@@ -1,0 +1,11 @@
+convex/ai.ts(6,7): error TS6133: 'MOCK_HINTS' is declared but its value is never read.
+convex/classroom.ts(1,17): error TS6133: 'mutation' is declared but its value is never read.
+convex/questions.ts(1,17): error TS6133: 'mutation' is declared but its value is never read.
+convex/seed.ts(2,1): error TS6133: 'v' is declared but its value is never read.
+src/pages/PracticeSession.tsx(6,16): error TS6133: 'Mail' is declared but its value is never read.
+src/pages/PracticeSession.tsx(6,22): error TS6133: 'User' is declared but its value is never read.
+src/pages/PracticeSession.tsx(6,118): error TS6133: 'HelpCircle' is declared but its value is never read.
+src/pages/PracticeSession.tsx(6,158): error TS6133: 'Lightbulb' is declared but its value is never read.
+src/pages/StudentHome.tsx(5,22): error TS6133: 'User' is declared but its value is never read.
+src/pages/StudentHome.tsx(5,118): error TS6133: 'HelpCircle' is declared but its value is never read.
+src/pages/StudentHome.tsx(5,156): error TS6133: 'Play' is declared but its value is never read.
