@@ -241,7 +241,7 @@ function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, ha
               const isCorrectC = idx === question.correctIndex;
               const isWrong = submitted && idx === selected && !isCorrectC;
               const isRight = submitted && isCorrectC;
-              let s: React.CSSProperties = { background: "var(--bg)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-sm)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
+              let s: React.CSSProperties = { background: "var(--surface-high)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
               if (submitted) { s.cursor = "default"; if (isRight) { s.background = "var(--primary-alpha)"; s.border = "1px solid var(--success)"; s.color = "var(--success)"; } else if (isWrong) { s.background = "rgba(254,111,107,0.1)"; s.border = "1px solid var(--danger)"; s.color = "var(--danger)"; } else { s.opacity = 0.5; } } else if (selected === idx) { s.border = "1px solid var(--primary-dim)"; s.boxShadow = "inset 0 0 0 1px var(--primary-dim)"; }
               return (
                 <motion.button key={idx} style={s} onClick={() => handleSelect(idx)} whileHover={!submitted ? { scale: 1.01 } : {}} whileTap={!submitted ? { scale: 0.99 } : {}}>
@@ -285,29 +285,61 @@ function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadin
 
   const handleKeyPress = (key: string) => {
     if (key === "del") {
-      setEqValue(v => v.slice(0, -1));
+      setEqValue(v => v === "Error" ? "" : v.slice(0, -1));
+    } else if (key === "C") {
+      setEqValue("");
+    } else if (key === "=") {
+      try {
+        let expr = eqValue
+          .replace(/×/g, "*")
+          .replace(/÷/g, "/")
+          .replace(/π/g, "Math.PI")
+          .replace(/sin\(/g, "Math.sin(")
+          .replace(/cos\(/g, "Math.cos(")
+          .replace(/tan\(/g, "Math.tan(")
+          .replace(/log\(/g, "Math.log10(")
+          .replace(/√\(/g, "Math.sqrt(")
+          .replace(/\^/g, "**"); // Handle powers
+        
+        // eslint-disable-next-line no-new-func
+        const result = new Function("return " + expr)();
+        
+        if (Number.isFinite(result)) {
+           setEqValue(Number(result.toFixed(5)).toString());
+        } else {
+           setEqValue("Error");
+        }
+      } catch (e) {
+        setEqValue("Error");
+      }
+    } else if (["sin", "cos", "tan", "log", "√"].includes(key)) {
+      setEqValue(v => (v === "Error" ? "" : v) + key + "(");
+    } else if (key === "x²") {
+      setEqValue(v => (v === "Error" ? "" : v) + "^2");
+    } else if (key === "xⁿ") {
+      setEqValue(v => (v === "Error" ? "" : v) + "^");
     } else {
-      setEqValue(v => v + key);
+      setEqValue(v => (v === "Error" ? "" : v) + key);
     }
   };
 
   return (
-    <div className="app-right-panel flex-col gap-6" style={{ background: "var(--bg-topbar)" }}>
+    <div className="app-right-panel flex-col gap-6" style={{ background: "transparent" }}>
       <div className="card" style={{ padding: 16 }}>
         <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
-          <div className="t-mini-title" style={{ margin: 0, color: "var(--text)" }}>עורך משוואות</div>
+          <div className="t-mini-title" style={{ margin: 0, color: "var(--text)" }}>מחשבון מדעי</div>
           <div className="flex gap-2">
             <div className="dot" style={{ background: "var(--danger)", width: 6, height: 6, cursor: "pointer" }} onClick={() => setEqValue("")} title="נקה הכל" />
             <div className="dot" style={{ background: "var(--warning)", width: 6, height: 6 }} />
             <div className="dot" style={{ background: "var(--success)", width: 6, height: 6 }} />
           </div>
         </div>
-        <div style={{ background: "var(--surface-highest)", borderRadius: "var(--r-sm)", padding: "12px 16px", minHeight: 48, marginBottom: 16, fontFamily: "monospace", fontSize: "1.2rem", textAlign: "left", direction: "ltr", color: "var(--text)", border: "1px solid var(--ghost-border)" }}>
+        <div style={{ background: "var(--surface-input)", borderRadius: "var(--r-sm)", padding: "12px 16px", minHeight: 48, marginBottom: 16, fontFamily: "monospace", fontSize: "1.2rem", textAlign: "left", direction: "ltr", color: "var(--primary-dim)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)" }}>
           {eqValue || <span style={{ color: "var(--text-faint)" }}>0</span>}
         </div>
         <div className="keypad">
-          {["x²","xⁿ","√","π","sin","cos","tan","log","d/dx","∫","lim","∑"].map(k => <button key={k} className="key-btn key-op" onClick={() => handleKeyPress(k)}>{k}</button>)}
-          {["(",")","^","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => <button key={k} className="key-btn" onClick={() => handleKeyPress(k)}>{k}</button>)}
+          {["x²","xⁿ","√","π","sin","cos","tan","log"].map(k => <button key={k} className="key-btn key-op" onClick={() => handleKeyPress(k)}>{k}</button>)}
+          {["(",")","C","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => <button key={k} className="key-btn" onClick={() => handleKeyPress(k)} style={{ background: k === "=" ? "var(--primary)" : k === "C" ? "rgba(251, 113, 133, 0.15)" : undefined, color: k === "=" ? "#fff" : k === "C" ? "var(--danger)" : undefined }}>{k}</button>)}
         </div>
       </div>
       <div className="card" style={{ padding: 20, border: showHint ? "1px solid var(--primary-dim)" : "var(--ghost-border)" }}>
