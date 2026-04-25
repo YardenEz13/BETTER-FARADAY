@@ -102,4 +102,84 @@ export default defineSchema({
     content: v.string(),
     timestamp: v.number(),
   }).index("by_chat", ["chatId"]),
+
+  // ── Session Briefs (composite pedagogical summary per conversation) ──
+  sessionBriefs: defineTable({
+    chatId: v.id("aiChats"),
+    studentId: v.id("students"),
+    topicId: v.optional(v.id("topics")),
+    createdAt: v.number(),
+
+    // Cycle metadata
+    totalCycles: v.number(),
+    totalMessages: v.number(),
+    totalDurationMs: v.number(),
+    partialBriefs: v.array(v.object({
+      sessionIndex: v.number(),
+      messageCount: v.number(),
+      durationMs: v.number(),
+      summary: v.string(),
+      triggerReason: v.string(), // "message_count" | "time" | "token_saturation" | "question_change"
+    })),
+
+    // Pedagogical Analysis
+    approach: v.string(),
+    frictionPoints: v.array(v.string()),
+    autonomyLevel: v.number(),         // 1-5
+    solutionAccuracy: v.number(),      // 1-5
+    keyInsight: v.string(),
+    recommendedAction: v.optional(v.string()),
+
+    // Student's own voice
+    selfAssessment: v.string(),
+  })
+    .index("by_student", ["studentId"])
+    .index("by_student_topic", ["studentId", "topicId"])
+    .index("by_chat", ["chatId"]),
+
+  // ── Student Power Map (aggregated longitudinal profile, scheduled) ──
+  studentPowerMap: defineTable({
+    studentId: v.id("students"),
+    lastUpdatedAt: v.number(),
+
+    // Strength vs. Weakness Heatmap
+    topicMastery: v.array(v.object({
+      topicId: v.id("topics"),
+      topicName: v.string(),
+      masteryScore: v.number(),         // 0-100
+      errorFrequency: v.number(),
+      avgAccuracy: v.number(),          // 1-5
+      sessionCount: v.number(),
+      lastSessionAt: v.number(),
+      trend: v.string(),                // "improving" | "stable" | "declining"
+    })),
+
+    // Progress Velocity
+    progressVelocity: v.object({
+      overall: v.number(),              // sessions per week
+      accuracyDelta: v.number(),
+      autonomyDelta: v.number(),
+      weeklySnapshots: v.array(v.object({
+        weekStart: v.number(),
+        avgAccuracy: v.number(),
+        avgAutonomy: v.number(),
+        sessionCount: v.number(),
+        topFriction: v.string(),
+      })),
+    }),
+
+    // Engagement Metrics
+    engagement: v.object({
+      totalSessions: v.number(),
+      totalMessages: v.number(),
+      avgSessionDuration: v.number(),
+      inquiryStyle: v.string(),         // "explorer" | "direct" | "passive"
+      inquiryEvolution: v.array(v.object({
+        date: v.number(),
+        style: v.string(),
+      })),
+      frustrationTrend: v.string(),     // "decreasing" | "stable" | "increasing"
+    }),
+  })
+    .index("by_student", ["studentId"]),
 });

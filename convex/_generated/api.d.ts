@@ -13,8 +13,12 @@ import type * as aiChat from "../aiChat.js";
 import type * as attempts from "../attempts.js";
 import type * as classroom from "../classroom.js";
 import type * as clear from "../clear.js";
+import type * as crons from "../crons.js";
+import type * as powerMap from "../powerMap.js";
 import type * as questions from "../questions.js";
 import type * as seed from "../seed.js";
+import type * as seedInteractions from "../seedInteractions.js";
+import type * as sessionBriefs from "../sessionBriefs.js";
 import type * as topics from "../topics.js";
 
 import type {
@@ -29,8 +33,12 @@ declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
   classroom: typeof classroom;
   clear: typeof clear;
+  crons: typeof crons;
+  powerMap: typeof powerMap;
   questions: typeof questions;
   seed: typeof seed;
+  seedInteractions: typeof seedInteractions;
+  sessionBriefs: typeof sessionBriefs;
   topics: typeof topics;
 }>;
 

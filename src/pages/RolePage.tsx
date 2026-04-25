@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Loader2, BarChart2, BookOpen, ChevronLeft, Zap } from "lucide-react";
+import { px } from "framer-motion";
 
 export default function RolePage() {
   const navigate = useNavigate();
@@ -28,18 +29,18 @@ export default function RolePage() {
       <div style={{ position: "fixed", bottom: -100, left: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(45, 212, 191, 0.08) 0%, transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
 
       {/* Content — Level 0 */}
-      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 800 }}>
+      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 1000 }}>
 
         {/* Header */}
-        <div className="fade-in-up text-center" style={{ marginBottom: "var(--s12)" }}>
+        <div className="fade-in-up text-center" style={{ marginBottom: 64 }}>
           <div className="section-label" style={{ justifyContent: "center" }}>
             כיתה י״א · שאלון 581 · 5 יחידות לימוד
           </div>
-          <h1 className="t-display" style={{ color: "var(--text)", marginBottom: "var(--s2)" }}>
+          <h1 className="t-display" style={{ color: "var(--text)", marginBottom: "var(--s4)" }}>
             מתמטיקה{" "}
             <span style={{ color: "var(--primary)", textShadow: "0 0 30px rgba(129,140,248,0.5)" }}>581</span>
           </h1>
-          <p className="t-body" style={{ maxWidth: 460, margin: "0 auto", fontSize: "1.05rem" }}>
+          <p className="t-body" style={{ maxWidth: 640, margin: "0 auto", fontSize: "1.15rem", lineHeight: 1.8 }}>
             פלטפורמת למידה אדפטיבית חכמה המבוססת על אלגוריתם הלמידה FARADAY Logic
           </p>
           {seeding && (
@@ -51,13 +52,13 @@ export default function RolePage() {
         </div>
 
         {/* Cards — Level 2 (surface-high) with no 1px borders per spec */}
-        <div className="fade-in-up" style={{ animationDelay: "0.1s", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--s6)" }}>
+        <div className="fade-in-up" style={{ animationDelay: "0.1s", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 48 }}>
 
           {/* Student Panel */}
-          <div className="card stripe-left stripe-primary" style={{ padding: "var(--s8)", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", marginBottom: "var(--s6)" }}>
-              <div style={{ width: 48, height: 48, background: "var(--primary-alpha)", borderRadius: "var(--r-md)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <BookOpen size={22} color="var(--primary)" />
+          <div className="role-card student-card stripe-left stripe-primary">
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--s4)", marginBottom: "var(--s6)" }}>
+              <div className="role-card-icon" style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dim))" }}>
+                <BookOpen size={28} color="#ffffff" />
               </div>
               <div>
                 <div className="t-label" style={{ color: "var(--text-faint)", marginBottom: 2 }}>חיבור לרשת הלמידה</div>
@@ -79,10 +80,10 @@ export default function RolePage() {
           </div>
 
           {/* Teacher Panel */}
-          <div className="card stripe-left stripe-yellow" style={{ padding: "var(--s8)", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", marginBottom: "var(--s6)" }}>
-              <div style={{ width: 48, height: 48, background: "var(--warning-dim)", borderRadius: "var(--r-md)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <BarChart2 size={22} color="var(--warning-amber)" />
+          <div className="role-card teacher-card stripe-left stripe-yellow">
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--s4)", marginBottom: "var(--s6)" }}>
+              <div className="role-card-icon" style={{ background: "linear-gradient(135deg, var(--warning), #f59e0b)" }}>
+                <BarChart2 size={28} color="#ffffff" />
               </div>
               <div>
                 <div className="t-label" style={{ color: "var(--text-faint)", marginBottom: 2 }}>ממשק אנליטיקה</div>
@@ -94,7 +95,7 @@ export default function RolePage() {
               עקוב אחרי הכיתה בזמן אמת דרך מפת החום. קבל התראות כשתלמידים תקועים, וצפה בנתוני ביצועים מפורטים לפי מודול.
             </p>
 
-            <div className="flex gap-2 flex-wrap" style={{ marginBottom: "var(--s6)" }}>
+            <div className="flex gap-2 flex-wrap" style={{ marginBottom: "var(--s6)", marginTop: 10 }}>
               <span className="badge badge-amber">מפת חום חיה</span>
               <span className="badge badge-danger">התראות מיידיות</span>
               <span className="badge badge-neutral">תובנות</span>
@@ -112,7 +113,7 @@ export default function RolePage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center t-label" style={{ marginTop: "var(--s12)", color: "var(--text-faint)" }}>
+        <p className="text-center t-label" style={{ marginTop: 48, color: "var(--text-faint)" }}>
           משרד החינוך | שאלון 581 | כיתה י״א
         </p>
       </div>

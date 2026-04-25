@@ -17,3 +17,32 @@ export interface ChatMetrics {
   independenceRatio?: number;        // 0-1 how much student showed own work
   gemmaAnalysisSummary?: string;     // Free-text summary from Gemma
 }
+
+// ── Session Cycling Types ──
+
+export interface PartialBrief {
+  sessionIndex: number;
+  messageCount: number;
+  durationMs: number;
+  summary: string;
+  triggerReason: "message_count" | "time" | "token_saturation" | "question_change";
+}
+
+export interface CompositeBrief {
+  // Cycle metadata
+  totalCycles: number;
+  totalMessages: number;
+  totalDurationMs: number;
+  partialBriefs: PartialBrief[];
+
+  // Pedagogical analysis
+  approach: string;
+  frictionPoints: string[];
+  autonomyLevel: number;          // 1-5
+  solutionAccuracy: number;       // 1-5
+  keyInsight: string;
+  recommendedAction?: string;
+
+  // Student self-assessment
+  selfAssessment: string;
+}

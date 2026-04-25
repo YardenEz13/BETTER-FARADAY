@@ -139,7 +139,7 @@ export default function StudentHome() {
             </div>
 
             {/* מודולים מחוברים ממסד הנתונים */}
-            <div className="flex-col" style={{ gap: 32, maxWidth: 600 }}>
+            <div className="flex-col" style={{ gap: 48, maxWidth: 640 }}>
               {topics.map((topic, idx) => {
                 const progress = getProgress(topic._id);
                 const isLocked = false;
@@ -185,12 +185,12 @@ export default function StudentHome() {
             </div>
 
             {/* שורה תחתונה - אתגרים קרובים */}
-            <div style={{ marginTop: 48 }}>
+            <div style={{ marginTop: 64 }}>
               <div className="flex justify-between items-center" style={{ marginBottom: 24 }}>
                 <h3 className="t-h2" style={{ margin: 0 }}>אתגרים קרובים 🎯</h3>
                 <span className="t-mini-title" style={{ color: "var(--primary-dim)", cursor: "pointer" }}>הצג הכל</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24 }}>
                 {[
                   { title: "אתגר גבולות אלפא", d: "פתרון פרדוקס ההתכנסות", xp: 450, icon: <Target size={16} color="var(--primary-dim)" />, time: "נשארו 24 דק'" },
                   { title: "הסתברות שיתופית", d: "הצטרפו ל-4 אחרים לחישוב שונות", xp: 1200, icon: <Trophy size={16} color="var(--warning)" />, time: "אירוע צוותי" },
