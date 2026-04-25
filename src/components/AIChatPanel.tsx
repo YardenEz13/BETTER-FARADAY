@@ -10,10 +10,14 @@ import {
   destroySession,
   streamMessage,
   analyzeConversation,
+  generateCompositeBrief,
   getMockResponse,
   onModelProgress,
+  estimateTokens,
+  heuristicSummary,
   type AgentType,
   type Message,
+  type PartialBrief,
 } from "../services/localAI";
 import { queueMessage, getPendingMessages, clearPendingMessages, isOnline, onOnline } from "../services/offlineQueue";
 import {
@@ -51,9 +55,21 @@ export default function AIChatPanel({
   const [online, setOnline] = useState(isOnline());
   const [isResumed, setIsResumed] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Session Cycling state
+  const [cycleState, setCycleState] = useState<"active" | "cycling" | "self_assess">("active");
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [partialBriefs, setPartialBriefs] = useState<PartialBrief[]>([]);
+  const [selfAssessment, setSelfAssessment] = useState<string | null>(null);
+  const [awaitingSelfAssess, setAwaitingSelfAssess] = useState(false);
+  const [pendingNextQuestion, setPendingNextQuestion] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatIdRef = useRef<Id<"aiChats"> | null>(null);
-  const initGuard = useRef(false); // prevents double-init race condition
+  const initGuard = useRef(false);
+  const sessionStartedAt = useRef(Date.now());
+  const prevQuestionId = useRef(questionId);
+  const userMsgCount = useRef(0);
 
   // Keep ref in sync so callbacks always have current value
   useEffect(() => { chatIdRef.current = chatId; }, [chatId]);
@@ -62,6 +78,7 @@ export default function AIChatPanel({
   const addMessageMut = useMutation(api.aiChat.addMessage);
   const endChatMut = useMutation(api.aiChat.endChat);
   const syncMessages = useMutation(api.aiChat.syncMessages);
+  const createBriefMut = useMutation(api.sessionBriefs.createBrief);
 
   // Chat history for the sidebar
   const chatHistory = useQuery(
@@ -249,12 +266,155 @@ export default function AIChatPanel({
     }
   }, [online, addMessageMut]);
 
+  // ── Session Cycling: detect questionId prop change ──
+  useEffect(() => {
+    if (questionId && prevQuestionId.current && questionId !== prevQuestionId.current && cycleState === "active" && messages.length > 1) {
+      setCycleState("self_assess");
+      setAwaitingSelfAssess(true);
+      setPendingNextQuestion(true);
+      const assessMsg: Message = {
+        role: "model",
+        content: "רגע לפני שממשיכים לשאלה הבאה — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הבנת הכי טוב?",
+      };
+      setMessages(prev => {
+        const newMsgs = [...prev, assessMsg];
+        if (chatIdRef.current) saveMessages(chatIdRef.current, newMsgs).catch(console.error);
+        return newMsgs;
+      });
+      persistMessage("model", assessMsg.content).catch(console.error);
+    }
+    prevQuestionId.current = questionId;
+  }, [questionId, cycleState, messages.length, persistMessage]);
+
+  // ── Session Cycling: check triggers ──
+  const checkCycleTriggers = useCallback((): "message_count" | "time" | "token_saturation" | null => {
+    // Check message count (8 user messages)
+    if (userMsgCount.current >= 8) return "message_count";
+
+    // Check elapsed time (15 minutes)
+    if (Date.now() - sessionStartedAt.current > 15 * 60 * 1000) return "time";
+
+    // Check token saturation (80% of 4096)
+    const allText = messages.map(m => m.content).join("");
+    if (estimateTokens(allText) > 3200) return "token_saturation";
+
+    return null;
+  }, [messages]);
+
+  // ── Execute a session cycle (transparent to student) ──
+  const executeCycle = useCallback(async (triggerReason: PartialBrief["triggerReason"]) => {
+    if (cycleState !== "active") return;
+    setCycleState("cycling");
+
+    // Generate a carry-over summary from current messages
+    const summary = heuristicSummary(messages);
+    const durationMs = Date.now() - sessionStartedAt.current;
+
+    // Store partial brief
+    const partial: PartialBrief = {
+      sessionIndex,
+      messageCount: messages.filter(m => m.role !== "system").length,
+      durationMs,
+      summary,
+      triggerReason,
+    };
+    setPartialBriefs(prev => [...prev, partial]);
+
+    // End current chat session on server
+    if (chatIdRef.current && online) {
+      try {
+        const metrics = await analyzeConversation(messages);
+        await endChatMut({ chatId: chatIdRef.current, metrics });
+      } catch (e) {
+        console.error("Failed to end cycle session:", e);
+      }
+    }
+
+    // Start a fresh chat session
+    const title = agentType === "practice"
+      ? `תרגול: ${topicName || "כללי"} (סבב ${sessionIndex + 2})`
+      : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")} (סבב ${sessionIndex + 2})`;
+
+    let newChatId: Id<"aiChats"> | null = null;
+    try {
+      if (online) {
+        newChatId = await startChat({
+          studentId: studentId as Id<"students">,
+          agentType,
+          topicId: topicId ? (topicId as Id<"topics">) : undefined,
+          questionId: questionId ? (questionId as Id<"questions">) : undefined,
+          title,
+        });
+        setChatId(newChatId);
+        chatIdRef.current = newChatId;
+      }
+    } catch (e) {
+      console.error("Failed to start cycle chat:", e);
+    }
+
+    // Inject carry-over summary as system message
+    const carryOver: Message = {
+      role: "system",
+      content: `[סיכום שיחה קודמת]: ${summary}`,
+    };
+    setMessages([carryOver]);
+    userMsgCount.current = 0;
+    sessionStartedAt.current = Date.now();
+    setSessionIndex(prev => prev + 1);
+
+    // Save to IndexedDB
+    if (newChatId) {
+      let context = "";
+      if (agentType === "practice" && questionStem) {
+        context = `נושא: ${topicName}\nשאלה: ${questionStem}`;
+      }
+      await saveActiveSession({
+        chatId: newChatId,
+        studentId,
+        agentType,
+        context,
+        topicName,
+        questionStem,
+        topicId,
+        questionId,
+        startedAt: Date.now(),
+      });
+      await saveMessages(newChatId, [carryOver]);
+    }
+
+    await createSession(agentType, questionStem ? `נושא: ${topicName}\nשאלה: ${questionStem}` : "");
+    setCycleState("active");
+  }, [cycleState, messages, sessionIndex, online, agentType, topicName, questionStem, topicId, questionId, studentId, startChat, endChatMut]);
+
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
     const userMsg = input.trim();
     setInput("");
 
     const newUserMsg: Message = { role: "user", content: userMsg };
+
+    // ── Self-assessment capture ──
+    if (awaitingSelfAssess) {
+      setSelfAssessment(userMsg);
+      setAwaitingSelfAssess(false);
+      setMessages(prev => [...prev, newUserMsg]);
+      // Now finalize the brief
+      if (pendingNextQuestion) {
+        await finalizeWithBriefAndContinue(userMsg);
+      } else {
+        await finalizeWithBrief(userMsg);
+      }
+      return;
+    }
+
+    // ── Check cycle triggers before processing ──
+    const trigger = checkCycleTriggers();
+    if (trigger) {
+      await executeCycle(trigger);
+      // After cycling, re-inject the user's message into the new session
+    }
+
+    userMsgCount.current++;
 
     // Update state and save to IndexedDB
     const updatedWithUser = [...messages, newUserMsg];
@@ -329,27 +489,130 @@ export default function AIChatPanel({
     onClose();
   };
 
-  // "End Chat" = finalize with Gemma analysis and clear local storage
+  // "End Chat" = ask for self-assessment, then finalize with brief
   const handleEndChat = async () => {
     if (!chatIdRef.current || messages.length <= 1) {
       await cleanup();
       return;
     }
 
+    // Ask the student for self-assessment
+    setCycleState("self_assess");
+    setAwaitingSelfAssess(true);
+
+    const assessMsg: Message = {
+      role: "model",
+      content: "לפני שנסיים — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הרגשת שהבנת הכי טוב?",
+    };
+    setMessages(prev => [...prev, assessMsg]);
+    if (chatIdRef.current) {
+      await saveMessages(chatIdRef.current, [...messages, assessMsg]);
+    }
+    await persistMessage("model", assessMsg.content);
+  };
+
+  // ── Finalize: generate composite brief + save + cleanup ──
+  const finalizeWithBrief = async (selfAssessText: string) => {
     setIsAnalyzing(true);
+
     try {
-      const metrics = await analyzeConversation(messages);
-      if (online) {
+      // Generate composite brief
+      const brief = await generateCompositeBrief(
+        partialBriefs,
+        messages,
+        selfAssessText
+      );
+
+      // End current chat with metrics
+      if (chatIdRef.current && online) {
+        const metrics = await analyzeConversation(messages);
         await endChatMut({ chatId: chatIdRef.current, metrics });
       }
+
+      // Save the composite brief to Convex
+      if (chatIdRef.current && online) {
+        await createBriefMut({
+          chatId: chatIdRef.current,
+          studentId: studentId as Id<"students">,
+          topicId: topicId ? (topicId as Id<"topics">) : undefined,
+          totalCycles: brief.totalCycles,
+          totalMessages: brief.totalMessages,
+          totalDurationMs: brief.totalDurationMs,
+          partialBriefs: brief.partialBriefs,
+          approach: brief.approach,
+          frictionPoints: brief.frictionPoints,
+          autonomyLevel: brief.autonomyLevel,
+          solutionAccuracy: brief.solutionAccuracy,
+          keyInsight: brief.keyInsight,
+          recommendedAction: brief.recommendedAction,
+          selfAssessment: brief.selfAssessment,
+        });
+      }
+
+      // Show confirmation message briefly
+      const confirmMsg: Message = {
+        role: "system",
+        content: "✨ השיחה נשמרה בהצלחה. תודה!",
+      };
+      setMessages(prev => [...prev, confirmMsg]);
+
+      // Wait a moment then cleanup
+      setTimeout(() => cleanup(), 1500);
     } catch (e) {
-      console.error("Failed to analyze/end chat:", e);
+      console.error("Failed to generate brief:", e);
       if (online && chatIdRef.current) {
         try { await endChatMut({ chatId: chatIdRef.current }); } catch {}
       }
+      await cleanup();
     }
+  };
 
-    await cleanup();
+  const finalizeWithBriefAndContinue = async (selfAssessText: string) => {
+    setIsAnalyzing(true);
+    try {
+      const brief = await generateCompositeBrief(
+        partialBriefs,
+        messages,
+        selfAssessText
+      );
+
+      if (chatIdRef.current && online) {
+        const metrics = await analyzeConversation(messages);
+        await endChatMut({ chatId: chatIdRef.current, metrics });
+        await createBriefMut({
+          chatId: chatIdRef.current,
+          studentId: studentId as Id<"students">,
+          topicId: topicId ? (topicId as Id<"topics">) : undefined,
+          ...brief,
+        });
+      }
+
+      const confirmMsg: Message = {
+        role: "system",
+        content: "✨ השיחה נשמרה בהצלחה! מכין את מורה ה-AI לשאלה החדשה...",
+      };
+      setMessages(prev => [...prev, confirmMsg]);
+
+      setTimeout(async () => {
+        setIsAnalyzing(false);
+        await clearActiveSession(studentId, agentType);
+        setPartialBriefs([]);
+        setSessionIndex(0);
+        userMsgCount.current = 0;
+        setSelfAssessment(null);
+        setPendingNextQuestion(false);
+        setCycleState("active");
+        
+        await createFreshChat();
+      }, 2000);
+
+    } catch (e) {
+      console.error("Failed to generate brief:", e);
+      setIsAnalyzing(false);
+      setPendingNextQuestion(false);
+      setCycleState("active");
+      await createFreshChat();
+    }
   };
 
   const cleanup = async () => {
@@ -360,7 +623,14 @@ export default function AIChatPanel({
     setChatId(null);
     chatIdRef.current = null;
     setIsResumed(false);
-    initGuard.current = false; // allow fresh init next time
+    setCycleState("active");
+    setSessionIndex(0);
+    setPartialBriefs([]);
+    setSelfAssessment(null);
+    setAwaitingSelfAssess(false);
+    setPendingNextQuestion(false);
+    userMsgCount.current = 0;
+    initGuard.current = false;
     onClose();
   };
 

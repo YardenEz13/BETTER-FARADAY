@@ -1,7 +1,7 @@
-import type { AgentType, ChatMetrics } from "./localAI.types";
+import type { AgentType, ChatMetrics, PartialBrief, CompositeBrief } from "./localAI.types";
 import type { WorkerRequest, WorkerResponse } from "./localAI.worker";
 
-export type { AgentType, ChatMetrics };
+export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief };
 
 export interface Message {
   role: "user" | "model" | "system";
@@ -409,6 +409,109 @@ export async function analyzeConversation(messages: Message[]): Promise<ChatMetr
   });
 }
 
+
+// ── Composite Brief Generation (Session Cycling) ──
+
+/** Heuristic fallback for brief generation */
+function heuristicBrief(
+  messages: Message[],
+  partialBriefs: PartialBrief[],
+  selfAssessment: string
+): CompositeBrief {
+  const userMsgs = messages.filter((m) => m.role === "user");
+  const hasOwnWork = userMsgs.some((m) =>
+    /ניסיתי|חשבתי|הגעתי ל|לדעתי|אני חושב/.test(m.content)
+  );
+  const hasFrustration = userMsgs.some((m) =>
+    /לא מבין|קשה|נתקעתי|בלבול|לא הבנתי/.test(m.content)
+  );
+  const hasQuestions = userMsgs.filter((m) => m.content.includes("?")).length;
+
+  const totalMessages = partialBriefs.reduce((s, b) => s + b.messageCount, 0) + messages.length;
+  const totalDuration = partialBriefs.reduce((s, b) => s + b.durationMs, 0);
+
+  return {
+    totalCycles: partialBriefs.length + 1,
+    totalMessages,
+    totalDurationMs: totalDuration,
+    partialBriefs,
+    approach: hasOwnWork ? "הציג עבודה עצמית ושאל שאלות" : "שאל שאלות ישירות ללא עבודה עצמית",
+    frictionPoints: hasFrustration ? ["ביטא תסכול או בלבול"] : [],
+    autonomyLevel: hasOwnWork ? 4 : hasQuestions > 3 ? 2 : 3,
+    solutionAccuracy: 3,
+    keyInsight: `${totalMessages} הודעות בסך הכל, ${hasQuestions} שאלות, ${partialBriefs.length} סבבי שיחה`,
+    selfAssessment,
+  };
+}
+
+/**
+ * Generate a composite pedagogical brief from partial cycle summaries + final session.
+ * Uses Gemma for rich analysis, with heuristic fallback.
+ */
+export async function generateCompositeBrief(
+  partialBriefs: PartialBrief[],
+  finalSessionMessages: Message[],
+  selfAssessment: string
+): Promise<CompositeBrief> {
+  const fallback = heuristicBrief(finalSessionMessages, partialBriefs, selfAssessment);
+
+  if (!isReady) return fallback;
+
+  // Build the analysis text from partial summaries + final session
+  const partialSummaries = partialBriefs
+    .map((b, i) => `סבב ${i + 1}: ${b.summary}`)
+    .join("\n");
+
+  const finalConvo = finalSessionMessages
+    .filter((m) => m.role !== "system")
+    .map((m) => `${m.role === "user" ? "תלמיד" : "מורה"}: ${m.content}`)
+    .join("\n");
+
+  const analysisText = [
+    partialSummaries ? `סיכומי סבבים קודמים:\n${partialSummaries}` : "",
+    `שיחה אחרונה:\n${finalConvo}`,
+    `הערכה עצמית של התלמיד:\n"${selfAssessment}"`,
+  ].filter(Boolean).join("\n---\n");
+
+  const id = Math.random().toString(36).substring(7);
+
+  return new Promise((resolve) => {
+    const w = getWorker();
+    const timeout = setTimeout(() => {
+      w.removeEventListener("message", onMessage);
+      resolve(fallback);
+    }, 12000);
+
+    const onMessage = (e: MessageEvent<WorkerResponse>) => {
+      const msg = e.data;
+      if (msg.type === "brief:done" && msg.id === id) {
+        clearTimeout(timeout);
+        w.removeEventListener("message", onMessage);
+        try {
+          const clean = msg.json.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+          const parsed = JSON.parse(clean);
+          resolve({
+            ...fallback,
+            ...parsed,
+            partialBriefs,
+            selfAssessment,
+            autonomyLevel: Math.max(1, Math.min(5, parsed.autonomyLevel ?? fallback.autonomyLevel)),
+            solutionAccuracy: Math.max(1, Math.min(5, parsed.solutionAccuracy ?? fallback.solutionAccuracy)),
+          });
+        } catch {
+          resolve(fallback);
+        }
+      } else if (msg.type === "brief:error" && msg.id === id) {
+        clearTimeout(timeout);
+        w.removeEventListener("message", onMessage);
+        resolve(fallback);
+      }
+    };
+
+    w.addEventListener("message", onMessage);
+    w.postMessage({ type: "brief", conversationText: analysisText, id } as WorkerRequest);
+  });
+}
 
 // ── Fallback mock for browsers without WebGPU ──
 

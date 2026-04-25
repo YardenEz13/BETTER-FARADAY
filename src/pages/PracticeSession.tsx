@@ -88,7 +88,7 @@ export default function PracticeSession() {
             showCelebration={showCelebration} submitted={submitted}
             selected={selected} isCorrect={isCorrect} elapsed={elapsed}
             hintsUsed={hintsUsed} handleSelect={handleSelect} handleHint={handleHint}
-            setQuestionKey={setQuestionKey}
+            setQuestionKey={setQuestionKey} navigate={navigate} studentId={studentId}
           />
           <RightPanel showHint={showHint} loadingHint={loadingHint} hint={hint} />
         </div>
@@ -120,8 +120,8 @@ function Sidebar({ studentId, navigate }: { studentId: string; navigate: any }) 
   return (
     <aside className="app-sidebar">
       <div className="app-brand"><span>FARADAY</span> Logic</div>
-      <button className="new-proof-btn" style={{ marginBottom: 32 }}><Plus size={16} /> הוכחה חדשה</button>
-      <div className="flex-col" style={{ gap: 4, flex: 1 }}>
+      <button className="new-proof-btn mb-8"><Plus size={16} /> הוכחה חדשה</button>
+      <div className="flex-col gap-1 flex-1">
         <button className="nav-item" onClick={() => navigate(`/student/${studentId}`)}><MapIcon size={18} /> מפת למידה</button>
         <button className="nav-item active"><BookOpen size={18} /> תרגול</button>
         <button className="nav-item"><BarChart2 size={18} /> סטטיסטיקות</button>
@@ -155,26 +155,26 @@ function Topbar({ student }: { student: any }) {
   );
 }
 
-function CenterPanel({ currentTopic, question, student, questionsAnswered, sessionXP, showCelebration, submitted, selected, isCorrect, elapsed, hintsUsed, handleSelect, handleHint, setQuestionKey }: any) {
+function CenterPanel({ currentTopic, question, student, questionsAnswered, sessionXP, showCelebration, submitted, selected, isCorrect, elapsed, hintsUsed, handleSelect, handleHint, setQuestionKey, navigate, studentId }: any) {
   return (
-    <div className="app-center" style={{ padding: 40 }}>
-      <div className="flex justify-between items-end" style={{ marginBottom: 32 }}>
+    <div className="app-center p-10">
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <div className="flex items-center gap-2 t-mini-title" style={{ color: "var(--primary-dim)", marginBottom: 8 }}>
+          <div className="flex items-center gap-2 t-mini-title text-primary mb-2">
             <RotateCcw size={14} /> מודול פעיל: {currentTopic.nameHe}
           </div>
           <h1 className="t-h1" style={{ margin: 0, fontSize: "2.5rem" }}>תרגול אדפטיבי</h1>
-          <div className="t-sub" style={{ marginTop: 8 }}>שאלון 581 · הכנה לבגרות · 5 יח״ל</div>
+          <div className="t-sub mt-2">שאלון 581 · הכנה לבגרות · 5 יח״ל</div>
         </div>
         <div className="flex gap-6 items-center">
           <div className="streak-badge">
             <Flame size={16} color="var(--warning)" />
-            <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--warning)" }}>{questionsAnswered} שאלות</span>
+            <span className="fw-800 text-warning" style={{ fontSize: "0.9rem" }}>{questionsAnswered} שאלות</span>
           </div>
           <div className="xp-badge">
             <Zap size={18} color="var(--primary-dim)" />
-            <span style={{ fontSize: "1.2rem", fontWeight: 800, position: "relative", zIndex: 1 }}>{student.streak * 10 + sessionXP}</span>
-            <span style={{ fontSize: "0.7rem", color: "var(--text-faint)", fontWeight: 700, position: "relative", zIndex: 1 }}>XP</span>
+            <span className="fw-800 text-lg" style={{ position: "relative", zIndex: 1 }}>{student.streak * 10 + sessionXP}</span>
+            <span className="text-2xs text-faint fw-700" style={{ position: "relative", zIndex: 1 }}>XP</span>
           </div>
         </div>
       </div>
@@ -225,9 +225,9 @@ function CenterPanel({ currentTopic, question, student, questionsAnswered, sessi
 function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, handleSelect, handleHint, setQuestionKey, hintsUsed }: any) {
   return (
     <div style={{ padding: "0 24px" }}>
-      <div className="flex justify-between items-center" style={{ marginBottom: 24 }}>
-        <div className="t-mini-title" style={{ margin: 0, color: "var(--text)", fontSize: "0.85rem" }}>צעדי פתרון לוגיים</div>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}><RotateCcw size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: 4 }} />{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
+      <div className="flex justify-between items-center mb-6">
+        <div className="t-mini-title mb-0 text-default text-sm">צעדי פתרון לוגיים</div>
+        <span className="text-xs text-muted"><RotateCcw size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: 4 }} />{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
       </div>
       <div className="flex gap-6 items-start" style={{ position: "relative" }}>
         <div style={{ position: "absolute", right: 15, top: 32, bottom: -40, width: 2, background: "rgba(255,255,255,0.05)" }} />
@@ -241,7 +241,7 @@ function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, ha
               const isCorrectC = idx === question.correctIndex;
               const isWrong = submitted && idx === selected && !isCorrectC;
               const isRight = submitted && isCorrectC;
-              let s: React.CSSProperties = { background: "var(--bg)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-sm)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
+              let s: React.CSSProperties = { background: "var(--surface-high)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
               if (submitted) { s.cursor = "default"; if (isRight) { s.background = "var(--primary-alpha)"; s.border = "1px solid var(--success)"; s.color = "var(--success)"; } else if (isWrong) { s.background = "rgba(254,111,107,0.1)"; s.border = "1px solid var(--danger)"; s.color = "var(--danger)"; } else { s.opacity = 0.5; } } else if (selected === idx) { s.border = "1px solid var(--primary-dim)"; s.boxShadow = "inset 0 0 0 1px var(--primary-dim)"; }
               return (
                 <motion.button key={idx} style={s} onClick={() => handleSelect(idx)} whileHover={!submitted ? { scale: 1.01 } : {}} whileTap={!submitted ? { scale: 0.99 } : {}}>
@@ -285,54 +285,86 @@ function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadin
 
   const handleKeyPress = (key: string) => {
     if (key === "del") {
-      setEqValue(v => v.slice(0, -1));
+      setEqValue(v => v === "Error" ? "" : v.slice(0, -1));
+    } else if (key === "C") {
+      setEqValue("");
+    } else if (key === "=") {
+      try {
+        let expr = eqValue
+          .replace(/×/g, "*")
+          .replace(/÷/g, "/")
+          .replace(/π/g, "Math.PI")
+          .replace(/sin\(/g, "Math.sin(")
+          .replace(/cos\(/g, "Math.cos(")
+          .replace(/tan\(/g, "Math.tan(")
+          .replace(/log\(/g, "Math.log10(")
+          .replace(/√\(/g, "Math.sqrt(")
+          .replace(/\^/g, "**"); // Handle powers
+        
+        // eslint-disable-next-line no-new-func
+        const result = new Function("return " + expr)();
+        
+        if (Number.isFinite(result)) {
+           setEqValue(Number(result.toFixed(5)).toString());
+        } else {
+           setEqValue("Error");
+        }
+      } catch (e) {
+        setEqValue("Error");
+      }
+    } else if (["sin", "cos", "tan", "log", "√"].includes(key)) {
+      setEqValue(v => (v === "Error" ? "" : v) + key + "(");
+    } else if (key === "x²") {
+      setEqValue(v => (v === "Error" ? "" : v) + "^2");
+    } else if (key === "xⁿ") {
+      setEqValue(v => (v === "Error" ? "" : v) + "^");
     } else {
-      setEqValue(v => v + key);
+      setEqValue(v => (v === "Error" ? "" : v) + key);
     }
   };
 
   return (
-    <div className="app-right-panel flex-col gap-6" style={{ background: "var(--bg-topbar)" }}>
-      <div className="card" style={{ padding: 16 }}>
-        <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
-          <div className="t-mini-title" style={{ margin: 0, color: "var(--text)" }}>עורך משוואות</div>
+    <div className="app-right-panel flex-col gap-6" style={{ background: "transparent" }}>
+      <div className="card p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="t-mini-title mb-0 text-default">מחשבון מדעי</div>
           <div className="flex gap-2">
             <div className="dot" style={{ background: "var(--danger)", width: 6, height: 6, cursor: "pointer" }} onClick={() => setEqValue("")} title="נקה הכל" />
             <div className="dot" style={{ background: "var(--warning)", width: 6, height: 6 }} />
             <div className="dot" style={{ background: "var(--success)", width: 6, height: 6 }} />
           </div>
         </div>
-        <div style={{ background: "var(--surface-highest)", borderRadius: "var(--r-sm)", padding: "12px 16px", minHeight: 48, marginBottom: 16, fontFamily: "monospace", fontSize: "1.2rem", textAlign: "left", direction: "ltr", color: "var(--text)", border: "1px solid var(--ghost-border)" }}>
+        <div className="card-recessed font-mono text-primary text-lg mb-4" style={{ padding: "12px 16px", minHeight: 48, textAlign: "left", direction: "ltr" }}>
           {eqValue || <span style={{ color: "var(--text-faint)" }}>0</span>}
         </div>
         <div className="keypad">
-          {["x²","xⁿ","√","π","sin","cos","tan","log","d/dx","∫","lim","∑"].map(k => <button key={k} className="key-btn key-op" onClick={() => handleKeyPress(k)}>{k}</button>)}
-          {["(",")","^","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => <button key={k} className="key-btn" onClick={() => handleKeyPress(k)}>{k}</button>)}
+          {["x²","xⁿ","√","π","sin","cos","tan","log"].map(k => <button key={k} className="key-btn key-op" onClick={() => handleKeyPress(k)}>{k}</button>)}
+          {["(",")","C","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => <button key={k} className="key-btn" onClick={() => handleKeyPress(k)} style={{ background: k === "=" ? "var(--primary)" : k === "C" ? "rgba(251, 113, 133, 0.15)" : undefined, color: k === "=" ? "#fff" : k === "C" ? "var(--danger)" : undefined }}>{k}</button>)}
         </div>
       </div>
-      <div className="card" style={{ padding: 20, border: showHint ? "1px solid var(--primary-dim)" : "var(--ghost-border)" }}>
-        <div className="flex items-center gap-3" style={{ marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "var(--r-sm)", background: "var(--surface-high)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="card p-5" style={{ border: showHint ? "1px solid var(--primary-dim)" : "var(--ghost-border)" }}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="icon-box" style={{ width: 36, height: 36, background: "var(--surface-high)" }}>
             {loadingHint ? <Loader2 size={18} color="var(--primary-dim)" style={{ animation: "spin 1s linear infinite" }} /> : <Settings size={18} color={showHint ? "var(--primary-dim)" : "var(--text)"} />}
           </div>
           <div>
-            <div className="t-mini-title" style={{ margin: 0, color: "var(--text)" }}>{showHint ? "מנוע AI פעיל" : "מורה AI ממתין"}</div>
-            <div style={{ fontSize: "0.85rem", color: showHint ? "var(--text)" : "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>
+            <div className="t-mini-title mb-0 text-default">{showHint ? "מנוע AI פעיל" : "מורה AI ממתין"}</div>
+            <div className="text-sm lh-snug mt-1" style={{ color: showHint ? "var(--text)" : "var(--text-muted)" }}>
               {hint ? `"${hint}"` : '"לחצו על ״שלח למנוע AI״ לרמז..."'}
             </div>
           </div>
         </div>
       </div>
-      <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-        <div style={{ height: 120, position: "relative", background: "linear-gradient(45deg,#16181d,#282c35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="card overflow-hidden" style={{ padding: 0 }}>
+        <div className="flex items-center justify-center relative" style={{ height: 120, background: "linear-gradient(45deg,#16181d,#282c35)" }}>
           <div style={{ position: "absolute", inset: 0, opacity: 0.3, background: "repeating-linear-gradient(0deg,transparent,transparent 10px,rgba(255,255,255,0.05) 10px,rgba(255,255,255,0.05) 11px)" }} />
-          <div style={{ width: 48, height: 48, background: "var(--primary-dim)", borderRadius: "var(--r-md)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1, boxShadow: "0 0 20px rgba(52,250,89,0.3)" }}>
+          <div className="icon-box-lg relative" style={{ background: "var(--primary-dim)", zIndex: 1, boxShadow: "0 0 20px rgba(52,250,89,0.3)" }}>
             <Play size={24} color="#000" fill="#000" />
           </div>
         </div>
-        <div style={{ padding: 16 }}>
-          <div className="t-mini-title" style={{ margin: 0 }}>סקירת קונספט</div>
-          <div style={{ fontSize: "0.85rem", fontWeight: 600, marginTop: 4 }}>סיכום עקרונות</div>
+        <div className="p-4">
+          <div className="t-mini-title mb-0">סקירת קונספט</div>
+          <div className="text-sm fw-600 mt-1">סיכום עקרונות</div>
         </div>
       </div>
     </div>

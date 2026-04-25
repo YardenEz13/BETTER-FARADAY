@@ -38,6 +38,7 @@ export type WorkerRequest =
   | { type: "generate"; prompt: string; id: string }
   | { type: "analyze"; conversationText: string; id: string }
   | { type: "summarize"; conversationText: string; id: string }
+  | { type: "brief"; conversationText: string; id: string }
   | { type: "status" }
   | { type: "destroy" };
 
@@ -52,6 +53,8 @@ export type WorkerResponse =
   | { type: "analyze:error"; id: string; error: string }
   | { type: "summarize:done"; id: string; text: string }
   | { type: "summarize:error"; id: string; error: string }
+  | { type: "brief:done"; id: string; json: string }
+  | { type: "brief:error"; id: string; error: string }
   | { type: "status"; status: "idle" | "loading" | "ready" | "error"; percent?: number };
 
 function post(msg: WorkerResponse) {
@@ -66,7 +69,12 @@ async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
 async function isModelCached(): Promise<boolean> {
   try {
     const root = await getOPFSRoot();
-    await root.getFileHandle(OPFS_FILE_NAME);
+    const handle = await root.getFileHandle(OPFS_FILE_NAME);
+    const file = await handle.getFile();
+    if (file.size < 1024 * 1024) { // Delete obviously broken/incomplete files (< 1MB)
+      await root.removeEntry(OPFS_FILE_NAME);
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -151,15 +159,23 @@ async function initModel() {
 
     // Step 3: Create LLM Inference
     post({ type: "init:progress", percent: 96, stage: "מאתחל מודל..." });
-    llmInference = await LlmInference.createFromOptions(genai, {
-      baseOptions: {
-        modelAssetPath: modelPath,
-      },
-      maxTokens: 1024,
-      temperature: 0.5,
-      topK: 40,
-      randomSeed: Math.floor(Math.random() * 1000000),
-    });
+    try {
+      llmInference = await LlmInference.createFromOptions(genai, {
+        baseOptions: {
+          modelAssetPath: modelPath,
+        },
+        maxTokens: 1024,
+        temperature: 0.5,
+        topK: 40,
+        randomSeed: Math.floor(Math.random() * 1000000),
+      });
+    } catch (createErr) {
+      try {
+        const root = await getOPFSRoot();
+        await root.removeEntry(OPFS_FILE_NAME);
+      } catch (_) {}
+      throw new Error("קובץ המודל המקומי נפגם. מחקנו את הקובץ התקול - אנא רענן את הדף (F5) כדי להוריד אותו מחדש בשלמותו.");
+    }
 
     isLoading = false;
     post({ type: "init:ready" });
@@ -269,6 +285,45 @@ ${conversationText}
   }
 }
 
+// ── Brief (Composite Pedagogical Summary) ──
+function brief(conversationText: string, id: string) {
+  if (!llmInference) {
+    post({ type: "brief:error", id, error: "Model not loaded" });
+    return;
+  }
+
+  const prompt = `<start_of_turn>user
+נתח את שיחת התרגול הבאה בין תלמיד למורה AI.
+החזר JSON בפורמט הבא בלבד:
+{
+  "approach": "תיאור קצר של גישת התלמיד",
+  "frictionPoints": ["נקודת חיכוך 1", "נקודת חיכוך 2"],
+  "autonomyLevel": 1-5,
+  "solutionAccuracy": 1-5,
+  "keyInsight": "תובנה מרכזית למורה",
+  "recommendedAction": "המלצה ספציפית למורה"
+}
+
+${conversationText}
+
+JSON:<end_of_turn>
+<start_of_turn>model
+`;
+
+  try {
+    let fullText = "";
+    llmInference.generateResponse(prompt, (partial: string, done: boolean) => {
+      fullText += partial;
+      if (done) {
+        post({ type: "brief:done", id, json: fullText.trim() });
+      }
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    post({ type: "brief:error", id, error: msg });
+  }
+}
+
 // ── Message handler ──
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   const msg = e.data;
@@ -288,6 +343,10 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
 
     case "summarize":
       summarize(msg.conversationText, msg.id);
+      break;
+
+    case "brief":
+      brief(msg.conversationText, msg.id);
       break;
 
     case "status":
