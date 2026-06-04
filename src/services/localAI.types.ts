@@ -16,6 +16,9 @@ export interface ChatMetrics {
   questionDepth?: number;            // 1-5 how deep student probed
   independenceRatio?: number;        // 0-1 how much student showed own work
   gemmaAnalysisSummary?: string;     // Free-text summary from Gemma
+  // Teacher-enriched fields
+  missingKnowledge?: string[];       // Specific concepts/formulas the student doesn't know
+  teacherActionItem?: string;        // Concrete recommended action for teacher
 }
 
 // ── Session Cycling Types ──
@@ -42,6 +45,13 @@ export interface CompositeBrief {
   solutionAccuracy: number;       // 1-5
   keyInsight: string;
   recommendedAction?: string;
+
+  // Teacher-enriched analytics
+  missingConcepts?: string[];       // Concepts the student is missing
+  teacherActionItem?: string;       // Specific action for the teacher
+  studentQuotes?: string[];         // Key quotes from the student that reveal understanding/confusion
+  detailedStruggleAnalysis?: string; // Detailed description of where the student struggled
+  nextSteps?: string[];             // Concrete next exercises/topics for the student
 
   // Student self-assessment
   selfAssessment: string;

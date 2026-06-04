@@ -1,41 +1,38 @@
 /**
- * Local AI Web Worker — MediaPipe LLM Inference (Gemma 3n E2B)
+ * Local AI Web Worker — DictaLM-3.0-1.7B-Thinking via Wllama (GGUF)
  *
  * Runs model loading and inference off the main thread.
  * Communicates via postMessage with the main thread service.
  */
 
-import { FilesetResolver, LlmInference } from "@mediapipe/tasks-genai";
-
-// ── Polyfill for MediaPipe Bug ──
-if (typeof self !== "undefined") {
-  // @ts-ignore
-  self.import = async (url: string) => {
-    // Instead of native import(), which isolates variables in a module scope,
-    // we fetch and globally evaluate the script so that Emscripten's var declarations
-    // attach to the global scope just like importScripts() would.
-    const res = await fetch(url);
-    const code = await res.text();
-    // Indirect eval executes in the global scope
-    (0, eval)(code);
-  };
-}
+import { Wllama, LoggerWithoutDebug } from "@wllama/wllama";
 
 // ── Config ──
 const MODEL_URL =
-  "https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4-Web.litertlm";
-const WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai@latest/wasm";
-const OPFS_FILE_NAME = "gemma-3n-e2b.litertlm";
+  "https://huggingface.co/VRDate/DictaLM-3.0-1.7B-Thinking-Q4_K_M-GGUF/resolve/main/dictalm-3.0-1.7b-thinking-q4_k_m.gguf";
+
+const CONFIG_PATHS = {
+  "default":
+    "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.1.1/esm/wasm/multi-thread/wllama.wasm",
+  "single-thread/wllama.wasm":
+    "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.1.1/esm/wasm/single-thread/wllama.wasm",
+  "multi-thread/wllama.wasm":
+    "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.1.1/esm/wasm/multi-thread/wllama.wasm",
+};
 
 // ── State ──
-let llmInference: LlmInference | null = null;
+let wllama: Wllama | null = null;
 let isLoading = false;
 
 // ── Types for messages ──
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
 export type WorkerRequest =
   | { type: "init" }
-  | { type: "generate"; prompt: string; id: string }
+  | { type: "generate"; messages: ChatMessage[]; id: string }
   | { type: "analyze"; conversationText: string; id: string }
   | { type: "summarize"; conversationText: string; id: string }
   | { type: "brief"; conversationText: string; id: string }
@@ -61,76 +58,20 @@ function post(msg: WorkerResponse) {
   self.postMessage(msg);
 }
 
-// ── OPFS Helpers ──
-async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
-  return await navigator.storage.getDirectory();
-}
-
-async function isModelCached(): Promise<boolean> {
-  try {
-    const root = await getOPFSRoot();
-    const handle = await root.getFileHandle(OPFS_FILE_NAME);
-    const file = await handle.getFile();
-    if (file.size < 1024 * 1024) { // Delete obviously broken/incomplete files (< 1MB)
-      await root.removeEntry(OPFS_FILE_NAME);
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function getCachedModelFile(): Promise<File> {
-  const root = await getOPFSRoot();
-  const handle = await root.getFileHandle(OPFS_FILE_NAME);
-  return await handle.getFile();
-}
-
-// ── Download directly to OPFS ──
-async function downloadAndCacheModel(): Promise<void> {
-  post({ type: "init:progress", percent: 0, stage: "מוריד מודל AI..." });
-
-  const hfToken = import.meta.env.VITE_HF_TOKEN;
-  const headers = hfToken ? { Authorization: `Bearer ${hfToken}` } : undefined;
-
-  const response = await fetch(MODEL_URL, { headers });
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error(
-        "Access to model is restricted (401/403). Please add VITE_HF_TOKEN to your .env.local file after accepting the terms on HuggingFace."
-      );
-    }
-    throw new Error(`Failed to download model: ${response.status}`);
-  }
-
-  const root = await getOPFSRoot();
-  const handle = await root.getFileHandle(OPFS_FILE_NAME, { create: true });
-  const writable = await handle.createWritable();
-
-  const contentLength = Number(response.headers.get("content-length") || 0);
-  const reader = response.body!.getReader();
-  let received = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    await writable.write(value);
-    received += value.length;
-
-    if (contentLength > 0) {
-      const percent = Math.round((received / contentLength) * 100);
-      post({ type: "init:progress", percent, stage: "מוריד מודל AI..." });
-    }
-  }
-
-  await writable.close();
+// ── Think-block stripping ──
+// DictaLM-Thinking outputs <think>...</think> before the actual answer.
+// We strip the think block and only show the clean response.
+function stripThinkBlock(text: string): string {
+  // Remove everything between <think> and </think> (inclusive)
+  const stripped = text.replace(/<think>[\s\S]*?<\/think>\s*/g, "");
+  // If we're still inside an unclosed think block, return empty
+  if (stripped.includes("<think>")) return "";
+  return stripped.trim();
 }
 
 // ── Initialize ──
 async function initModel() {
-  if (llmInference) {
+  if (wllama?.isModelLoaded()) {
     post({ type: "init:ready" });
     return;
   }
@@ -139,43 +80,26 @@ async function initModel() {
   isLoading = true;
 
   try {
-    // Step 1: Resolve WASM fileset
     post({ type: "init:progress", percent: 0, stage: "טוען רכיבי AI..." });
-    const genai = await FilesetResolver.forGenAiTasks(WASM_URL);
 
-    // Step 2: Get or download model
-    let modelPath: string;
+    wllama = new Wllama(CONFIG_PATHS, {
+      logger: LoggerWithoutDebug,
+    });
 
-    if (await isModelCached()) {
-      post({ type: "init:progress", percent: 95, stage: "טוען מודל מהמטמון..." });
-      const file = await getCachedModelFile();
-      modelPath = URL.createObjectURL(file);
-    } else {
-      await downloadAndCacheModel();
-      post({ type: "init:progress", percent: 95, stage: "טוען מודל מקומי..." });
-      const file = await getCachedModelFile();
-      modelPath = URL.createObjectURL(file);
-    }
+    post({ type: "init:progress", percent: 5, stage: "מוריד מודל DictaLM..." });
 
-    // Step 3: Create LLM Inference
-    post({ type: "init:progress", percent: 96, stage: "מאתחל מודל..." });
-    try {
-      llmInference = await LlmInference.createFromOptions(genai, {
-        baseOptions: {
-          modelAssetPath: modelPath,
-        },
-        maxTokens: 1024,
-        temperature: 0.5,
-        topK: 40,
-        randomSeed: Math.floor(Math.random() * 1000000),
-      });
-    } catch (createErr) {
-      try {
-        const root = await getOPFSRoot();
-        await root.removeEntry(OPFS_FILE_NAME);
-      } catch (_) {}
-      throw new Error("קובץ המודל המקומי נפגם. מחקנו את הקובץ התקול - אנא רענן את הדף (F5) כדי להוריד אותו מחדש בשלמותו.");
-    }
+    await wllama.loadModelFromUrl(MODEL_URL, {
+      n_ctx: 4096,
+      n_batch: 512,
+      progressCallback: ({ loaded, total }) => {
+        if (total > 0) {
+          const percent = Math.min(90, Math.round((loaded / total) * 90));
+          post({ type: "init:progress", percent, stage: "מוריד מודל DictaLM..." });
+        }
+      },
+    });
+
+    post({ type: "init:progress", percent: 95, stage: "מאתחל מודל..." });
 
     isLoading = false;
     post({ type: "init:ready" });
@@ -187,23 +111,47 @@ async function initModel() {
   }
 }
 
-// ── Generate ──
-function generate(prompt: string, id: string) {
-  if (!llmInference) {
+// ── Generate (Chat Completion with streaming) ──
+async function generate(messages: ChatMessage[], id: string) {
+  if (!wllama?.isModelLoaded()) {
     post({ type: "generate:error", id, error: "Model not loaded" });
     return;
   }
 
   try {
-    let fullText = "";
-    llmInference.generateResponse(prompt, (partialResult: string, done: boolean) => {
-      fullText += partialResult;
-      if (done) {
-        post({ type: "generate:done", id, text: fullText });
-      } else {
-        post({ type: "generate:partial", id, text: fullText });
-      }
+    let rawText = "";
+    let lastVisibleText = "";
+
+    const stream = await wllama.createChatCompletion({
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      stream: true,
+      temperature: 0.6,
+      top_k: 40,
+      top_p: 0.9,
+      max_tokens: 1024,
+      onData: (chunk) => {
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          rawText += delta;
+          // Strip think blocks and emit visible text
+          const visible = stripThinkBlock(rawText);
+          if (visible && visible !== lastVisibleText) {
+            lastVisibleText = visible;
+            post({ type: "generate:partial", id, text: visible });
+          }
+        }
+      },
     });
+
+    // Consume the async iterator to completion
+    if (stream && Symbol.asyncIterator in Object(stream)) {
+      for await (const _chunk of stream as AsyncIterable<unknown>) {
+        // Already handled via onData callback
+      }
+    }
+
+    const finalText = stripThinkBlock(rawText) || rawText.trim();
+    post({ type: "generate:done", id, text: finalText });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     post({ type: "generate:error", id, error: msg });
@@ -211,19 +159,20 @@ function generate(prompt: string, id: string) {
 }
 
 // ── Analyze ──
-function analyze(conversationText: string, id: string) {
-  if (!llmInference) {
+async function analyze(conversationText: string, id: string) {
+  if (!wllama?.isModelLoaded()) {
     post({ type: "analyze:error", id, error: "Model not loaded" });
     return;
   }
 
-  const prompt = `<start_of_turn>user
-You are an educational analytics engine. Analyze this Hebrew math tutoring conversation and respond ONLY with a valid JSON object (no markdown, no explanation).
-
-Conversation:
-${conversationText}
-
-Respond with this exact JSON structure:
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `אתה מנוע ניתוח פדגוגי. נתח שיחת תרגול מתמטיקה בעברית והחזר JSON בלבד.`
+    },
+    {
+      role: "user",
+      content: `נתח את השיחה הבאה והחזר JSON בפורמט הזה בלבד (ללא markdown):
 {
   "sentiment": "frustrated" | "neutral" | "confident",
   "confusionScore": <0-100>,
@@ -231,22 +180,27 @@ Respond with this exact JSON structure:
   "progressionSignal": "improving" | "stuck" | "declining",
   "questionDepth": <1-5>,
   "independenceRatio": <0.0-1.0>,
-  "conceptMentions": [<list of Hebrew math topic strings detected>],
-  "keyStrugglePoints": [<list of specific struggle descriptions in Hebrew>],
-  "topicsCovered": [<list of math topic names in Hebrew>],
-  "gemmaAnalysisSummary": <one sentence Hebrew summary of the student's understanding level>
-}<end_of_turn>
-<start_of_turn>model
-`;
+  "conceptMentions": [<רשימת נושאים מתמטיים בעברית>],
+  "keyStrugglePoints": [<תיאורי קושי ספציפיים בעברית>],
+  "topicsCovered": [<שמות נושאים מתמטיים בעברית>],
+  "missingKnowledge": [<חוקים/מושגים שחסרים לתלמיד>],
+  "teacherActionItem": "<המלצה ספציפית אחת למורה>",
+  "gemmaAnalysisSummary": "<משפט אחד בעברית שמסכם את רמת ההבנה>"
+}
+
+שיחה:
+${conversationText}`
+    }
+  ];
 
   try {
-    let fullText = "";
-    llmInference.generateResponse(prompt, (partial: string, done: boolean) => {
-      fullText += partial;
-      if (done) {
-        post({ type: "analyze:done", id, json: fullText.trim() });
-      }
+    const result = await wllama.createChatCompletion({
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      temperature: 0.3,
+      max_tokens: 512,
     });
+    const text = result.choices?.[0]?.message?.content || "";
+    post({ type: "analyze:done", id, json: stripThinkBlock(text) || text.trim() });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     post({ type: "analyze:error", id, error: msg });
@@ -254,31 +208,34 @@ Respond with this exact JSON structure:
 }
 
 // ── Summarize ──
-function summarize(conversationText: string, id: string) {
-  if (!llmInference) {
+async function summarize(conversationText: string, id: string) {
+  if (!wllama?.isModelLoaded()) {
     post({ type: "summarize:error", id, error: "Model not loaded" });
     return;
   }
 
-  const prompt = `<start_of_turn>user
-סכם את השיחה הבאה בין תלמיד למורה מתמטיקה בפסקה אחת קצרה בעברית.
-ציין: מה התלמיד שאל, על מה הוא נתקע, ומה הוסבר לו.
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content: "סכם שיחות תרגול מתמטיקה בפסקה אחת קצרה בעברית."
+    },
+    {
+      role: "user",
+      content: `סכם את השיחה הבאה בפסקה אחת קצרה. ציין: מה התלמיד שאל, על מה הוא נתקע, ומה הוסבר לו.
 
 שיחה:
-${conversationText}
-
-סיכום:<end_of_turn>
-<start_of_turn>model
-`;
+${conversationText}`
+    }
+  ];
 
   try {
-    let fullText = "";
-    llmInference.generateResponse(prompt, (partial: string, done: boolean) => {
-      fullText += partial;
-      if (done) {
-        post({ type: "summarize:done", id, text: fullText.trim() });
-      }
+    const result = await wllama.createChatCompletion({
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      temperature: 0.3,
+      max_tokens: 256,
     });
+    const text = result.choices?.[0]?.message?.content || "";
+    post({ type: "summarize:done", id, text: stripThinkBlock(text) || text.trim() });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     post({ type: "summarize:error", id, error: msg });
@@ -286,38 +243,43 @@ ${conversationText}
 }
 
 // ── Brief (Composite Pedagogical Summary) ──
-function brief(conversationText: string, id: string) {
-  if (!llmInference) {
+async function brief(conversationText: string, id: string) {
+  if (!wllama?.isModelLoaded()) {
     post({ type: "brief:error", id, error: "Model not loaded" });
     return;
   }
 
-  const prompt = `<start_of_turn>user
-נתח את שיחת התרגול הבאה בין תלמיד למורה AI.
-החזר JSON בפורמט הבא בלבד:
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content: "אתה מנתח פדגוגי. החזר JSON בלבד."
+    },
+    {
+      role: "user",
+      content: `נתח את שיחת התרגול הבאה והחזר JSON בפורמט הזה בלבד:
 {
   "approach": "תיאור קצר של גישת התלמיד",
   "frictionPoints": ["נקודת חיכוך 1", "נקודת חיכוך 2"],
   "autonomyLevel": 1-5,
   "solutionAccuracy": 1-5,
   "keyInsight": "תובנה מרכזית למורה",
-  "recommendedAction": "המלצה ספציפית למורה"
+  "missingConcepts": ["מושג חסר 1", "מושג חסר 2"],
+  "teacherActionItem": "המלצה ספציפית למורה",
+  "recommendedAction": "פעולה מומלצת"
 }
 
-${conversationText}
-
-JSON:<end_of_turn>
-<start_of_turn>model
-`;
+${conversationText}`
+    }
+  ];
 
   try {
-    let fullText = "";
-    llmInference.generateResponse(prompt, (partial: string, done: boolean) => {
-      fullText += partial;
-      if (done) {
-        post({ type: "brief:done", id, json: fullText.trim() });
-      }
+    const result = await wllama.createChatCompletion({
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      temperature: 0.3,
+      max_tokens: 512,
     });
+    const text = result.choices?.[0]?.message?.content || "";
+    post({ type: "brief:done", id, json: stripThinkBlock(text) || text.trim() });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     post({ type: "brief:error", id, error: msg });
@@ -334,7 +296,7 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
       break;
 
     case "generate":
-      generate(msg.prompt, msg.id);
+      generate(msg.messages, msg.id);
       break;
 
     case "analyze":
@@ -352,14 +314,14 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
     case "status":
       post({
         type: "status",
-        status: llmInference ? "ready" : isLoading ? "loading" : "idle",
+        status: wllama?.isModelLoaded() ? "ready" : isLoading ? "loading" : "idle",
       });
       break;
 
     case "destroy":
-      if (llmInference) {
-        llmInference.close();
-        llmInference = null;
+      if (wllama) {
+        wllama.exit();
+        wllama = null;
       }
       break;
   }

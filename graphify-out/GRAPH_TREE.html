@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>/ — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/ — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"/","total_count":410,"children":[{"name":".agent","total_count":55,"children":[{"name":"skills","total_count":55,"children":[{"name":"ui-ux-pro-max","total_count":55,"children":[{"name":"scripts","total_count":54,"children":[{"name":"core.py","total_count":19,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":".fit()","total_count":1,"children":[]},{"name":".score()","total_count":1,"children":[]},{"name":".tokenize()","total_count":1,"children":[]},{"name":"_load_csv()","total_count":1,"children":[]},{"name":"_search_csv()","total_count":1,"children":[]},{"name":"Auto-detect the most relevant domain from query","total_count":1,"children":[]},{"name":"BM25","total_count":1,"children":[]},{"name":"BM25 ranking algorithm for text search","total_count":1,"children":[]},{"name":"Build BM25 index from documents","total_count":1,"children":[]},{"name":"Core search function using BM25","total_count":1,"children":[]},{"name":"detect_domain()","total_count":1,"children":[]},{"name":"Load CSV and return list of dicts","total_count":1,"children":[]},{"name":"Lowercase, split, remove punctuation, filter short words","total_count":1,"children":[]},{"name":"Main search function with auto-domain detection","total_count":1,"children":[]},{"name":"Score all documents against query","total_count":1,"children":[]},{"name":"Search stack-specific guidelines","total_count":1,"children":[]},{"name":"search()","total_count":1,"children":[]},{"name":"search_stack()","total_count":1,"children":[]}]},{"name":"design_system.py","total_count":33,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":"._apply_reasoning()","total_count":1,"children":[]},{"name":"._extract_results()","total_count":1,"children":[]},{"name":"._find_reasoning_rule()","total_count":1,"children":[]},{"name":"._load_reasoning()","total_count":1,"children":[]},{"name":"._multi_domain_search()","total_count":1,"children":[]},{"name":"._select_best_match()","total_count":1,"children":[]},{"name":".generate()","total_count":1,"children":[]},{"name":"_detect_page_type()","total_count":1,"children":[]},{"name":"_generate_intelligent_overrides()","total_count":1,"children":[]},{"name":"Apply reasoning rules to search results.","total_count":1,"children":[]},{"name":"DesignSystemGenerator","total_count":1,"children":[]},{"name":"Detect page type from context and search results.","total_count":1,"children":[]},{"name":"Execute searches across multiple domains.","total_count":1,"children":[]},{"name":"Extract results list from search result dict.","total_count":1,"children":[]},{"name":"Find matching reasoning rule for a category.","total_count":1,"children":[]},{"name":"Format a page-specific override file with intelligent AI-generated content.","total_count":1,"children":[]},{"name":"Format design system as ASCII box with emojis (MCP-style).","total_count":1,"children":[]},{"name":"Format design system as markdown.","total_count":1,"children":[]},{"name":"Format design system as MASTER.md with hierarchical override logic.","total_count":1,"children":[]},{"name":"format_ascii_box()","total_count":1,"children":[]},{"name":"format_markdown()","total_count":1,"children":[]},{"name":"format_master_md()","total_count":1,"children":[]},{"name":"format_page_override_md()","total_count":1,"children":[]},{"name":"Generate complete design system recommendation.","total_count":1,"children":[]},{"name":"Generate intelligent overrides based on page type using layered search.","total_count":1,"children":[]},{"name":"generate_design_system()","total_count":1,"children":[]},{"name":"Generates design system recommendations from aggregated searches.","total_count":1,"children":[]},{"name":"Load reasoning rules from CSV.","total_count":1,"children":[]},{"name":"Main entry point for design system generation.      Args:         query: Search","total_count":1,"children":[]},{"name":"Persist design system to design-system/<project>/ folder using Master + Override","total_count":1,"children":[]},{"name":"persist_design_system()","total_count":1,"children":[]},{"name":"Select best matching result based on priority keywords.","total_count":1,"children":[]}]},{"name":"search.py","total_count":2,"children":[{"name":"Format results for Claude consumption (token-optimized)","total_count":1,"children":[]},{"name":"format_output()","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":1,"children":[{"name":"UI/UX Pro Max Skill","total_count":1,"children":[]}]}]}]}]},{"name":".agents","total_count":8,"children":[{"name":"skills","total_count":8,"children":[{"name":"browser-use","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Browser Use Skill","total_count":1,"children":[]}]}]},{"name":"convex","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Skill","total_count":1,"children":[]}]}]},{"name":"convex-create-component","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Create Component Skill","total_count":1,"children":[]}]}]},{"name":"convex-migration-helper","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Migration Helper Skill","total_count":1,"children":[]}]}]},{"name":"convex-performance-audit","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Performance Audit Skill","total_count":1,"children":[]}]}]},{"name":"convex-quickstart","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Quickstart Skill","total_count":1,"children":[]}]}]},{"name":"convex-setup-auth","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Setup Auth Skill","total_count":1,"children":[]}]}]},{"name":"frontend-design","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Frontend Design Skill","total_count":1,"children":[]}]}]}]}]},{"name":".claude","total_count":36,"children":[{"name":"skills","total_count":36,"children":[{"name":"code-reviewer","total_count":36,"children":[{"name":"scripts","total_count":36,"children":[{"name":"code_quality_checker.py","total_count":12,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":".analyze()","total_count":1,"children":[]},{"name":".generate_report()","total_count":1,"children":[]},{"name":".run()","total_count":1,"children":[]},{"name":".validate_target()","total_count":1,"children":[]},{"name":"CodeQualityChecker","total_count":1,"children":[]},{"name":"Execute the main functionality","total_count":1,"children":[]},{"name":"Generate and display the report","total_count":1,"children":[]},{"name":"Main class for code quality checker functionality","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Perform the main analysis or operation","total_count":1,"children":[]},{"name":"Validate the target path exists and is accessible","total_count":1,"children":[]}]},{"name":"pr_analyzer.py","total_count":12,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":".analyze()","total_count":1,"children":[]},{"name":".generate_report()","total_count":1,"children":[]},{"name":".run()","total_count":1,"children":[]},{"name":".validate_target()","total_count":1,"children":[]},{"name":"Execute the main functionality","total_count":1,"children":[]},{"name":"Generate and display the report","total_count":1,"children":[]},{"name":"Main class for pr analyzer functionality","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Perform the main analysis or operation","total_count":1,"children":[]},{"name":"PrAnalyzer","total_count":1,"children":[]},{"name":"Validate the target path exists and is accessible","total_count":1,"children":[]}]},{"name":"review_report_generator.py","total_count":12,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":".analyze()","total_count":1,"children":[]},{"name":".generate_report()","total_count":1,"children":[]},{"name":".run()","total_count":1,"children":[]},{"name":".validate_target()","total_count":1,"children":[]},{"name":"Execute the main functionality","total_count":1,"children":[]},{"name":"Generate and display the report","total_count":1,"children":[]},{"name":"Main class for review report generator functionality","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Perform the main analysis or operation","total_count":1,"children":[]},{"name":"ReviewReportGenerator","total_count":1,"children":[]},{"name":"Validate the target path exists and is accessible","total_count":1,"children":[]}]}]}]}]}]},{"name":".gemini","total_count":3,"children":[{"name":"scratch","total_count":3,"children":[{"name":"rebuild_seed.js","total_count":3,"children":[{"name":"fs","total_count":1,"children":[]},{"name":"generateInteractions","total_count":1,"children":[]},{"name":"seedDatabase","total_count":1,"children":[]}]}]}]},{"name":".junie","total_count":21,"children":[{"name":"skills","total_count":21,"children":[{"name":"convex-create-component","total_count":7,"children":[{"name":"references","total_count":7,"children":[{"name":"advanced-patterns.md","total_count":4,"children":[{"name":"Class-based Client Wrappers","total_count":1,"children":[]},{"name":"Deriving Validators from Schema","total_count":1,"children":[]},{"name":"Function Handles for Callbacks","total_count":1,"children":[]},{"name":"Static Configuration with Globals Table","total_count":1,"children":[]}]},{"name":"hybrid-components.md","total_count":1,"children":[{"name":"Hybrid Convex Components","total_count":1,"children":[]}]},{"name":"local-components.md","total_count":1,"children":[{"name":"Local Convex Components","total_count":1,"children":[]}]},{"name":"packaged-components.md","total_count":1,"children":[{"name":"Packaged Convex Components","total_count":1,"children":[]}]}]}]},{"name":"convex-migration-helper","total_count":3,"children":[{"name":"references","total_count":2,"children":[{"name":"migration-patterns.md","total_count":1,"children":[{"name":"Widen-Migrate-Narrow Workflow","total_count":1,"children":[]}]},{"name":"migrations-component.md","total_count":1,"children":[{"name":"@convex-dev/migrations Component","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Migration Helper Skill","total_count":1,"children":[]}]}]},{"name":"convex-performance-audit","total_count":5,"children":[{"name":"references","total_count":4,"children":[{"name":"function-budget.md","total_count":1,"children":[{"name":"Function Budget and Limits","total_count":1,"children":[]}]},{"name":"hot-path-rules.md","total_count":1,"children":[{"name":"Push Filters To Storage (Indexes)","total_count":1,"children":[]}]},{"name":"occ-conflicts.md","total_count":1,"children":[{"name":"OCC Conflict Resolution","total_count":1,"children":[]}]},{"name":"subscription-cost.md","total_count":1,"children":[{"name":"Subscription Cost Optimization","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Performance Audit Skill","total_count":1,"children":[]}]}]},{"name":"convex-quickstart","total_count":1,"children":[{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Quickstart Skill","total_count":1,"children":[]}]}]},{"name":"convex-setup-auth","total_count":5,"children":[{"name":"references","total_count":4,"children":[{"name":"auth0.md","total_count":1,"children":[{"name":"Auth0 Auth Provider","total_count":1,"children":[]}]},{"name":"clerk.md","total_count":1,"children":[{"name":"Clerk Auth Provider","total_count":1,"children":[]}]},{"name":"convex-auth.md","total_count":1,"children":[{"name":"Convex Auth Provider","total_count":1,"children":[]}]},{"name":"workos-authkit.md","total_count":1,"children":[{"name":"WorkOS AuthKit Provider","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":1,"children":[{"name":"Convex Setup Auth Skill","total_count":1,"children":[]}]}]}]}]},{"name":"AGENTS.md","total_count":1,"children":[{"name":"Convex Backend Integration","total_count":1,"children":[]}]},{"name":"CLAUDE.md","total_count":1,"children":[{"name":"Convex Backend Integration","total_count":1,"children":[]}]},{"name":"convex","total_count":98,"children":[{"name":"_generated","total_count":24,"children":[{"name":"ai","total_count":5,"children":[{"name":"ai-files.state.json","total_count":5,"children":[{"name":"agentSkillsSha","total_count":1,"children":[]},{"name":"agentsMdSectionHash","total_count":1,"children":[]},{"name":"claudeMdHash","total_count":1,"children":[]},{"name":"guidelinesHash","total_count":1,"children":[]},{"name":"installedSkillNames","total_count":1,"children":[]}]}]},{"name":"api.js","total_count":3,"children":[{"name":"api","total_count":1,"children":[]},{"name":"components","total_count":1,"children":[]},{"name":"internal","total_count":1,"children":[]}]},{"name":"dataModel.d.ts","total_count":3,"children":[{"name":"Doc","total_count":1,"children":[]},{"name":"Id","total_count":1,"children":[]},{"name":"TableNames","total_count":1,"children":[]}]},{"name":"server.d.ts","total_count":5,"children":[{"name":"ActionCtx","total_count":1,"children":[]},{"name":"DatabaseReader","total_count":1,"children":[]},{"name":"DatabaseWriter","total_count":1,"children":[]},{"name":"MutationCtx","total_count":1,"children":[]},{"name":"QueryCtx","total_count":1,"children":[]}]},{"name":"server.js","total_count":7,"children":[{"name":"action","total_count":1,"children":[]},{"name":"httpAction","total_count":1,"children":[]},{"name":"internalAction","total_count":1,"children":[]},{"name":"internalMutation","total_count":1,"children":[]},{"name":"internalQuery","total_count":1,"children":[]},{"name":"mutation","total_count":1,"children":[]},{"name":"query","total_count":1,"children":[]}]},{"name":"api.d.ts","total_count":1,"children":[]}]},{"name":"ai.ts","total_count":2,"children":[{"name":"generateHint","total_count":1,"children":[]},{"name":"getStudentHints","total_count":1,"children":[]}]},{"name":"aiChat.ts","total_count":9,"children":[{"name":"addMessage","total_count":1,"children":[]},{"name":"deleteChat","total_count":1,"children":[]},{"name":"endChat","total_count":1,"children":[]},{"name":"getActiveChat","total_count":1,"children":[]},{"name":"getChatMessages","total_count":1,"children":[]},{"name":"getStudentChats","total_count":1,"children":[]},{"name":"getTeacherChatAnalytics","total_count":1,"children":[]},{"name":"startChat","total_count":1,"children":[]},{"name":"syncMessages","total_count":1,"children":[]}]},{"name":"attempts.ts","total_count":4,"children":[{"name":"getQuestionFailureRates","total_count":1,"children":[]},{"name":"getRecentAttempts","total_count":1,"children":[]},{"name":"getStudentStats","total_count":1,"children":[]},{"name":"submitAttempt","total_count":1,"children":[]}]},{"name":"classroom.ts","total_count":6,"children":[{"name":"get","total_count":1,"children":[]},{"name":"getByClassroom","total_count":1,"children":[]},{"name":"getClassroomHeatmap","total_count":1,"children":[]},{"name":"getFirstClassroom","total_count":1,"children":[]},{"name":"getLiveAlerts","total_count":1,"children":[]},{"name":"list","total_count":1,"children":[]}]},{"name":"compoundQuestions.ts","total_count":4,"children":[{"name":"getByDifficulty","total_count":1,"children":[]},{"name":"getById","total_count":1,"children":[]},{"name":"getByTopics","total_count":1,"children":[]},{"name":"list","total_count":1,"children":[]}]},{"name":"crons.ts","total_count":1,"children":[{"name":"crons","total_count":1,"children":[]}]},{"name":"homework.ts","total_count":7,"children":[{"name":"assignToStudents","total_count":1,"children":[]},{"name":"closeHomework","total_count":1,"children":[]},{"name":"createHomework","total_count":1,"children":[]},{"name":"finalizeSubmission","total_count":1,"children":[]},{"name":"getHomeworkForClassroom","total_count":1,"children":[]},{"name":"getStudentHomework","total_count":1,"children":[]},{"name":"submitAnswer","total_count":1,"children":[]}]},{"name":"homeworkRundown.ts","total_count":2,"children":[{"name":"generateRundown","total_count":1,"children":[]},{"name":"getRundown","total_count":1,"children":[]}]},{"name":"levels.ts","total_count":5,"children":[{"name":"backfillLevels","total_count":1,"children":[]},{"name":"evaluateStudentLevel","total_count":1,"children":[]},{"name":"getPendingSuggestions","total_count":1,"children":[]},{"name":"resolveSuggestion","total_count":1,"children":[]},{"name":"scheduledEvaluateAll","total_count":1,"children":[]}]},{"name":"powerMap.ts","total_count":4,"children":[{"name":"getClassroomPowerMaps","total_count":1,"children":[]},{"name":"getStudentPowerMap","total_count":1,"children":[]},{"name":"recomputePowerMap","total_count":1,"children":[]},{"name":"scheduledRecompute","total_count":1,"children":[]}]},{"name":"questions.ts","total_count":4,"children":[{"name":"getByTopic","total_count":1,"children":[]},{"name":"getNextQuestion","total_count":1,"children":[]},{"name":"getQuestion","total_count":1,"children":[]},{"name":"list","total_count":1,"children":[]}]},{"name":"seed.ts","total_count":2,"children":[{"name":"generateInteractions","total_count":1,"children":[]},{"name":"seedDatabase","total_count":1,"children":[]}]},{"name":"seedCompound.ts","total_count":1,"children":[{"name":"seedCompoundQuestions","total_count":1,"children":[]}]},{"name":"seedInteractions.ts","total_count":1,"children":[{"name":"generate","total_count":1,"children":[]}]},{"name":"sessionBriefs.ts","total_count":3,"children":[{"name":"createBrief","total_count":1,"children":[]},{"name":"getBriefForChat","total_count":1,"children":[]},{"name":"getBriefsForStudent","total_count":1,"children":[]}]},{"name":"topics.ts","total_count":2,"children":[{"name":"get","total_count":1,"children":[]},{"name":"list","total_count":1,"children":[]}]},{"name":"tsconfig.json","total_count":15,"children":[{"name":"allowJs","total_count":1,"children":[]},{"name":"allowSyntheticDefaultImports","total_count":1,"children":[]},{"name":"compilerOptions","total_count":1,"children":[]},{"name":"exclude","total_count":1,"children":[]},{"name":"forceConsistentCasingInFileNames","total_count":1,"children":[]},{"name":"include","total_count":1,"children":[]},{"name":"isolatedModules","total_count":1,"children":[]},{"name":"jsx","total_count":1,"children":[]},{"name":"lib","total_count":1,"children":[]},{"name":"module","total_count":1,"children":[]},{"name":"moduleResolution","total_count":1,"children":[]},{"name":"noEmit","total_count":1,"children":[]},{"name":"skipLibCheck","total_count":1,"children":[]},{"name":"strict","total_count":1,"children":[]},{"name":"target","total_count":1,"children":[]}]},{"name":"clear.ts","total_count":1,"children":[]},{"name":"schema.ts","total_count":1,"children":[]}]},{"name":"convex_generated","total_count":1,"children":[{"name":"ai","total_count":1,"children":[{"name":"guidelines.md","total_count":1,"children":[{"name":"HTTP Endpoint Guidelines","total_count":1,"children":[]}]}]}]},{"name":"index.html","total_count":1,"children":[{"name":"Application Root","total_count":1,"children":[]}]},{"name":"package.json","total_count":38,"children":[{"name":"@eslint/js","total_count":1,"children":[]},{"name":"@mediapipe/tasks-genai","total_count":1,"children":[]},{"name":"@tailwindcss/vite","total_count":1,"children":[]},{"name":"@types/deep-eql","total_count":1,"children":[]},{"name":"@types/katex","total_count":1,"children":[]},{"name":"@types/node","total_count":1,"children":[]},{"name":"@types/react","total_count":1,"children":[]},{"name":"@vitejs/plugin-react","total_count":1,"children":[]},{"name":"@wllama/wllama","total_count":1,"children":[]},{"name":"build","total_count":1,"children":[]},{"name":"convex","total_count":1,"children":[]},{"name":"dependencies","total_count":1,"children":[]},{"name":"dev","total_count":1,"children":[]},{"name":"devDependencies","total_count":1,"children":[]},{"name":"eslint","total_count":1,"children":[]},{"name":"eslint-plugin-react-hooks","total_count":1,"children":[]},{"name":"eslint-plugin-react-refresh","total_count":1,"children":[]},{"name":"fake-indexeddb","total_count":1,"children":[]},{"name":"framer-motion","total_count":1,"children":[]},{"name":"globals","total_count":1,"children":[]},{"name":"katex","total_count":1,"children":[]},{"name":"lint","total_count":1,"children":[]},{"name":"lucide-react","total_count":1,"children":[]},{"name":"name","total_count":1,"children":[]},{"name":"preview","total_count":1,"children":[]},{"name":"private","total_count":1,"children":[]},{"name":"react","total_count":1,"children":[]},{"name":"react-dom","total_count":1,"children":[]},{"name":"react-router-dom","total_count":1,"children":[]},{"name":"recharts","total_count":1,"children":[]},{"name":"scripts","total_count":1,"children":[]},{"name":"tailwindcss","total_count":1,"children":[]},{"name":"type","total_count":1,"children":[]},{"name":"typescript","total_count":1,"children":[]},{"name":"typescript-eslint","total_count":1,"children":[]},{"name":"version","total_count":1,"children":[]},{"name":"vite","total_count":1,"children":[]},{"name":"vitest","total_count":1,"children":[]}]},{"name":"README.md","total_count":1,"children":[{"name":"Faraday Project","total_count":1,"children":[]}]},{"name":"skills-lock.json","total_count":11,"children":[{"name":"browser-use","total_count":1,"children":[]},{"name":"computedHash","total_count":1,"children":[]},{"name":"convex","total_count":1,"children":[]},{"name":"convex-performance-audit","total_count":1,"children":[]},{"name":"convex-setup-auth","total_count":1,"children":[]},{"name":"frontend-design","total_count":1,"children":[]},{"name":"skillPath","total_count":1,"children":[]},{"name":"skills","total_count":1,"children":[]},{"name":"source","total_count":1,"children":[]},{"name":"sourceType","total_count":1,"children":[]},{"name":"version","total_count":1,"children":[]}]},{"name":"src","total_count":90,"children":[{"name":"App.tsx","total_count":1,"children":[{"name":"App()","total_count":1,"children":[]}]},{"name":"components","total_count":8,"children":[{"name":"AIChatPanel.tsx","total_count":1,"children":[{"name":"AIChatPanelProps","total_count":1,"children":[]}]},{"name":"CompoundQuestionRenderer.tsx","total_count":3,"children":[{"name":"CompoundQuestionData","total_count":1,"children":[]},{"name":"Props","total_count":1,"children":[]},{"name":"Section","total_count":1,"children":[]}]},{"name":"LegacyHomeworkRenderer.tsx","total_count":2,"children":[{"name":"LegacyQuestionData","total_count":1,"children":[]},{"name":"Props","total_count":1,"children":[]}]},{"name":"MathText.tsx","total_count":2,"children":[{"name":"MathText()","total_count":1,"children":[]},{"name":"Props","total_count":1,"children":[]}]}]},{"name":"main.tsx","total_count":1,"children":[{"name":"convex","total_count":1,"children":[]}]},{"name":"pages","total_count":12,"children":[{"name":"PracticeSession.tsx","total_count":5,"children":[{"name":"CenterPanel()","total_count":1,"children":[]},{"name":"QuestionChoices()","total_count":1,"children":[]},{"name":"RightPanel()","total_count":1,"children":[]},{"name":"Sidebar()","total_count":1,"children":[]},{"name":"Topbar()","total_count":1,"children":[]}]},{"name":"RolePage.tsx","total_count":1,"children":[{"name":"StudentSelector()","total_count":1,"children":[]}]},{"name":"TeacherDashboard.tsx","total_count":4,"children":[{"name":"AIChatAnalyticsView()","total_count":1,"children":[]},{"name":"HeatmapView()","total_count":1,"children":[]},{"name":"HomeworkManagementView()","total_count":1,"children":[]},{"name":"StudentPowerMapView()","total_count":1,"children":[]}]},{"name":"StudentHome.tsx","total_count":1,"children":[]},{"name":"StudentHomework.tsx","total_count":1,"children":[]}]},{"name":"services","total_count":67,"children":[{"name":"chatStorage.ts","total_count":15,"children":[{"name":"ActiveSession","total_count":1,"children":[]},{"name":"ChatHistoryEntry","total_count":1,"children":[]},{"name":"clearActiveSession()","total_count":1,"children":[]},{"name":"clearMessages()","total_count":1,"children":[]},{"name":"debouncedSaveMessages()","total_count":1,"children":[]},{"name":"flushAllPending()","total_count":1,"children":[]},{"name":"getActiveSession()","total_count":1,"children":[]},{"name":"getMessages()","total_count":1,"children":[]},{"name":"openDB()","total_count":1,"children":[]},{"name":"pendingSaves","total_count":1,"children":[]},{"name":"saveActiveSession()","total_count":1,"children":[]},{"name":"saveMessages()","total_count":1,"children":[]},{"name":"saveTimers","total_count":1,"children":[]},{"name":"sessionKey()","total_count":1,"children":[]},{"name":"StoredChat","total_count":1,"children":[]}]},{"name":"localAI.ts","total_count":30,"children":[{"name":"analyzeConversation()","total_count":1,"children":[]},{"name":"buildSystemPrompt()","total_count":1,"children":[]},{"name":"compactHistory()","total_count":1,"children":[]},{"name":"createSession()","total_count":1,"children":[]},{"name":"destroySession()","total_count":1,"children":[]},{"name":"DictaLM 3.0 Thinking Model","total_count":1,"children":[]},{"name":"dictaSummary()","total_count":1,"children":[]},{"name":"estimateTokens()","total_count":1,"children":[]},{"name":"formatChatMLMessages()","total_count":1,"children":[]},{"name":"generateCompositeBrief()","total_count":1,"children":[]},{"name":"getAIStatus()","total_count":1,"children":[]},{"name":"getMockResponse()","total_count":1,"children":[]},{"name":"handleAICrash()","total_count":1,"children":[]},{"name":"heuristicAnalysis()","total_count":1,"children":[]},{"name":"heuristicBrief()","total_count":1,"children":[]},{"name":"heuristicSummary()","total_count":1,"children":[]},{"name":"isGPUMode()","total_count":1,"children":[]},{"name":"isLocalAIAvailable()","total_count":1,"children":[]},{"name":"Local AI Service","total_count":1,"children":[]},{"name":"Message","total_count":1,"children":[]},{"name":"needsCompaction()","total_count":1,"children":[]},{"name":"onModelProgress()","total_count":1,"children":[]},{"name":"preloadModel()","total_count":1,"children":[]},{"name":"ProgressCallback","total_count":1,"children":[]},{"name":"reinitSession()","total_count":1,"children":[]},{"name":"streamMessage()","total_count":1,"children":[]},{"name":"stripThinkBlock()","total_count":1,"children":[]},{"name":"Wllama WASM URL","total_count":1,"children":[]},{"name":"WLLAMA_CONFIG_PATHS","total_count":1,"children":[]},{"name":"WllamaChatMessage","total_count":1,"children":[]}]},{"name":"localAI.types.ts","total_count":4,"children":[{"name":"AgentType","total_count":1,"children":[]},{"name":"ChatMetrics","total_count":1,"children":[]},{"name":"CompositeBrief","total_count":1,"children":[]},{"name":"PartialBrief","total_count":1,"children":[]}]},{"name":"localAI.worker.ts","total_count":11,"children":[{"name":"analyze()","total_count":1,"children":[]},{"name":"brief()","total_count":1,"children":[]},{"name":"ChatMessage","total_count":1,"children":[]},{"name":"CONFIG_PATHS","total_count":1,"children":[]},{"name":"generate()","total_count":1,"children":[]},{"name":"initModel()","total_count":1,"children":[]},{"name":"post()","total_count":1,"children":[]},{"name":"stripThinkBlock()","total_count":1,"children":[]},{"name":"summarize()","total_count":1,"children":[]},{"name":"WorkerRequest","total_count":1,"children":[]},{"name":"WorkerResponse","total_count":1,"children":[]}]},{"name":"offlineQueue.ts","total_count":7,"children":[{"name":"clearPendingMessages()","total_count":1,"children":[]},{"name":"getPendingMessages()","total_count":1,"children":[]},{"name":"isOnline()","total_count":1,"children":[]},{"name":"onOnline()","total_count":1,"children":[]},{"name":"openDB()","total_count":1,"children":[]},{"name":"PendingMessage","total_count":1,"children":[]},{"name":"queueMessage()","total_count":1,"children":[]}]}]},{"name":"vite-env.d.ts","total_count":1,"children":[]}]},{"name":"tsconfig.app.json","total_count":22,"children":[{"name":"@/*","total_count":1,"children":[]},{"name":"allowImportingTsExtensions","total_count":1,"children":[]},{"name":"baseUrl","total_count":1,"children":[]},{"name":"compilerOptions","total_count":1,"children":[]},{"name":"include","total_count":1,"children":[]},{"name":"isolatedModules","total_count":1,"children":[]},{"name":"jsx","total_count":1,"children":[]},{"name":"lib","total_count":1,"children":[]},{"name":"module","total_count":1,"children":[]},{"name":"moduleDetection","total_count":1,"children":[]},{"name":"moduleResolution","total_count":1,"children":[]},{"name":"noEmit","total_count":1,"children":[]},{"name":"noFallthroughCasesInSwitch","total_count":1,"children":[]},{"name":"noUncheckedSideEffectImports","total_count":1,"children":[]},{"name":"noUnusedLocals","total_count":1,"children":[]},{"name":"noUnusedParameters","total_count":1,"children":[]},{"name":"paths","total_count":1,"children":[]},{"name":"skipLibCheck","total_count":1,"children":[]},{"name":"strict","total_count":1,"children":[]},{"name":"target","total_count":1,"children":[]},{"name":"tsBuildInfoFile","total_count":1,"children":[]},{"name":"useDefineForClassFields","total_count":1,"children":[]}]},{"name":"tsconfig.json","total_count":2,"children":[{"name":"files","total_count":1,"children":[]},{"name":"references","total_count":1,"children":[]}]},{"name":"tsconfig.node.json","total_count":18,"children":[{"name":"allowImportingTsExtensions","total_count":1,"children":[]},{"name":"compilerOptions","total_count":1,"children":[]},{"name":"include","total_count":1,"children":[]},{"name":"isolatedModules","total_count":1,"children":[]},{"name":"lib","total_count":1,"children":[]},{"name":"module","total_count":1,"children":[]},{"name":"moduleDetection","total_count":1,"children":[]},{"name":"moduleResolution","total_count":1,"children":[]},{"name":"noEmit","total_count":1,"children":[]},{"name":"noFallthroughCasesInSwitch","total_count":1,"children":[]},{"name":"noUncheckedSideEffectImports","total_count":1,"children":[]},{"name":"noUnusedLocals","total_count":1,"children":[]},{"name":"noUnusedParameters","total_count":1,"children":[]},{"name":"skipLibCheck","total_count":1,"children":[]},{"name":"strict","total_count":1,"children":[]},{"name":"target","total_count":1,"children":[]},{"name":"tsBuildInfoFile","total_count":1,"children":[]},{"name":"types","total_count":1,"children":[]}]},{"name":"eslint.config.js","total_count":1,"children":[]},{"name":"lint_errors.json","total_count":1,"children":[]},{"name":"vite.config.ts","total_count":1,"children":[]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>

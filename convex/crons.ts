@@ -10,4 +10,18 @@ crons.interval(
   internal.powerMap.scheduledRecompute,
 );
 
+// Evaluate student levels every 6 hours
+crons.interval(
+  "evaluate-student-levels",
+  { hours: 6 },
+  internal.levels.scheduledEvaluateAll,
+);
+
+// Cleanup abandoned/empty AI chats every 15 minutes
+crons.interval(
+  "cleanup-abandoned-chats",
+  { minutes: 15 },
+  internal.ai.processAbandonedChats,
+);
+
 export default crons;

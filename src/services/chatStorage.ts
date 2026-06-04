@@ -177,7 +177,7 @@ export function debouncedSaveMessages(chatId: string, messages: Message[], delay
 
 /** Immediately flush all pending debounced saves — call before page unload */
 export function flushAllPending(): void {
-  for (const [chatId, timer] of saveTimers) {
+  for (const [_, timer] of saveTimers) {
     clearTimeout(timer);
   }
   saveTimers.clear();

@@ -9,7 +9,11 @@ export const list = query({
 });
 
 export const getNextQuestion = query({
-  args: { studentId: v.id("students"), topicId: v.id("topics") },
+  args: {
+    studentId: v.id("students"),
+    topicId: v.id("topics"),
+    questionKey: v.optional(v.number()),
+  },
   handler: async (ctx, { studentId, topicId }) => {
     // Find recently attempted question IDs
     const recentAttempts = await ctx.db

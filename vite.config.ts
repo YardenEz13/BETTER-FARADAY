@@ -14,14 +14,4 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
-  optimizeDeps: {
-    exclude: ['@mediapipe/tasks-genai'],
-  },
-  server: {
-    headers: {
-      // Required for SharedArrayBuffer (WebGPU WASM)
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
 })

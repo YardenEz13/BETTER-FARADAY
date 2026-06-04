@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useNavigate, useParams } from "react-router-dom";
-import { Id } from "../../convex/_generated/dataModel";
+import { useNavigate, useParams, NavigateFunction } from "react-router-dom";
+import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, Map as MapIcon, BookOpen, BarChart2, Activity, AlertTriangle, FileText, Settings, Plus, Zap, Play, RotateCcw, Loader2, Flame, ChevronLeft, Bot } from "lucide-react";
@@ -13,10 +13,28 @@ export default function PracticeSession() {
   const student = useQuery(api.classroom.get, { id: studentId as Id<"students"> });
   const topicsList = useQuery(api.topics.list);
   const currentTopic = topicsList?.find(t => t._id === topicId);
+  
+  const [questionKey, setQuestionKey] = useState(0);
   const question = useQuery(api.questions.getNextQuestion, {
     studentId: studentId as Id<"students">,
     topicId: topicId as Id<"topics">,
+    questionKey: questionKey,
   });
+
+  const [activeQuestion, setActiveQuestion] = useState<Doc<"questions"> | null>(null);
+
+  // Sync active question from query if currently null
+  useEffect(() => {
+    if (question && !activeQuestion) {
+      setActiveQuestion(question);
+    }
+  }, [question, activeQuestion]);
+
+  // Reset active question when topic changes
+  useEffect(() => {
+    setActiveQuestion(null);
+  }, [topicId]);
+
   const submitAttempt = useMutation(api.attempts.submitAttempt);
   const generateHint = useMutation(api.ai.generateHint);
 
@@ -27,7 +45,6 @@ export default function PracticeSession() {
   const [loadingHint, setLoadingHint] = useState(false);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [questionKey, setQuestionKey] = useState(0);
   const [sessionXP, setSessionXP] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
@@ -40,41 +57,48 @@ export default function PracticeSession() {
   }, [questionKey]);
 
   useEffect(() => {
-    setSelected(null); setSubmitted(false); setShowHint(false);
-    setHint(null); setHintsUsed(0); setElapsed(0);
-    startTimeRef.current = Date.now(); setShowCelebration(false);
-  }, [question?._id]);
+    if (activeQuestion) {
+      setSelected(null); setSubmitted(false); setShowHint(false);
+      setHint(null); setHintsUsed(0); setElapsed(0);
+      startTimeRef.current = Date.now(); setShowCelebration(false);
+    }
+  }, [activeQuestion?._id]);
 
   if (!student || !currentTopic) return null;
 
   const handleSelect = async (idx: number) => {
-    if (submitted || !question) return;
+    if (submitted || !activeQuestion) return;
     setSelected(idx); setSubmitted(true);
-    const isCorrect = idx === question.correctIndex;
+    const isCorrect = idx === activeQuestion.correctIndex;
     setQuestionsAnswered(q => q + 1);
     if (isCorrect) {
-      setSessionXP(x => x + (question.difficulty * 50) + (hintsUsed === 0 ? 30 : 0));
+      setSessionXP(x => x + (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0));
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1500);
     }
     await submitAttempt({
-      studentId: studentId as Id<"students">, questionId: question._id,
+      studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
-      timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: question.difficulty,
+      timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: activeQuestion.difficulty,
     });
   };
 
   const handleHint = async () => {
-    if (!question || loadingHint) return;
+    if (!activeQuestion || loadingHint) return;
     setShowHint(true); setLoadingHint(true); setHintsUsed(h => h + 1);
     const r = await generateHint({
-      studentId: studentId as Id<"students">, questionId: question._id,
-      studentInput: selected !== null ? question.choices[selected] : "",
+      studentId: studentId as Id<"students">, questionId: activeQuestion._id,
+      studentInput: selected !== null ? activeQuestion.choices[selected] : "",
     });
     setHint(r.hint); setLoadingHint(false);
   };
 
-  const isCorrect = submitted && selected === question?.correctIndex;
+  const handleNextQuestion = () => {
+    setActiveQuestion(null);
+    setQuestionKey(k => k + 1);
+  };
+
+  const isCorrect = submitted && selected === activeQuestion?.correctIndex;
 
   return (
     <div className="app-layout">
@@ -83,12 +107,12 @@ export default function PracticeSession() {
         <Topbar student={student} />
         <div className="app-main">
           <CenterPanel
-            currentTopic={currentTopic} question={question} student={student}
+            currentTopic={currentTopic} question={activeQuestion} student={student}
             questionsAnswered={questionsAnswered} sessionXP={sessionXP}
             showCelebration={showCelebration} submitted={submitted}
             selected={selected} isCorrect={isCorrect} elapsed={elapsed}
             hintsUsed={hintsUsed} handleSelect={handleSelect} handleHint={handleHint}
-            setQuestionKey={setQuestionKey} navigate={navigate} studentId={studentId}
+            onNext={handleNextQuestion} navigate={navigate} studentId={studentId}
           />
           <RightPanel showHint={showHint} loadingHint={loadingHint} hint={hint} />
         </div>
@@ -105,10 +129,10 @@ export default function PracticeSession() {
         onClose={() => setChatOpen(false)}
         studentId={studentId!}
         agentType="practice"
-        questionStem={question?.stem}
+        questionStem={activeQuestion?.stem}
         topicName={currentTopic?.nameHe}
         topicId={topicId}
-        questionId={question?._id}
+        questionId={activeQuestion?._id}
       />
 
       <style>{`@keyframes spin{100%{transform:rotate(360deg)}}@keyframes blink{50%{opacity:0}}`}</style>
@@ -116,7 +140,7 @@ export default function PracticeSession() {
   );
 }
 
-function Sidebar({ studentId, navigate }: { studentId: string; navigate: any }) {
+function Sidebar({ studentId, navigate }: { studentId: string; navigate: NavigateFunction }) {
   return (
     <aside className="app-sidebar">
       <div className="app-brand"><span>FARADAY</span> Logic</div>
@@ -133,7 +157,7 @@ function Sidebar({ studentId, navigate }: { studentId: string; navigate: any }) 
   );
 }
 
-function Topbar({ student }: { student: any }) {
+function Topbar({ student }: { student: Doc<"students"> }) {
   return (
     <header className="app-topbar">
       <div className="topbar-links">
@@ -155,7 +179,41 @@ function Topbar({ student }: { student: any }) {
   );
 }
 
-function CenterPanel({ currentTopic, question, student, questionsAnswered, sessionXP, showCelebration, submitted, selected, isCorrect, elapsed, hintsUsed, handleSelect, handleHint, setQuestionKey, navigate, studentId }: any) {
+function CenterPanel({
+  currentTopic,
+  question,
+  student,
+  questionsAnswered,
+  sessionXP,
+  showCelebration,
+  submitted,
+  selected,
+  isCorrect,
+  elapsed,
+  hintsUsed,
+  handleSelect,
+  handleHint,
+  onNext,
+  navigate,
+  studentId
+}: {
+  currentTopic: Doc<"topics">;
+  question: Doc<"questions"> | null | undefined;
+  student: Doc<"students">;
+  questionsAnswered: number;
+  sessionXP: number;
+  showCelebration: boolean;
+  submitted: boolean;
+  selected: number | null;
+  isCorrect: boolean;
+  elapsed: number;
+  hintsUsed: number;
+  handleSelect: (idx: number) => void;
+  handleHint: () => void;
+  onNext: () => void;
+  navigate: NavigateFunction;
+  studentId: string | undefined;
+}) {
   return (
     <div className="app-center p-10">
       <div className="flex justify-between items-end mb-8">
@@ -215,14 +273,34 @@ function CenterPanel({ currentTopic, question, student, questionsAnswered, sessi
             </div>
           </motion.div>
 
-          <QuestionChoices question={question} submitted={submitted} selected={selected} isCorrect={isCorrect} elapsed={elapsed} handleSelect={handleSelect} handleHint={handleHint} setQuestionKey={setQuestionKey} hintsUsed={hintsUsed} />
+          <QuestionChoices question={question} submitted={submitted} selected={selected} isCorrect={isCorrect} elapsed={elapsed} handleSelect={handleSelect} handleHint={handleHint} onNext={onNext} hintsUsed={hintsUsed} />
         </>
       )}
     </div>
   );
 }
 
-function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, handleSelect, handleHint, setQuestionKey, hintsUsed }: any) {
+function QuestionChoices({
+  question,
+  submitted,
+  selected,
+  isCorrect,
+  elapsed,
+  handleSelect,
+  handleHint,
+  onNext,
+  hintsUsed
+}: {
+  question: Doc<"questions">;
+  submitted: boolean;
+  selected: number | null;
+  isCorrect: boolean;
+  elapsed: number;
+  handleSelect: (idx: number) => void;
+  handleHint: () => void;
+  onNext: () => void;
+  hintsUsed: number;
+}) {
   return (
     <div style={{ padding: "0 24px" }}>
       <div className="flex justify-between items-center mb-6">
@@ -241,7 +319,7 @@ function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, ha
               const isCorrectC = idx === question.correctIndex;
               const isWrong = submitted && idx === selected && !isCorrectC;
               const isRight = submitted && isCorrectC;
-              let s: React.CSSProperties = { background: "var(--surface-high)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
+              const s: React.CSSProperties = { background: "var(--surface-high)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
               if (submitted) { s.cursor = "default"; if (isRight) { s.background = "var(--primary-alpha)"; s.border = "1px solid var(--success)"; s.color = "var(--success)"; } else if (isWrong) { s.background = "rgba(254,111,107,0.1)"; s.border = "1px solid var(--danger)"; s.color = "var(--danger)"; } else { s.opacity = 0.5; } } else if (selected === idx) { s.border = "1px solid var(--primary-dim)"; s.boxShadow = "inset 0 0 0 1px var(--primary-dim)"; }
               return (
                 <motion.button key={idx} style={s} onClick={() => handleSelect(idx)} whileHover={!submitted ? { scale: 1.01 } : {}} whileTap={!submitted ? { scale: 0.99 } : {}}>
@@ -257,7 +335,7 @@ function QuestionChoices({ question, submitted, selected, isCorrect, elapsed, ha
               <button className="key-btn" style={{ padding: "0 24px", background: selected !== null ? "var(--primary-dim)" : "var(--surface)", color: selected !== null ? "#000" : "var(--text)", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 700 }}>בדוק תשובה</button>
               <button className="key-btn" style={{ padding: "0 16px", background: "transparent", border: "none", color: "var(--danger)", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 700 }} onClick={handleHint}><AlertTriangle size={14} style={{ marginLeft: 8, display: "inline-block", verticalAlign: "middle" }} /> שלח למנוע AI</button>
             </>) : (
-              <motion.button className="key-btn" style={{ padding: "0 24px", background: "var(--primary-dim)", color: "#000", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 800 }} onClick={() => setQuestionKey((k: number) => k + 1)} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <motion.button className="key-btn" style={{ padding: "0 24px", background: "var(--primary-dim)", color: "#000", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 800 }} onClick={onNext} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 שאלה הבאה <ChevronLeft size={14} style={{ marginRight: 8, display: "inline-block", verticalAlign: "middle" }} />
               </motion.button>
             )}
@@ -290,7 +368,7 @@ function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadin
       setEqValue("");
     } else if (key === "=") {
       try {
-        let expr = eqValue
+        const expr = eqValue
           .replace(/×/g, "*")
           .replace(/÷/g, "/")
           .replace(/π/g, "Math.PI")
@@ -301,7 +379,7 @@ function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadin
           .replace(/√\(/g, "Math.sqrt(")
           .replace(/\^/g, "**"); // Handle powers
         
-        // eslint-disable-next-line no-new-func
+         
         const result = new Function("return " + expr)();
         
         if (Number.isFinite(result)) {
@@ -309,7 +387,7 @@ function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadin
         } else {
            setEqValue("Error");
         }
-      } catch (e) {
+      } catch {
         setEqValue("Error");
       }
     } else if (["sin", "cos", "tan", "log", "√"].includes(key)) {

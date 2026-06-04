@@ -1,0 +1,724 @@
+{
+  "communities": {
+    "0": [
+      "components_aichatpanel_aichatpanelprops",
+      "services_chatstorage_activesession",
+      "services_chatstorage_chathistoryentry",
+      "services_chatstorage_clearactivesession",
+      "services_chatstorage_clearmessages",
+      "services_chatstorage_debouncedsavemessages",
+      "services_chatstorage_flushallpending",
+      "services_chatstorage_getactivesession",
+      "services_chatstorage_getmessages",
+      "services_chatstorage_opendb",
+      "services_chatstorage_pendingsaves",
+      "services_chatstorage_saveactivesession",
+      "services_chatstorage_savemessages",
+      "services_chatstorage_savetimers",
+      "services_chatstorage_sessionkey",
+      "services_chatstorage_storedchat",
+      "services_localai_analyzeconversation",
+      "services_localai_buildsystemprompt",
+      "services_localai_compacthistory",
+      "services_localai_createsession",
+      "services_localai_destroysession",
+      "services_localai_dictasummary",
+      "services_localai_estimatetokens",
+      "services_localai_formatchatmlmessages",
+      "services_localai_generatecompositebrief",
+      "services_localai_getaistatus",
+      "services_localai_getmockresponse",
+      "services_localai_handleaicrash",
+      "services_localai_heuristicanalysis",
+      "services_localai_heuristicbrief",
+      "services_localai_heuristicsummary",
+      "services_localai_isgpumode",
+      "services_localai_islocalaiavailable",
+      "services_localai_message",
+      "services_localai_needscompaction",
+      "services_localai_onmodelprogress",
+      "services_localai_preloadmodel",
+      "services_localai_progresscallback",
+      "services_localai_reinitsession",
+      "services_localai_streammessage",
+      "services_localai_stripthinkblock",
+      "services_localai_types_agenttype",
+      "services_localai_types_chatmetrics",
+      "services_localai_types_compositebrief",
+      "services_localai_types_partialbrief",
+      "services_localai_wllama_config_paths",
+      "services_localai_wllamachatmessage",
+      "services_offlinequeue_clearpendingmessages",
+      "services_offlinequeue_getpendingmessages",
+      "services_offlinequeue_isonline",
+      "services_offlinequeue_ononline",
+      "services_offlinequeue_opendb",
+      "services_offlinequeue_pendingmessage",
+      "services_offlinequeue_queuemessage",
+      "src_components_aichatpanel_tsx",
+      "src_services_chatstorage_ts",
+      "src_services_localai_ts",
+      "src_services_localai_types_ts",
+      "src_services_offlinequeue_ts"
+    ],
+    "1": [
+      "agent_skills_ui_ux_pro_max_scripts_design_system_py",
+      "scripts_design_system_designsystemgenerator",
+      "scripts_design_system_designsystemgenerator_apply_reasoning",
+      "scripts_design_system_designsystemgenerator_extract_results",
+      "scripts_design_system_designsystemgenerator_find_reasoning_rule",
+      "scripts_design_system_designsystemgenerator_generate",
+      "scripts_design_system_designsystemgenerator_init",
+      "scripts_design_system_designsystemgenerator_load_reasoning",
+      "scripts_design_system_designsystemgenerator_multi_domain_search",
+      "scripts_design_system_designsystemgenerator_select_best_match",
+      "scripts_design_system_detect_page_type",
+      "scripts_design_system_format_ascii_box",
+      "scripts_design_system_format_markdown",
+      "scripts_design_system_format_master_md",
+      "scripts_design_system_format_page_override_md",
+      "scripts_design_system_generate_design_system",
+      "scripts_design_system_generate_intelligent_overrides",
+      "scripts_design_system_persist_design_system",
+      "scripts_design_system_rationale_1021",
+      "scripts_design_system_rationale_123",
+      "scripts_design_system_rationale_160",
+      "scripts_design_system_rationale_164",
+      "scripts_design_system_rationale_243",
+      "scripts_design_system_rationale_368",
+      "scripts_design_system_rationale_38",
+      "scripts_design_system_rationale_44",
+      "scripts_design_system_rationale_464",
+      "scripts_design_system_rationale_492",
+      "scripts_design_system_rationale_52",
+      "scripts_design_system_rationale_543",
+      "scripts_design_system_rationale_65",
+      "scripts_design_system_rationale_806",
+      "scripts_design_system_rationale_89",
+      "scripts_design_system_rationale_915"
+    ],
+    "2": [
+      "auth0_auth_provider",
+      "clerk_auth_provider",
+      "cobalt_apollo_skills_lock_convex_computedhash",
+      "cobalt_apollo_skills_lock_convex_skillpath",
+      "cobalt_apollo_skills_lock_convex_source",
+      "cobalt_apollo_skills_lock_convex_sourcetype",
+      "cobalt_apollo_skills_lock_skills",
+      "cobalt_apollo_skills_lock_skills_browser_use",
+      "cobalt_apollo_skills_lock_skills_convex",
+      "cobalt_apollo_skills_lock_skills_convex_performance_audit",
+      "cobalt_apollo_skills_lock_skills_convex_setup_auth",
+      "cobalt_apollo_skills_lock_skills_frontend_design",
+      "cobalt_apollo_skills_lock_version",
+      "convex_auth_provider",
+      "convex_migration_helper_skill",
+      "convex_performance_audit_skill",
+      "convex_quickstart_skill",
+      "convex_setup_auth_skill",
+      "function_budget_limits",
+      "hot_path_rules_indexes",
+      "migration_patterns_widen_migrate_narrow",
+      "migrations_component_setup",
+      "occ_conflicts_resolution",
+      "skill_convex",
+      "skill_convex_create_component",
+      "skill_convex_migration_helper",
+      "skill_convex_performance_audit",
+      "skill_convex_quickstart",
+      "skill_convex_setup_auth",
+      "skills_lock_json",
+      "subscription_cost_optimization",
+      "workos_authkit_provider"
+    ],
+    "3": [
+      "components_compoundquestionrenderer_compoundquestiondata",
+      "components_compoundquestionrenderer_props",
+      "components_compoundquestionrenderer_section",
+      "components_legacyhomeworkrenderer_legacyquestiondata",
+      "components_legacyhomeworkrenderer_props",
+      "components_mathtext_mathtext",
+      "components_mathtext_props",
+      "convex_generated_api_js",
+      "generated_api_api",
+      "generated_api_components",
+      "pages_practicesession_centerpanel",
+      "pages_practicesession_questionchoices",
+      "pages_practicesession_rightpanel",
+      "pages_practicesession_sidebar",
+      "pages_practicesession_topbar",
+      "pages_rolepage_studentselector",
+      "pages_teacherdashboard_aichatanalyticsview",
+      "pages_teacherdashboard_heatmapview",
+      "pages_teacherdashboard_homeworkmanagementview",
+      "pages_teacherdashboard_studentpowermapview",
+      "src_app_app",
+      "src_app_tsx",
+      "src_components_compoundquestionrenderer_tsx",
+      "src_components_legacyhomeworkrenderer_tsx",
+      "src_components_mathtext_tsx",
+      "src_main_convex",
+      "src_main_tsx",
+      "src_pages_practicesession_tsx",
+      "src_pages_rolepage_tsx",
+      "src_pages_studenthome_tsx",
+      "src_pages_studenthomework_tsx",
+      "src_pages_teacherdashboard_tsx"
+    ],
+    "4": [
+      "cobalt_apollo_package_dependencies",
+      "cobalt_apollo_package_dependencies_convex",
+      "cobalt_apollo_package_dependencies_framer_motion",
+      "cobalt_apollo_package_dependencies_katex",
+      "cobalt_apollo_package_dependencies_lucide_react",
+      "cobalt_apollo_package_dependencies_mediapipe_tasks_genai",
+      "cobalt_apollo_package_dependencies_react",
+      "cobalt_apollo_package_dependencies_react_dom",
+      "cobalt_apollo_package_dependencies_react_router_dom",
+      "cobalt_apollo_package_dependencies_recharts",
+      "cobalt_apollo_package_dependencies_tailwindcss",
+      "cobalt_apollo_package_dependencies_tailwindcss_vite",
+      "cobalt_apollo_package_dependencies_types_katex",
+      "cobalt_apollo_package_dependencies_wllama_wllama",
+      "cobalt_apollo_package_name",
+      "cobalt_apollo_package_private",
+      "cobalt_apollo_package_scripts",
+      "cobalt_apollo_package_scripts_build",
+      "cobalt_apollo_package_scripts_dev",
+      "cobalt_apollo_package_scripts_lint",
+      "cobalt_apollo_package_scripts_preview",
+      "cobalt_apollo_package_type",
+      "cobalt_apollo_package_version",
+      "package_json"
+    ],
+    "5": [
+      "cobalt_apollo_tsconfig_app_compileroptions",
+      "cobalt_apollo_tsconfig_app_compileroptions_allowimportingtsextensions",
+      "cobalt_apollo_tsconfig_app_compileroptions_baseurl",
+      "cobalt_apollo_tsconfig_app_compileroptions_isolatedmodules",
+      "cobalt_apollo_tsconfig_app_compileroptions_jsx",
+      "cobalt_apollo_tsconfig_app_compileroptions_lib",
+      "cobalt_apollo_tsconfig_app_compileroptions_module",
+      "cobalt_apollo_tsconfig_app_compileroptions_moduledetection",
+      "cobalt_apollo_tsconfig_app_compileroptions_moduleresolution",
+      "cobalt_apollo_tsconfig_app_compileroptions_noemit",
+      "cobalt_apollo_tsconfig_app_compileroptions_nofallthroughcasesinswitch",
+      "cobalt_apollo_tsconfig_app_compileroptions_nouncheckedsideeffectimports",
+      "cobalt_apollo_tsconfig_app_compileroptions_nounusedlocals",
+      "cobalt_apollo_tsconfig_app_compileroptions_nounusedparameters",
+      "cobalt_apollo_tsconfig_app_compileroptions_paths",
+      "cobalt_apollo_tsconfig_app_compileroptions_skiplibcheck",
+      "cobalt_apollo_tsconfig_app_compileroptions_strict",
+      "cobalt_apollo_tsconfig_app_compileroptions_target",
+      "cobalt_apollo_tsconfig_app_compileroptions_tsbuildinfofile",
+      "cobalt_apollo_tsconfig_app_compileroptions_usedefineforclassfields",
+      "cobalt_apollo_tsconfig_app_include",
+      "cobalt_apollo_tsconfig_app_paths",
+      "tsconfig_app_json"
+    ],
+    "6": [
+      "agent_skills_ui_ux_pro_max_scripts_core_py",
+      "scripts_core_bm25",
+      "scripts_core_bm25_fit",
+      "scripts_core_bm25_init",
+      "scripts_core_bm25_score",
+      "scripts_core_bm25_tokenize",
+      "scripts_core_detect_domain",
+      "scripts_core_load_csv",
+      "scripts_core_rationale_110",
+      "scripts_core_rationale_115",
+      "scripts_core_rationale_134",
+      "scripts_core_rationale_160",
+      "scripts_core_rationale_166",
+      "scripts_core_rationale_191",
+      "scripts_core_rationale_213",
+      "scripts_core_rationale_235",
+      "scripts_core_rationale_97",
+      "scripts_core_search",
+      "scripts_core_search_csv",
+      "scripts_core_search_stack"
+    ],
+    "7": [
+      "cobalt_apollo_tsconfig_node_compileroptions",
+      "cobalt_apollo_tsconfig_node_compileroptions_allowimportingtsextensions",
+      "cobalt_apollo_tsconfig_node_compileroptions_isolatedmodules",
+      "cobalt_apollo_tsconfig_node_compileroptions_lib",
+      "cobalt_apollo_tsconfig_node_compileroptions_module",
+      "cobalt_apollo_tsconfig_node_compileroptions_moduledetection",
+      "cobalt_apollo_tsconfig_node_compileroptions_moduleresolution",
+      "cobalt_apollo_tsconfig_node_compileroptions_noemit",
+      "cobalt_apollo_tsconfig_node_compileroptions_nofallthroughcasesinswitch",
+      "cobalt_apollo_tsconfig_node_compileroptions_nouncheckedsideeffectimports",
+      "cobalt_apollo_tsconfig_node_compileroptions_nounusedlocals",
+      "cobalt_apollo_tsconfig_node_compileroptions_nounusedparameters",
+      "cobalt_apollo_tsconfig_node_compileroptions_skiplibcheck",
+      "cobalt_apollo_tsconfig_node_compileroptions_strict",
+      "cobalt_apollo_tsconfig_node_compileroptions_target",
+      "cobalt_apollo_tsconfig_node_compileroptions_tsbuildinfofile",
+      "cobalt_apollo_tsconfig_node_compileroptions_types",
+      "cobalt_apollo_tsconfig_node_include",
+      "tsconfig_node_json"
+    ],
+    "8": [
+      "convex_ai_generatehint",
+      "convex_ai_getstudenthints",
+      "convex_ai_ts",
+      "convex_clear_ts",
+      "convex_generated_api_d_ts",
+      "convex_generated_server_js",
+      "convex_seed_generateinteractions",
+      "convex_seed_seeddatabase",
+      "convex_seed_ts",
+      "convex_seedcompound_seedcompoundquestions",
+      "convex_seedcompound_ts",
+      "convex_seedinteractions_generate",
+      "convex_seedinteractions_ts",
+      "convex_sessionbriefs_createbrief",
+      "convex_sessionbriefs_getbriefforchat",
+      "convex_sessionbriefs_getbriefsforstudent",
+      "convex_sessionbriefs_ts",
+      "generated_server_mutation"
+    ],
+    "9": [
+      "convex_tsconfig_compileroptions",
+      "convex_tsconfig_compileroptions_allowjs",
+      "convex_tsconfig_compileroptions_allowsyntheticdefaultimports",
+      "convex_tsconfig_compileroptions_forceconsistentcasinginfilenames",
+      "convex_tsconfig_compileroptions_isolatedmodules",
+      "convex_tsconfig_compileroptions_jsx",
+      "convex_tsconfig_compileroptions_lib",
+      "convex_tsconfig_compileroptions_module",
+      "convex_tsconfig_compileroptions_moduleresolution",
+      "convex_tsconfig_compileroptions_noemit",
+      "convex_tsconfig_compileroptions_skiplibcheck",
+      "convex_tsconfig_compileroptions_strict",
+      "convex_tsconfig_compileroptions_target",
+      "convex_tsconfig_exclude",
+      "convex_tsconfig_include",
+      "convex_tsconfig_json"
+    ],
+    "10": [
+      "cobalt_apollo_package_devdependencies",
+      "cobalt_apollo_package_devdependencies_eslint",
+      "cobalt_apollo_package_devdependencies_eslint_js",
+      "cobalt_apollo_package_devdependencies_eslint_plugin_react_hooks",
+      "cobalt_apollo_package_devdependencies_eslint_plugin_react_refresh",
+      "cobalt_apollo_package_devdependencies_fake_indexeddb",
+      "cobalt_apollo_package_devdependencies_globals",
+      "cobalt_apollo_package_devdependencies_types_deep_eql",
+      "cobalt_apollo_package_devdependencies_types_node",
+      "cobalt_apollo_package_devdependencies_types_react",
+      "cobalt_apollo_package_devdependencies_typescript",
+      "cobalt_apollo_package_devdependencies_typescript_eslint",
+      "cobalt_apollo_package_devdependencies_vite",
+      "cobalt_apollo_package_devdependencies_vitejs_plugin_react",
+      "cobalt_apollo_package_devdependencies_vitest"
+    ],
+    "11": [
+      "scripts_code_quality_checker_codequalitychecker",
+      "scripts_code_quality_checker_codequalitychecker_analyze",
+      "scripts_code_quality_checker_codequalitychecker_generate_report",
+      "scripts_code_quality_checker_codequalitychecker_init",
+      "scripts_code_quality_checker_codequalitychecker_run",
+      "scripts_code_quality_checker_codequalitychecker_validate_target",
+      "scripts_code_quality_checker_main",
+      "scripts_code_quality_checker_rationale_15",
+      "scripts_code_quality_checker_rationale_23",
+      "scripts_code_quality_checker_rationale_40",
+      "scripts_code_quality_checker_rationale_48",
+      "scripts_code_quality_checker_rationale_62"
+    ],
+    "12": [
+      "scripts_pr_analyzer_main",
+      "scripts_pr_analyzer_pranalyzer",
+      "scripts_pr_analyzer_pranalyzer_analyze",
+      "scripts_pr_analyzer_pranalyzer_generate_report",
+      "scripts_pr_analyzer_pranalyzer_init",
+      "scripts_pr_analyzer_pranalyzer_run",
+      "scripts_pr_analyzer_pranalyzer_validate_target",
+      "scripts_pr_analyzer_rationale_15",
+      "scripts_pr_analyzer_rationale_23",
+      "scripts_pr_analyzer_rationale_40",
+      "scripts_pr_analyzer_rationale_48",
+      "scripts_pr_analyzer_rationale_62"
+    ],
+    "13": [
+      "scripts_review_report_generator_main",
+      "scripts_review_report_generator_rationale_15",
+      "scripts_review_report_generator_rationale_23",
+      "scripts_review_report_generator_rationale_40",
+      "scripts_review_report_generator_rationale_48",
+      "scripts_review_report_generator_rationale_62",
+      "scripts_review_report_generator_reviewreportgenerator",
+      "scripts_review_report_generator_reviewreportgenerator_analyze",
+      "scripts_review_report_generator_reviewreportgenerator_generate_report",
+      "scripts_review_report_generator_reviewreportgenerator_init",
+      "scripts_review_report_generator_reviewreportgenerator_run",
+      "scripts_review_report_generator_reviewreportgenerator_validate_target"
+    ],
+    "14": [
+      "services_localai_worker_analyze",
+      "services_localai_worker_brief",
+      "services_localai_worker_chatmessage",
+      "services_localai_worker_config_paths",
+      "services_localai_worker_generate",
+      "services_localai_worker_initmodel",
+      "services_localai_worker_post",
+      "services_localai_worker_stripthinkblock",
+      "services_localai_worker_summarize",
+      "services_localai_worker_workerrequest",
+      "services_localai_worker_workerresponse",
+      "src_services_localai_worker_ts"
+    ],
+    "15": [
+      "convex_aichat_addmessage",
+      "convex_aichat_deletechat",
+      "convex_aichat_endchat",
+      "convex_aichat_getactivechat",
+      "convex_aichat_getchatmessages",
+      "convex_aichat_getstudentchats",
+      "convex_aichat_getteacherchatanalytics",
+      "convex_aichat_startchat",
+      "convex_aichat_syncmessages",
+      "convex_aichat_ts"
+    ],
+    "16": [
+      "convex_homeworkrundown_generaterundown",
+      "convex_homeworkrundown_getrundown",
+      "convex_homeworkrundown_ts",
+      "convex_levels_backfilllevels",
+      "convex_levels_evaluatestudentlevel",
+      "convex_levels_getpendingsuggestions",
+      "convex_levels_resolvesuggestion",
+      "convex_levels_scheduledevaluateall",
+      "convex_levels_ts",
+      "generated_server_internalmutation"
+    ],
+    "17": [
+      "convex_compoundquestions_getbydifficulty",
+      "convex_compoundquestions_getbyid",
+      "convex_compoundquestions_getbytopics",
+      "convex_compoundquestions_list",
+      "convex_compoundquestions_ts",
+      "convex_topics_get",
+      "convex_topics_list",
+      "convex_topics_ts",
+      "generated_server_query"
+    ],
+    "18": [
+      "convex_crons_crons",
+      "convex_crons_ts",
+      "convex_powermap_getclassroompowermaps",
+      "convex_powermap_getstudentpowermap",
+      "convex_powermap_recomputepowermap",
+      "convex_powermap_scheduledrecompute",
+      "convex_powermap_ts",
+      "generated_api_internal"
+    ],
+    "19": [
+      "convex_homework_assigntostudents",
+      "convex_homework_closehomework",
+      "convex_homework_createhomework",
+      "convex_homework_finalizesubmission",
+      "convex_homework_gethomeworkforclassroom",
+      "convex_homework_getstudenthomework",
+      "convex_homework_submitanswer",
+      "convex_homework_ts"
+    ],
+    "20": [
+      "convex_classroom_get",
+      "convex_classroom_getbyclassroom",
+      "convex_classroom_getclassroomheatmap",
+      "convex_classroom_getfirstclassroom",
+      "convex_classroom_getlivealerts",
+      "convex_classroom_list",
+      "convex_classroom_ts"
+    ],
+    "21": [
+      "ai_ai_files_state_agentskillssha",
+      "ai_ai_files_state_agentsmdsectionhash",
+      "ai_ai_files_state_claudemdhash",
+      "ai_ai_files_state_guidelineshash",
+      "ai_ai_files_state_installedskillnames",
+      "convex_generated_ai_ai_files_state_json"
+    ],
+    "22": [
+      "convex_generated_server_d_ts",
+      "generated_server_d_actionctx",
+      "generated_server_d_databasereader",
+      "generated_server_d_databasewriter",
+      "generated_server_d_mutationctx",
+      "generated_server_d_queryctx"
+    ],
+    "23": [
+      "convex_generated_datamodel_d_ts",
+      "convex_schema_ts",
+      "generated_datamodel_d_doc",
+      "generated_datamodel_d_id",
+      "generated_datamodel_d_tablenames"
+    ],
+    "24": [
+      "convex_questions_getbytopic",
+      "convex_questions_getnextquestion",
+      "convex_questions_getquestion",
+      "convex_questions_list",
+      "convex_questions_ts"
+    ],
+    "25": [
+      "convex_attempts_getquestionfailurerates",
+      "convex_attempts_getrecentattempts",
+      "convex_attempts_getstudentstats",
+      "convex_attempts_submitattempt",
+      "convex_attempts_ts"
+    ],
+    "26": [
+      "index_root",
+      "localai_dictalm_3_0",
+      "localai_localai",
+      "localai_wllamawasmurl",
+      "readme_faraday_project"
+    ],
+    "27": [
+      "gemini_scratch_rebuild_seed_js",
+      "scratch_rebuild_seed_fs",
+      "scratch_rebuild_seed_generateinteractions",
+      "scratch_rebuild_seed_seeddatabase"
+    ],
+    "28": [
+      "agent_skills_ui_ux_pro_max_scripts_search_py",
+      "scripts_search_format_output",
+      "scripts_search_rationale_31"
+    ],
+    "29": [
+      "cobalt_apollo_tsconfig_files",
+      "cobalt_apollo_tsconfig_references",
+      "tsconfig_json"
+    ],
+    "30": [
+      "agents_convex",
+      "claude_convex"
+    ],
+    "31": [
+      "eslint_config_js"
+    ],
+    "32": [
+      "lint_errors_json"
+    ],
+    "33": [
+      "vite_config_ts"
+    ],
+    "34": [
+      "src_vite_env_d_ts"
+    ],
+    "35": [
+      "generated_server_internalquery"
+    ],
+    "36": [
+      "generated_server_action"
+    ],
+    "37": [
+      "generated_server_internalaction"
+    ],
+    "38": [
+      "generated_server_httpaction"
+    ],
+    "39": [
+      "advanced_patterns_function_handles"
+    ],
+    "40": [
+      "advanced_patterns_schema_derivation"
+    ],
+    "41": [
+      "advanced_patterns_globals_table"
+    ],
+    "42": [
+      "advanced_patterns_client_wrappers"
+    ],
+    "43": [
+      "hybrid_components_overview"
+    ],
+    "44": [
+      "local_components_overview"
+    ],
+    "45": [
+      "packaged_components_overview"
+    ],
+    "46": [
+      "guidelines_http_endpoints"
+    ],
+    "47": [
+      "skill_ui_ux_pro_max"
+    ],
+    "48": [
+      "skill_browser_use"
+    ],
+    "49": [
+      "skill_frontend_design"
+    ]
+  },
+  "cohesion": {
+    "0": 0.07071887784921099,
+    "1": 0.0855614973262032,
+    "2": 0.11895161290322581,
+    "3": 0.08870967741935484,
+    "4": 0.08333333333333333,
+    "5": 0.08695652173913043,
+    "6": 0.14736842105263157,
+    "7": 0.10526315789473684,
+    "8": 0.17647058823529413,
+    "9": 0.125,
+    "10": 0.13333333333333333,
+    "11": 0.22727272727272727,
+    "12": 0.22727272727272727,
+    "13": 0.22727272727272727,
+    "14": 0.30303030303030304,
+    "15": 0.2,
+    "16": 0.2,
+    "17": 0.2222222222222222,
+    "18": 0.25,
+    "19": 0.25,
+    "20": 0.2857142857142857,
+    "21": 0.3333333333333333,
+    "22": 0.3333333333333333,
+    "23": 0.4,
+    "24": 0.4,
+    "25": 0.4,
+    "26": 0.4,
+    "27": 0.5,
+    "28": 0.6666666666666666,
+    "29": 0.6666666666666666,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0,
+    "47": 1.0,
+    "48": 1.0,
+    "49": 1.0
+  },
+  "gods": [
+    {
+      "id": "cobalt_apollo_tsconfig_app_compileroptions",
+      "label": "compilerOptions",
+      "degree": 20
+    },
+    {
+      "id": "cobalt_apollo_tsconfig_node_compileroptions",
+      "label": "compilerOptions",
+      "degree": 17
+    },
+    {
+      "id": "convex_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 13
+    },
+    {
+      "id": "generated_server_mutation",
+      "label": "mutation",
+      "degree": 13
+    },
+    {
+      "id": "scripts_design_system_designsystemgenerator",
+      "label": "DesignSystemGenerator",
+      "degree": 11
+    },
+    {
+      "id": "generated_server_query",
+      "label": "query",
+      "degree": 11
+    },
+    {
+      "id": "convex_migration_helper_skill",
+      "label": "Convex Migration Helper Skill",
+      "degree": 10
+    },
+    {
+      "id": "cobalt_apollo_skills_lock_skills",
+      "label": "skills",
+      "degree": 9
+    },
+    {
+      "id": "cobalt_apollo_skills_lock_convex_source",
+      "label": "source",
+      "degree": 8
+    },
+    {
+      "id": "cobalt_apollo_skills_lock_convex_sourcetype",
+      "label": "sourceType",
+      "degree": 8
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Faraday Project",
+      "target": "Local AI Service",
+      "source_files": [
+        "README.md",
+        "src/services/localAI.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "references",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code \u2194 doc); connects across different repos/directories"
+    },
+    {
+      "source": "Convex Backend Integration",
+      "target": "Convex Backend Integration",
+      "source_files": [
+        "AGENTS.md",
+        "CLAUDE.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "semantically_similar_to",
+      "why": "connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Application Root",
+      "target": "Faraday Project",
+      "source_files": [
+        "index.html",
+        "README.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "implements",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "_generate_intelligent_overrides()",
+      "target": "search()",
+      "source_files": [
+        ".agent/skills/ui-ux-pro-max/scripts/design_system.py",
+        ".agent/skills/ui-ux-pro-max/scripts/core.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "Convex Migration Helper Skill",
+      "target": "@convex-dev/migrations Component",
+      "source_files": [
+        ".junie/skills/convex-migration-helper/SKILL.md",
+        ".junie/skills/convex-migration-helper/references/migrations-component.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "peripheral node `@convex-dev/migrations Component` unexpectedly reaches hub `Convex Migration Helper Skill`"
+    }
+  ],
+  "tokens": {
+    "input": 114837,
+    "output": 5573
+  }
+}

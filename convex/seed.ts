@@ -47,6 +47,7 @@ export const seedDatabase = mutation({
         avatarColor: colors[i % colors.length],
         streak: Math.floor(Math.random() * 8),
         currentTopicId: undefined,
+        level: 1,
       });
       studentIds.push(id);
     }

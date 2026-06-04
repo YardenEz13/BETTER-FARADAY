@@ -1,18 +1,20 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Bell, Mail, User, Search, Map as MapIcon, BookOpen, BarChart2, Activity, AlertTriangle, FileText, Settings, HelpCircle, Plus, ChevronDown, RefreshCw, MessageSquare, Bot, Frown, Smile, Meh, ArrowRight, TrendingUp, Zap, ChevronRight } from "lucide-react";
+import { Bell, Mail, User, Search, Map as MapIcon, BookOpen, BarChart2, Activity, AlertTriangle, FileText, Settings, HelpCircle, Plus, ChevronDown, RefreshCw, MessageSquare, Bot, Frown, Smile, Meh, ArrowRight, TrendingUp, Zap, ChevronRight, Clock, CheckCircle2, Users, Calendar, Send, XCircle, Trash2 } from "lucide-react";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const classroom = useQuery(api.classroom.getFirstClassroom);
   const heatmap = useQuery(api.classroom.getClassroomHeatmap, classroom ? { classroomId: classroom._id } : "skip");
   const aiAnalytics = useQuery(api.aiChat.getTeacherChatAnalytics, classroom ? { classroomId: classroom._id } : "skip");
-  const [activeTab, setActiveTab] = useState<"heatmap" | "aiChats" | "powerMap">("heatmap");
+  const dashboardStats = useQuery(api.classroom.getDashboardStats, classroom ? { classroomId: classroom._id } : "skip");
+  const liveAlerts = useQuery(api.classroom.getLiveAlerts, classroom ? { classroomId: classroom._id } : "skip");
+  const [activeTab, setActiveTab] = useState<"heatmap" | "aiChats" | "powerMap" | "homework">("heatmap");
   const [selectedStudentId, setSelectedStudentId] = useState<Id<"students"> | null>(null);
 
   if (!heatmap) return null;
@@ -66,7 +68,7 @@ export default function TeacherDashboard() {
             <div className={`topbar-link ${activeTab === 'heatmap' ? 'active' : ''}`} onClick={() => setActiveTab('heatmap')} style={{ cursor: 'pointer' }}>מפת חום</div>
             <div className={`topbar-link ${activeTab === 'aiChats' ? 'active' : ''}`} onClick={() => setActiveTab('aiChats')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Bot size={16} /> שיחות AI</div>
             <div className={`topbar-link ${activeTab === 'powerMap' ? 'active' : ''}`} onClick={() => setActiveTab('powerMap')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><TrendingUp size={16} /> פרופיל תלמיד</div>
-            <div className="topbar-link">תוכנית לימודים</div>
+            <div className={`topbar-link ${activeTab === 'homework' ? 'active' : ''}`} onClick={() => setActiveTab('homework')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileText size={16} /> שיעורי בית</div>
           </div>
           <div className="topbar-actions">
             <div className="search-box">
@@ -84,15 +86,19 @@ export default function TeacherDashboard() {
           <AnimatePresence mode="wait">
             {activeTab === 'heatmap' ? (
               <motion.div key="heatmap" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.4, ease: "easeOut" }} style={{ flex: 1, display: 'flex', width: '100%' }}>
-                <HeatmapView heatmap={heatmap} counts={counts} onStudentClick={(id: Id<"students">) => { setSelectedStudentId(id); setActiveTab('powerMap'); }} />
+                <HeatmapView heatmap={heatmap} counts={counts} classroom={classroom} dashboardStats={dashboardStats} liveAlerts={liveAlerts} onStudentClick={(id: Id<"students">) => { setSelectedStudentId(id); setActiveTab('powerMap'); }} />
               </motion.div>
             ) : activeTab === 'aiChats' ? (
               <motion.div key="aiChats" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.4, ease: "easeOut" }} style={{ flex: 1, display: 'flex', width: '100%' }}>
                 <AIChatAnalyticsView analytics={aiAnalytics} />
               </motion.div>
-            ) : (
+            ) : activeTab === 'powerMap' ? (
               <motion.div key="powerMap" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.4, ease: "easeOut" }} style={{ flex: 1, display: 'flex', width: '100%' }}>
                 <StudentPowerMapView studentId={selectedStudentId} onBack={() => setActiveTab('heatmap')} />
+              </motion.div>
+            ) : (
+              <motion.div key="homework" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.4, ease: "easeOut" }} style={{ flex: 1, display: 'flex', width: '100%' }}>
+                <HomeworkManagementView classroomId={classroom?._id ?? null} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -103,7 +109,10 @@ export default function TeacherDashboard() {
 }
 
 /* ── Heatmap View (original content) ── */
-function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; counts: { green: number; yellow: number; red: number }; onStudentClick: (id: Id<"students">) => void }) {
+function HeatmapView({ heatmap, counts, classroom, dashboardStats, liveAlerts, onStudentClick }: { heatmap: any[]; counts: { green: number; yellow: number; red: number }; classroom: any; dashboardStats: any; liveAlerts: any; onStudentClick: (id: Id<"students">) => void }) {
+  const pendingLevels = useQuery(api.levels.getPendingSuggestions, classroom ? { classroomId: classroom._id } : "skip");
+  const resolveLevel = useMutation(api.levels.resolveSuggestion);
+
   return (
     <>
       {/* עמודה מרכזית: רשת מפת חום */}
@@ -113,7 +122,7 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
           <div style={{ maxWidth: 400 }}>
             <h1 className="t-h1 mb-4">מפת חום<br />כיתתית<br />בזמן אמת</h1>
             <p className="t-sub text-base">
-              מעקב חי אחרי {heatmap.length} תלמידים ב<span className="text-primary">אלגברה מתקדמת: אריתמטיקה מודולרית</span>.
+              מעקב חי אחרי {heatmap.length} תלמידים ב<span className="text-primary">{classroom?.name ?? "כיתה"}</span>.
             </p>
           </div>
 
@@ -138,23 +147,6 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
         <div className="flex justify-between items-end mb-6">
           <div className="flex gap-4">
             <div>
-              <div className="t-mini-title">אשכול כיתה</div>
-              <div className="search-box justify-between pointer" style={{ width: 180 }}>
-                <span className="text-sm">אלגברה מתקדמת</span>
-                <ChevronDown size={14} color="var(--text-faint)" />
-              </div>
-            </div>
-            <div>
-              <div className="t-mini-title">נושא פעיל</div>
-              <div className="search-box justify-between pointer" style={{ width: 180 }}>
-                <span className="text-sm">הוכחות מורכבות 4</span>
-                <ChevronDown size={14} color="var(--text-faint)" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div>
               <div className="t-mini-title">רמת סיכון</div>
               <div className="flex gap-2">
                 <button className="key-btn" style={{ width: 40, height: 40 }}><div className="dot dot-green" /></button>
@@ -162,8 +154,11 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
                 <button className="key-btn" style={{ width: 40, height: 40, border: "1px solid var(--danger)", background: "rgba(254,111,107,0.1)" }}><div className="dot dot-red" style={{ borderRadius: 2, height: 12, width: 4 }} /></button>
               </div>
             </div>
+          </div>
+
+          <div className="flex gap-4">
             <button className="key-btn text-sm font-body fw-700" style={{ padding: "0 16px", height: 40 }}>
-              <RefreshCw size={14} style={{ marginLeft: 8 }} /> סנכרון מאולץ
+              <RefreshCw size={14} style={{ marginLeft: 8 }} /> ריענון הנתונים
             </button>
           </div>
         </div>
@@ -178,9 +173,10 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
             visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
           }}
         >
-          {heatmap.map(({ student, status, isStuck, recentAttempts }) => {
+          {heatmap.map(({ student, status, currentTopicName, isStuck, recentAttempts }) => {
             const filled = recentAttempts ? recentAttempts.filter((a: any) => a.isCorrect).length : 0;
             const total = recentAttempts ? recentAttempts.length : 0;
+            const attemptsArr = recentAttempts ? [...recentAttempts].reverse() : []; // show chronologically
 
             return (
               <motion.div
@@ -215,21 +211,23 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
 
                 <div className="flex justify-between items-end" style={{ marginBottom: 6 }}>
                   <div>
-                    <div className="t-mini-title" style={{ margin: 0 }}>שלב 6M</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{filled}/{total || 12} {isStuck && <span style={{ color: "var(--danger)" }}>תקוע</span>}</div>
+                    <div className="t-mini-title" style={{ margin: 0, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentTopicName || 'נושא פעיל'}</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{filled}/{total || 0} {isStuck && <span style={{ color: "var(--danger)" }}>תקוע</span>}</div>
                   </div>
-                  {status === "green" && <div className="t-mini-title" style={{ color: "var(--primary-dim)", margin: 0 }}>הושלם</div>}
+                  {status === "green" && <div className="t-mini-title" style={{ color: "var(--primary-dim)", margin: 0 }}>מצוין</div>}
                 </div>
 
                 <div className="seg-bar">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="seg" style={{ background: i < 3 ? (status === 'red' ? 'var(--danger)' : status === 'green' ? 'var(--primary-dim)' : 'var(--warning)') : "var(--surface-highest)" }} />
-                  ))}
+                  {attemptsArr.length > 0 ? attemptsArr.map((a: any, i: number) => (
+                    <div key={i} className="seg" style={{ background: a.isCorrect ? 'var(--primary-dim)' : 'var(--danger)' }} title={a.isCorrect ? 'נכון' : 'שגוי'} />
+                  )) : (
+                    <div className="seg" style={{ background: "var(--surface-highest)", width: '100%' }} title="אין נתונים עדיין" />
+                  )}
                 </div>
               </motion.div>
             );
           })}
-          {[...Array(9)].map((_, i) => (
+          {heatmap.length < 12 && [...Array(12 - heatmap.length)].map((_, i) => (
             <motion.div
               key={`empty-${i}`}
               className="student-card s-empty"
@@ -256,47 +254,97 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
         <div className="t-mini-title mb-6 text-default">תובנות בזמן אמת</div>
 
         {/* כרטיס התערבות דחופה */}
-        <div className="card p-5 mb-8" style={{ background: "transparent", border: "1px solid rgba(254,111,107,0.3)" }}>
-          <div className="flex items-center gap-2 t-mini-title mb-3 text-danger">
-            <span className="text-lg fw-900">!</span> התערבות דחופה
+        {liveAlerts && liveAlerts.length > 0 ? (
+          <div className="card p-5 mb-8" style={{ background: "transparent", border: "1px solid rgba(254,111,107,0.3)" }}>
+            <div className="flex items-center gap-2 t-mini-title mb-3 text-danger">
+              <span className="text-lg fw-900">!</span> התערבות דחופה
+            </div>
+            <p className="t-sub text-sm text-muted mb-4">
+              <strong className="text-white">{liveAlerts[0].count} תלמידים</strong> נתקעים ב<strong className="text-white">{liveAlerts[0].topicName}</strong>. 
+              <br/>"{liveAlerts[0].questionStem}"
+            </p>
+            <button className="btn btn-danger">
+              שליחת טיפ לכיתה
+            </button>
           </div>
-          <p className="t-sub text-sm text-muted mb-4">
-            5 תלמידים נכשלים בחישוב ההופכי המודולרי ב<strong className="text-white">שלב 4</strong>. זמן עיכוב ממוצע: 6 דקות ו-12 שניות.
-          </p>
-          <button className="btn btn-danger">
-            שליחת טיפ לכיתה
-          </button>
-        </div>
+        ) : (
+          <div className="card p-5 mb-8 text-center" style={{ background: "transparent", border: "1px solid rgba(52,250,89,0.2)" }}>
+            <div className="flex items-center justify-center gap-2 t-mini-title mb-2" style={{ color: "var(--primary-dim)" }}>
+              <CheckCircle2 size={18} /> הכל מתנהל כשורה
+            </div>
+            <p className="text-xs text-muted">אין התראות דחופות כרגע.</p>
+          </div>
+        )}
+
+        {/* Level Suggestions */}
+        <div className="t-mini-title mb-4 text-default flex items-center gap-2"><TrendingUp size={16} color="var(--primary-dim)" /> הצעות לקידום רמה</div>
+        {pendingLevels && pendingLevels.length > 0 ? (
+          <div className="flex-col gap-4 mb-8">
+            {pendingLevels.map((s, i) => (
+              <div key={i} className="card p-4" style={{ border: '1px solid var(--primary-dim)', background: 'var(--surface)' }}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="avatar" style={{ width: 24, height: 24, background: s.avatarColor || 'var(--surface-highest)' }}>
+                      {(s.studentName || '?')[0]}
+                    </div>
+                    <div>
+                      <div className="text-sm fw-800">{s.studentName}</div>
+                      <div className="t-sub text-xs">רמה {s.currentLevel} ← רמה {s.suggestedLevel}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted mb-3">{s.reason}</div>
+                <div className="flex gap-2">
+                  <button className="btn btn-primary" style={{ flex: 1, padding: '4px 0', fontSize: '0.8rem' }} onClick={() => resolveLevel({ suggestionId: s._id as any, action: 'approved' })}>
+                    <CheckCircle2 size={14} style={{ display: 'inline', marginLeft: 4 }} /> אישור
+                  </button>
+                  <button className="btn" style={{ flex: 1, padding: '4px 0', fontSize: '0.8rem', background: 'var(--surface-highest)' }} onClick={() => resolveLevel({ suggestionId: s._id as any, action: 'rejected' })}>
+                    <XCircle size={14} style={{ display: 'inline', marginLeft: 4 }} /> דחייה
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-4 mb-8 text-center text-faint text-sm">
+            אין הצעות קידום כרגע.
+          </div>
+        )}
 
         {/* אבני דרך אחרונות */}
         <div className="t-mini-title mb-4 text-default">אבני דרך אחרונות</div>
-        <div className="flex-col gap-4 mb-8">
-          {[
-            { n: "אלנה פ.", a: "השלימה הוכחה 4.2", t: "לפני 2 שניות · 98% דיוק" },
-            { n: "שרה כ.", a: "השלימה הוכחה 4.2", t: "לפני 14 שניות · 94% דיוק" },
-            { n: "מרקוס י.", a: "פתח רמז 2", t: "לפני 45 שניות" },
-          ].map((m, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <div className="dot dot-green" style={{ marginTop: 6 }} />
-              <div>
-                <div className="text-sm"><strong>{m.n}</strong> {m.a}</div>
-                <div className="t-sub text-xs mt-1">{m.t}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {dashboardStats?.milestones?.length > 0 ? (
+          <div className="flex-col gap-4 mb-8">
+            {dashboardStats.milestones.map((m: any, i: number) => {
+              const diffSec = Math.floor((Date.now() - m.timestamp) / 1000);
+              const diffMin = Math.floor(diffSec / 60);
+              const timeStr = diffSec < 60 ? `לפני ${diffSec} שניות` : `לפני ${diffMin} דקות`;
+              
+              return (
+                <div key={i} className="flex gap-3 items-start">
+                  <div className={`dot ${m.isCorrect ? 'dot-green' : 'dot-red'}`} style={{ marginTop: 6, borderRadius: m.isCorrect ? '50%' : 2, width: m.isCorrect ? 8 : 4, height: m.isCorrect ? 8 : 8 }} />
+                  <div>
+                    <div className="text-sm"><strong>{m.studentName}</strong> {m.action} <span style={{ opacity: 0.7 }}>({m.topicName})</span></div>
+                    <div className="t-sub text-xs mt-1">{timeStr}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="card p-4 mb-8 text-center text-faint text-sm">
+            אין אירועים עדיין
+          </div>
+        )}
 
         {/* כרטיס מהירות הפעלה גלובלית */}
         <div className="card p-5">
           <div className="t-mini-title text-primary mb-3">מהירות שיעור גלובלית</div>
           <div className="font-title fw-900 text-3xl lh-1 mb-4">
-            4.2 <span className="fw-600 text-muted" style={{ fontSize: "1rem", fontStyle: "italic", verticalAlign: "middle" }}>צעדים/דקה</span>
-          </div>
-          <div className="progress-bar mb-2">
-            <div style={{ width: "72%", height: "100%", background: "var(--primary-dim)", borderRadius: 2 }} />
+            {dashboardStats?.globalSpeed || 0} <span className="fw-600 text-muted" style={{ fontSize: "1rem", fontStyle: "italic", verticalAlign: "middle" }}>פעולות/דקה</span>
           </div>
           <div className="text-left text-2xs text-faint">
-            72% התקדמות ליעד
+            מבוסס על ממוצע כיתתי בשעה האחרונה
           </div>
         </div>
 
@@ -308,6 +356,8 @@ function HeatmapView({ heatmap, counts, onStudentClick }: { heatmap: any[]; coun
 /* ── AI Chat Analytics View ── */
 function AIChatAnalyticsView({ analytics }: { analytics: any }) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const deleteChatMut = useMutation(api.aiChat.deleteChat);
   const chatMessages = useQuery(
     api.aiChat.getChatMessages,
     selectedChatId ? { chatId: selectedChatId as any } : "skip"
@@ -411,20 +461,43 @@ function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                     <div className="text-xs text-faint">
                       <MessageSquare size={12} style={{ display: 'inline', marginLeft: 4 }} /> {chat.messageCount}
                     </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(chat._id); }}
+                      title="מחק שיחה"
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, borderRadius: 'var(--r-sm)', transition: 'color 0.15s' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-faint)')}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
 
                 {chat.metrics && (
-                  <div className="flex gap-4 mt-2">
-                    <div className="context-chip">
-                      <div className="flex items-center gap-1">{SentimentIcon(chat.metrics.sentiment)}</div> {sentimentLabel(chat.metrics.sentiment)}
+                  <div className="flex-col gap-2 mt-2">
+                    <div className="flex gap-4">
+                      <div className="context-chip">
+                        <div className="flex items-center gap-1">{SentimentIcon(chat.metrics.sentiment)}</div> {sentimentLabel(chat.metrics.sentiment)}
+                      </div>
+                      <div className="context-chip">
+                        בלבול: {chat.metrics.confusionScore}%
+                      </div>
+                      {chat.metrics.keyStrugglePoints?.slice(0, 2).map((p: string, i: number) => (
+                        <div key={i} className="context-chip flex items-center gap-1"><AlertTriangle size={12} /> {p}</div>
+                      ))}
                     </div>
-                    <div className="context-chip">
-                      בלבול: {chat.metrics.confusionScore}%
-                    </div>
-                    {chat.metrics.keyStrugglePoints?.slice(0, 2).map((p: string, i: number) => (
-                      <div key={i} className="context-chip flex items-center gap-1"><AlertTriangle size={12} /> {p}</div>
-                    ))}
+                    {chat.metrics.missingKnowledge && chat.metrics.missingKnowledge.length > 0 && (
+                      <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
+                        {chat.metrics.missingKnowledge.map((mk: string, i: number) => (
+                          <span key={i} className="context-chip" style={{ background: "rgba(254,111,107,0.1)", color: "var(--danger)", borderColor: "rgba(254,111,107,0.25)" }}>🧩 {mk}</span>
+                        ))}
+                      </div>
+                    )}
+                    {chat.metrics.teacherActionItem && (
+                      <div style={{ fontSize: "0.78rem", color: "var(--primary-dim)", fontWeight: 600 }}>
+                        🎯 {chat.metrics.teacherActionItem}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -450,6 +523,34 @@ function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             ))
           )}
         </motion.div>
+
+        {/* Delete confirmation dialog */}
+        {confirmDeleteId && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'var(--surface-highest)', border: '1px solid var(--danger)', borderRadius: 'var(--r-md)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}
+          >
+            <AlertTriangle size={20} color="var(--danger)" />
+            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>למחוק את השיחה לצמיתות?</span>
+            <button
+              onClick={async () => {
+                await deleteChatMut({ chatId: confirmDeleteId as any });
+                setConfirmDeleteId(null);
+                if (selectedChatId === confirmDeleteId) setSelectedChatId(null);
+              }}
+              style={{ background: 'var(--danger)', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: 'var(--r-sm)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              מחק
+            </button>
+            <button
+              onClick={() => setConfirmDeleteId(null)}
+              style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--surface-highest)', padding: '6px 16px', borderRadius: 'var(--r-sm)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+            >
+              ביטול
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* Right panel: Top struggles */}
@@ -704,6 +805,47 @@ function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> 
                   <strong> תובנה:</strong> {brief.keyInsight}
                 </div>
 
+                {brief.missingConcepts && brief.missingConcepts.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--danger)", marginBottom: 4 }}>🧩 מושגים חסרים:</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {brief.missingConcepts.map((c: string, i: number) => (
+                        <span key={i} style={{ fontSize: "0.75rem", padding: "2px 8px", borderRadius: "var(--r-sm)", background: "rgba(254,111,107,0.12)", color: "var(--danger)", border: "1px solid rgba(254,111,107,0.25)" }}>{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {brief.teacherActionItem && (
+                  <div style={{ fontSize: "0.8rem", padding: "8px 12px", borderRadius: "var(--r-sm)", background: "rgba(99,179,237,0.1)", border: "1px solid rgba(99,179,237,0.25)", marginBottom: 8 }}>
+                    <strong>🎯 פעולה נדרשת:</strong> {brief.teacherActionItem}
+                  </div>
+                )}
+
+                {brief.detailedStruggleAnalysis && (
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 8 }}>
+                    <strong>📋 ניתוח קשיים:</strong> {brief.detailedStruggleAnalysis}
+                  </div>
+                )}
+
+                {brief.nextSteps && brief.nextSteps.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--success)", marginBottom: 4 }}>📌 צעדים הבאים:</div>
+                    {brief.nextSteps.map((step: string, i: number) => (
+                      <div key={i} style={{ fontSize: "0.8rem", color: "var(--text-muted)", paddingRight: 12 }}>• {step}</div>
+                    ))}
+                  </div>
+                )}
+
+                {brief.studentQuotes && brief.studentQuotes.length > 0 && (
+                  <div style={{ marginBottom: 8, padding: "8px 12px", borderRadius: "var(--r-sm)", background: "var(--surface)", borderRight: "3px solid var(--primary-dim)" }}>
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-faint)", marginBottom: 4 }}>💬 ציטוטים מהתלמיד:</div>
+                    {brief.studentQuotes.map((q: string, i: number) => (
+                      <div key={i} style={{ fontSize: "0.8rem", fontStyle: "italic", color: "var(--text-muted)", marginBottom: 2 }}>{q}</div>
+                    ))}
+                  </div>
+                )}
+
                 {brief.recommendedAction && (
                   <div style={{ fontSize: "0.8rem", color: "var(--primary-dim)" }}>
                     <ArrowRight size={12} style={{ display: "inline", marginLeft: 4 }} />
@@ -799,6 +941,364 @@ function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> 
         ) : (
           <div className="card p-5 text-center text-faint">
             אין נתוני מעורבות עדיין
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ── Homework Management View ── */
+function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
+  const topics = useQuery(api.topics.list);
+  const homeworkList = useQuery(
+    api.homework.getHomeworkForClassroom,
+    classroomId ? { classroomId } : "skip"
+  );
+  const createHomework = useMutation(api.homework.createHomework);
+  const closeHomework = useMutation(api.homework.closeHomework);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [title, setTitle] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<Id<"topics">[]>([]);
+  const [teacherNotes, setTeacherNotes] = useState("");
+  const [questionCount, setQuestionCount] = useState(4);
+  const [deadlineDays, setDeadlineDays] = useState(3);
+  const [creating, setCreating] = useState(false);
+  const [selectedHwId, setSelectedHwId] = useState<Id<"homework"> | null>(null);
+
+  const rundown = useQuery(
+    api.homeworkRundown.getRundown,
+    selectedHwId ? { homeworkId: selectedHwId } : "skip"
+  );
+
+  const handleCreate = async () => {
+    if (!classroomId || !title.trim() || selectedTopics.length === 0) return;
+    setCreating(true);
+    await createHomework({
+      classroomId,
+      title: title.trim(),
+      topicIds: selectedTopics,
+      teacherNotes: teacherNotes.trim() || undefined,
+      questionCount,
+      deadline: Date.now() + deadlineDays * 24 * 60 * 60 * 1000,
+    });
+    setTitle(""); setSelectedTopics([]); setTeacherNotes("");
+    setQuestionCount(4); setDeadlineDays(3);
+    setShowCreate(false); setCreating(false);
+  };
+
+  const handleClose = async (hwId: Id<"homework">) => {
+    await closeHomework({ homeworkId: hwId });
+  };
+
+  const toggleTopic = (id: Id<"topics">) => {
+    setSelectedTopics((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  };
+
+  const formatDate = (ts: number) =>
+    new Date(ts).toLocaleDateString("he-IL", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+    });
+
+  return (
+    <>
+      <div className="app-center">
+        <div className="mb-10">
+          <h1 className="t-h1 mb-4">
+            <FileText size={32} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 12 }} />
+            ניהול<br />שיעורי בית
+          </h1>
+          <p className="t-sub text-base">
+            צרו שיעורי בית מותאמים אישית — המערכת מתאימה את רמת הקושי לכל תלמיד לפי מפת הכוח שלו.
+          </p>
+        </div>
+
+        {/* Create button */}
+        <button
+          className="new-proof-btn mb-8"
+          style={{ maxWidth: 300 }}
+          onClick={() => setShowCreate(!showCreate)}
+        >
+          <Plus size={16} /> צור שיעורי בית חדשים
+        </button>
+
+        {/* Creation Form */}
+        <AnimatePresence>
+          {showCreate && (
+            <motion.div
+              className="hw-create-form mb-8"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="card p-6">
+                <div className="t-mini-title mb-4 text-default">שיעורי בית חדשים</div>
+
+                {/* Title */}
+                <div className="mb-4">
+                  <label className="stat-label">כותרת</label>
+                  <input
+                    className="hw-input"
+                    type="text"
+                    placeholder="לדוגמה: חזרה על חדו״א — נקודות קיצון"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    dir="rtl"
+                  />
+                </div>
+
+                {/* Topics */}
+                <div className="mb-4">
+                  <label className="stat-label">נושאים</label>
+                  <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                    {topics?.map((topic) => (
+                      <button
+                        key={topic._id}
+                        className={`hw-topic-chip ${selectedTopics.includes(topic._id) ? 'selected' : ''}`}
+                        onClick={() => toggleTopic(topic._id)}
+                      >
+                        {topic.nameHe}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Settings row */}
+                <div className="flex gap-4 mb-4">
+                  <div className="flex-1">
+                    <label className="stat-label">מספר שאלות לתלמיד</label>
+                    <div className="flex gap-2">
+                      {[2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          className={`key-btn ${questionCount === n ? 'key-op' : ''}`}
+                          style={{ width: 48, height: 44, fontSize: '1rem' }}
+                          onClick={() => setQuestionCount(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="stat-label">מועד הגשה (ימים)</label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 5, 7].map((d) => (
+                        <button
+                          key={d}
+                          className={`key-btn ${deadlineDays === d ? 'key-op' : ''}`}
+                          style={{ width: 48, height: 44, fontSize: '1rem' }}
+                          onClick={() => setDeadlineDays(d)}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Teacher notes */}
+                <div className="mb-6">
+                  <label className="stat-label">הערות למורה (אופציונלי)</label>
+                  <textarea
+                    className="hw-input"
+                    placeholder="לדוגמה: התמקדו בשאלות פרמטר..."
+                    value={teacherNotes}
+                    onChange={(e) => setTeacherNotes(e.target.value)}
+                    rows={2}
+                    dir="rtl"
+                    style={{ resize: 'vertical', minHeight: 60 }}
+                  />
+                </div>
+
+                {/* Submit */}
+                <div className="flex gap-3">
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleCreate}
+                    disabled={creating || !title.trim() || selectedTopics.length === 0}
+                  >
+                    <Send size={16} /> {creating ? 'יוצר...' : 'צור והפץ לתלמידים'}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setShowCreate(false)}>
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Homework list */}
+        <div className="t-mini-title mb-4 text-default">שיעורי בית קיימים</div>
+        <motion.div
+          className="flex-col gap-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { staggerChildren: 0.06 } }
+          }}
+        >
+          {!homeworkList || homeworkList.length === 0 ? (
+            <div className="card p-10 text-center text-muted">
+              <FileText size={48} color="var(--text-faint)" style={{ margin: '0 auto 16px' }} />
+              <div className="fw-700" style={{ fontSize: '1.1rem' }}>עוד אין שיעורי בית</div>
+              <div className="t-sub mt-2">לחצו על "צור שיעורי בית חדשים" כדי להתחיל.</div>
+            </div>
+          ) : (
+            homeworkList.map((hw) => {
+              const isExpired = Date.now() > hw.deadline;
+              const statusColor = hw.status === 'graded' ? 'var(--success)' : hw.status === 'closed' ? 'var(--text-muted)' : isExpired ? 'var(--danger)' : 'var(--primary-dim)';
+              const statusLabel = hw.status === 'graded' ? 'הוערך' : hw.status === 'closed' ? 'נסגר' : isExpired ? 'עבר מועד' : 'פעיל';
+
+              return (
+                <motion.div
+                  key={hw._id}
+                  className="card p-5 pointer"
+                  style={{ border: selectedHwId === hw._id ? '1px solid var(--primary-dim)' : undefined }}
+                  onClick={() => setSelectedHwId(selectedHwId === hw._id ? null : hw._id)}
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0 }
+                  }}
+                  whileHover={{ scale: 1.005, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div style={{ width: 40, height: 40, borderRadius: 'var(--r-md)', background: 'var(--surface-high)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={20} color={statusColor} />
+                      </div>
+                      <div>
+                        <div className="fw-800" style={{ fontSize: '1rem' }}>{hw.title}</div>
+                        <div className="text-xs text-faint flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1"><Calendar size={12} /> נוצר: {formatDate(hw.createdAt)}</span>
+                          <span className="flex items-center gap-1"><Clock size={12} /> מועד: {formatDate(hw.deadline)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="context-chip" style={{ background: `${statusColor}20`, color: statusColor, borderColor: `${statusColor}40` }}>
+                        {statusLabel}
+                      </span>
+                      <span className="text-xs text-faint">{hw.questionCount} שאלות/תלמיד</span>
+                      {hw.status === 'active' && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                          onClick={(e) => { e.stopPropagation(); handleClose(hw._id); }}
+                        >
+                          <XCircle size={14} /> סגור
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {hw.teacherNotes && (
+                    <div className="text-sm text-muted mt-2" style={{ paddingRight: 56 }}>
+                      📝 {hw.teacherNotes}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })
+          )}
+        </motion.div>
+      </div>
+
+      {/* Right panel: Rundown */}
+      <div className="app-right-panel">
+        <div className="t-mini-title mb-6 text-default flex items-center gap-2">
+          <BarChart2 size={16} color="var(--primary-dim)" /> סיכום שיעור
+        </div>
+
+        {selectedHwId && rundown ? (
+          <div className="flex-col gap-4">
+            {/* Class-level stats */}
+            <div className="card p-4 text-center">
+              <div className="stat-label">ציון ממוצע כיתתי</div>
+              <div className="stat-value" style={{ color: rundown.classAvgScore >= 70 ? 'var(--success)' : rundown.classAvgScore >= 40 ? 'var(--warning)' : 'var(--danger)' }}>
+                {rundown.classAvgScore}%
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="card flex-1 p-4 text-center">
+                <div className="stat-label">השלמה</div>
+                <div className="fw-800 text-lg">{rundown.completionRate}%</div>
+              </div>
+              <div className="card flex-1 p-4 text-center">
+                <div className="stat-label">זמן ממוצע</div>
+                <div className="fw-800 text-lg">{rundown.avgTimeMinutes} דק'</div>
+              </div>
+            </div>
+
+            {/* Topic breakdown */}
+            {rundown.topicBreakdown.length > 0 && (
+              <div>
+                <div className="stat-label mb-2">פירוט נושאים</div>
+                {rundown.topicBreakdown.map((tb, i) => (
+                  <div key={i} className="card p-3 mb-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="fw-700 text-sm">{tb.topicName}</span>
+                      <span className="fw-800" style={{ color: tb.avgScore >= 70 ? 'var(--success)' : tb.avgScore >= 40 ? 'var(--warning)' : 'var(--danger)' }}>
+                        {tb.avgScore}%
+                      </span>
+                    </div>
+                    <div className="text-2xs text-faint">{tb.hardestSection}</div>
+                    {tb.commonMistakes.length > 0 && (
+                      <div className="text-2xs text-muted mt-1">טעויות: {tb.commonMistakes.slice(0, 2).join(', ')}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Clusters */}
+            {rundown.clusters.length > 0 && (
+              <div>
+                <div className="stat-label mb-2">אשכולות תלמידים</div>
+                {rundown.clusters.map((cl, i) => (
+                  <div key={i} className="card p-3 mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users size={14} color={cl.label === 'מצטיינים' ? 'var(--success)' : cl.label === 'צריכים חיזוק' ? 'var(--danger)' : 'var(--warning)'} />
+                      <span className="fw-700 text-sm">{cl.label}</span>
+                      <span className="text-2xs text-faint">({cl.studentIds.length})</span>
+                    </div>
+                    <div className="text-2xs text-muted">{cl.recommendedAction}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Flagged */}
+            {rundown.flagged.length > 0 && (
+              <div>
+                <div className="stat-label mb-2 flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+                  <AlertTriangle size={12} /> תלמידים לטיפול
+                </div>
+                {rundown.flagged.map((f, i) => (
+                  <div key={i} className="card p-3 mb-2" style={{ borderColor: 'rgba(251,113,133,0.2)', background: 'rgba(251,113,133,0.05)' }}>
+                    <div className="text-sm text-danger fw-700">{f.reason}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : selectedHwId ? (
+          <div className="card p-5 text-center text-faint">
+            <BarChart2 size={32} color="var(--text-faint)" style={{ margin: '0 auto 12px' }} />
+            סיכום יהיה זמין לאחר סגירת שיעורי הבית
+          </div>
+        ) : (
+          <div className="card p-5 text-center text-faint">
+            <FileText size={32} color="var(--text-faint)" style={{ margin: '0 auto 12px' }} />
+            בחרו שיעורי בית מהרשימה כדי לראות סיכום
           </div>
         )}
       </div>

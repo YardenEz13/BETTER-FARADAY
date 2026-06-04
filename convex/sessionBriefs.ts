@@ -23,6 +23,12 @@ export const createBrief = mutation({
     solutionAccuracy: v.number(),
     keyInsight: v.string(),
     recommendedAction: v.optional(v.string()),
+    // Teacher-enriched analytics
+    missingConcepts: v.optional(v.array(v.string())),
+    teacherActionItem: v.optional(v.string()),
+    studentQuotes: v.optional(v.array(v.string())),
+    detailedStruggleAnalysis: v.optional(v.string()),
+    nextSteps: v.optional(v.array(v.string())),
     selfAssessment: v.string(),
   },
   handler: async (ctx, args) => {

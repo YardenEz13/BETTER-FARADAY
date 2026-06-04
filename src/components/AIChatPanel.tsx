@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import { X, Send, Bot, BookOpen, Zap, WifiOff, History, MessageSquare, Sparkles, Clock } from "lucide-react";
+import { Id, Doc } from "../../convex/_generated/dataModel";
+import { X, Send, Bot, BookOpen, Zap, WifiOff, History, MessageSquare, Sparkles, Clock, Terminal, ChevronDown, ChevronUp } from "lucide-react";
 import {
   isLocalAIAvailable,
   getAIStatus,
@@ -15,9 +15,11 @@ import {
   onModelProgress,
   estimateTokens,
   heuristicSummary,
+  onDebugUpdate,
   type AgentType,
   type Message,
   type PartialBrief,
+  type AIDebugState,
 } from "../services/localAI";
 import { queueMessage, getPendingMessages, clearPendingMessages, isOnline, onOnline } from "../services/offlineQueue";
 import {
@@ -29,6 +31,7 @@ import {
   debouncedSaveMessages,
   flushAllPending,
 } from "../services/chatStorage";
+import MathText from "./MathText";
 
 interface AIChatPanelProps {
   isOpen: boolean;
@@ -60,19 +63,34 @@ export default function AIChatPanel({
   const [cycleState, setCycleState] = useState<"active" | "cycling" | "self_assess">("active");
   const [sessionIndex, setSessionIndex] = useState(0);
   const [partialBriefs, setPartialBriefs] = useState<PartialBrief[]>([]);
-  const [selfAssessment, setSelfAssessment] = useState<string | null>(null);
   const [awaitingSelfAssess, setAwaitingSelfAssess] = useState(false);
   const [pendingNextQuestion, setPendingNextQuestion] = useState(false);
+  const [selfAssessment, setSelfAssessment] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<AIDebugState | null>(null);
+  
+  const currentContext = questionStem
+    ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
+    : "";
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatIdRef = useRef<Id<"aiChats"> | null>(null);
   const initGuard = useRef(false);
   const sessionStartedAt = useRef(Date.now());
-  const prevQuestionId = useRef(questionId);
+  const lastValidQuestionIdRef = useRef(questionId);
   const userMsgCount = useRef(0);
+  const isSendingRef = useRef(false);
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
 
   // Keep ref in sync so callbacks always have current value
   useEffect(() => { chatIdRef.current = chatId; }, [chatId]);
+
+  useEffect(() => {
+    return () => {
+      activeAbortControllerRef.current?.abort();
+      activeAbortControllerRef.current = null;
+    };
+  }, []);
 
   const startChat = useMutation(api.aiChat.startChat);
   const addMessageMut = useMutation(api.aiChat.addMessage);
@@ -93,8 +111,16 @@ export default function AIChatPanel({
       setLoadProgress({ percent, stage });
       setAiStatus(percent >= 100 || stage === "ready" ? "ready" : "downloading");
     });
-    const interval = setInterval(() => setAiStatus(getAIStatus()), 2000);
+    const interval = setInterval(() => {
+      setAiStatus(getAIStatus());
+    }, 2000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Subscribe to AI debug state updates
+  useEffect(() => {
+    const unsub = onDebugUpdate((state) => setDebugInfo(state));
+    return unsub;
   }, []);
 
   // Track online status
@@ -137,52 +163,8 @@ export default function AIChatPanel({
     });
   }, [syncMessages]);
 
-  // ── Single unified init/resume flow ──
-  useEffect(() => {
-    if (!isOpen) {
-      initGuard.current = false; // reset guard when panel closes
-      return;
-    }
 
-    // If we already have messages in state (panel was just hidden, not unmounted), skip re-init
-    if (chatId && messages.length > 0) return;
-
-    if (initGuard.current) return; // prevent double-fire from React strict mode / race
-    initGuard.current = true;
-
-    const init = async () => {
-      // 1. Try local IndexedDB (instant, no network)
-      const localSession = await getActiveSession(studentId, agentType);
-
-      if (localSession) {
-        const localChatId = localSession.chatId as Id<"aiChats">;
-        setChatId(localChatId);
-        chatIdRef.current = localChatId; // sync ref immediately, don't wait for render
-
-        const cached = await getMessages(localSession.chatId);
-        if (cached.length > 0) {
-          setMessages(cached);
-          setIsResumed(true);
-          await createSession(agentType, localSession.context);
-          return; // successfully restored
-        }
-        // local session exists but messages cache is empty → fall through to create fresh
-      }
-
-      // 2. Try Convex server for an open chat (within last 4 hours)
-      // We do a direct fetch instead of relying on a reactive useQuery to avoid race conditions
-      // The getActiveChat query is still available for the future but we don't depend on it reactively here
-      // Just create a fresh chat — this is the simplest reliable path
-      await createFreshChat();
-    };
-
-    init().catch((e) => {
-      console.error("Chat init failed:", e);
-      initGuard.current = false;
-    });
-  }, [isOpen, agentType, studentId]);
-
-  const createFreshChat = async () => {
+  const createFreshChat = useCallback(async () => {
     const title = agentType === "practice"
       ? `תרגול: ${topicName || "כללי"}`
       : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
@@ -204,10 +186,9 @@ export default function AIChatPanel({
       console.error("Failed to start chat:", e);
     }
 
-    let context = "";
-    if (agentType === "practice" && questionStem) {
-      context = `נושא: ${topicName}\nשאלה: ${questionStem}`;
-    }
+    const context = questionStem
+      ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
+      : "";
     await createSession(agentType, context);
 
     const welcome: Message = {
@@ -235,7 +216,77 @@ export default function AIChatPanel({
       });
       await saveMessages(newChatId, initialMessages);
     }
-  };
+  }, [agentType, topicName, online, startChat, studentId, topicId, questionId, questionStem]);
+
+  // ── Reset on question change ──
+  const prevQuestionIdRef = useRef(questionId);
+  useEffect(() => {
+    if (prevQuestionIdRef.current !== questionId) {
+      console.log("[AIChatPanel] Active question changed! Clearing old chat state...");
+      setChatId(null);
+      chatIdRef.current = null;
+      setMessages([]);
+      setIsResumed(false);
+      initGuard.current = false; // allow re-init
+      prevQuestionIdRef.current = questionId;
+    }
+  }, [questionId]);
+
+  // ── Single unified init/resume flow ──
+  useEffect(() => {
+    if (!isOpen) {
+      initGuard.current = false; // reset guard when panel closes
+      return;
+    }
+
+    // If we already have messages in state (panel was just hidden, not unmounted), skip re-init
+    if (chatId && messages.length > 0) {
+      createSession(agentType, currentContext).catch((e) =>
+        console.error("[AIChatPanel] Failed to restore session context on reopen:", e)
+      );
+      return;
+    }
+
+    if (initGuard.current) return; // prevent double-fire from React strict mode / race
+    initGuard.current = true;
+
+    const init = async () => {
+      // 1. Try local IndexedDB (instant, no network)
+      const localSession = await getActiveSession(studentId, agentType);
+
+      if (localSession) {
+        if (localSession.questionId !== questionId) {
+          console.log("[AIChatPanel] Question ID mismatch, clearing old session. Old:", localSession.questionId, "New:", questionId);
+          await clearActiveSession(studentId, agentType);
+        } else {
+          const localChatId = localSession.chatId as Id<"aiChats">;
+          setChatId(localChatId);
+          chatIdRef.current = localChatId; // sync ref immediately, don't wait for render
+
+          const cached = await getMessages(localSession.chatId);
+          if (cached.length > 0) {
+            setMessages(cached);
+            setIsResumed(true);
+            await createSession(agentType, localSession.context);
+            return; // successfully restored
+          }
+          // local session exists but messages cache is empty → fall through to create fresh
+        }
+      }
+
+      // 2. Try Convex server for an open chat (within last 4 hours)
+      // We do a direct fetch instead of relying on a reactive useQuery to avoid race conditions
+      // The getActiveChat query is still available for the future but we don't depend on it reactively here
+      // Just create a fresh chat — this is the simplest reliable path
+      await createFreshChat();
+    };
+
+    init().catch((e) => {
+      console.error("Chat init failed:", e);
+      initGuard.current = false;
+    });
+  }, [isOpen, agentType, studentId, chatId, messages.length, createFreshChat]);
+
 
   // Auto-scroll
   useEffect(() => {
@@ -268,23 +319,96 @@ export default function AIChatPanel({
 
   // ── Session Cycling: detect questionId prop change ──
   useEffect(() => {
-    if (questionId && prevQuestionId.current && questionId !== prevQuestionId.current && cycleState === "active" && messages.length > 1) {
-      setCycleState("self_assess");
-      setAwaitingSelfAssess(true);
-      setPendingNextQuestion(true);
-      const assessMsg: Message = {
-        role: "model",
-        content: "רגע לפני שממשיכים לשאלה הבאה — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הבנת הכי טוב?",
-      };
-      setMessages(prev => {
-        const newMsgs = [...prev, assessMsg];
-        if (chatIdRef.current) saveMessages(chatIdRef.current, newMsgs).catch(console.error);
-        return newMsgs;
-      });
-      persistMessage("model", assessMsg.content).catch(console.error);
+    if (questionId) {
+      const prevId = lastValidQuestionIdRef.current;
+      if (prevId && questionId !== prevId) {
+        if (cycleState === "active" && messages.length > 1) {
+          setCycleState("self_assess");
+          setAwaitingSelfAssess(true);
+          setPendingNextQuestion(true);
+          const assessMsg: Message = {
+            role: "model",
+            content: "רגע לפני שממשיכים לשאלה הבאה — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הבנת הכי טוב?",
+          };
+          setMessages(prev => {
+            const newMsgs = [...prev, assessMsg];
+            if (chatIdRef.current) saveMessages(chatIdRef.current, newMsgs).catch(console.error);
+            return newMsgs;
+          });
+          persistMessage("model", assessMsg.content).catch(console.error);
+        } else if (messages.length <= 1) {
+          // Silently reset to the new question!
+          const resetSession = async () => {
+            console.log("[AIChatPanel] Silently resetting chat for new question:", questionId);
+            await clearActiveSession(studentId, agentType);
+            setMessages([]);
+            setChatId(null);
+            chatIdRef.current = null;
+            setIsResumed(false);
+            setCycleState("active");
+            setSessionIndex(0);
+            setPartialBriefs([]);
+            setSelfAssessment(null);
+            setAwaitingSelfAssess(false);
+            setPendingNextQuestion(false);
+            userMsgCount.current = 0;
+            initGuard.current = false;
+            
+            const title = agentType === "practice"
+              ? `תרגול: ${topicName || "כללי"}`
+              : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
+
+            let newChatId: Id<"aiChats"> | null = null;
+            try {
+              if (online) {
+                newChatId = await startChat({
+                  studentId: studentId as Id<"students">,
+                  agentType,
+                  topicId: topicId ? (topicId as Id<"topics">) : undefined,
+                  questionId: questionId ? (questionId as Id<"questions">) : undefined,
+                  title,
+                });
+                setChatId(newChatId);
+                chatIdRef.current = newChatId;
+              }
+            } catch (e) {
+              console.error("Failed to start silent reset chat:", e);
+            }
+
+            const context = questionStem
+              ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
+              : "";
+            await createSession(agentType, context);
+
+            const welcome: Message = {
+              role: "system",
+              content: agentType === "practice"
+                ? `🤖 מורה AI מוכן לעזור עם ${topicName || "הנושא הנוכחי"}`
+                : "🤖 מורה AI מוכן לעזור עם שיעורי הבית",
+            };
+            const initialMessages = [welcome];
+            setMessages(initialMessages);
+            if (newChatId) {
+              await saveActiveSession({
+                chatId: newChatId,
+                studentId,
+                agentType,
+                context,
+                topicName,
+                questionStem,
+                topicId,
+                questionId,
+                startedAt: Date.now(),
+              });
+              await saveMessages(newChatId, initialMessages);
+            }
+          };
+          resetSession().catch(console.error);
+        }
+      }
+      lastValidQuestionIdRef.current = questionId;
     }
-    prevQuestionId.current = questionId;
-  }, [questionId, cycleState, messages.length, persistMessage]);
+  }, [questionId, cycleState, messages.length, persistMessage, studentId, agentType, topicName, questionStem, topicId, online, startChat]);
 
   // ── Session Cycling: check triggers ──
   const checkCycleTriggers = useCallback((): "message_count" | "time" | "token_saturation" | null => {
@@ -364,10 +488,9 @@ export default function AIChatPanel({
 
     // Save to IndexedDB
     if (newChatId) {
-      let context = "";
-      if (agentType === "practice" && questionStem) {
-        context = `נושא: ${topicName}\nשאלה: ${questionStem}`;
-      }
+      const context = questionStem
+        ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
+        : "";
       await saveActiveSession({
         chatId: newChatId,
         studentId,
@@ -382,74 +505,94 @@ export default function AIChatPanel({
       await saveMessages(newChatId, [carryOver]);
     }
 
-    await createSession(agentType, questionStem ? `נושא: ${topicName}\nשאלה: ${questionStem}` : "");
+    await createSession(agentType, questionStem ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`) : "");
     setCycleState("active");
   }, [cycleState, messages, sessionIndex, online, agentType, topicName, questionStem, topicId, questionId, studentId, startChat, endChatMut]);
 
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
-    const userMsg = input.trim();
-    setInput("");
-
-    const newUserMsg: Message = { role: "user", content: userMsg };
-
-    // ── Self-assessment capture ──
-    if (awaitingSelfAssess) {
-      setSelfAssessment(userMsg);
-      setAwaitingSelfAssess(false);
-      setMessages(prev => [...prev, newUserMsg]);
-      // Now finalize the brief
-      if (pendingNextQuestion) {
-        await finalizeWithBriefAndContinue(userMsg);
-      } else {
-        await finalizeWithBrief(userMsg);
-      }
-      return;
-    }
-
-    // ── Check cycle triggers before processing ──
-    const trigger = checkCycleTriggers();
-    if (trigger) {
-      await executeCycle(trigger);
-      // After cycling, re-inject the user's message into the new session
-    }
-
-    userMsgCount.current++;
-
-    // Update state and save to IndexedDB
-    const updatedWithUser = [...messages, newUserMsg];
-    setMessages(updatedWithUser);
-    if (chatIdRef.current) {
-      // Immediate save for the user message (don't lose it)
-      saveMessages(chatIdRef.current, updatedWithUser).catch(console.error);
-    }
-
-    await persistMessage("user", userMsg);
-    setIsTyping(true);
-
+    if (!input.trim() || isTyping || isSendingRef.current) return;
+    isSendingRef.current = true;
+    
     try {
+      const userMsg = input.trim();
+      setInput("");
+
+      const newUserMsg: Message = { role: "user", content: userMsg };
+
+      // ── Self-assessment capture ──
+      if (awaitingSelfAssess) {
+        setAwaitingSelfAssess(false);
+        setMessages(prev => [...prev, newUserMsg]);
+        // Now finalize the brief
+        if (pendingNextQuestion) {
+          await finalizeWithBriefAndContinue(userMsg);
+        } else {
+          await finalizeWithBrief(userMsg);
+        }
+        return;
+      }
+
+      // ── Check cycle triggers before processing ──
+      const trigger = checkCycleTriggers();
+      if (trigger) {
+        await executeCycle(trigger);
+        // After cycling, re-inject the user's message into the new session
+      }
+
+      userMsgCount.current++;
+
+      // Update state and save to IndexedDB
+      const updatedWithUser = [...messages, newUserMsg];
+      setMessages(updatedWithUser);
+      if (chatIdRef.current) {
+        // Immediate save for the user message (don't lose it)
+        saveMessages(chatIdRef.current, updatedWithUser).catch(console.error);
+      }
+
+      await persistMessage("user", userMsg);
+      setIsTyping(true);
+
       const available = await isLocalAIAvailable();
+      console.log("[AIChatPanel] isLocalAIAvailable returned:", available);
       let finalResponse = "";
 
       if (available) {
-        finalResponse = await streamMessage(userMsg, (partial: string) => {
-          setMessages((prev) => {
-            const updated = [...prev];
-            const lastMsg = updated[updated.length - 1];
-            if (lastMsg?.role === "model") {
-              lastMsg.content = partial;
-            } else {
-              updated.push({ role: "model", content: partial });
-            }
-            // Debounced save during streaming (too many chunks to save each one)
-            if (chatIdRef.current) debouncedSaveMessages(chatIdRef.current, [...updated]);
-            return [...updated];
-          });
-        }, updatedWithUser);
+        const controller = new AbortController();
+        activeAbortControllerRef.current = controller;
+        try {
+          console.log("[AIChatPanel] Calling streamMessage for userMsg:", JSON.stringify(userMsg));
+          finalResponse = await streamMessage(
+            userMsg,
+            (partial: string) => {
+              setMessages((prev) => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg?.role === "model") {
+                  lastMsg.content = partial;
+                } else {
+                  updated.push({ role: "model", content: partial });
+                }
+                // Debounced save during streaming (too many chunks to save each one)
+                if (chatIdRef.current) debouncedSaveMessages(chatIdRef.current, [...updated]);
+                return [...updated];
+              });
+            },
+            messages,
+            controller.signal,
+            { agentType, questionContext: currentContext }  // always pass fresh context
+          );
+          console.log("[AIChatPanel] streamMessage resolved. finalResponse returned:", JSON.stringify(finalResponse));
+        } finally {
+          if (activeAbortControllerRef.current === controller) {
+            activeAbortControllerRef.current = null;
+          }
+        }
       }
 
       if (!finalResponse) {
+        console.log("[AIChatPanel] finalResponse is empty/falsy, falling back to mock response.");
         finalResponse = getMockResponse(userMsg, messages);
+        console.log("[AIChatPanel] getMockResponse returned fallback:", JSON.stringify(finalResponse));
       }
 
       // Final save with complete response — immediate, not debounced
@@ -467,7 +610,25 @@ export default function AIChatPanel({
       });
 
       await persistMessage("model", finalResponse);
-    } catch (e) {
+
+      if (chatIdRef.current) {
+        await saveActiveSession({
+          chatId: chatIdRef.current,
+          studentId,
+          agentType,
+          context: currentContext ?? "",
+          topicName,
+          questionStem,
+          topicId,
+          questionId,
+          startedAt: sessionStartedAt.current,
+        });
+      }
+    } catch (e: any) {
+      if (e?.name === "AbortError" || e?.message?.includes("aborted")) {
+        console.log("[AIChatPanel] streamMessage was aborted, skipping error display.");
+        return;
+      }
       console.error("AI error:", e);
       const fallback = "מצטער, נתקלתי בבעיה טכנית. נסה שוב.";
       setMessages((prev) => {
@@ -476,13 +637,16 @@ export default function AIChatPanel({
         return updated;
       });
       await persistMessage("model", fallback);
+    } finally {
+      setIsTyping(false);
+      isSendingRef.current = false;
     }
-
-    setIsTyping(false);
   };
 
   // X = minimize (keep session alive for resume)
   const handleMinimize = async () => {
+    activeAbortControllerRef.current?.abort();
+    activeAbortControllerRef.current = null;
     // Flush-save messages immediately before closing
     await flushSave();
     destroySession();
@@ -511,111 +675,118 @@ export default function AIChatPanel({
     await persistMessage("model", assessMsg.content);
   };
 
-  // ── Finalize: generate composite brief + save + cleanup ──
-  const finalizeWithBrief = async (selfAssessText: string) => {
-    setIsAnalyzing(true);
-
+  // Helper to run pedagogical analysis and save the session brief in the background
+  const runFinalizeBackground = async (
+    selfAssessText: string,
+    currentChatId: Id<"aiChats"> | null,
+    currentMessages: Message[],
+    currentPartialBriefs: PartialBrief[]
+  ) => {
+    if (!currentChatId) return;
+    console.log("[AIChatPanel] Starting background finalization for chat:", currentChatId);
     try {
-      // Generate composite brief
+      // 1. Generate composite brief in the background
       const brief = await generateCompositeBrief(
-        partialBriefs,
-        messages,
+        currentPartialBriefs,
+        currentMessages,
         selfAssessText
       );
 
-      // End current chat with metrics
-      if (chatIdRef.current && online) {
-        const metrics = await analyzeConversation(messages);
-        await endChatMut({ chatId: chatIdRef.current, metrics });
+      // 2. Analyze conversation
+      let metrics = undefined;
+      try {
+        metrics = await analyzeConversation(currentMessages);
+      } catch (err) {
+        console.error("[AIChatPanel] Background analyzeConversation failed:", err);
       }
 
-      // Save the composite brief to Convex
-      if (chatIdRef.current && online) {
-        await createBriefMut({
-          chatId: chatIdRef.current,
-          studentId: studentId as Id<"students">,
-          topicId: topicId ? (topicId as Id<"topics">) : undefined,
-          totalCycles: brief.totalCycles,
-          totalMessages: brief.totalMessages,
-          totalDurationMs: brief.totalDurationMs,
-          partialBriefs: brief.partialBriefs,
-          approach: brief.approach,
-          frictionPoints: brief.frictionPoints,
-          autonomyLevel: brief.autonomyLevel,
-          solutionAccuracy: brief.solutionAccuracy,
-          keyInsight: brief.keyInsight,
-          recommendedAction: brief.recommendedAction,
-          selfAssessment: brief.selfAssessment,
-        });
+      // 3. End chat with metrics
+      if (online) {
+        try {
+          await endChatMut({ chatId: currentChatId, metrics });
+        } catch (err) {
+          console.error("[AIChatPanel] Background endChatMut failed:", err);
+        }
       }
 
-      // Show confirmation message briefly
-      const confirmMsg: Message = {
-        role: "system",
-        content: "✨ השיחה נשמרה בהצלחה. תודה!",
-      };
-      setMessages(prev => [...prev, confirmMsg]);
-
-      // Wait a moment then cleanup
-      setTimeout(() => cleanup(), 1500);
+      // 4. Save composite brief to Convex
+      if (online) {
+        try {
+          await createBriefMut({
+            chatId: currentChatId,
+            studentId: studentId as Id<"students">,
+            topicId: topicId ? (topicId as Id<"topics">) : undefined,
+            totalCycles: brief.totalCycles,
+            totalMessages: brief.totalMessages,
+            totalDurationMs: brief.totalDurationMs,
+            partialBriefs: brief.partialBriefs,
+            approach: brief.approach,
+            frictionPoints: brief.frictionPoints,
+            autonomyLevel: brief.autonomyLevel,
+            solutionAccuracy: brief.solutionAccuracy,
+            keyInsight: brief.keyInsight,
+            recommendedAction: brief.recommendedAction,
+            // Teacher-enriched analytics
+            missingConcepts: brief.missingConcepts,
+            teacherActionItem: brief.teacherActionItem,
+            studentQuotes: brief.studentQuotes,
+            detailedStruggleAnalysis: brief.detailedStruggleAnalysis,
+            nextSteps: brief.nextSteps,
+            selfAssessment: brief.selfAssessment,
+          });
+          console.log("[AIChatPanel] Background brief created successfully for:", currentChatId);
+        } catch (err) {
+          console.error("[AIChatPanel] Background createBriefMut failed:", err);
+        }
+      }
     } catch (e) {
-      console.error("Failed to generate brief:", e);
-      if (online && chatIdRef.current) {
-        try { await endChatMut({ chatId: chatIdRef.current }); } catch {}
+      console.error("[AIChatPanel] Background finalization failed:", e);
+      if (online) {
+        try {
+          await endChatMut({ chatId: currentChatId });
+        } catch (err) {
+          console.error("[AIChatPanel] Background fallback endChatMut failed:", err);
+        }
       }
-      await cleanup();
     }
+  };
+
+  // ── Finalize: generate composite brief + save + cleanup ──
+  const finalizeWithBrief = async (selfAssessText: string) => {
+    const currentChatId = chatIdRef.current;
+    const currentMessages = [...messages];
+    const currentPartialBriefs = [...partialBriefs];
+
+    // Trigger background generation and saving without blocking the user
+    runFinalizeBackground(selfAssessText, currentChatId, currentMessages, currentPartialBriefs);
+
+    // Immediately clean up and close the panel
+    await cleanup();
   };
 
   const finalizeWithBriefAndContinue = async (selfAssessText: string) => {
-    setIsAnalyzing(true);
-    try {
-      const brief = await generateCompositeBrief(
-        partialBriefs,
-        messages,
-        selfAssessText
-      );
+    const currentChatId = chatIdRef.current;
+    const currentMessages = [...messages];
+    const currentPartialBriefs = [...partialBriefs];
 
-      if (chatIdRef.current && online) {
-        const metrics = await analyzeConversation(messages);
-        await endChatMut({ chatId: chatIdRef.current, metrics });
-        await createBriefMut({
-          chatId: chatIdRef.current,
-          studentId: studentId as Id<"students">,
-          topicId: topicId ? (topicId as Id<"topics">) : undefined,
-          ...brief,
-        });
-      }
+    // Trigger background generation and saving without blocking the user
+    runFinalizeBackground(selfAssessText, currentChatId, currentMessages, currentPartialBriefs);
 
-      const confirmMsg: Message = {
-        role: "system",
-        content: "✨ השיחה נשמרה בהצלחה! מכין את מורה ה-AI לשאלה החדשה...",
-      };
-      setMessages(prev => [...prev, confirmMsg]);
-
-      setTimeout(async () => {
-        setIsAnalyzing(false);
-        await clearActiveSession(studentId, agentType);
-        setPartialBriefs([]);
-        setSessionIndex(0);
-        userMsgCount.current = 0;
-        setSelfAssessment(null);
-        setPendingNextQuestion(false);
-        setCycleState("active");
-        
-        await createFreshChat();
-      }, 2000);
-
-    } catch (e) {
-      console.error("Failed to generate brief:", e);
-      setIsAnalyzing(false);
-      setPendingNextQuestion(false);
-      setCycleState("active");
-      await createFreshChat();
-    }
+    // Immediately reset the chat context and start a fresh session
+    await clearActiveSession(studentId, agentType);
+    setPartialBriefs([]);
+    setSessionIndex(0);
+    userMsgCount.current = 0;
+    setSelfAssessment(null);
+    setPendingNextQuestion(false);
+    setCycleState("active");
+    
+    await createFreshChat();
   };
 
   const cleanup = async () => {
+    activeAbortControllerRef.current?.abort();
+    activeAbortControllerRef.current = null;
     setIsAnalyzing(false);
     await clearActiveSession(studentId, agentType);
     destroySession();
@@ -681,7 +852,7 @@ export default function AIChatPanel({
                     {loadProgress ? `${loadProgress.stage} ${loadProgress.percent}%` : "טוען מודל..."}
                   </span>
                 ) : (
-                  <span className={`ai-status-dot ${aiStatus}`} title={aiStatus === "ready" ? "מודל AI מקומי פעיל" : "אין תמיכה במודל מקומי"} />
+                  <span className={`ai-status-dot ${aiStatus}`} title={aiStatus === "ready" ? "עוזר AI פעיל (Gemini)" : "אין חיבור לעוזר AI"} />
                 )}
                 {!online && <WifiOff size={12} color="var(--warning)" />}
               </div>
@@ -689,6 +860,13 @@ export default function AIChatPanel({
           </div>
 
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowDebug(v => !v)}
+              title="קונסולת פיתוח AI"
+              style={{ background: showDebug ? "rgba(16,185,129,0.12)" : "transparent", border: "none", color: showDebug ? "#10b981" : "var(--text-muted)", cursor: "pointer", padding: 8, borderRadius: "var(--r-sm)", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 3 }}
+            >
+              <Terminal size={15} />
+            </button>
             <button
               onClick={() => setShowHistory((v) => !v)}
               title="היסטוריית שיחות"
@@ -724,7 +902,7 @@ export default function AIChatPanel({
             {chatHistory?.length === 0 && (
               <div style={{ color: "var(--text-faint)", fontSize: "0.8rem", padding: "8px 0" }}>אין שיחות קודמות</div>
             )}
-            {chatHistory?.map((chat) => (
+            {chatHistory?.map((chat: Doc<"aiChats">) => (
               <div
                 key={chat._id}
                 onClick={() => handleResumeHistoryChat(chat._id)}
@@ -767,8 +945,8 @@ export default function AIChatPanel({
         {/* Messages */}
         <div className="chat-messages" style={{ flex: 1 }}>
           {messages.map((msg, i) => (
-            <div key={i} className={`chat-msg ${msg.role}`}>
-              {msg.content}
+            <div key={i} className={`chat-msg ${msg.role === "model" ? "assistant" : msg.role}`}>
+              <MathText>{msg.content}</MathText>
             </div>
           ))}
           {isTyping && (
@@ -779,13 +957,110 @@ export default function AIChatPanel({
             </div>
           )}
           {isAnalyzing && (
-            <div className="chat-msg model" style={{ opacity: 0.7, fontStyle: "italic" }}>
+            <div className="chat-msg assistant" style={{ opacity: 0.7, fontStyle: "italic" }}>
               <Sparkles size={14} style={{ display: "inline", marginLeft: 6 }} />
               מנתח את השיחה עם AI... זה ייקח כמה שניות 🔍
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* AI Debug Console */}
+        {showDebug && (
+          <div style={{
+            borderTop: "1px solid rgba(16,185,129,0.15)",
+            background: "#0a0f0a",
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+            fontSize: "0.7rem",
+            maxHeight: 340,
+            overflowY: "auto",
+            direction: "ltr",
+          }}>
+            {/* Header bar */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", background: "rgba(16,185,129,0.08)", borderBottom: "1px solid rgba(16,185,129,0.12)", position: "sticky", top: 0, zIndex: 1 }}>
+              <span style={{ color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                <Terminal size={11} /> AI DEBUG CONSOLE
+              </span>
+              {debugInfo?.isGenerating && (
+                <span style={{ color: "#f59e0b", animation: "pulse 1s infinite" }}>⟳ GENERATING…</span>
+              )}
+              {!debugInfo?.isGenerating && debugInfo && debugInfo.chunkCount > 0 && (
+                <span style={{ color: "#6b7280" }}>✓ {debugInfo.chunkCount} chunks</span>
+              )}
+            </div>
+
+            {/* API & Model */}
+            <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>API & MODEL</div>
+              <div style={{ color: "#10b981" }}>
+                🌐 Google Gemini 3.1 Flash Lite → 2.5 Flash Lite → 2.5 Flash (API)
+              </div>
+              <div style={{ color: "#9ca3af", marginTop: 2 }}>max_tokens: {debugInfo?.generationParams?.max_tokens ?? 1024}</div>
+              <div style={{ color: "#9ca3af" }}>temp: {debugInfo?.generationParams?.temperature ?? 0.3}</div>
+            </div>
+
+            {/* Token Stats */}
+            <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>TOKEN STATS</div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span style={{ color: "#818cf8" }}>📊 Prompt: ~<b style={{ color: "#a5b4fc" }}>{debugInfo?.promptTokenEstimate ?? 0}</b> tokens</span>
+                <span style={{ color: "#818cf8" }}>📝 History: <b style={{ color: "#a5b4fc" }}>{debugInfo?.historyLength ?? 0}</b> msgs</span>
+                <span style={{ color: debugInfo?.wasCompacted ? "#f59e0b" : "#6b7280" }}>🗜 Compacted: {debugInfo?.wasCompacted ? "YES" : "no"}</span>
+                <span style={{ color: "#818cf8" }}>⟲ Chunks: <b style={{ color: "#a5b4fc" }}>{debugInfo?.chunkCount ?? 0}</b></span>
+              </div>
+            </div>
+
+            {/* Think Block */}
+            {(debugInfo?.thinkBlock || debugInfo?.isGenerating) && (
+              <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>
+                  🧠 THINKING BLOCK {debugInfo?.isGenerating && !debugInfo?.visibleResponse ? "(live stream)" : "(complete)"}
+                </div>
+                <pre style={{
+                  color: "#fbbf24",
+                  background: "rgba(251,191,36,0.04)",
+                  padding: "8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(251,191,36,0.1)",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  maxHeight: 160,
+                  overflowY: "auto",
+                  margin: 0,
+                  fontSize: "0.68rem",
+                }}>{debugInfo?.thinkBlock || "(ממתין לחשיבה...)"}</pre>
+              </div>
+            )}
+
+            {/* Visible Response */}
+            {debugInfo?.visibleResponse && (
+              <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>✅ VISIBLE RESPONSE</div>
+                <pre style={{ color: "#34d399", background: "rgba(52,211,153,0.04)", padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(52,211,153,0.1)", whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0, fontSize: "0.68rem" }}>{debugInfo.visibleResponse}</pre>
+              </div>
+            )}
+
+            {/* ChatML Prompt Dump */}
+            {debugInfo?.promptMessages && (
+              <div style={{ padding: "8px 12px" }}>
+                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>📋 CHATML PROMPT DUMP ({debugInfo.promptMessages.length} messages)</div>
+                <pre style={{
+                  color: "#9ca3af",
+                  background: "rgba(255,255,255,0.02)",
+                  padding: "8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  maxHeight: 280,
+                  overflowY: "auto",
+                  margin: 0,
+                  fontSize: "0.65rem",
+                }}>{JSON.stringify(debugInfo.promptMessages, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Input */}
         <div className="chat-input-bar">

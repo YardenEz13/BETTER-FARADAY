@@ -2,11 +2,9 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell, Mail, Search, Map as MapIcon, BookOpen, BarChart2, Activity, AlertTriangle, FileText, Settings, Plus, Lock, ChevronLeft, ArrowLeft, Flame, Zap, Trophy, Target, Bot } from "lucide-react";
-import { preloadModel } from "../services/localAI";
 import AIChatPanel from "../components/AIChatPanel";
-import AIStoragePopup from "../components/AIStoragePopup";
 
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -15,10 +13,6 @@ export default function StudentHome() {
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
   const [chatOpen, setChatOpen] = useState(false);
-
-  const handleStorageConsent = () => {
-    preloadModel().catch(console.error);
-  };
 
   if (!student || !topics) return null;
 
@@ -57,7 +51,7 @@ export default function StudentHome() {
           <button className="nav-item"><BarChart2 size={18} /> סטטיסטיקות</button>
           <button className="nav-item" onClick={() => navigate("/teacher")}><Activity size={18} /> מפת חום</button>
           <button className="nav-item"><AlertTriangle size={18} /> התראות</button>
-          <button className="nav-item"><FileText size={18} /> שיעורי בית</button>
+          <button className="nav-item" onClick={() => navigate(`/student/${studentId}/homework`)}><FileText size={18} /> שיעורי בית</button>
         </div>
 
         <div className="flex-col" style={{ gap: 4, marginTop: "auto" }}>
@@ -130,9 +124,9 @@ export default function StudentHome() {
               <div className="streak-badge" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))", borderColor: "rgba(99,102,241,0.3)" }}>
                 <Trophy size={18} color="#818cf8" />
                 <div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", fontWeight: 700 }}>דרגה</div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-faint)", fontWeight: 700 }}>דרגה (רמה {student.level ?? 1})</div>
                   <div style={{ fontSize: "1rem", fontWeight: 900, color: "#818cf8" }}>
-                    {totalXP > 1000 ? "מתקדם" : totalXP > 500 ? "חוקר" : "מתחיל"}
+                    {student.level === 5 ? "מאסטר" : student.level === 4 ? "מומחה" : student.level === 3 ? "מתקדם" : student.level === 2 ? "חוקר" : "מתחיל"}
                   </div>
                 </div>
               </div>
@@ -289,9 +283,6 @@ export default function StudentHome() {
           </div>
         </div>
       </div>
-
-      {/* Storage Consent Popup */}
-      <AIStoragePopup onConsent={handleStorageConsent} />
 
       {/* Floating AI Chat Trigger — Homework Agent */}
       <button className="chat-trigger-btn pulse" onClick={() => setChatOpen(true)} title="מורה AI לשיעורי בית">

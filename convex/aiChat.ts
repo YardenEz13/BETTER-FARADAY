@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 // ── Start a new chat session ──
@@ -86,9 +86,14 @@ export const endChat = mutation({
       questionDepth: v.optional(v.number()),
       independenceRatio: v.optional(v.number()),
       gemmaAnalysisSummary: v.optional(v.string()),
+      missingKnowledge: v.optional(v.array(v.string())),
+      teacherActionItem: v.optional(v.string()),
     })),
   },
   handler: async (ctx, { chatId, metrics }) => {
+    const existing = await ctx.db.get(chatId);
+    if (!existing) return;
+
     await ctx.db.patch(chatId, {
       endedAt: Date.now(),
       metrics,
@@ -211,5 +216,143 @@ export const getTeacherChatAnalytics = query({
         totalMessages: allChats.reduce((s, c) => s + c.messageCount, 0),
       },
     };
+  },
+});
+
+// ── Delete a chat (hard delete — teacher action) ──
+export const deleteChat = mutation({
+  args: { chatId: v.id("aiChats") },
+  handler: async (ctx, { chatId }) => {
+    // 1. Delete all messages
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .collect();
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id);
+    }
+
+    // 2. Delete associated session brief (if any)
+    const brief = await ctx.db
+      .query("sessionBriefs")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .first();
+    if (brief) {
+      await ctx.db.delete(brief._id);
+    }
+
+    // 3. Delete the chat itself
+    await ctx.db.delete(chatId);
+  },
+});
+
+// ── Background Cleanup: Find and delete empty, or return abandoned chats ──
+export const findChatsToCleanup = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const THIRTY_MINUTES = 30 * 60 * 1000;
+    const ONE_HOUR = 60 * 60 * 1000;
+
+    // Get all chats that haven't ended
+    // We don't have an index on endedAt=undefined, so we just query all and filter,
+    // or better, order by desc and take a reasonable chunk to process periodically.
+    const activeChats = await ctx.db
+      .query("aiChats")
+      .order("desc")
+      .take(500); // look at the last 500 chats
+
+    const toProcess: any[] = [];
+    let deletedCount = 0;
+
+    for (const chat of activeChats) {
+      if (chat.endedAt) continue;
+
+      const age = now - chat.startedAt;
+
+      // Rule 1: Empty chats older than 30 minutes -> delete
+      if (chat.messageCount === 0 && age > THIRTY_MINUTES) {
+        await ctx.db.delete(chat._id);
+        deletedCount++;
+        continue;
+      }
+
+      // Rule 2: Abandoned chats (has messages, open for > 1 hour) -> return for AI processing
+      if (chat.messageCount > 0 && age > ONE_HOUR) {
+        toProcess.push(chat);
+      }
+    }
+
+    // Build processing payloads with question context
+    const chatsToProcess = [];
+    for (const c of toProcess) {
+      let contextStr = "";
+      if (c.questionId) {
+        const question = await ctx.db.get(c.questionId as any);
+        if (question && (question as any).stem) {
+          contextStr = `שאלה: ${(question as any).stem}`;
+        }
+      } else if (c.topicId) {
+        const topic = await ctx.db.get(c.topicId as any);
+        if (topic && (topic as any).name) {
+          contextStr = `נושא: ${(topic as any).name}`;
+        }
+      }
+
+      chatsToProcess.push({
+        chatId: c._id,
+        agentType: c.agentType,
+        context: contextStr,
+      });
+    }
+
+    return {
+      deletedCount,
+      chatsToProcess,
+    };
+  },
+});
+
+// ── Internal Wrappers for Background Actions ──
+export const getChatMessagesForAnalysis = internalQuery({
+  args: { chatId: v.id("aiChats") },
+  handler: async (ctx, { chatId }) => {
+    return await ctx.db
+      .query("aiMessages")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .order("asc")
+      .collect();
+  },
+});
+
+export const endChatInternal = internalMutation({
+  args: {
+    chatId: v.id("aiChats"),
+    metrics: v.object({
+      confusionScore: v.number(),
+      topicsCovered: v.array(v.string()),
+      questionsAsked: v.number(),
+      avgResponseLength: v.number(),
+      sentiment: v.string(),
+      keyStrugglePoints: v.array(v.string()),
+      engagementScore: v.optional(v.number()),
+      progressionSignal: v.optional(v.string()),
+      conceptMentions: v.optional(v.array(v.string())),
+      totalDurationMs: v.optional(v.number()),
+      questionDepth: v.optional(v.number()),
+      independenceRatio: v.optional(v.number()),
+      gemmaAnalysisSummary: v.optional(v.string()),
+      missingKnowledge: v.optional(v.array(v.string())),
+      teacherActionItem: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { chatId, metrics }) => {
+    const existing = await ctx.db.get(chatId);
+    if (!existing) return;
+
+    await ctx.db.patch(chatId, {
+      endedAt: Date.now(),
+      metrics,
+    });
   },
 });

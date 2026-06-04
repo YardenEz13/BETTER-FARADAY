@@ -133,3 +133,47 @@ export const getFirstClassroom = query({
     return await ctx.db.query("classrooms").first();
   },
 });
+
+// Get dashboard real-time stats
+export const getDashboardStats = query({
+  args: { classroomId: v.id("classrooms") },
+  handler: async (ctx, { classroomId }) => {
+    // We only want data for students in this classroom
+    const students = await ctx.db
+      .query("students")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
+      .collect();
+    const studentIds = new Set(students.map(s => s._id));
+
+    // Recent attempts across the class
+    const allRecentAttempts = await ctx.db.query("attempts").order("desc").take(100);
+    const classAttempts = allRecentAttempts.filter(a => studentIds.has(a.studentId));
+
+    // Build milestones (last 5 actions)
+    const milestones = [];
+    for (const a of classAttempts.slice(0, 5)) {
+      const student = students.find(s => s._id === a.studentId);
+      const question = await ctx.db.get(a.questionId) as any;
+      const topic = question?.topicId ? await ctx.db.get(question.topicId) : null;
+      
+      milestones.push({
+        studentName: student?.name ?? "תלמיד",
+        action: a.isCorrect ? "השלים שאלה" : "טעה בשאלה",
+        topicName: topic ? (topic as any).name : "נושא כללי",
+        timestamp: a._creationTime,
+        isCorrect: a.isCorrect
+      });
+    }
+
+    // Calculate global speed
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const attemptsLastHour = classAttempts.filter(a => a._creationTime > oneHourAgo).length;
+    // Speed = attempts per minute
+    const speed = +(attemptsLastHour / 60).toFixed(1);
+
+    return {
+      milestones,
+      globalSpeed: speed
+    };
+  },
+});

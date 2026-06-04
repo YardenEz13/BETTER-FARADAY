@@ -1,5 +1,4 @@
 import type { AgentType, ChatMetrics, PartialBrief, CompositeBrief } from "./localAI.types";
-import type { WorkerRequest, WorkerResponse } from "./localAI.worker";
 
 export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief };
 
@@ -8,73 +7,125 @@ export interface Message {
   content: string;
 }
 
-// ── Configuration & Prompts ──
+const PRACTICE_AGENT_PROMPT = `אתה פאראדיי — מורה פרטי למתמטיקה בשיטה הסוקרטית. מטרתך לעזור לתלמיד להבין ולפתור בעיות מתמטיות בעצמו.
 
-const PRACTICE_AGENT_PROMPT = `אתה מורה פרטי למתמטיקה 5 יח"ל (שאלון 581).
-הוראות קריטיות:
-- לעולם אל תציג את עצמך. אל תגיד "שלום, אני..." או כל הצגה עצמית.
-- ענה בעברית בלבד, תמיד.
-- ענה בקצרה ובדייקנות. מקסימום 3 משפטים אלא אם התלמיד מבקש הסבר מפורט.
-- אל תחזור על מה שהתלמיד אמר. אל תחזור על הוראות אלו.
-- אל תיתן את הפתרון. תן רמז ממוקד אחד שיכוון לכיוון הנכון.
-- אם יש סיכום שיחה קודמת, השתמש בו כהקשר ואל תחזור על מה שכבר נדון.`;
+כללים:
+1. השב תמיד בעברית בלבד.
+2. הצג רק את הנוסחה הכללית הרלוונטית (ב-$...$) ושאל שאלה מנחה אחת.
+3. אל תציב מספרים, אל תחשב, ואל תגלה את התשובה הסופית בשום אופן.
+4. אם התלמיד נתקע, פרק את הבעיה לצעדים קטנים יותר ושאל על הצעד הראשון.
+5. השב ב-2-3 משפטים קצרים.`;
 
-const HOMEWORK_AGENT_PROMPT = `אתה מורה פרטי למתמטיקה 5 יח"ל (שאלון 581).
-הוראות קריטיות:
-- לעולם אל תציג את עצמך. אל תגיד "שלום, אני..." או כל הצגה עצמית.
-- ענה בעברית בלבד, תמיד.
-- ענה בקצרה ובדייקנות. מקסימום 3 משפטים אלא אם התלמיד מבקש הסבר מפורט.
-- אל תחזור על מה שהתלמיד אמר. אל תחזור על הוראות אלו.
-- הסבר צעד אחר צעד. שאל את התלמיד על מה בדיוק הוא נתקע.
-- אם יש סיכום שיחה קודמת, השתמש בו כהקשר ואל תחזור על מה שכבר נדון.`;
+const HOMEWORK_AGENT_PROMPT = `אתה פאראדיי — עוזר שיעורי בית למתמטיקה בשיטה הסוקרטית. מטרתך לעזור לתלמיד להגיע לפתרון בעצמו.
 
-// ── Worker Singleton ──
+כללים:
+1. השב תמיד בעברית בלבד.
+2. הצג רק את הנוסחה הכללית הרלוונטית (ב-$...$) ושאל שאלה מנחה אחת.
+3. אל תציב מספרים, אל תחשב, ואל תגלה את התשובה הסופית בשום אופן.
+4. אם התלמיד נתקע, פרק את הבעיה לצעדים קטנים יותר ושאל על הצעד הראשון.
+5. השב ב-2-3 משפטים קצרים.`;
 
-let worker: Worker | null = null;
+// ── State ──
 let currentAgentType: AgentType | null = null;
 let currentContext: string = "";
 
-// ── Initialization Progress Event ──
-
 type ProgressCallback = (percent: number, stage: string) => void;
 let onInitProgress: ProgressCallback | null = null;
-let initPromise: Promise<void> | null = null;
 let isReady = false;
 let isFailed = false;
 
+// ── Progress ──
 export function onModelProgress(cb: ProgressCallback) {
   onInitProgress = cb;
-}
-
-function getWorker(): Worker {
-  if (!worker) {
-    worker = new Worker(new URL("./localAI.worker.ts", import.meta.url), {
-      type: "module",
-    });
-
-    worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      const msg = e.data;
-      if (msg.type === "init:progress") {
-        onInitProgress?.(msg.percent, msg.stage);
-      }
-    };
+  if (isReady) {
+    setTimeout(() => cb(100, "מוכן!"), 0);
   }
-  return worker;
 }
 
+// ── Think-block stripping ──
+export function stripThinkBlock(text: string): string {
+  // Remove all closed think blocks
+  let stripped = text.replace(/<think>[\s\S]*?<\/think>\s*/g, "");
+  // Remove any trailing unclosed think block
+  const lastThinkIdx = stripped.lastIndexOf("<think>");
+  if (lastThinkIdx !== -1) {
+    stripped = stripped.slice(0, lastThinkIdx);
+  }
+  return stripped.trim();
+}
+
+// ── Socratic Rule Validation ──
+export function violatesSocraticRules(text: string): boolean {
+  // 1. Extract all LaTeX math blocks (content between $ or $$)
+  const mathRegex = /\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
+  let match;
+  while ((match = mathRegex.exec(text)) !== null) {
+    const fullMathBlock = match[0];
+    const mathContent = match[1] || match[2] || "";
+
+    // If the exact math block appears in the question context, it is allowed as context repetition
+    if (currentContext && (currentContext.includes(fullMathBlock) || currentContext.includes(mathContent))) {
+      continue;
+    }
+
+    // Check if the math block contains active math operations/operators
+    const hasOperators = /[\+\-\*\/\^]|\\[f]rac|\\cdot|\\times|\\div|\\pm|\\sqrt/g.test(mathContent);
+    if (hasOperators) {
+      const numbers = mathContent.match(/\d+/g);
+      if (numbers) {
+        for (const num of numbers) {
+          // Allow isolated 1, 2, 4 (used in general formulas)
+          if (num !== "1" && num !== "2" && num !== "4") {
+            // Allow numbers that are part of the original question context
+            const numRegex = new RegExp(`\\b${num}\\b`);
+            if (currentContext && numRegex.test(currentContext)) {
+              continue;
+            }
+            console.log("[localAI] Socratic violation: math block contains calculation with number", num);
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Check for explicit arithmetic calculations or assignments outside math blocks or across the text
+  const equalsMatch = text.match(/=\s*[\+\-]?\s*(\d+)/g);
+  if (equalsMatch) {
+    for (const matchStr of equalsMatch) {
+      const numMatch = matchStr.match(/\d+/);
+      if (numMatch && currentContext) {
+        const numRegex = new RegExp(`\\b${numMatch[0]}\\b`);
+        if (numRegex.test(currentContext)) {
+          continue; // Allow assignment if the number is from the context
+        }
+      }
+      console.log("[localAI] Socratic violation: contains '=' followed by a number:", numMatch?.[0]);
+      return true;
+    }
+  }
+  
+  // 3. Check for division of numbers (like fraction answers "17/20" or "6/36")
+  if (/\b\d+\s*\/\s*\d+\b/g.test(text)) {
+    console.log("[localAI] Socratic violation: contains a fraction number");
+    return true;
+  }
+
+  return false;
+}
+
+// ── Availability ──
 export async function isLocalAIAvailable(): Promise<boolean> {
-  if (!(navigator as any).gpu || isFailed) return false;
-  return true;
+  return !isFailed;
 }
 
 export function getAIStatus(): "unavailable" | "downloading" | "ready" {
-  if (!(navigator as any).gpu || isFailed) return "unavailable";
+  if (isFailed) return "unavailable";
   if (isReady) return "ready";
   return "downloading";
 }
 
 // ── Session ──
-
 export async function preloadModel() {
   await createSession("practice");
 }
@@ -83,42 +134,29 @@ export async function createSession(
   agentType: AgentType,
   questionContext?: string
 ): Promise<boolean> {
-  if (!(navigator as any).gpu) return false;
-
   currentAgentType = agentType;
   currentContext = questionContext || "";
+  isReady = true;
+  isFailed = false;
+  setTimeout(() => onInitProgress?.(100, "מוכן!"), 0);
+  return true;
+}
 
-  if (isReady) return true;
+export function handleAICrash(error: any) {
+  console.error("[localAI] AI System error. Error:", error);
+  isReady = false;
+  isFailed = false;
+}
 
-  if (!initPromise) {
-    initPromise = new Promise((resolve, reject) => {
-      const w = getWorker();
-      
-      const onMessage = (e: MessageEvent<WorkerResponse>) => {
-        const msg = e.data;
-        if (msg.type === "init:ready") {
-          isReady = true;
-          w.removeEventListener("message", onMessage);
-          resolve();
-        } else if (msg.type === "init:error") {
-          w.removeEventListener("message", onMessage);
-          reject(new Error(msg.error));
-        }
-      };
-      
-      w.addEventListener("message", onMessage);
-      w.postMessage({ type: "init" } as WorkerRequest);
-    });
-  }
+export async function reinitSession(
+  agentType: AgentType,
+  questionContext?: string
+): Promise<boolean> {
+  return createSession(agentType, questionContext);
+}
 
-  try {
-    await initPromise;
-    return true;
-  } catch (e) {
-    console.error("Failed to initialize model:", e);
-    isFailed = true;
-    return false;
-  }
+export function isGPUMode(): boolean {
+  return false;
 }
 
 export function destroySession() {
@@ -127,25 +165,17 @@ export function destroySession() {
 }
 
 // ── Context Compaction ──
-// Gemma 3n E2B has ~4096 token context. We compact after 4 user turns to
-// prevent quality degradation. Old messages are replaced with a summary.
-
-/** Rough token estimate for Hebrew text (~0.5 tokens per character) */
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length * 0.5);
 }
 
-/** Check if history needs compaction (>4 user messages) */
 export function needsCompaction(history: Message[]): boolean {
-  const userCount = history.filter((m) => m.role === "user").length;
-  return userCount > 4;
+  return history.filter((m) => m.role === "user").length > 4;
 }
 
-/** Build a heuristic summary from old messages (no GPU needed) */
 export function heuristicSummary(messages: Message[]): string {
   const userMsgs = messages.filter((m) => m.role === "user");
-  const modelMsgs = messages.filter((m) => m.role === "model");
-
+  const modelMsgs = messages.filter((m) => m.role === "model" || (m as any).role === "assistant");
   const points: string[] = [];
   for (const m of userMsgs) {
     const trimmed = m.content.slice(0, 60);
@@ -153,171 +183,416 @@ export function heuristicSummary(messages: Message[]): string {
   }
   if (modelMsgs.length > 0) {
     const lastAnswer = modelMsgs[modelMsgs.length - 1].content.slice(0, 80);
-    points.push(`• תשובה אחרונה של המורה: ${lastAnswer}...`);
+    points.push(`• תשובה אחרונה: ${lastAnswer}...`);
   }
   return points.join("\n");
 }
 
-/** Request Gemma to summarize old messages, with 5s timeout to heuristic fallback */
-async function gemmaSummary(oldMessages: Message[]): Promise<string> {
-  if (!isReady) return heuristicSummary(oldMessages);
-
-  const conversationText = oldMessages
-    .filter((m) => m.role !== "system")
-    .map((m) => `${m.role === "user" ? "תלמיד" : "מורה"}: ${m.content}`)
-    .join("\n");
-
-  const id = Math.random().toString(36).substring(7);
-
-  return new Promise((resolve) => {
-    const w = getWorker();
-    const timeout = setTimeout(() => {
-      w.removeEventListener("message", onMessage);
-      resolve(heuristicSummary(oldMessages));
-    }, 5000);
-
-    const onMessage = (e: MessageEvent<WorkerResponse>) => {
-      const msg = e.data;
-      if (msg.type === "summarize:done" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        resolve(msg.text.trim());
-      } else if (msg.type === "summarize:error" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        resolve(heuristicSummary(oldMessages));
-      }
-    };
-
-    w.addEventListener("message", onMessage);
-    w.postMessage({ type: "summarize", conversationText, id } as WorkerRequest);
-  });
-}
-
-/**
- * Compact conversation history: summarize old messages, keep the most recent 4.
- * Returns a new array where the first element is a summary system message.
- */
 export async function compactHistory(history: Message[]): Promise<Message[]> {
   if (!needsCompaction(history)) return history;
-
-  // Keep the last 4 non-system messages
   const nonSystem = history.filter((m) => m.role !== "system");
   const keepCount = 4;
   const oldMessages = nonSystem.slice(0, -keepCount);
   const recentMessages = nonSystem.slice(-keepCount);
-
-  // Get summary
-  const summary = await gemmaSummary(oldMessages);
-
-  // Build compacted history
-  const summaryMsg: Message = {
-    role: "system",
-    content: `[סיכום שיחה קודמת]: ${summary}`,
-  };
-
-  return [summaryMsg, ...recentMessages];
+  const summary = heuristicSummary(oldMessages);
+  return [{ role: "system", content: `[סיכום שיחה קודמת]: ${summary}` }, ...recentMessages];
 }
 
-// ── Prompt Formatting (Gemma 3n) ──
+// ── Debug State ──
+export interface AIDebugState {
+  promptMessages: { role: string; content: string }[] | null;
+  promptTokenEstimate: number;
+  historyLength: number;
+  wasCompacted: boolean;
+  rawStream: string;
+  thinkBlock: string;
+  visibleResponse: string;
+  isGenerating: boolean;
+  chunkCount: number;
+  generationParams: {
+    temperature: number;
+    max_tokens: number;
+  } | null;
+  gpuMode: boolean;
+  modelUrl: string;
+  lastUpdateMs: number;
+}
 
-function formatGemmaPrompt(
+let _debugState: AIDebugState = {
+  promptMessages: null,
+  promptTokenEstimate: 0,
+  historyLength: 0,
+  wasCompacted: false,
+  rawStream: "",
+  thinkBlock: "",
+  visibleResponse: "",
+  isGenerating: false,
+  chunkCount: 0,
+  generationParams: null,
+  gpuMode: false,
+  modelUrl: "Google Gemini 2.0 Flash",
+  lastUpdateMs: 0,
+};
+
+const _debugListeners: Array<(state: AIDebugState) => void> = [];
+
+export function onDebugUpdate(cb: (state: AIDebugState) => void): () => void {
+  _debugListeners.push(cb);
+  return () => {
+    const idx = _debugListeners.indexOf(cb);
+    if (idx >= 0) _debugListeners.splice(idx, 1);
+  };
+}
+
+export function getDebugState(): Readonly<AIDebugState> {
+  return _debugState;
+}
+
+function _notifyDebug(): void {
+  _debugState.lastUpdateMs = Date.now();
+  const snapshot: AIDebugState = {
+    ..._debugState,
+    promptMessages: _debugState.promptMessages ? [..._debugState.promptMessages] : null,
+  };
+  for (const cb of _debugListeners) {
+    try { cb(snapshot); } catch { /* ignore listener errors */ }
+  }
+}
+
+function _extractThinkContent(rawText: string): string {
+  const start = rawText.indexOf("<think>");
+  if (start === -1) return "";
+  const end = rawText.indexOf("</think>");
+  if (end === -1) return rawText.slice(start + 7);
+  return rawText.slice(start + 7, end);
+}
+
+function buildSystemPrompt(agentType: AgentType, context: string): string {
+  const base = agentType === "practice" ? PRACTICE_AGENT_PROMPT : HOMEWORK_AGENT_PROMPT;
+  if (!context) return base;
+  // Put the active question AFTER the rules and examples with explicit emphasis
+  // so the model doesn't confuse it with the few-shot examples that follow.
+  return `${base}
+
+<examples>
+דוגמה 1:
+תלמיד: "מה המחזור של f(x)=cos(3x)?"
+מורה: "כדי למצוא את המחזור של פונקציית קוסינוס מהצורה $\\cos(kx)$, משתמשים בנוסחה $T=\\frac{2\\pi}{k}$. מה הוא הערך של $k$ בפונקציה שלך?"
+תלמיד: "אני לא יודע, תעזור לי"
+מורה: "בפונקציה שלך, $f(x)=\\cos(3x)$, המקדם של $x$ בתוך הקוסינוס הוא ה-$k$ שלנו. לפי זה, מהו הערך של $k$?"
+
+דוגמה 2:
+תלמיד: "מה סכום 10 האיברים הראשונים בסדרה 3,7,11...?"
+מורה: "הנוסחה לסכום $n$ איברים בסדרה חשבונית היא $S_n=\\frac{n}{2}(a_1+a_n)$. מה הם $n$ ו-$a_1$ לפי הנתונים שלך?"
+תלמיד: "תעזור לי בבקשה, לא הבנתי"
+מורה: "בסדרה שלך, $3,7,11,\\dots$, האיבר הראשון בסדרה הוא $a_1$ ומספר האיברים שרוצים לסכם הוא $n$. לפי הנתונים האלו, מהו האיבר הראשון ומהו מספר האיברים?"
+</examples>
+
+=== שאלה פעילה (התייחס לזו בלבד — ספק הדרכה לשאלה זו ולא לדוגמאות לעיל) ===
+${context}
+=== סוף שאלה פעילה ===`;
+}
+
+function buildGeminiPayload(
   agentType: AgentType,
   context: string,
   userMessage: string,
   history?: Message[]
-): string {
-  const basePrompt =
-    agentType === "practice" ? PRACTICE_AGENT_PROMPT : HOMEWORK_AGENT_PROMPT;
-  const systemPrompt = context
-    ? `${basePrompt}\n\nהקשר השאלה הנוכחית:\n${context}`
-    : basePrompt;
-
-  let prompt = "";
-
-  // The very first turn should include the system instructions
-  if (!history || history.length === 0) {
-    prompt += `<start_of_turn>user\n${systemPrompt}\n[User]: ${userMessage}<end_of_turn>\n<start_of_turn>model\n`;
-    return prompt;
+) {
+  let systemContent = buildSystemPrompt(agentType, context);
+  const historyToUse = history ? [...history] : [];
+  if (historyToUse.length > 0 && historyToUse[0].role === "system") {
+    systemContent += `\n\n${historyToUse[0].content}`;
+    historyToUse.shift();
   }
 
-  // Construct history
-  for (let i = 0; i < history.length; i++) {
-    const msg = history[i];
+  const contents: any[] = [];
+
+  // Clear few-shot examples from here. They are now safely isolated in the system prompt.
+
+  // Add history
+  for (const msg of historyToUse) {
     if (msg.role === "system") continue;
-
-    const role = msg.role === "user" ? "user" : "model";
-    let content = msg.content;
-
-    if (i === 0 || (i === 1 && history[0].role === "system")) {
-      content = `${systemPrompt}\n[User]: ${content}`;
-    }
-
-    prompt += `<start_of_turn>${role}\n${content}<end_of_turn>\n`;
+    contents.push({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content }]
+    });
   }
 
-  // Add the current user turn
-  prompt += `<start_of_turn>user\n${userMessage}<end_of_turn>\n<start_of_turn>model\n`;
+  // Current message with trailing constraints
+  const TRAILING_CONSTRAINT = "\n\n[הנחיית מערכת: ענה בעברית בלבד. הצג נוסחה כללית אחת ב-$...$ ושאלה מנחה אחת בלבד. אסור בהחלט: חישובים, הצבת מספרים, תוצאות ביניים, תשובה סופית.]";
+  contents.push({
+    role: "user",
+    parts: [{ text: userMessage + TRAILING_CONSTRAINT }]
+  });
 
-  return prompt;
+  // Track in debug state
+  const promptMessagesForDebug: { role: string; content: string }[] = [];
+  promptMessagesForDebug.push({ role: "system", content: systemContent });
+  for (const item of contents) {
+    promptMessagesForDebug.push({
+      role: item.role,
+      content: item.parts[0].text
+    });
+  }
+  _debugState.promptMessages = promptMessagesForDebug;
+  _debugState.promptTokenEstimate = promptMessagesForDebug.reduce((acc, m) => acc + estimateTokens(m.content), 0);
+  _notifyDebug();
+
+  return {
+    contents,
+    systemInstruction: {
+      parts: [{ text: systemContent }]
+    },
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 1024
+    }
+  };
 }
 
 // ── Generation ──
-
 export async function streamMessage(
   message: string,
   onChunk: (fullText: string) => void,
-  conversationHistory?: Message[]
+  conversationHistory?: Message[],
+  abortSignal?: AbortSignal,
+  contextOverride?: { agentType?: AgentType; questionContext?: string }
 ): Promise<string> {
-  if (!isReady) return "עדיין טוען מודל עוזר... אנא המתן.";
-
-  // Compact history if it's getting long
-  let history = conversationHistory;
-  if (history && needsCompaction(history)) {
-    history = await compactHistory(history);
+  console.log("[localAI] streamMessage called. isReady:", isReady);
+  
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) {
+    console.warn("[localAI] VITE_GEMINI_API_KEY is not defined in environment variables!");
+    return "שגיאה: מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר. אנא הגדר אותו בקובץ .env.local.";
   }
 
-  const prompt = formatGemmaPrompt(
-    currentAgentType || "practice",
-    currentContext,
+  const wasCompacted = !!(conversationHistory && needsCompaction(conversationHistory));
+  let history = conversationHistory;
+  if (wasCompacted) {
+    console.log("[localAI] streamMessage: history needs compaction, compacting...");
+    history = await compactHistory(history!);
+  }
+
+  // contextOverride lets the caller pass fresh context even if the module state is stale
+  const effectiveAgentType = contextOverride?.agentType ?? currentAgentType ?? "practice";
+  const effectiveContext = contextOverride?.questionContext ?? currentContext;
+
+  const payload = buildGeminiPayload(
+    effectiveAgentType,
+    effectiveContext,
     message,
     history
   );
-  
-  const id = Math.random().toString(36).substring(7);
 
-  return new Promise((resolve, reject) => {
-    const w = getWorker();
-    
-    const onMessage = (e: MessageEvent<WorkerResponse>) => {
-      const msg = e.data;
-      if (msg.type === "generate:partial" && msg.id === id) {
-        onChunk(msg.text);
-      } else if (msg.type === "generate:done" && msg.id === id) {
-        w.removeEventListener("message", onMessage);
-        resolve(msg.text);
-      } else if (msg.type === "generate:error" && msg.id === id) {
-        w.removeEventListener("message", onMessage);
-        reject(new Error(msg.error));
+  // ── Initialize debug state for this generation ──
+  _debugState.rawStream = "";
+  _debugState.thinkBlock = "";
+  _debugState.visibleResponse = "";
+  _debugState.isGenerating = true;
+  _debugState.chunkCount = 0;
+  _debugState.wasCompacted = wasCompacted;
+  _debugState.historyLength = conversationHistory?.filter(m => m.role !== "system").length ?? 0;
+  _debugState.gpuMode = false;
+  _debugState.generationParams = {
+    temperature: 0.3,
+    max_tokens: 1024,
+  };
+  _notifyDebug();
+
+  let rawText = "";
+  let lastVisible = "";
+
+  // Models to try in order. If 2.0-flash hits rate limit, fall back to 1.5-flash.
+  // Models in priority order, based on confirmed quota on this API key:
+  // gemini-3.1-flash-lite: 15 RPM, 500 RPD (best free tier)
+  // gemini-2.5-flash-lite: 10 RPM,  20 RPD
+  // gemini-2.5-flash:       5 RPM,  20 RPD (highest quality fallback)
+  // NOTE: gemini-2.0-flash has 0/0/0 quota on this project — skip it.
+  const MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  const MAX_RETRIES = 2; // per model
+
+  async function fetchWithRetry(modelName: string, signal?: AbortSignal): Promise<Response> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        // Exponential backoff: 2s, 4s — longer waits help with 429 rate limits
+        const delay = 2000 * Math.pow(2, attempt - 1);
+        console.log(`[localAI] Retry ${attempt}/${MAX_RETRIES - 1} for ${modelName} after ${delay}ms...`);
+        await new Promise(res => setTimeout(res, delay));
       }
-    };
-    
-    w.addEventListener("message", onMessage);
-    w.postMessage({ type: "generate", prompt, id } as WorkerRequest);
-  });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      });
+      if (res.ok) return res;
+      if (res.status === 429) {
+        lastErr = new Error(`Gemini streaming API error: ${res.status} ${res.statusText}`);
+        console.warn(`[localAI] ${modelName} rate limited (429). attempt=${attempt}`);
+        continue; // retry same model
+      }
+      // Other errors — throw immediately
+      throw new Error(`Gemini streaming API error: ${res.status} ${res.statusText}`);
+    }
+    throw lastErr!;
+  }
+
+  async function tryModels(signal?: AbortSignal): Promise<Response> {
+    let lastErr: Error | null = null;
+    for (const model of MODELS) {
+      try {
+        console.log(`[localAI] streamMessage: trying model ${model}...`);
+        return await fetchWithRetry(model, signal);
+      } catch (e: any) {
+        lastErr = e;
+        if (e?.message?.includes("429")) {
+          console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
+          continue;
+        }
+        throw e; // non-429 error, propagate immediately
+      }
+    }
+    throw lastErr!;
+  }
+
+  try {
+    console.log("[localAI] streamMessage: fetching Gemini streaming API...");
+    const response = await tryModels(abortSignal);
+
+    if (!response.ok) {
+      throw new Error(`Gemini streaming API error: ${response.status} ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Response body is not readable");
+
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let chunkCount = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Keep the last partial line in buffer
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const cleanLine = line.trim();
+        if (!cleanLine) continue;
+
+        if (cleanLine.startsWith("data: ")) {
+          const jsonStr = cleanLine.substring(6).trim();
+          if (jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              chunkCount++;
+              rawText += text;
+              const visible = stripThinkBlock(rawText);
+              if (visible && violatesSocraticRules(visible)) {
+                console.log("[localAI] streamMessage: detected Socratic rule violation during stream, breaking.");
+                rawText = "";
+                break;
+              }
+              // Live debug tracking on every chunk
+              _debugState.rawStream = rawText;
+              _debugState.thinkBlock = _extractThinkContent(rawText);
+              _debugState.visibleResponse = visible;
+              _debugState.chunkCount = chunkCount;
+              _notifyDebug();
+              if (visible && visible !== lastVisible) {
+                lastVisible = visible;
+                onChunk(visible);
+              }
+            }
+          } catch (e) {
+            console.error("Error parsing Gemini SSE chunk:", e, jsonStr);
+          }
+        }
+      }
+    }
+    console.log("[localAI] streamMessage: stream complete. Total chunks:", chunkCount);
+  } catch (error: any) {
+    if (error?.name === "AbortError" || error?.message?.includes("aborted")) {
+      console.log("[localAI] streamMessage was intentionally aborted.");
+      throw error;
+    }
+    console.error("[localAI] streamMessage failed:", error);
+    throw new Error("פנייה לשרת Gemini נכשלה. אנא בדוק את החיבור לרשת ומפתח ה-API.");
+  }
+
+  const finalVisible = stripThinkBlock(rawText);
+  _debugState.isGenerating = false;
+
+  if (!finalVisible || violatesSocraticRules(finalVisible)) {
+    console.log("[localAI] streamMessage: finalVisible is empty or violates Socratic rules, returning pedagogical fallback.");
+    const fallbackResponse = "אני כאן כדי לעזור לך לפתור את התרגיל צעד אחר צעד. מהו השלב הראשון שבו נתקעת?";
+    _debugState.visibleResponse = fallbackResponse;
+    _notifyDebug();
+    return fallbackResponse;
+  }
+
+  console.log("[localAI] streamMessage completed. final rawText length:", rawText.length, "final visible response:", JSON.stringify(finalVisible));
+  _debugState.visibleResponse = finalVisible;
+  _notifyDebug();
+  return finalVisible;
+}
+
+// ── Shared non-streaming Gemini helper with retry + model fallback ──
+async function geminiGenerateContent(
+  payload: object,
+  signal?: AbortSignal
+): Promise<any> {
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
+
+  const MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  const MAX_RETRIES = 2;
+
+  let lastErr: Error | null = null;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delay = 2000 * Math.pow(2, attempt - 1);
+        await new Promise(res => setTimeout(res, delay));
+      }
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      });
+      if (res.ok) return await res.json();
+      if (res.status === 429) {
+        lastErr = new Error(`Gemini 429 on ${model}`);
+        console.warn(`[localAI] geminiGenerateContent: ${model} rate limited (429) attempt=${attempt}`);
+        continue;
+      }
+      throw new Error(`Gemini API error: ${res.status} ${res.statusText}`);
+    }
+    console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
+  }
+  throw lastErr!;
 }
 
 // ── Analysis ──
-
-/** Heuristic fallback analysis (no GPU needed) */
 export function heuristicAnalysis(messages: Message[]): ChatMetrics {
   const userMessages = messages.filter((m) => m.role === "user");
   const questionsAsked = userMessages.filter((m) => m.content.includes("?")).length;
-  const frustrationKeywords = ["לא מבין", "קשה", "בלבול", "אוף", "תסכול", "נתקעתי"];
+  const frustrationKeywords = ["לא מבין", "קשה", "בלבול", "אוף", "תסכול", "נתקעתי", "לא הבנתי", "מבולבל", "עזרה"];
   const isFrustrated = userMessages.some((m) =>
     frustrationKeywords.some((k) => m.content.includes(k))
   );
-  const independenceKeywords = ["ניסיתי", "חשבתי", "לפי דעתי", "אולי", "אני חושב"];
+  const independenceKeywords = ["ניסיתי", "חשבתי", "לפי דעתי", "אולי", "אני חושב", "הגעתי ל", "נראה לי", "חישבתי"];
   const independenceRatio =
     userMessages.length > 0
       ? userMessages.filter((m) =>
@@ -326,217 +601,296 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
       : 0;
 
   const timestamps = messages
-    .filter((m) => (m as any).timestamp)
-    .map((m) => (m as any).timestamp as number);
+    .filter((m) => (m as Message & { timestamp?: number }).timestamp)
+    .map((m) => (m as Message & { timestamp?: number }).timestamp as number);
   const totalDurationMs =
-    timestamps.length >= 2
-      ? timestamps[timestamps.length - 1] - timestamps[0]
-      : 0;
+    timestamps.length >= 2 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+
+  // Detect math topics from conversation
+  const allText = userMessages.map(m => m.content).join(" ");
+  const topicDetectors: [RegExp, string][] = [
+    [/סדר|סדרות|חשבונית|הנדסית|a_n|a_1|הפרש/, "סדרות"],
+    [/הסתברות|הסתברו|כדור|קלפ|הטלת|מטבע|קובי/, "הסתברות"],
+    [/נגזרת|גזירה|פונקצי|שיפוע|משיק/, "חדו\"א - נגזרות"],
+    [/אינטגרל|שטח|אנטי/, "חדו\"א - אינטגרלים"],
+    [/טריגו|sin|cos|tan|זווית/, "טריגונומטריה"],
+    [/וקטור|ישר|מישור|נקודה/, "גיאומטריה אנליטית"],
+    [/לוגריתם|log|ln|מעריכ/, "לוגריתמים ומעריכים"],
+  ];
+  const detectedTopics = topicDetectors
+    .filter(([re]) => re.test(allText))
+    .map(([, name]) => name);
+
+  // Detect struggle points
+  const strugglePoints: string[] = [];
+  if (isFrustrated) strugglePoints.push("ביטא תסכול או בלבול");
+  if (questionsAsked > 3) strugglePoints.push("שאל הרבה שאלות — ייתכן שלא מבין את הבסיס");
+  if (independenceRatio < 0.2 && userMessages.length > 2) strugglePoints.push("לא הציג עבודה עצמית");
+
+  // Extract key student quotes that reveal confusion or understanding
+  const revealingPatterns = [
+    /לא מבין|לא הבנתי|מבולבל|נתקעתי|קשה לי/,
+    /אני חושב|נראה לי|הגעתי ל|ניסיתי/,
+    /למה|איך|מה זה|מתי|מה ההבדל/,
+    /טעיתי|טעות|לא נכון/,
+  ];
+  const studentQuotes: string[] = [];
+  for (const msg of userMessages) {
+    if (revealingPatterns.some(p => p.test(msg.content)) && msg.content.length > 5) {
+      studentQuotes.push(msg.content.slice(0, 100));
+      if (studentQuotes.length >= 5) break;
+    }
+  }
+
+  // Detect missing knowledge from repeated questions about same topic
+  const missingKnowledge: string[] = [];
+  const knowledgeDetectors: [RegExp, string][] = [
+    [/מה (זה|היא|הם)?\s*נוסח/, "לא מכיר את הנוסחה הרלוונטית"],
+    [/איך מציב|מה מציבים|להציב/, "קושי בהצבה בנוסחה"],
+    [/מה (ה)?הפרש|מה (ה)?d\b/, "לא מבין מושג הפרש בסדרה"],
+    [/מה (ה)?הסתברות|מה הסיכוי/, "לא מבין חישוב הסתברות"],
+    [/נגזרת של|איך גוזרים/, "לא שולט בכללי גזירה"],
+    [/לא מבין.*(נוסח|שאל|תרגיל)/, "קושי בהבנת השאלה"],
+  ];
+  for (const [re, label] of knowledgeDetectors) {
+    if (re.test(allText)) missingKnowledge.push(label);
+  }
+
+  // Generate teacher action item based on analysis
+  let teacherActionItem = "";
+  if (isFrustrated && independenceRatio < 0.2) {
+    teacherActionItem = "התלמיד מתוסכל ולא מנסה לבד — מומלץ שיחה אישית ותרגול מודרך על הבסיס";
+  } else if (independenceRatio < 0.2) {
+    teacherActionItem = "התלמיד לא מציג עבודה עצמית — מומלץ לתת תרגילים עם שלבי ביניים";
+  } else if (isFrustrated) {
+    teacherActionItem = "התלמיד מנסה אבל מתוסכל — מומלץ לחזור על הנושא בשיעור";
+  }
 
   return {
     confusionScore: isFrustrated ? 80 : Math.max(20, questionsAsked * 10),
-    topicsCovered: [],
+    topicsCovered: detectedTopics,
     questionsAsked: userMessages.length,
     avgResponseLength: Math.round(
       userMessages.reduce((s, m) => s + m.content.split(" ").length, 0) /
         Math.max(1, userMessages.length)
     ),
     sentiment: isFrustrated ? "frustrated" : "neutral",
-    keyStrugglePoints: [],
+    keyStrugglePoints: strugglePoints,
     engagementScore: Math.min(100, userMessages.length * 10),
     progressionSignal: "stuck",
-    conceptMentions: [],
+    conceptMentions: detectedTopics,
     totalDurationMs,
     questionDepth: Math.min(5, Math.max(1, questionsAsked)),
     independenceRatio,
+    missingKnowledge,
+    teacherActionItem: teacherActionItem || undefined,
   };
 }
 
-/** Format messages as readable conversation text for the analysis prompt */
-function formatConversationForAnalysis(messages: Message[]): string {
-  return messages
+export async function analyzeConversation(messages: Message[]): Promise<ChatMetrics> {
+  const fallback = heuristicAnalysis(messages);
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) return fallback;
+
+  const conversationText = messages
     .filter((m) => m.role !== "system")
     .map((m) => `${m.role === "user" ? "תלמיד" : "AI"}: ${m.content}`)
     .join("\n");
-}
-
-/** Analyze conversation using Gemma for rich insights, with heuristic fallback */
-export async function analyzeConversation(messages: Message[]): Promise<ChatMetrics> {
-  const fallback = heuristicAnalysis(messages);
-
-  if (!isReady) return fallback;
-
-  const conversationText = formatConversationForAnalysis(messages);
   if (!conversationText.trim()) return fallback;
 
-  const id = Math.random().toString(36).substring(7);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.warn("[localAI] analyzeConversation operation timed out, aborting...");
+    controller.abort();
+  }, 15000);
 
-  return new Promise((resolve) => {
-    const w = getWorker();
-    const timeout = setTimeout(() => {
-      w.removeEventListener("message", onMessage);
-      resolve(fallback);
-    }, 15000);
+  try {
+    const payload = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `נתח שיחת תלמיד-מורה והחזר JSON בלבד ללא טקסט נוסף וללא markdown (בלי תגיות \`\`\`json):
+{"sentiment":"frustrated"|"neutral"|"confident","confusionScore":0-100,"engagementScore":0-100,"progressionSignal":"improving"|"stuck"|"declining","questionDepth":1-5,"independenceRatio":0.0-1.0,"conceptMentions":["נושאים מתמטיים שהוזכרו"],"keyStrugglePoints":["קשיים ספציפיים: מה בדיוק לא הבין?"],"topicsCovered":["נושאים"],"missingKnowledge":["מושגים/חוקים שהתלמיד לא מכיר וצריך לתרגל"],"teacherActionItem":"המלצה מעשית אחת למורה: מה לעשות בשיעור הבא?","gemmaAnalysisSummary":"סיכום קצר: האם התלמיד התקדם? מה למד? מה עדיין חסר?"}
 
-    const onMessage = (e: MessageEvent<WorkerResponse>) => {
-      const msg = e.data;
-      if (msg.type === "analyze:done" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        try {
-          const clean = msg.json.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-          const parsed = JSON.parse(clean);
-          resolve({
-            ...fallback,
-            ...parsed,
-            confusionScore: Math.max(0, Math.min(100, parsed.confusionScore ?? fallback.confusionScore)),
-            engagementScore: Math.max(0, Math.min(100, parsed.engagementScore ?? fallback.engagementScore)),
-            questionDepth: Math.max(1, Math.min(5, parsed.questionDepth ?? fallback.questionDepth)),
-            independenceRatio: Math.max(0, Math.min(1, parsed.independenceRatio ?? fallback.independenceRatio)),
-          });
-        } catch {
-          resolve({ ...fallback, gemmaAnalysisSummary: msg.json.slice(0, 200) });
+שיחה:
+${conversationText}`
+            }
+          ]
         }
-      } else if (msg.type === "analyze:error" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        resolve(fallback);
+      ],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json"
       }
     };
 
-    w.addEventListener("message", onMessage);
-    w.postMessage({ type: "analyze", conversationText, id } as WorkerRequest);
-  });
+    const data = await geminiGenerateContent(payload, controller.signal);
+    clearTimeout(timeoutId);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const clean = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(clean);
+    return {
+      ...fallback,
+      ...parsed,
+      confusionScore: Math.max(0, Math.min(100, parsed.confusionScore ?? fallback.confusionScore)),
+      engagementScore: Math.max(0, Math.min(100, parsed.engagementScore ?? fallback.engagementScore)),
+      questionDepth: Math.max(1, Math.min(5, parsed.questionDepth ?? fallback.questionDepth)),
+      independenceRatio: Math.max(0, Math.min(1, parsed.independenceRatio ?? fallback.independenceRatio)),
+    };
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    console.error("[localAI] analyzeConversation failed, using fallback:", error);
+    return fallback;
+  }
 }
 
-
-// ── Composite Brief Generation (Session Cycling) ──
-
-/** Heuristic fallback for brief generation */
+// ── Composite Brief Generation ──
 function heuristicBrief(
   messages: Message[],
   partialBriefs: PartialBrief[],
   selfAssessment: string
 ): CompositeBrief {
   const userMsgs = messages.filter((m) => m.role === "user");
-  const hasOwnWork = userMsgs.some((m) =>
-    /ניסיתי|חשבתי|הגעתי ל|לדעתי|אני חושב/.test(m.content)
-  );
-  const hasFrustration = userMsgs.some((m) =>
-    /לא מבין|קשה|נתקעתי|בלבול|לא הבנתי/.test(m.content)
-  );
+  const hasOwnWork = userMsgs.some((m) => /ניסיתי|חשבתי|הגעתי ל|לדעתי|אני חושב/.test(m.content));
+  const hasFrustration = userMsgs.some((m) => /לא מבין|קשה|נתקעתי|בלבול|לא הבנתי/.test(m.content));
   const hasQuestions = userMsgs.filter((m) => m.content.includes("?")).length;
-
   const totalMessages = partialBriefs.reduce((s, b) => s + b.messageCount, 0) + messages.length;
   const totalDuration = partialBriefs.reduce((s, b) => s + b.durationMs, 0);
+
+  const revealingPatterns = [
+    /לא מבין|לא הבנתי|מבולבל|נתקעתי|קשה לי/,
+    /אני חושב|נראה לי|הגעתי ל|ניסיתי/,
+    /טעיתי|טעות|לא נכון/,
+  ];
+  const studentQuotes: string[] = [];
+  for (const msg of userMsgs) {
+    if (revealingPatterns.some(p => p.test(msg.content)) && msg.content.length > 5) {
+      studentQuotes.push(`"${msg.content.slice(0, 80)}${msg.content.length > 80 ? "..." : ""}"`);
+      if (studentQuotes.length >= 4) break;
+    }
+  }
+
+  // Detect missing concepts heuristically
+  const allText = userMsgs.map(m => m.content).join(" ");
+  const missingConcepts: string[] = [];
+  if (/מה (זה|היא)?\s*נוסח|לא יודע.*נוסח/.test(allText)) missingConcepts.push("לא מכיר את הנוסחה");
+  if (/איך מציב|מה מציבים/.test(allText)) missingConcepts.push("קושי בהצבה");
+  if (/לא מבין.*(שאל|תרגיל|בעי)/.test(allText)) missingConcepts.push("קושי בהבנת השאלה");
+
+  // Generate struggle analysis
+  const struggleParts: string[] = [];
+  if (hasFrustration) struggleParts.push("התלמיד ביטא תסכול או בלבול במהלך השיחה");
+  if (!hasOwnWork && userMsgs.length > 2) struggleParts.push("לא הציג ניסיון עצמאי לפתרון");
+  if (hasQuestions > 3) struggleParts.push("שאל שאלות רבות — ייתכן שחסר ידע בסיסי");
+  const detailedStruggleAnalysis = struggleParts.length > 0 ? struggleParts.join(". ") + "." : "";
+
+  // Generate next steps
+  const nextSteps: string[] = [];
+  if (!hasOwnWork) nextSteps.push("לתת תרגילים עם שלבי ביניים מפורטים");
+  if (hasFrustration) nextSteps.push("לחזור על הנושא הבסיסי בשיעור");
+  if (hasQuestions > 3) nextSteps.push("לבדוק הבנה של המושגים הבסיסיים לפני המשך");
 
   return {
     totalCycles: partialBriefs.length + 1,
     totalMessages,
     totalDurationMs: totalDuration,
     partialBriefs,
-    approach: hasOwnWork ? "הציג עבודה עצמית ושאל שאלות" : "שאל שאלות ישירות ללא עבודה עצמית",
+    approach: hasOwnWork ? "הציג עבודה עצמית" : "שאל שאלות ישירות",
     frictionPoints: hasFrustration ? ["ביטא תסכול או בלבול"] : [],
     autonomyLevel: hasOwnWork ? 4 : hasQuestions > 3 ? 2 : 3,
     solutionAccuracy: 3,
-    keyInsight: `${totalMessages} הודעות בסך הכל, ${hasQuestions} שאלות, ${partialBriefs.length} סבבי שיחה`,
+    keyInsight: `${totalMessages} הודעות, ${hasQuestions} שאלות, ${partialBriefs.length} סבבים`,
     selfAssessment,
+    studentQuotes: studentQuotes.length > 0 ? studentQuotes : undefined,
+    missingConcepts: missingConcepts.length > 0 ? missingConcepts : undefined,
+    detailedStruggleAnalysis: detailedStruggleAnalysis || undefined,
+    nextSteps: nextSteps.length > 0 ? nextSteps : undefined,
   };
 }
 
-/**
- * Generate a composite pedagogical brief from partial cycle summaries + final session.
- * Uses Gemma for rich analysis, with heuristic fallback.
- */
 export async function generateCompositeBrief(
   partialBriefs: PartialBrief[],
   finalSessionMessages: Message[],
   selfAssessment: string
 ): Promise<CompositeBrief> {
   const fallback = heuristicBrief(finalSessionMessages, partialBriefs, selfAssessment);
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) return fallback;
 
-  if (!isReady) return fallback;
-
-  // Build the analysis text from partial summaries + final session
-  const partialSummaries = partialBriefs
-    .map((b, i) => `סבב ${i + 1}: ${b.summary}`)
-    .join("\n");
-
+  const partialSummaries = partialBriefs.map((b, i) => `סבב ${i + 1}: ${b.summary}`).join("\n");
   const finalConvo = finalSessionMessages
     .filter((m) => m.role !== "system")
     .map((m) => `${m.role === "user" ? "תלמיד" : "מורה"}: ${m.content}`)
     .join("\n");
-
   const analysisText = [
-    partialSummaries ? `סיכומי סבבים קודמים:\n${partialSummaries}` : "",
+    partialSummaries ? `סיכומי סבבים:\n${partialSummaries}` : "",
     `שיחה אחרונה:\n${finalConvo}`,
-    `הערכה עצמית של התלמיד:\n"${selfAssessment}"`,
+    `הערכה עצמית:\n"${selfAssessment}"`,
   ].filter(Boolean).join("\n---\n");
 
-  const id = Math.random().toString(36).substring(7);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.warn("[localAI] generateCompositeBrief operation timed out, aborting...");
+    controller.abort();
+  }, 15000);
 
-  return new Promise((resolve) => {
-    const w = getWorker();
-    const timeout = setTimeout(() => {
-      w.removeEventListener("message", onMessage);
-      resolve(fallback);
-    }, 12000);
+  try {
+    const payload = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `נתח שיחת תרגול והחזר JSON בלבד ללא טקסט נוסף וללא markdown (בלי תגיות \`\`\`json):
+{"approach":"גישת התלמיד: ניסה לבד? שאל? חיפש פתרון מהיר?","frictionPoints":["נקודות שנתקע"],"autonomyLevel":1-5,"solutionAccuracy":1-5,"keyInsight":"תובנה אחת שהמורה חייב לדעת","missingConcepts":["מושגים/נוסחאות שהתלמיד לא שולט בהם"],"teacherActionItem":"המלצה מעשית: מה לעשות בשיעור הבא","detailedStruggleAnalysis":"תאר בפירוט איפה התלמיד נתקע ולמה","nextSteps":["תרגילים/נושאים ספציפיים שהתלמיד צריך לעבוד עליהם"],"studentQuotes":["ציטוטים חשובים מהתלמיד שחושפים הבנה/בלבול"]}
 
-    const onMessage = (e: MessageEvent<WorkerResponse>) => {
-      const msg = e.data;
-      if (msg.type === "brief:done" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        try {
-          const clean = msg.json.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-          const parsed = JSON.parse(clean);
-          resolve({
-            ...fallback,
-            ...parsed,
-            partialBriefs,
-            selfAssessment,
-            autonomyLevel: Math.max(1, Math.min(5, parsed.autonomyLevel ?? fallback.autonomyLevel)),
-            solutionAccuracy: Math.max(1, Math.min(5, parsed.solutionAccuracy ?? fallback.solutionAccuracy)),
-          });
-        } catch {
-          resolve(fallback);
+נתונים:
+${analysisText}`
+            }
+          ]
         }
-      } else if (msg.type === "brief:error" && msg.id === id) {
-        clearTimeout(timeout);
-        w.removeEventListener("message", onMessage);
-        resolve(fallback);
+      ],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json"
       }
     };
 
-    w.addEventListener("message", onMessage);
-    w.postMessage({ type: "brief", conversationText: analysisText, id } as WorkerRequest);
-  });
+    const data = await geminiGenerateContent(payload, controller.signal);
+    clearTimeout(timeoutId);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const clean = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(clean);
+    return {
+      ...fallback,
+      ...parsed,
+      partialBriefs,
+      selfAssessment,
+      autonomyLevel: Math.max(1, Math.min(5, parsed.autonomyLevel ?? fallback.autonomyLevel)),
+      solutionAccuracy: Math.max(1, Math.min(5, parsed.solutionAccuracy ?? fallback.solutionAccuracy)),
+    };
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    console.error("[localAI] generateCompositeBrief failed, using fallback:", error);
+    return fallback;
+  }
 }
 
-// ── Fallback mock for browsers without WebGPU ──
-
-export function getMockResponse(
-  userMessage: string,
-  conversationHistory?: Message[]
-): string {
+// ── Mock fallback ──
+export function getMockResponse(userMessage: string, conversationHistory?: Message[]): string {
   const msg = userMessage.toLowerCase();
   const msgCount = conversationHistory?.filter((m) => m.role === "user").length ?? 0;
 
-  if (msg.match(/^(היי|הי|שלום|בוקר טוב|ערב טוב|מה נשמע|אהלן)/)) {
-    return "איך אפשר לעזור? 😊 (מצב הדגמה — הדפדפן לא תומך במודל AI מלא)";
-  }
-
-  if (msg.match(/(לא מבין|לא הבנתי|לא ברור|מבולבל|קשה לי|עזרה)/)) {
+  if (msg.match(/^(היי|הי|שלום|בוקר טוב|ערב טוב|מה נשמע|אהלן)/))
+    return "איך אפשר לעזור? 😊 (מצב הדגמה)";
+  if (msg.match(/(לא מבין|לא הבנתי|לא ברור|מבולבל|קשה לי|עזרה)/))
     return "נסה לפרק את השאלה לחלקים. מה הנתון הראשון שאתה מזהה? (מצב הדגמה)";
-  }
-
-  if (msg.match(/(סדר|סדרות|סכום|חשבוני|הנדסי)/)) {
-    return `בסדרות חשוב לזכור:\n• חשבונית: הפרש קבוע d\n• הנדסית: מנה קבועה q\n(מצב הדגמה)`;
-  }
-
-  if (msgCount >= 3) {
-    return "אתה מתקדם יפה! על מה תרצה לעבוד עכשיו? (מצב הדגמה)";
-  }
-
-  return `שאלה טובה! "${userMessage.slice(0, 30)}..." — הדפדפן לא תומך במודל AI מלא, אז זה מענה מדומה.`;
+  if (msg.match(/(סדר|סדרות|סכום|חשבוני|הנדסי)/))
+    return `בסדרות: חשבונית=הפרש קבוע, הנדסית=מנה קבועה (מצב הדגמה)`;
+  if (msgCount >= 3) return "אתה מתקדם יפה! על מה תרצה לעבוד עכשיו? (מצב הדגמה)";
+  return `שאלה טובה! "${userMessage.slice(0, 30)}..." — מצב הדגמה.`;
 }
