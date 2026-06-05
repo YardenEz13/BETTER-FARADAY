@@ -1,10 +1,10 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useNavigate, useParams, NavigateFunction } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Search, Map as MapIcon, BookOpen, BarChart2, Activity, AlertTriangle, FileText, Settings, Plus, Zap, Play, RotateCcw, Loader2, Flame, ChevronLeft, Bot } from "lucide-react";
+import { ChevronLeft, RotateCcw, AlertTriangle, Zap, Bot, Database, Activity, Scan, Terminal } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 
 export default function PracticeSession() {
@@ -23,14 +23,12 @@ export default function PracticeSession() {
 
   const [activeQuestion, setActiveQuestion] = useState<Doc<"questions"> | null>(null);
 
-  // Sync active question from query if currently null
   useEffect(() => {
     if (question && !activeQuestion) {
       setActiveQuestion(question);
     }
   }, [question, activeQuestion]);
 
-  // Reset active question when topic changes
   useEffect(() => {
     setActiveQuestion(null);
   }, [topicId]);
@@ -74,7 +72,7 @@ export default function PracticeSession() {
     if (isCorrect) {
       setSessionXP(x => x + (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0));
       setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 1500);
+      setTimeout(() => setShowCelebration(false), 2000);
     }
     await submitAttempt({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
@@ -101,29 +99,178 @@ export default function PracticeSession() {
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
 
   return (
-    <div className="app-layout">
-      <Sidebar studentId={studentId!} navigate={navigate} />
-      <div className="app-content-wrapper">
-        <Topbar student={student} />
-        <div className="app-main">
-          <CenterPanel
-            currentTopic={currentTopic} question={activeQuestion} student={student}
-            questionsAnswered={questionsAnswered} sessionXP={sessionXP}
-            showCelebration={showCelebration} submitted={submitted}
-            selected={selected} isCorrect={isCorrect} elapsed={elapsed}
-            hintsUsed={hintsUsed} handleSelect={handleSelect} handleHint={handleHint}
-            onNext={handleNextQuestion} navigate={navigate} studentId={studentId}
-          />
-          <RightPanel showHint={showHint} loadingHint={loadingHint} hint={hint} />
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+      
+      {/* ── Background & Ambient ── */}
+      <div className="absolute top-0 left-0 w-[50vw] h-full border-r border-[var(--neon-emerald)] opacity-10" style={{clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 100%)'}}></div>
+      
+      {/* ── HUD ── */}
+      <div className="fixed top-6 left-6 z-40 flex items-center gap-6">
+        <button className="cyber-btn cyber-btn-ghost !p-2" onClick={() => navigate(`/student/${studentId}`)}>
+          <ChevronLeft size={24} />
+        </button>
+        <div>
+          <div className="t-mono-label">MODULE: {currentTopic.nameHe}</div>
+          <div className="font-mono text-[var(--neon-emerald)] opacity-80 uppercase tracking-widest text-xs mt-1">ACTIVE ASSIMILATION</div>
         </div>
       </div>
 
-      {/* Floating AI Chat Trigger */}
-      <button className="chat-trigger-btn pulse" onClick={() => setChatOpen(true)} title="פתח מורה AI">
-        <Bot size={24} />
-      </button>
+      <div className="fixed top-6 right-6 z-40 flex gap-6">
+        <div className="shard px-6 py-3 flex items-center gap-3">
+          <Activity size={16} className="text-[var(--acid-green)]" />
+          <div className="font-mono font-bold">{questionsAnswered} / INF</div>
+        </div>
+        <div className="shard px-6 py-3 flex items-center gap-3">
+          <Zap size={16} className="text-[var(--neon-emerald)]" />
+          <div className="font-mono font-bold">+{sessionXP} XP</div>
+        </div>
+      </div>
 
-      {/* AI Chat Panel — Practice Agent */}
+      <div className="fixed bottom-6 right-6 z-40 flex gap-6">
+        <button className="cyber-btn" onClick={() => setChatOpen(true)}>
+          <Terminal size={18} />
+          [ TERMINAL_UPLINK ]
+        </button>
+      </div>
+
+      {/* ── Main Arena ── */}
+      <div className="relative z-10 w-full max-w-7xl px-8 flex gap-12 items-start mt-12">
+        
+        {/* Left: The Question Slab */}
+        <div className="flex-1 flex flex-col gap-8 relative">
+          
+          {question === undefined ? (
+            <div className="shard p-24 flex flex-col items-center justify-center text-[var(--neon-emerald)] text-center">
+              <Scan size={64} className="animate-spin mb-8 opacity-50" />
+              <h2 className="hud-title text-4xl" data-text="SCANNING...">SCANNING...</h2>
+            </div>
+          ) : question === null ? (
+            <div className="shard p-24 flex flex-col items-center justify-center text-center">
+              <Database size={64} className="text-[var(--acid-green)] mb-8" />
+              <h2 className="hud-title text-5xl mb-4" data-text="DATABANK_DEPLETED">DATABANK_DEPLETED</h2>
+              <p className="font-mono text-[var(--text-muted)] mb-12">ALL AVAILABLE NODES ASSIMILATED.</p>
+              <button className="cyber-btn" onClick={() => navigate(`/student/${studentId}`)}>
+                [ RETURN_TO_CORE ]
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Question Header */}
+              <div className="flex justify-between items-end border-b border-[var(--neon-emerald)] pb-4 mb-4">
+                <div className="font-mono text-2xl font-bold text-[var(--neon-emerald)]">PROBLEM_ID: {question._id.slice(-6).toUpperCase()}</div>
+                <div className="flex items-center gap-2 text-[var(--acid-green)] font-mono">
+                  <RotateCcw size={16} className="animate-spin-slow" />
+                  {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
+                </div>
+              </div>
+
+              {/* The Stem */}
+              <motion.div 
+                key={question._id} 
+                initial={{ opacity: 0, x: -50, scale: 0.95 }} 
+                animate={{ opacity: 1, x: 0, scale: 1 }} 
+                className="text-2xl leading-relaxed mb-8"
+              >
+                {question.stem}
+              </motion.div>
+
+              {/* Celebration Overlay */}
+              <AnimatePresence>
+                {showCelebration && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 2 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    exit={{ opacity: 0 }} 
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-title text-[8rem] text-[var(--neon-emerald)] drop-shadow-[var(--glow-emerald)] z-50 pointer-events-none"
+                  >
+                    SYNCED!
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Choices */}
+              <div className="flex flex-col gap-6">
+                {question.choices.map((choice: string, idx: number) => {
+                  const isCorrectC = idx === question.correctIndex;
+                  const isWrong = submitted && idx === selected && !isCorrectC;
+                  const isRight = submitted && isCorrectC;
+                  
+                  return (
+                    <button 
+                      key={idx} 
+                      className={`shard p-8 text-xl text-right transition-all font-mono duration-300 relative overflow-hidden group
+                        ${submitted ? 'cursor-default opacity-80' : 'cursor-pointer hover:-translate-x-2'}
+                        ${selected === idx && !submitted ? 'border-[var(--acid-green)] shadow-[var(--glow-acid)]' : ''}
+                        ${isRight ? 'border-[var(--neon-emerald)] bg-[rgba(0,255,136,0.2)]' : ''}
+                        ${isWrong ? 'border-[var(--danger-crimson)] bg-[rgba(255,0,85,0.1)] opacity-50' : ''}
+                      `}
+                      onClick={() => handleSelect(idx)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="opacity-50 text-sm">[{idx + 1}]</span>
+                        <div className="flex-1 mr-6">{choice}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Actions / Feedback */}
+              <div className="mt-8 flex gap-6">
+                {!submitted ? (
+                  <>
+                    <button 
+                      className={`cyber-btn ${selected !== null ? '' : 'opacity-50 pointer-events-none grayscale'}`} 
+                      onClick={selected !== null ? () => handleSelect(selected) : undefined}
+                    >
+                      [ INITIATE_VERIFICATION ]
+                    </button>
+                    <button className="cyber-btn cyber-btn-ghost text-[var(--warning-amber)] border-[var(--warning-amber)] hover:bg-[var(--warning-amber)]" onClick={handleHint}>
+                      <Bot size={16} /> [ REQUEST_AI_ASSIST ]
+                    </button>
+                  </>
+                ) : (
+                  <button className="cyber-btn" onClick={handleNextQuestion}>
+                    [ PROCEED_NEXT_NODE ] <ChevronLeft size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Explanation Panel */}
+              <AnimatePresence>
+                {submitted && (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mt-8 shard p-8 border-l-4 ${isCorrect ? 'border-[var(--neon-emerald)]' : 'border-[var(--danger-crimson)]'}`}>
+                    <div className="t-mono-label mb-2">SYSTEM_ANALYSIS // {isCorrect ? 'SUCCESS' : 'FAILURE'}</div>
+                    <div className="font-mono">{question.explanation}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
+
+        </div>
+
+        {/* Right: The Hardware Keypad & AI Link */}
+        <div className="w-[320px] flex-shrink-0 flex flex-col gap-8">
+          
+          <CalculatorCard />
+
+          <div className="shard p-8 flex flex-col gap-6">
+            <div className="t-mono-label flex items-center gap-2">
+              <Bot size={14} /> AI_ENGINE_STATUS
+            </div>
+            {loadingHint ? (
+              <div className="text-[var(--acid-green)] font-mono animate-pulse">PROCESSING_QUERY...</div>
+            ) : hint ? (
+              <div className="font-mono text-sm border-r-2 border-[var(--neon-emerald)] pr-4 italic">"{hint}"</div>
+            ) : (
+              <div className="font-mono text-sm opacity-50">ENGINE_IDLE. AWAITING_PROMPT.</div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
       <AIChatPanel
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
@@ -134,316 +281,64 @@ export default function PracticeSession() {
         topicId={topicId}
         questionId={activeQuestion?._id}
       />
-
-      <style>{`@keyframes spin{100%{transform:rotate(360deg)}}@keyframes blink{50%{opacity:0}}`}</style>
     </div>
   );
 }
 
-function Sidebar({ studentId, navigate }: { studentId: string; navigate: NavigateFunction }) {
-  return (
-    <aside className="app-sidebar">
-      <div className="app-brand"><span>FARADAY</span> Logic</div>
-      <button className="new-proof-btn mb-8"><Plus size={16} /> הוכחה חדשה</button>
-      <div className="flex-col gap-1 flex-1">
-        <button className="nav-item" onClick={() => navigate(`/student/${studentId}`)}><MapIcon size={18} /> מפת למידה</button>
-        <button className="nav-item active"><BookOpen size={18} /> תרגול</button>
-        <button className="nav-item"><BarChart2 size={18} /> סטטיסטיקות</button>
-        <button className="nav-item" onClick={() => navigate("/teacher")}><Activity size={18} /> מפת חום</button>
-        <button className="nav-item"><AlertTriangle size={18} /> התראות</button>
-        <button className="nav-item"><FileText size={18} /> שיעורי בית</button>
-      </div>
-    </aside>
-  );
-}
-
-function Topbar({ student }: { student: Doc<"students"> }) {
-  return (
-    <header className="app-topbar">
-      <div className="topbar-links">
-        <div className="topbar-link">מפת למידה</div>
-        <div className="topbar-link active">תרגול</div>
-        <div className="topbar-link">סטטיסטיקות</div>
-      </div>
-      <div className="topbar-actions">
-        <div className="search-box">
-          <Search size={16} color="var(--text-faint)" />
-          <input type="text" placeholder="חיפוש קונספטים..." />
-        </div>
-        <Bell size={18} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
-        <div className="avatar" style={{ width: 28, height: 28, background: student.avatarColor, fontSize: '0.8rem' }}>
-          {student.name.slice(0, 1)}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function CenterPanel({
-  currentTopic,
-  question,
-  student,
-  questionsAnswered,
-  sessionXP,
-  showCelebration,
-  submitted,
-  selected,
-  isCorrect,
-  elapsed,
-  hintsUsed,
-  handleSelect,
-  handleHint,
-  onNext,
-  navigate,
-  studentId
-}: {
-  currentTopic: Doc<"topics">;
-  question: Doc<"questions"> | null | undefined;
-  student: Doc<"students">;
-  questionsAnswered: number;
-  sessionXP: number;
-  showCelebration: boolean;
-  submitted: boolean;
-  selected: number | null;
-  isCorrect: boolean;
-  elapsed: number;
-  hintsUsed: number;
-  handleSelect: (idx: number) => void;
-  handleHint: () => void;
-  onNext: () => void;
-  navigate: NavigateFunction;
-  studentId: string | undefined;
-}) {
-  return (
-    <div className="app-center p-10">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <div className="flex items-center gap-2 t-mini-title text-primary mb-2">
-            <RotateCcw size={14} /> מודול פעיל: {currentTopic.nameHe}
-          </div>
-          <h1 className="t-h1" style={{ margin: 0, fontSize: "2.5rem" }}>תרגול אדפטיבי</h1>
-          <div className="t-sub mt-2">שאלון 581 · הכנה לבגרות · 5 יח״ל</div>
-        </div>
-        <div className="flex gap-6 items-center">
-          <div className="streak-badge">
-            <Flame size={16} color="var(--warning)" />
-            <span className="fw-800 text-warning" style={{ fontSize: "0.9rem" }}>{questionsAnswered} שאלות</span>
-          </div>
-          <div className="xp-badge">
-            <Zap size={18} color="var(--primary-dim)" />
-            <span className="fw-800 text-lg" style={{ position: "relative", zIndex: 1 }}>{student.streak * 10 + sessionXP}</span>
-            <span className="text-2xs text-faint fw-700" style={{ position: "relative", zIndex: 1 }}>XP</span>
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showCelebration && (
-          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-            style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 1000, padding: "24px 48px", borderRadius: "var(--r-xl)", background: "rgba(52,250,89,0.15)", border: "2px solid var(--primary-dim)", backdropFilter: "blur(12px)", textAlign: "center" }}>
-            <div style={{ fontSize: "2rem", marginBottom: 8 }}>🎉</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--primary-dim)" }}>אחלה עבודה!</div>
-            <div style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: 4 }}>+{(question?.difficulty ?? 1) * 50 + (hintsUsed === 0 ? 30 : 0)} XP</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {question === undefined ? (
-        <div className="card" style={{ padding: 48, textAlign: "center" }}>
-          <Loader2 size={32} color="var(--primary-dim)" style={{ animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-          <div className="t-h2">טוען שאלות...</div>
-        </div>
-      ) : question === null ? (
-        <div className="card" style={{ padding: 48, textAlign: "center", border: "1px solid var(--primary-dim)" }}>
-          <div className="t-h2" style={{ color: "var(--primary-dim)", marginBottom: 16 }}>🎉 אין יותר שאלות להיום!</div>
-          <p style={{ color: "var(--text-muted)" }}>סיימתם את המודול הנוכחי. תוכלו לחזור למפת הלמידה כדי לבחור מודול אחר.</p>
-          <button className="key-btn" style={{ marginTop: 24, padding: "8px 24px", background: "var(--primary-dim)", color: "#000", fontWeight: 800 }} onClick={() => navigate(`/student/${studentId}`)}>
-            חזרה למפת הלמידה
-          </button>
-        </div>
-      ) : (
-        <>
-          <motion.div key={question._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="card" style={{ padding: 0, position: "relative", overflow: "hidden", borderRight: "3px solid var(--primary-dim)", marginBottom: 40 }}>
-            <div className="flex justify-between items-center" style={{ padding: "16px 24px", borderBottom: "var(--ghost-border)" }}>
-              <span className="status-badge" style={{ background: "rgba(255,255,255,0.1)", color: "#fff", padding: "4px 8px" }}>רמת קושי {question.difficulty} · שאלון 581</span>
-              <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "var(--text-faint)" }}>TH-{question._id.slice(-5).toUpperCase()}</span>
-            </div>
-            <div style={{ padding: "32px 40px" }}>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 500, marginBottom: 24, lineHeight: 1.5 }}>{question.stem}</h2>
-            </div>
-          </motion.div>
-
-          <QuestionChoices question={question} submitted={submitted} selected={selected} isCorrect={isCorrect} elapsed={elapsed} handleSelect={handleSelect} handleHint={handleHint} onNext={onNext} hintsUsed={hintsUsed} />
-        </>
-      )}
-    </div>
-  );
-}
-
-function QuestionChoices({
-  question,
-  submitted,
-  selected,
-  isCorrect,
-  elapsed,
-  handleSelect,
-  handleHint,
-  onNext,
-  hintsUsed
-}: {
-  question: Doc<"questions">;
-  submitted: boolean;
-  selected: number | null;
-  isCorrect: boolean;
-  elapsed: number;
-  handleSelect: (idx: number) => void;
-  handleHint: () => void;
-  onNext: () => void;
-  hintsUsed: number;
-}) {
-  return (
-    <div style={{ padding: "0 24px" }}>
-      <div className="flex justify-between items-center mb-6">
-        <div className="t-mini-title mb-0 text-default text-sm">צעדי פתרון לוגיים</div>
-        <span className="text-xs text-muted"><RotateCcw size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: 4 }} />{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
-      </div>
-      <div className="flex gap-6 items-start" style={{ position: "relative" }}>
-        <div style={{ position: "absolute", right: 15, top: 32, bottom: -40, width: 2, background: "rgba(255,255,255,0.05)" }} />
-        <div style={{ width: 32, height: 32, borderRadius: 16, background: "var(--primary-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 800, color: "#000", flexShrink: 0 }}>01</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "var(--primary-dim)", fontSize: "0.95rem", fontWeight: 800, marginBottom: 16 }}>
-            {submitted && !isCorrect ? "צעד שגוי. בדקו ותקנו:" : "בחרו את צעד הפתרון הנכון:"}
-          </div>
-          <div className="flex-col gap-3" style={{ marginBottom: 24 }}>
-            {question.choices.map((choice: string, idx: number) => {
-              const isCorrectC = idx === question.correctIndex;
-              const isWrong = submitted && idx === selected && !isCorrectC;
-              const isRight = submitted && isCorrectC;
-              const s: React.CSSProperties = { background: "var(--surface-high)", border: "1px solid var(--surface-highest)", borderRadius: "var(--r-md)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, fontFamily: "var(--font-body)", fontSize: "1.1rem", cursor: "pointer", transition: "all 0.2s", textAlign: "right" };
-              if (submitted) { s.cursor = "default"; if (isRight) { s.background = "var(--primary-alpha)"; s.border = "1px solid var(--success)"; s.color = "var(--success)"; } else if (isWrong) { s.background = "rgba(254,111,107,0.1)"; s.border = "1px solid var(--danger)"; s.color = "var(--danger)"; } else { s.opacity = 0.5; } } else if (selected === idx) { s.border = "1px solid var(--primary-dim)"; s.boxShadow = "inset 0 0 0 1px var(--primary-dim)"; }
-              return (
-                <motion.button key={idx} style={s} onClick={() => handleSelect(idx)} whileHover={!submitted ? { scale: 1.01 } : {}} whileTap={!submitted ? { scale: 0.99 } : {}}>
-                  <div style={{ flex: 1 }}>{choice}</div>
-                  {isRight && <span>✅</span>}{isWrong && <span>❌</span>}
-                  {selected === idx && !submitted && <div style={{ width: 8, height: 20, background: "rgba(52,250,89,0.7)", animation: "blink 1s step-end infinite" }} />}
-                </motion.button>
-              );
-            })}
-          </div>
-          <div className="flex gap-4">
-            {!submitted ? (<>
-              <button className="key-btn" style={{ padding: "0 24px", background: selected !== null ? "var(--primary-dim)" : "var(--surface)", color: selected !== null ? "#000" : "var(--text)", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 700 }}>בדוק תשובה</button>
-              <button className="key-btn" style={{ padding: "0 16px", background: "transparent", border: "none", color: "var(--danger)", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 700 }} onClick={handleHint}><AlertTriangle size={14} style={{ marginLeft: 8, display: "inline-block", verticalAlign: "middle" }} /> שלח למנוע AI</button>
-            </>) : (
-              <motion.button className="key-btn" style={{ padding: "0 24px", background: "var(--primary-dim)", color: "#000", fontSize: "0.9rem", fontFamily: "var(--font-body)", fontWeight: 800 }} onClick={onNext} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                שאלה הבאה <ChevronLeft size={14} style={{ marginRight: 8, display: "inline-block", verticalAlign: "middle" }} />
-              </motion.button>
-            )}
-          </div>
-          <AnimatePresence>
-            {submitted && !isCorrect && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ marginTop: 24, padding: 16, background: "rgba(254,111,107,0.1)", borderRadius: "var(--r-md)", borderRight: "3px solid var(--danger)" }}>
-                <span style={{ fontWeight: 800, color: "var(--danger)" }}>ניתוח:</span> {question.explanation}
-              </motion.div>
-            )}
-            {submitted && isCorrect && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ marginTop: 24, padding: 16, background: "var(--primary-alpha)", borderRadius: "var(--r-md)", borderRight: "3px solid var(--primary-dim)" }}>
-                <span style={{ fontWeight: 800, color: "var(--primary-dim)" }}>מעולה!</span> {question.explanation}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RightPanel({ showHint, loadingHint, hint }: { showHint: boolean; loadingHint: boolean; hint: string | null }) {
+function CalculatorCard() {
   const [eqValue, setEqValue] = useState("");
 
   const handleKeyPress = (key: string) => {
-    if (key === "del") {
-      setEqValue(v => v === "Error" ? "" : v.slice(0, -1));
-    } else if (key === "C") {
-      setEqValue("");
-    } else if (key === "=") {
+    if (key === "del") setEqValue(v => v === "Error" ? "" : v.slice(0, -1));
+    else if (key === "C") setEqValue("");
+    else if (key === "=") {
       try {
-        const expr = eqValue
-          .replace(/×/g, "*")
-          .replace(/÷/g, "/")
-          .replace(/π/g, "Math.PI")
-          .replace(/sin\(/g, "Math.sin(")
-          .replace(/cos\(/g, "Math.cos(")
-          .replace(/tan\(/g, "Math.tan(")
-          .replace(/log\(/g, "Math.log10(")
-          .replace(/√\(/g, "Math.sqrt(")
-          .replace(/\^/g, "**"); // Handle powers
-        
-         
+        const expr = eqValue.replace(/×/g, "*").replace(/÷/g, "/").replace(/π/g, "Math.PI").replace(/sin\(/g, "Math.sin(").replace(/cos\(/g, "Math.cos(").replace(/tan\(/g, "Math.tan(").replace(/log\(/g, "Math.log10(").replace(/√\(/g, "Math.sqrt(").replace(/\^/g, "**");
         const result = new Function("return " + expr)();
-        
-        if (Number.isFinite(result)) {
-           setEqValue(Number(result.toFixed(5)).toString());
-        } else {
-           setEqValue("Error");
-        }
+        setEqValue(Number.isFinite(result) ? Number(result.toFixed(5)).toString() : "Error");
       } catch {
         setEqValue("Error");
       }
-    } else if (["sin", "cos", "tan", "log", "√"].includes(key)) {
-      setEqValue(v => (v === "Error" ? "" : v) + key + "(");
-    } else if (key === "x²") {
-      setEqValue(v => (v === "Error" ? "" : v) + "^2");
-    } else if (key === "xⁿ") {
-      setEqValue(v => (v === "Error" ? "" : v) + "^");
-    } else {
-      setEqValue(v => (v === "Error" ? "" : v) + key);
-    }
+    } 
+    else if (["sin", "cos", "tan", "log", "√"].includes(key)) setEqValue(v => (v === "Error" ? "" : v) + key + "(");
+    else if (key === "x²") setEqValue(v => (v === "Error" ? "" : v) + "^2");
+    else if (key === "xⁿ") setEqValue(v => (v === "Error" ? "" : v) + "^");
+    else setEqValue(v => (v === "Error" ? "" : v) + key);
   };
 
   return (
-    <div className="app-right-panel flex-col gap-6" style={{ background: "transparent" }}>
-      <div className="card p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="t-mini-title mb-0 text-default">מחשבון מדעי</div>
-          <div className="flex gap-2">
-            <div className="dot" style={{ background: "var(--danger)", width: 6, height: 6, cursor: "pointer" }} onClick={() => setEqValue("")} title="נקה הכל" />
-            <div className="dot" style={{ background: "var(--warning)", width: 6, height: 6 }} />
-            <div className="dot" style={{ background: "var(--success)", width: 6, height: 6 }} />
-          </div>
-        </div>
-        <div className="card-recessed font-mono text-primary text-lg mb-4" style={{ padding: "12px 16px", minHeight: 48, textAlign: "left", direction: "ltr" }}>
-          {eqValue || <span style={{ color: "var(--text-faint)" }}>0</span>}
-        </div>
-        <div className="keypad">
-          {["x²","xⁿ","√","π","sin","cos","tan","log"].map(k => <button key={k} className="key-btn key-op" onClick={() => handleKeyPress(k)}>{k}</button>)}
-          {["(",")","C","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => <button key={k} className="key-btn" onClick={() => handleKeyPress(k)} style={{ background: k === "=" ? "var(--primary)" : k === "C" ? "rgba(251, 113, 133, 0.15)" : undefined, color: k === "=" ? "#fff" : k === "C" ? "var(--danger)" : undefined }}>{k}</button>)}
+    <div className="shard p-8">
+      <div className="t-mono-label flex items-center justify-between mb-4">
+        <span>HARDWARE_CALCULATOR</span>
+        <div className="flex gap-1">
+          <div className="w-2 h-2 rounded bg-[var(--danger-crimson)] cursor-pointer" onClick={() => setEqValue("")} />
+          <div className="w-2 h-2 rounded bg-[var(--warning-amber)]" />
+          <div className="w-2 h-2 rounded bg-[var(--neon-emerald)]" />
         </div>
       </div>
-      <div className="card p-5" style={{ border: showHint ? "1px solid var(--primary-dim)" : "var(--ghost-border)" }}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="icon-box" style={{ width: 36, height: 36, background: "var(--surface-high)" }}>
-            {loadingHint ? <Loader2 size={18} color="var(--primary-dim)" style={{ animation: "spin 1s linear infinite" }} /> : <Settings size={18} color={showHint ? "var(--primary-dim)" : "var(--text)"} />}
-          </div>
-          <div>
-            <div className="t-mini-title mb-0 text-default">{showHint ? "מנוע AI פעיל" : "מורה AI ממתין"}</div>
-            <div className="text-sm lh-snug mt-1" style={{ color: showHint ? "var(--text)" : "var(--text-muted)" }}>
-              {hint ? `"${hint}"` : '"לחצו על ״שלח למנוע AI״ לרמז..."'}
-            </div>
-          </div>
-        </div>
+      
+      <div className="bg-[rgba(0,0,0,0.5)] border border-[var(--neon-emerald)] font-mono text-[var(--neon-emerald)] text-xl mb-6 p-4 min-h-[60px] text-left dir-ltr flex items-center justify-end overflow-hidden shadow-[var(--glow-emerald)]">
+        {eqValue || <span className="opacity-30">0.0000</span>}
       </div>
-      <div className="card overflow-hidden" style={{ padding: 0 }}>
-        <div className="flex items-center justify-center relative" style={{ height: 120, background: "linear-gradient(45deg,#16181d,#282c35)" }}>
-          <div style={{ position: "absolute", inset: 0, opacity: 0.3, background: "repeating-linear-gradient(0deg,transparent,transparent 10px,rgba(255,255,255,0.05) 10px,rgba(255,255,255,0.05) 11px)" }} />
-          <div className="icon-box-lg relative" style={{ background: "var(--primary-dim)", zIndex: 1, boxShadow: "0 0 20px rgba(52,250,89,0.3)" }}>
-            <Play size={24} color="#000" fill="#000" />
-          </div>
-        </div>
-        <div className="p-4">
-          <div className="t-mini-title mb-0">סקירת קונספט</div>
-          <div className="text-sm fw-600 mt-1">סיכום עקרונות</div>
-        </div>
+      
+      <div className="grid grid-cols-4 gap-2">
+        {["x²","xⁿ","√","π","sin","cos","tan","log"].map(k => (
+          <button key={k} className="h-12 bg-[rgba(0,255,136,0.1)] hover:bg-[rgba(0,255,136,0.3)] text-[var(--acid-green)] font-mono font-bold transition-colors" style={{clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)'}} onClick={() => handleKeyPress(k)}>{k}</button>
+        ))}
+        {["(",")","C","del","7","8","9","÷","4","5","6","×","1","2","3","-","0",".","=","+"].map(k => (
+          <button 
+            key={k} 
+            className={`h-12 font-mono font-bold transition-all ${
+              k === "=" ? "bg-[var(--neon-emerald)] text-[var(--bg-deep)] shadow-[var(--glow-emerald)]" : 
+              k === "C" ? "bg-[rgba(255,0,85,0.2)] text-[var(--danger-crimson)]" : 
+              "bg-[var(--bg-panel)] text-[var(--text-bright)] hover:bg-[rgba(0,255,136,0.2)] hover:text-[var(--neon-emerald)] border border-[rgba(0,255,136,0.1)]"
+            }`}
+            style={{clipPath: 'polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px)'}}
+            onClick={() => handleKeyPress(k)}
+          >
+            {k}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -2,8 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Loader2, BarChart2, BookOpen, ChevronLeft, Zap } from "lucide-react";
-import { px } from "framer-motion";
+import { Loader2, Terminal, ShieldAlert } from "lucide-react";
 
 export default function RolePage() {
   const navigate = useNavigate();
@@ -11,8 +10,7 @@ export default function RolePage() {
   const [seeding, setSeeding] = useState(false);
   const seedDatabase = useMutation(api.seed.seedDatabase);
   const students = useQuery(api.classroom.list);
-  const classroom = useQuery(api.classroom.getFirstClassroom);
-
+  
   useEffect(() => {
     if (students && students.length === 0 && !seeded && !seeding) {
       setSeeding(true);
@@ -22,143 +20,94 @@ export default function RolePage() {
   }, [students, seeded, seeding]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--s8)", position: "relative", overflow: "hidden" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-8 relative overflow-hidden">
+      
+      {/* HUD Accents */}
+      <div className="absolute top-8 right-8 t-mono-label opacity-50">SYS.INIT // FARADAY LOGIC</div>
+      <div className="absolute bottom-8 left-8 t-mono-label opacity-50">v3.0.0_BETA</div>
 
-      {/* Cosmic background glow */}
-      <div style={{ position: "fixed", top: -100, right: -100, width: 800, height: 800, background: "radial-gradient(circle, rgba(129, 140, 248, 0.08) 0%, transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "fixed", bottom: -100, left: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(45, 212, 191, 0.08) 0%, transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
-
-      {/* Content — Level 0 */}
-      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 1000 }}>
-
-        {/* Header */}
-        <div className="fade-in-up text-center" style={{ marginBottom: 64 }}>
-          <div className="section-label" style={{ justifyContent: "center" }}>
-            כיתה י״א · שאלון 581 · 5 יחידות לימוד
-          </div>
-          <h1 className="t-display" style={{ color: "var(--text)", marginBottom: "var(--s4)" }}>
-            מתמטיקה{" "}
-            <span style={{ color: "var(--primary)", textShadow: "0 0 30px rgba(129,140,248,0.5)" }}>581</span>
-          </h1>
-          <p className="t-body" style={{ maxWidth: 640, margin: "0 auto", fontSize: "1.15rem", lineHeight: 1.8 }}>
-            פלטפורמת למידה אדפטיבית חכמה המבוססת על אלגוריתם הלמידה FARADAY Logic
+      <div className="relative z-10 w-full max-w-4xl flex flex-col gap-16">
+        {/* Massive Glitching Title */}
+        <div className="text-center">
+          <div className="t-mono-label mb-4 opacity-70 tracking-[5px]">-- IDENTITY SELECTION --</div>
+          <h1 className="hud-title" data-text="FARADAY LOGIC">FARADAY LOGIC</h1>
+          <p className="font-mono text-[var(--laser-cyan)] mt-4 max-w-lg mx-auto opacity-80 text-sm">
+            ACCESSING NEURAL PATHWAYS. PLEASE SELECT YOUR DESIGNATION TO PROCEED WITH SYSTEM INTEGRATION.
           </p>
-          {seeding && (
-            <div className="flex items-center justify-center gap-2 t-label" style={{ marginTop: "var(--s4)", color: "var(--text-faint)" }}>
-              <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
-              מאתחל את מערכת הלוגיקה...
-            </div>
-          )}
         </div>
 
-        {/* Cards — Level 2 (surface-high) with no 1px borders per spec */}
-        <div className="fade-in-up" style={{ animationDelay: "0.1s", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 48 }}>
+        {seeding && (
+          <div className="shard p-4 text-center font-mono text-[var(--neon-emerald)] flex items-center justify-center gap-3">
+            <Loader2 className="animate-spin" size={18} />
+            INITIALIZING CORE DATABANKS...
+          </div>
+        )}
 
-          {/* Student Panel */}
-          <div className="role-card student-card stripe-left stripe-primary">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--s4)", marginBottom: "var(--s6)" }}>
-              <div className="role-card-icon" style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-dim))" }}>
-                <BookOpen size={28} color="#ffffff" />
-              </div>
-              <div>
-                <div className="t-label" style={{ color: "var(--text-faint)", marginBottom: 2 }}>חיבור לרשת הלמידה</div>
-                <h2 className="t-headline" style={{ marginBottom: 0, fontSize: "1.35rem" }}>אני תלמיד/ה</h2>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+          
+          {/* Asymmetric line connecting them */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[1px] bg-[var(--neon-emerald)] opacity-20 pointer-events-none hidden md:block"></div>
+
+          {/* Student Terminal */}
+          <div className="shard p-8 flex flex-col group hover:border-[var(--neon-emerald)] transition-colors duration-500">
+            <div className="flex items-center gap-4 mb-6 text-[var(--neon-emerald)]">
+              <Terminal size={32} />
+              <h2 className="text-3xl font-bold font-mono tracking-widest">STUDENT_</h2>
             </div>
-
-            <p className="t-body" style={{ marginBottom: "var(--s6)", flex: 1 }}>
-              תרגל שאלות בהתאמה אישית, קבל רמזים חכמים מבוססי-לוגיקה כשאתה תקוע, ועקוב אחרי ההתקדמות המבנית בכל נושא.
+            <p className="font-mono text-sm opacity-70 mb-8 flex-1 leading-relaxed">
+              &gt; Enter the learning matrix.<br/>
+              &gt; Adaptive problem solving active.<br/>
+              &gt; AI assistance ready.
             </p>
-
-            <div className="flex gap-2 flex-wrap" style={{ marginBottom: "var(--s6)" }}>
-              <span className="badge badge-success">רמה מותאמת</span>
-              <span className="badge badge-primary">רמזים חכמים</span>
-              <span className="badge badge-neutral">מסלול למידה</span>
-            </div>
-
-            <StudentSelector classroom={classroom} students={students} />
+            
+            <StudentSelector students={students} />
           </div>
 
-          {/* Teacher Panel */}
-          <div className="role-card teacher-card stripe-left stripe-yellow">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--s4)", marginBottom: "var(--s6)" }}>
-              <div className="role-card-icon" style={{ background: "linear-gradient(135deg, var(--warning), #f59e0b)" }}>
-                <BarChart2 size={28} color="#ffffff" />
-              </div>
-              <div>
-                <div className="t-label" style={{ color: "var(--text-faint)", marginBottom: 2 }}>ממשק אנליטיקה</div>
-                <h2 className="t-headline" style={{ marginBottom: 0, fontSize: "1.35rem" }}>אני מורה</h2>
-              </div>
+          {/* Teacher Terminal */}
+          <div className="shard p-8 flex flex-col group hover:border-[var(--acid-green)] transition-colors duration-500 border-[rgba(180,255,0,0.2)]">
+            <div className="flex items-center gap-4 mb-6 text-[var(--acid-green)]">
+              <ShieldAlert size={32} />
+              <h2 className="text-3xl font-bold font-mono tracking-widest" style={{color: 'var(--acid-green)'}}>OVERSEER_</h2>
             </div>
-
-            <p className="t-body" style={{ marginBottom: "var(--s6)", flex: 1 }}>
-              עקוב אחרי הכיתה בזמן אמת דרך מפת החום. קבל התראות כשתלמידים תקועים, וצפה בנתוני ביצועים מפורטים לפי מודול.
+            <p className="font-mono text-sm opacity-70 mb-8 flex-1 leading-relaxed">
+              &gt; Global telemetry access.<br/>
+              &gt; Real-time cognitive tracking.<br/>
+              &gt; Deployment commands active.
             </p>
-
-            <div className="flex gap-2 flex-wrap" style={{ marginBottom: "var(--s6)", marginTop: 10 }}>
-              <span className="badge badge-amber">מפת חום חיה</span>
-              <span className="badge badge-danger">התראות מיידיות</span>
-              <span className="badge badge-neutral">תובנות</span>
-            </div>
-
+            
             <button
-              id="teacher-enter-btn"
-              className="btn btn-ghost btn-full"
+              className="cyber-btn mt-auto"
+              style={{background: 'var(--acid-green)', color: 'var(--bg-deep)'}}
               onClick={() => navigate("/teacher")}
             >
-              הפעלת לוח מחוונים
-              <ChevronLeft size={16} />
+              [ INITIALIZE_DASHBOARD ]
             </button>
           </div>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center t-label" style={{ marginTop: 48, color: "var(--text-faint)" }}>
-          משרד החינוך | שאלון 581 | כיתה י״א
-        </p>
+        </div>
       </div>
     </div>
   );
 }
 
-function StudentSelector({ classroom, students }: { classroom: any; students: any[] | undefined }) {
+function StudentSelector({ students }: { students: any[] | undefined }) {
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(false);
 
   if (!students) return (
-    <button className="btn btn-primary btn-full" disabled>
-      <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-      טוען...
-    </button>
-  );
-
-  if (!expanded) return (
-    <button id="student-select-btn" className="btn btn-primary btn-full" onClick={() => setExpanded(true)}>
-      <Zap size={16} />
-      חיבור לחשבון
-      <ChevronLeft size={16} />
-    </button>
+    <div className="font-mono text-[var(--neon-emerald)] animate-pulse">AWAITING CONNECTION...</div>
   );
 
   return (
-    <div className="fade-in">
-      <p className="t-label" style={{ marginBottom: "var(--s3)", color: "var(--text-muted)" }}>
-        {classroom?.name ?? "הכיתה"} — בחר/י זהות לוגית:
-      </p>
-      {/* "Recessed" area for inputs / lists per spec */}
-      <div className="card-recessed no-scrollbar" style={{ padding: "var(--s2)", maxHeight: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--s1)" }}>
+    <div className="flex flex-col gap-2">
+      <div className="t-mono-label mb-2 opacity-50">AVAILABLE_IDENTITIES:</div>
+      <div className="max-h-[160px] overflow-y-auto pr-2 flex flex-col gap-2">
         {students.map((s) => (
           <button
             key={s._id}
-            id={`student-${s._id}`}
-            className="btn btn-text"
-            style={{ justifyContent: "flex-start", gap: "var(--s3)", padding: "var(--s2) var(--s3)", color: "var(--text)" }}
+            className="cyber-btn cyber-btn-ghost justify-start w-full"
             onClick={() => navigate(`/student/${s._id}`)}
           >
-            <span className="avatar" style={{ width: 32, height: 32, fontSize: "0.85rem", background: s.avatarColor }}>
-              {s.name.slice(0, 1)}
-            </span>
-            {s.name}
+            [CONNECT] :: {s.name.toUpperCase()}
           </button>
         ))}
       </div>

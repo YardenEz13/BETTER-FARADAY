@@ -63,7 +63,7 @@ describe("Convex levels queries and mutations", () => {
         },
       };
 
-      await evaluateStudentLevel._handler(mockCtx, { studentId });
+      await (evaluateStudentLevel as any)._handler(mockCtx, { studentId });
 
       // Should insert a new level suggestion with status pending and suggestedLevel = 2
       expect(mockInsert).toHaveBeenCalledTimes(1);
@@ -104,7 +104,7 @@ describe("Convex levels queries and mutations", () => {
         },
       };
 
-      await resolveSuggestion._handler(mockCtx, {
+      await (resolveSuggestion as any)._handler(mockCtx, {
         suggestionId,
         action: "approved",
         resolvedBy: "המורה שרה",

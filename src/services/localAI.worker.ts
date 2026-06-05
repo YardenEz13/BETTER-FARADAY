@@ -91,7 +91,7 @@ async function initModel() {
     await wllama.loadModelFromUrl(MODEL_URL, {
       n_ctx: 4096,
       n_batch: 512,
-      progressCallback: ({ loaded, total }) => {
+      progressCallback: ({ loaded, total }: { loaded: number; total: number }) => {
         if (total > 0) {
           const percent = Math.min(90, Math.round((loaded / total) * 90));
           post({ type: "init:progress", percent, stage: "מוריד מודל DictaLM..." });
@@ -129,7 +129,7 @@ async function generate(messages: ChatMessage[], id: string) {
       top_k: 40,
       top_p: 0.9,
       max_tokens: 1024,
-      onData: (chunk) => {
+      onData: (chunk: any) => {
         const delta = chunk.choices?.[0]?.delta?.content;
         if (delta) {
           rawText += delta;
@@ -141,7 +141,7 @@ async function generate(messages: ChatMessage[], id: string) {
           }
         }
       },
-    });
+    }) as any;
 
     // Consume the async iterator to completion
     if (stream && Symbol.asyncIterator in Object(stream)) {

@@ -16,7 +16,6 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="mesh-bg" />
       <Routes>
         <Route path="/" element={<RolePage />} />
         <Route path="/student/:studentId" element={<StudentHome />} />

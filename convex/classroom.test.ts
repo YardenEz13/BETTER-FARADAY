@@ -54,7 +54,7 @@ describe("Convex classroom queries", () => {
         },
       };
 
-      const result = await getClassroomHeatmap._handler(mockCtx, { classroomId });
+      const result = await (getClassroomHeatmap as any)._handler(mockCtx, { classroomId });
       expect(result).toHaveLength(1);
       expect(result[0].student.name).toBe("יוסי כהן");
       expect(result[0].status).toBe("red"); // low ratio < 0.4
@@ -111,7 +111,7 @@ describe("Convex classroom queries", () => {
         },
       };
 
-      const result = await getClassroomHeatmap._handler(mockCtx, { classroomId });
+      const result = await (getClassroomHeatmap as any)._handler(mockCtx, { classroomId });
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe("green");
     });
@@ -172,7 +172,7 @@ describe("Convex classroom queries", () => {
         },
       };
 
-      const alerts = await getLiveAlerts._handler(mockCtx, { classroomId });
+      const alerts = await (getLiveAlerts as any)._handler(mockCtx, { classroomId });
       expect(alerts).toHaveLength(1);
       expect(alerts[0].questionId).toBe(questionId);
       expect(alerts[0].studentNames).toContain("תלמיד א׳");

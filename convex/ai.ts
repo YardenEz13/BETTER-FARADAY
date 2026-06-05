@@ -103,3 +103,28 @@ export const processAbandonedChats = internalAction({
     }
   }
 });
+
+export const generateHint = mutation({
+  args: {
+    studentId: v.id("students"),
+    questionId: v.id("questions"),
+    studentInput: v.string(),
+  },
+  handler: async (ctx, { studentId, questionId, studentInput }) => {
+    const question = await ctx.db.get(questionId);
+    if (!question) throw new Error("Question not found");
+
+    // Generate a mock contextual hint based on the question's actual hint field
+    const mockHint = question.hint;
+
+    await ctx.db.insert("hintRequests", {
+      studentId,
+      questionId,
+      studentInput: studentInput || "(no input)",
+      aiHint: mockHint,
+    });
+
+    return { hint: mockHint };
+  },
+});
+

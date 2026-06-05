@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
@@ -825,258 +826,95 @@ export default function AIChatPanel({
   };
 
   return (
-    <>
-      <div className="chat-overlay" onClick={handleMinimize} />
-      <div className="chat-panel" style={{ display: "flex", flexDirection: "column" }}>
-
-        {/* Header */}
-        <div className="chat-header">
-          <div className="flex items-center gap-3">
-            <div style={{ width: 36, height: 36, borderRadius: "var(--r-md)", background: "var(--surface-high)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Bot size={20} color={agentType === "practice" ? "var(--primary-dim)" : "#818cf8"} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: "1rem" }}> מייקל פאראדיי  🤖</div>
-              <div className="flex items-center gap-2">
-                <span className={`chat-agent-badge ${agentType}`}>
-                  {agentType === "practice" ? <><Zap size={10} /> תרגול</> : <><BookOpen size={10} /> שיעורי בית</>}
-                </span>
-                {isResumed && (
-                  <span style={{ fontSize: "0.7rem", color: "var(--primary-dim)", display: "flex", alignItems: "center", gap: 3, background: "var(--primary-alpha)", padding: "1px 6px", borderRadius: 6 }}>
-                    <Clock size={9} /> ממשיך שיחה
-                  </span>
-                )}
-                {aiStatus === "downloading" ? (
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <div className="typing-dot" style={{ width: 6, height: 6 }} />
-                    {loadProgress ? `${loadProgress.stage} ${loadProgress.percent}%` : "טוען מודל..."}
-                  </span>
-                ) : (
-                  <span className={`ai-status-dot ${aiStatus}`} title={aiStatus === "ready" ? "עוזר AI פעיל (Gemini)" : "אין חיבור לעוזר AI"} />
-                )}
-                {!online && <WifiOff size={12} color="var(--warning)" />}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "100%", opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed bottom-0 left-0 w-full h-[65vh] z-[100] border-t-2 border-[var(--neon-emerald)] flex flex-col backdrop-blur-3xl bg-[rgba(2,8,5,0.92)] shadow-[0_-10px_40px_rgba(0,255,136,0.15)]"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[var(--neon-emerald)] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <Bot size={32} className="text-[var(--acid-green)]" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[var(--neon-emerald)] rounded-full animate-pulse border-2 border-[var(--bg-deep)]"></div>
               </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowDebug(v => !v)}
-              title="קונסולת פיתוח AI"
-              style={{ background: showDebug ? "rgba(16,185,129,0.12)" : "transparent", border: "none", color: showDebug ? "#10b981" : "var(--text-muted)", cursor: "pointer", padding: 8, borderRadius: "var(--r-sm)", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 3 }}
-            >
-              <Terminal size={15} />
-            </button>
-            <button
-              onClick={() => setShowHistory((v) => !v)}
-              title="היסטוריית שיחות"
-              style={{ background: showHistory ? "var(--primary-alpha)" : "transparent", border: "none", color: showHistory ? "var(--primary-dim)" : "var(--text-muted)", cursor: "pointer", padding: 8, borderRadius: "var(--r-sm)", transition: "all 0.2s" }}
-            >
-              <History size={16} />
-            </button>
-            <button
-              onClick={handleEndChat}
-              disabled={isAnalyzing || messages.length <= 1}
-              title="סיים שיחה ושמור תובנות"
-              style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: isAnalyzing ? "var(--primary-dim)" : "var(--text-muted)", cursor: "pointer", padding: "5px 10px", borderRadius: "var(--r-sm)", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, transition: "all 0.2s" }}
-            >
-              {isAnalyzing ? (
-                <><div className="typing-dot" style={{ width: 5, height: 5 }} /> מנתח...</>
-              ) : (
-                <><Sparkles size={11} /> סיים ושמור</>
-              )}
-            </button>
-            <button onClick={handleMinimize} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: 8 }}>
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* History Sidebar */}
-        {showHistory && (
-          <div style={{ borderBottom: "1px solid var(--surface-highest)", padding: "8px 16px", maxHeight: 220, overflowY: "auto", background: "var(--surface)" }}>
-            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-faint)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>שיחות קודמות</div>
-            {!chatHistory && (
-              <div style={{ color: "var(--text-faint)", fontSize: "0.8rem", padding: "8px 0" }}>טוען...</div>
-            )}
-            {chatHistory?.length === 0 && (
-              <div style={{ color: "var(--text-faint)", fontSize: "0.8rem", padding: "8px 0" }}>אין שיחות קודמות</div>
-            )}
-            {chatHistory?.map((chat: Doc<"aiChats">) => (
-              <div
-                key={chat._id}
-                onClick={() => handleResumeHistoryChat(chat._id)}
-                style={{ padding: "8px 10px", borderRadius: "var(--r-sm)", cursor: "pointer", marginBottom: 4, background: chat._id === chatId ? "var(--primary-alpha)" : "var(--surface-high)", border: chat._id === chatId ? "1px solid var(--primary-alpha)" : "1px solid transparent", transition: "all 0.15s" }}
-              >
-                <div className="flex justify-between items-center">
-                  <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--text)" }}>
-                    <MessageSquare size={10} style={{ display: "inline", marginLeft: 4 }} />
-                    {chat.title}
+              <div>
+                <div className="font-mono text-2xl text-[var(--neon-emerald)] font-bold tracking-widest">FARADAY_AI_UPLINK</div>
+                <div className="flex gap-2 mt-1">
+                  <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--laser-cyan)] text-[var(--laser-cyan)] tracking-wider">
+                    SYS: ONLINE
                   </div>
-                  <div style={{ fontSize: "0.65rem", color: "var(--text-faint)" }}>
-                    {chat.endedAt ? "✅ הסתיים" : "🟢 פתוח"}
-                  </div>
-                </div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                  {chat.messageCount} הודעות · {formatTime(chat.startedAt)}
-                  {chat.metrics?.sentiment && (
-                    <span style={{ marginRight: 8 }}>
-                      {chat.metrics.sentiment === "frustrated" ? "😟" : chat.metrics.sentiment === "confident" ? "😊" : "😐"}
-                    </span>
+                  {aiStatus === "downloading" && (
+                     <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--warning-amber)] text-[var(--warning-amber)] tracking-wider animate-pulse">
+                       {loadProgress ? `DOWNLOADING... ${loadProgress.percent}%` : "SYNCING MODEL..."}
+                     </div>
+                  )}
+                  {isAnalyzing && (
+                    <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--neon-emerald)] text-[var(--neon-emerald)] tracking-wider animate-pulse">
+                      ANALYZING_TELEMETRY...
+                    </div>
                   )}
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="flex items-center gap-6">
+              <button onClick={() => setShowDebug(v => !v)} className="font-mono text-[10px] text-[var(--text-muted)] hover:text-[var(--neon-emerald)] transition-colors">
+                [ TOGGLE_DEBUG ]
+              </button>
+              <button onClick={handleEndChat} disabled={isAnalyzing || messages.length <= 1} className="font-mono text-[10px] text-[var(--warning-amber)] hover:text-white transition-colors">
+                [ TERMINATE_SESSION ]
+              </button>
+              <button onClick={handleMinimize} className="text-[var(--danger-crimson)] hover:text-white transition-colors ml-4">
+                <X size={28} />
+              </button>
+            </div>
           </div>
-        )}
-
-        {/* Context chips */}
-        {(topicName || questionStem) && !showHistory && (
-          <div style={{ padding: "8px 24px", display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {topicName && <span className="context-chip">📐 {topicName}</span>}
-            {questionStem && (
-              <span className="context-chip" style={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                ❓ {questionStem.slice(0, 40)}...
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Messages */}
-        <div className="chat-messages" style={{ flex: 1 }}>
-          {messages.map((msg, i) => (
-            <div key={i} className={`chat-msg ${msg.role === "model" ? "assistant" : msg.role}`}>
-              <MathText>{msg.content}</MathText>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="typing-indicator">
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-            </div>
-          )}
-          {isAnalyzing && (
-            <div className="chat-msg assistant" style={{ opacity: 0.7, fontStyle: "italic" }}>
-              <Sparkles size={14} style={{ display: "inline", marginLeft: 6 }} />
-              מנתח את השיחה עם AI... זה ייקח כמה שניות 🔍
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* AI Debug Console */}
-        {showDebug && (
-          <div style={{
-            borderTop: "1px solid rgba(16,185,129,0.15)",
-            background: "#0a0f0a",
-            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            fontSize: "0.7rem",
-            maxHeight: 340,
-            overflowY: "auto",
-            direction: "ltr",
-          }}>
-            {/* Header bar */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", background: "rgba(16,185,129,0.08)", borderBottom: "1px solid rgba(16,185,129,0.12)", position: "sticky", top: 0, zIndex: 1 }}>
-              <span style={{ color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                <Terminal size={11} /> AI DEBUG CONSOLE
-              </span>
-              {debugInfo?.isGenerating && (
-                <span style={{ color: "#f59e0b", animation: "pulse 1s infinite" }}>⟳ GENERATING…</span>
-              )}
-              {!debugInfo?.isGenerating && debugInfo && debugInfo.chunkCount > 0 && (
-                <span style={{ color: "#6b7280" }}>✓ {debugInfo.chunkCount} chunks</span>
-              )}
+          
+          <div className="flex flex-1 overflow-hidden">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-8 font-mono flex flex-col gap-6 text-lg relative">
+              {messages.map((msg, i) => (
+                 <div key={i} className={`max-w-[85%] p-5 text-xl leading-relaxed ${msg.role === "model" ? "self-start border-l-4 border-[var(--acid-green)] text-[var(--neon-emerald)] bg-[rgba(180,255,0,0.05)]" : "self-end border-r-4 border-[var(--laser-cyan)] text-white bg-[rgba(0,240,255,0.08)]"}`}>
+                   <MathText>{msg.content}</MathText>
+                 </div>
+              ))}
+              {isTyping && <div className="text-[var(--acid-green)] animate-pulse border-l-4 border-[var(--acid-green)] p-5 self-start bg-[rgba(180,255,0,0.05)]">PROCESSING_DATA_STREAM...</div>}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* API & Model */}
-            <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>API & MODEL</div>
-              <div style={{ color: "#10b981" }}>
-                🌐 Google Gemini 3.1 Flash Lite → 2.5 Flash Lite → 2.5 Flash (API)
-              </div>
-              <div style={{ color: "#9ca3af", marginTop: 2 }}>max_tokens: {debugInfo?.generationParams?.max_tokens ?? 1024}</div>
-              <div style={{ color: "#9ca3af" }}>temp: {debugInfo?.generationParams?.temperature ?? 0.3}</div>
-            </div>
-
-            {/* Token Stats */}
-            <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>TOKEN STATS</div>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                <span style={{ color: "#818cf8" }}>📊 Prompt: ~<b style={{ color: "#a5b4fc" }}>{debugInfo?.promptTokenEstimate ?? 0}</b> tokens</span>
-                <span style={{ color: "#818cf8" }}>📝 History: <b style={{ color: "#a5b4fc" }}>{debugInfo?.historyLength ?? 0}</b> msgs</span>
-                <span style={{ color: debugInfo?.wasCompacted ? "#f59e0b" : "#6b7280" }}>🗜 Compacted: {debugInfo?.wasCompacted ? "YES" : "no"}</span>
-                <span style={{ color: "#818cf8" }}>⟲ Chunks: <b style={{ color: "#a5b4fc" }}>{debugInfo?.chunkCount ?? 0}</b></span>
-              </div>
-            </div>
-
-            {/* Think Block */}
-            {(debugInfo?.thinkBlock || debugInfo?.isGenerating) && (
-              <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>
-                  🧠 THINKING BLOCK {debugInfo?.isGenerating && !debugInfo?.visibleResponse ? "(live stream)" : "(complete)"}
-                </div>
-                <pre style={{
-                  color: "#fbbf24",
-                  background: "rgba(251,191,36,0.04)",
-                  padding: "8px",
-                  borderRadius: 6,
-                  border: "1px solid rgba(251,191,36,0.1)",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  maxHeight: 160,
-                  overflowY: "auto",
-                  margin: 0,
-                  fontSize: "0.68rem",
-                }}>{debugInfo?.thinkBlock || "(ממתין לחשיבה...)"}</pre>
-              </div>
-            )}
-
-            {/* Visible Response */}
-            {debugInfo?.visibleResponse && (
-              <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>✅ VISIBLE RESPONSE</div>
-                <pre style={{ color: "#34d399", background: "rgba(52,211,153,0.04)", padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(52,211,153,0.1)", whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0, fontSize: "0.68rem" }}>{debugInfo.visibleResponse}</pre>
-              </div>
-            )}
-
-            {/* ChatML Prompt Dump */}
-            {debugInfo?.promptMessages && (
-              <div style={{ padding: "8px 12px" }}>
-                <div style={{ color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.6rem" }}>📋 CHATML PROMPT DUMP ({debugInfo.promptMessages.length} messages)</div>
-                <pre style={{
-                  color: "#9ca3af",
-                  background: "rgba(255,255,255,0.02)",
-                  padding: "8px",
-                  borderRadius: 6,
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  maxHeight: 280,
-                  overflowY: "auto",
-                  margin: 0,
-                  fontSize: "0.65rem",
-                }}>{JSON.stringify(debugInfo.promptMessages, null, 2)}</pre>
+            {/* Debug Sidebar (if open) */}
+            {showDebug && (
+              <div className="w-[400px] border-r border-[var(--neon-emerald)] bg-[#010402] overflow-y-auto p-4 font-mono text-xs text-[var(--text-muted)]">
+                <div className="text-[var(--laser-cyan)] font-bold mb-4">-- AI DIAGNOSTICS --</div>
+                {debugInfo && (
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
+                )}
               </div>
             )}
           </div>
-        )}
 
-        {/* Input */}
-        <div className="chat-input-bar">
-          <input
-            type="text"
-            placeholder={agentType === "practice" ? "שאל על השאלה הנוכחית..." : "שאל כל שאלה במתמטיקה..."}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={isTyping || isAnalyzing}
-          />
-          <button className="chat-send-btn" onClick={handleSend} disabled={!input.trim() || isTyping || isAnalyzing}>
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
-    </>
+          {/* Input */}
+          <div className="p-6 border-t border-[var(--neon-emerald)] flex gap-6 bg-[var(--bg-deep)]">
+            <input
+              type="text"
+              className="flex-1 bg-[rgba(0,255,136,0.05)] border border-[var(--neon-emerald)] px-6 py-4 text-xl text-[var(--neon-emerald)] font-mono outline-none focus:shadow-[var(--glow-emerald)] placeholder:text-[rgba(0,255,136,0.3)] transition-all"
+              placeholder="ENTER_COMMAND_OR_QUERY..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              disabled={isTyping || isAnalyzing}
+            />
+            <button className="cyber-btn !px-8 !text-lg" onClick={handleSend} disabled={!input.trim() || isTyping || isAnalyzing}>
+              [ TRANSMIT ] <Send size={20} className="ml-2" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
