@@ -194,7 +194,7 @@ export default function PracticeSession() {
                         borderColor: 'var(--border-default)',
                         color: 'var(--text-secondary)'
                       }}>
-                        {'★'.repeat(question.difficulty)}{'☆'.repeat(3 - question.difficulty)} רמה {question.difficulty}
+                        {'★'.repeat(Math.max(0, question.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (question.difficulty || 1)))} רמה {question.difficulty}
                       </span>
                     </div>
                     <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
