@@ -832,85 +832,198 @@ export default function AIChatPanel({
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed bottom-0 left-0 w-full h-[65vh] z-[100] border-t-2 border-[var(--neon-emerald)] flex flex-col backdrop-blur-3xl bg-[rgba(2,8,5,0.92)] shadow-[0_-10px_40px_rgba(0,255,136,0.15)]"
+          transition={{ type: "spring", damping: 28, stiffness: 220 }}
+          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col"
+          style={{
+            height: '65vh',
+            background: 'rgba(5, 11, 24, 0.96)',
+            backdropFilter: 'blur(32px)',
+            borderTop: '1px solid var(--border-default)',
+            boxShadow: '0 -8px 48px rgba(0,0,0,0.6), 0 -1px 0 var(--border-subtle)',
+          }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[var(--neon-emerald)] shadow-[0_2px_10px_rgba(0,255,136,0.1)]">
-            <div className="flex items-center gap-6">
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+            style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+
+            {/* AI identity */}
+            <div className="flex items-center gap-3">
               <div className="relative">
-                <Bot size={32} className="text-[var(--acid-green)]" />
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[var(--neon-emerald)] rounded-full animate-pulse border-2 border-[var(--bg-deep)]"></div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', boxShadow: 'var(--glow-primary)' }}>
+                  <Bot size={20} className="text-white" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full pulse-dot border-2"
+                  style={{ borderColor: 'var(--bg-void)' }} />
               </div>
               <div>
-                <div className="font-mono text-2xl text-[var(--neon-emerald)] font-bold tracking-widest">FARADAY_AI_UPLINK</div>
-                <div className="flex gap-2 mt-1">
-                  <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--laser-cyan)] text-[var(--laser-cyan)] tracking-wider">
-                    SYS: ONLINE
-                  </div>
-                  {aiStatus === "downloading" && (
-                     <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--warning-amber)] text-[var(--warning-amber)] tracking-wider animate-pulse">
-                       {loadProgress ? `DOWNLOADING... ${loadProgress.percent}%` : "SYNCING MODEL..."}
-                     </div>
+                <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                  פרופסור פאראדיי · מורה AI
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="label-mono" style={{ color: 'var(--color-success)', fontSize: '0.58rem' }}>מחובר</span>
+                  {aiStatus === "downloading" && loadProgress && (
+                    <span className="label-mono animate-pulse" style={{ color: 'var(--color-warning)', fontSize: '0.58rem' }}>
+                      טוען מודל... {loadProgress.percent}%
+                    </span>
                   )}
                   {isAnalyzing && (
-                    <div className="text-[10px] font-mono px-2 py-0.5 bg-[var(--bg-panel)] border border-[var(--neon-emerald)] text-[var(--neon-emerald)] tracking-wider animate-pulse">
-                      ANALYZING_TELEMETRY...
-                    </div>
+                    <span className="label-mono animate-pulse" style={{ color: 'var(--color-primary-light)', fontSize: '0.58rem' }}>
+                      מנתח שיחה...
+                    </span>
+                  )}
+                  {cycleState === "cycling" && (
+                    <span className="label-mono animate-pulse" style={{ color: 'var(--color-accent)', fontSize: '0.58rem' }}>
+                      מחדש הקשר...
+                    </span>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-6">
-              <button onClick={() => setShowDebug(v => !v)} className="font-mono text-[10px] text-[var(--text-muted)] hover:text-[var(--neon-emerald)] transition-colors">
-                [ TOGGLE_DEBUG ]
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDebug(v => !v)}
+                className="btn-icon"
+                title="Debug"
+                style={{ fontSize: '0.6rem' }}
+              >
+                <Terminal size={14} />
               </button>
-              <button onClick={handleEndChat} disabled={isAnalyzing || messages.length <= 1} className="font-mono text-[10px] text-[var(--warning-amber)] hover:text-white transition-colors">
-                [ TERMINATE_SESSION ]
+              <button
+                onClick={handleEndChat}
+                disabled={isAnalyzing || messages.length <= 1}
+                className="btn btn-ghost btn-sm"
+              >
+                סיום שיחה
               </button>
-              <button onClick={handleMinimize} className="text-[var(--danger-crimson)] hover:text-white transition-colors ml-4">
-                <X size={28} />
+              <button
+                onClick={handleMinimize}
+                className="btn-icon"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <X size={20} />
               </button>
             </div>
           </div>
-          
+
+          {/* ── Body: messages + optional debug ── */}
           <div className="flex flex-1 overflow-hidden">
+
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-8 font-mono flex flex-col gap-6 text-lg relative">
-              {messages.map((msg, i) => (
-                 <div key={i} className={`max-w-[85%] p-5 text-xl leading-relaxed ${msg.role === "model" ? "self-start border-l-4 border-[var(--acid-green)] text-[var(--neon-emerald)] bg-[rgba(180,255,0,0.05)]" : "self-end border-r-4 border-[var(--laser-cyan)] text-white bg-[rgba(0,240,255,0.08)]"}`}>
-                   <MathText>{msg.content}</MathText>
-                 </div>
-              ))}
-              {isTyping && <div className="text-[var(--acid-green)] animate-pulse border-l-4 border-[var(--acid-green)] p-5 self-start bg-[rgba(180,255,0,0.05)]">PROCESSING_DATA_STREAM...</div>}
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+              {messages.map((msg, i) => {
+                if (msg.role === "system") return (
+                  <div key={i} className="flex justify-center">
+                    <div className="px-3 py-1.5 rounded-full text-xs"
+                      style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                      <MathText>{msg.content}</MathText>
+                    </div>
+                  </div>
+                );
+
+                const isAI = msg.role === "model";
+
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex gap-3 ${isAI ? 'justify-end' : 'justify-start'}`}
+                    style={{ flexDirection: isAI ? 'row' : 'row-reverse' }}
+                  >
+                    {/* Avatar */}
+                    {isAI && (
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ background: 'var(--color-primary-muted)', border: '1px solid var(--border-primary)' }}>
+                        <Bot size={14} style={{ color: 'var(--color-primary-light)' }} />
+                      </div>
+                    )}
+
+                    {/* Bubble */}
+                    <div
+                      className="max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
+                      style={isAI ? {
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--text-primary)',
+                        borderBottomLeftRadius: '6px',
+                      } : {
+                        background: 'var(--color-primary-muted)',
+                        border: '1px solid var(--border-primary)',
+                        color: 'var(--text-primary)',
+                        borderBottomRightRadius: '6px',
+                      }}
+                    >
+                      <MathText>{msg.content}</MathText>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex gap-3 justify-end">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'var(--color-primary-muted)', border: '1px solid var(--border-primary)' }}>
+                    <Bot size={14} style={{ color: 'var(--color-primary-light)' }} />
+                  </div>
+                  <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5"
+                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderBottomLeftRadius: '6px' }}>
+                    {[0, 1, 2].map(i => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: 'var(--color-primary-light)' }}
+                        animate={{ opacity: [0.3, 1, 0.3], y: [0, -4, 0] }}
+                        transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Debug Sidebar (if open) */}
+            {/* Debug sidebar */}
             {showDebug && (
-              <div className="w-[400px] border-r border-[var(--neon-emerald)] bg-[#010402] overflow-y-auto p-4 font-mono text-xs text-[var(--text-muted)]">
-                <div className="text-[var(--laser-cyan)] font-bold mb-4">-- AI DIAGNOSTICS --</div>
-                {debugInfo && (
-                  <pre className="whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
+              <div className="w-[360px] overflow-y-auto p-4 flex-shrink-0"
+                style={{ borderRight: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.3)' }}>
+                <div className="label-mono mb-3" style={{ color: 'var(--color-primary-light)' }}>AI Diagnostics</div>
+                {debugInfo ? (
+                  <pre className="text-xs whitespace-pre-wrap" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                ) : (
+                  <span className="label-mono" style={{ color: 'var(--text-disabled)' }}>אין נתונים</span>
                 )}
               </div>
             )}
           </div>
 
-          {/* Input */}
-          <div className="p-6 border-t border-[var(--neon-emerald)] flex gap-6 bg-[var(--bg-deep)]">
+          {/* ── Input bar ── */}
+          <div className="flex-shrink-0 px-5 py-4 flex gap-3"
+            style={{ borderTop: '1px solid var(--border-subtle)', background: 'rgba(5,11,24,0.7)' }}>
             <input
               type="text"
-              className="flex-1 bg-[rgba(0,255,136,0.05)] border border-[var(--neon-emerald)] px-6 py-4 text-xl text-[var(--neon-emerald)] font-mono outline-none focus:shadow-[var(--glow-emerald)] placeholder:text-[rgba(0,255,136,0.3)] transition-all"
-              placeholder="ENTER_COMMAND_OR_QUERY..."
+              className="field flex-1"
+              placeholder="כתוב שאלה לפרופסור פאראדיי..."
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSend()}
               disabled={isTyping || isAnalyzing}
+              style={{ fontSize: '0.95rem' }}
             />
-            <button className="cyber-btn !px-8 !text-lg" onClick={handleSend} disabled={!input.trim() || isTyping || isAnalyzing}>
-              [ TRANSMIT ] <Send size={20} className="ml-2" />
+            <button
+              className="btn btn-primary flex-shrink-0"
+              onClick={handleSend}
+              disabled={!input.trim() || isTyping || isAnalyzing}
+            >
+              <Send size={16} />
+              שלח
             </button>
           </div>
         </motion.div>
@@ -918,3 +1031,4 @@ export default function AIChatPanel({
     </AnimatePresence>
   );
 }
+
