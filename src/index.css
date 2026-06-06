@@ -112,13 +112,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 html {
-  font-size: 16px;
+  font-size: 18px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
 body {
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
   background-color: var(--bg-void);
   direction: rtl;
