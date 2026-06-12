@@ -83,3 +83,4 @@ export default function MathText({ children, className, style }: Props) {
     />
   );
 }
+

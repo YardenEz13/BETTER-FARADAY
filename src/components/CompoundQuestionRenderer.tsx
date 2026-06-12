@@ -107,7 +107,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     <div className="flex flex-col gap-6">
       {/* ── Preamble ── */}
       <motion.div
-        className="shard p-8 bg-[rgba(0,0,0,0.4)] border border-[#1a3324] relative overflow-hidden"
+        className="glass p-8 bg-[var(--bg-surface)] border border-[var(--border-default)] relative overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -116,25 +116,25 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           <div className="flex items-center gap-4">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className={`w-2 h-2 rounded-none ${i < question.difficulty ? "bg-[var(--acid-green)] shadow-[var(--glow-acid)]" : "bg-white opacity-20"}`} />
+                <div key={i} className={`w-2 h-2 rounded-none ${i < question.difficulty ? "bg-[var(--color-primary-light)] shadow-[var(--glow-acid)]" : "bg-white opacity-20"}`} />
               ))}
             </div>
-            <span className="t-mono-label opacity-80">רמה {question.difficulty}</span>
+            <span className="label-mono opacity-80">רמה {question.difficulty}</span>
           </div>
 
           <div className="flex gap-2">
             {question.tags.map((tag) => (
-              <span key={tag} className="t-mono-label px-3 py-1 bg-[rgba(255,255,255,0.05)] border border-[#1a3324]">{tag}</span>
+              <span key={tag} className="label-mono px-3 py-1 bg-[rgba(255,255,255,0.05)] border border-[var(--border-default)]">{tag}</span>
             ))}
           </div>
         </div>
 
-        <div className="text-xl leading-relaxed text-white mb-6"><MathText>{question.preamble}</MathText></div>
+        <div className="text-xl leading-relaxed text-[var(--text-primary)] mb-6"><MathText>{question.preamble}</MathText></div>
 
         {question.preambleParams.length > 0 && (
-          <div className="flex flex-wrap gap-3 p-4 bg-[rgba(0,0,0,0.5)] border border-[#1a3324]">
+          <div className="flex flex-wrap gap-3 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)]">
             {question.preambleParams.map((p) => (
-              <span key={p.symbol} className="t-mono-label text-[var(--acid-green)]">
+              <span key={p.symbol} className="label-mono text-[var(--color-primary-light)]">
                 {p.displayHe} <span className="opacity-50 ml-1">({p.type === "find" ? "למציאה" : p.type === "given" ? "נתון" : "טווח"})</span>
               </span>
             ))}
@@ -154,7 +154,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           return (
             <motion.div
               key={section.label}
-              className={`shard transition-all border ${!unlocked ? "border-[#1a3324] bg-[rgba(0,0,0,0.8)] opacity-60" : isSubmitted ? (isCorrect ? "border-[var(--neon-emerald)] bg-[rgba(0,255,136,0.02)]" : "border-[#ff4b4b] bg-[rgba(255,75,75,0.02)]") : "border-[var(--acid-green)] bg-[rgba(0,0,0,0.6)] shadow-[0_0_15px_rgba(180,255,0,0.05)]"}`}
+              className={`shard transition-all border ${!unlocked ? "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-60" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] bg-[rgba(255,75,75,0.02)]") : "border-[var(--color-primary-light)] bg-[var(--bg-surface)] shadow-[0_0_15px_rgba(180,255,0,0.05)]"}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1, duration: 0.4 }}
@@ -165,21 +165,21 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                 onClick={() => unlocked && setExpandedSection(isExpanded ? "" : section.label)}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 flex items-center justify-center border font-title text-xl ${!unlocked ? "border-[#1a3324] text-[#1a3324]" : isSubmitted ? (isCorrect ? "border-[var(--neon-emerald)] text-[var(--neon-emerald)] bg-[rgba(0,255,136,0.1)]" : "border-[#ff4b4b] text-[#ff4b4b] bg-[rgba(255,75,75,0.1)]") : "border-[var(--acid-green)] text-[var(--acid-green)] bg-[rgba(180,255,0,0.1)]"}`}>
+                  <div className={`w-8 h-8 flex items-center justify-center border font-title text-xl ${!unlocked ? "border-[var(--border-default)] text-[#1a3324]" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] text-[var(--color-primary)] bg-[rgba(0,255,136,0.1)]" : "border-[var(--color-danger)] text-[var(--color-danger)] bg-[rgba(255,75,75,0.1)]") : "border-[var(--color-primary-light)] text-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)]"}`}>
                     {!unlocked ? <Lock size={14} /> : isSubmitted ? (isCorrect ? <Check size={16} /> : <X size={16} />) : section.label}
                   </div>
                   <div>
-                    <div className="font-bold text-white tracking-wider">סעיף {section.label}׳</div>
-                    <div className="t-mono-label opacity-60 text-[10px]">{section.points} נקודות סנכרון</div>
+                    <div className="font-bold text-[var(--text-primary)] tracking-wider">סעיף {section.label}׳</div>
+                    <div className="label-mono opacity-60 text-[10px]">{section.points} נקודות סנכרון</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="hidden md:flex gap-2">
                     {section.skillsTested.slice(0, 2).map((skill) => (
-                      <span key={skill} className="t-mono-label px-2 py-0.5 bg-[rgba(255,255,255,0.05)] border border-[#1a3324] text-[10px]">{skill}</span>
+                      <span key={skill} className="label-mono px-2 py-0.5 bg-[rgba(255,255,255,0.05)] border border-[var(--border-default)] text-[10px]">{skill}</span>
                     ))}
                   </div>
-                  {unlocked && (isExpanded ? <ChevronUp size={20} className="text-[var(--acid-green)]" /> : <ChevronDown size={20} className="opacity-50" />)}
+                  {unlocked && (isExpanded ? <ChevronUp size={20} className="text-[var(--color-primary-light)]" /> : <ChevronDown size={20} className="opacity-50" />)}
                 </div>
               </div>
 
@@ -191,12 +191,12 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="px-6 pb-6 overflow-hidden border-t border-[#1a3324] pt-6"
+                    className="px-6 pb-6 overflow-hidden border-t border-[var(--border-default)] pt-6"
                   >
-                    <div className="text-lg mb-6 leading-relaxed text-white"><MathText>{section.prompt}</MathText></div>
+                    <div className="text-lg mb-6 leading-relaxed text-[var(--text-primary)]"><MathText>{section.prompt}</MathText></div>
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
-                      <div className="t-mono-label text-[var(--warning-amber)] mb-6 p-4 border border-[var(--warning-amber)] bg-[rgba(255,170,0,0.05)] flex items-center gap-2">
+                      <div className="label-mono text-[var(--color-warning)] mb-6 p-4 border border-[var(--color-warning)] bg-[rgba(255,170,0,0.05)] flex items-center gap-2">
                         <Lightbulb size={16} /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
                       </div>
                     )}
@@ -204,7 +204,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     {!isSubmitted && (
                       <div className="flex flex-col gap-4">
                         <textarea
-                          className="w-full bg-[rgba(0,0,0,0.5)] border border-[#1a3324] p-4 text-white font-mono focus:border-[var(--acid-green)] focus:outline-none transition-colors"
+                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] p-4 text-[var(--text-primary)] font-mono focus:border-[var(--color-primary-light)] focus:outline-none transition-colors"
                           placeholder="[ INSERT_SOLUTION_HERE ]"
                           value={answers[section.label] ?? ""}
                           onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
@@ -213,7 +213,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         />
                         <div className="flex flex-wrap gap-4 mt-2">
                           <button
-                            className={`cyber-btn ${!answers[section.label]?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`btn btn-primary ${!answers[section.label]?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={() => handleSubmitSection(section)}
                             disabled={!answers[section.label]?.trim()}
                           >
@@ -222,7 +222,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                           {section.hints.length > 0 && (
                             <button
-                              className="cyber-btn cyber-btn-ghost"
+                              className="btn btn-primary btn-ghost"
                               onClick={() => handleRevealHint(section.label, section.hints.length)}
                               disabled={hintCount >= section.hints.length}
                             >
@@ -232,7 +232,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           )}
 
                           {aiChatTrigger && (
-                            <button className="cyber-btn cyber-btn-ghost" onClick={aiChatTrigger}>
+                            <button className="btn btn-primary btn-ghost" onClick={aiChatTrigger}>
                               <Bot size={16} /> [ AI_ASSIST ]
                             </button>
                           )}
@@ -245,11 +245,11 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         {section.hints.slice(0, hintCount).map((hint, i) => (
                           <motion.div
                             key={i}
-                            className="p-4 border border-[var(--laser-cyan)] bg-[rgba(0,240,255,0.05)] t-mono-label flex items-start gap-3 text-white normal-case"
+                            className="p-4 border border-[var(--color-accent)] bg-[var(--color-accent-muted)] label-mono flex items-start gap-3 text-[var(--text-primary)] normal-case"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
-                            <Lightbulb size={16} className="text-[var(--laser-cyan)] shrink-0 mt-0.5" />
+                            <Lightbulb size={16} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
                             <span className="leading-relaxed"><MathText>{hint}</MathText></span>
                           </motion.div>
                         ))}
@@ -258,7 +258,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                     {isSubmitted && (
                       <motion.div
-                        className={`p-6 mt-6 border flex flex-col gap-4 ${isCorrect ? "border-[var(--neon-emerald)] bg-[rgba(0,255,136,0.05)] text-[var(--neon-emerald)]" : "border-[#ff4b4b] bg-[rgba(255,75,75,0.05)] text-[#ff4b4b]"}`}
+                        className={`p-6 mt-6 border flex flex-col gap-4 ${isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "border-[var(--color-danger)] bg-[var(--color-danger-muted)] text-[var(--color-danger)]"}`}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                       >
@@ -271,7 +271,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         </div>
 
                         <button
-                          className="cyber-btn cyber-btn-ghost self-start mt-2"
+                          className="btn btn-primary btn-ghost self-start mt-2"
                           onClick={() => setShowSolution((prev) => ({ ...prev, [section.label]: !prev[section.label] }))}
                         >
                           {showSolution[section.label] ? "[ HIDE_SOLUTION ]" : "[ REVEAL_SOLUTION ]"}
@@ -286,7 +286,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               exit={{ height: 0, opacity: 0 }}
                             >
                               {section.solutionSteps.map((step, i) => (
-                                <div key={i} className="flex gap-4 items-start p-4 bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.1)] text-white">
+                                <div key={i} className="flex gap-4 items-start p-4 bg-[var(--bg-surface)] border border-[rgba(255,255,255,0.1)] text-[var(--text-primary)]">
                                   <span className="w-6 h-6 flex items-center justify-center bg-white text-black font-bold shrink-0">{i + 1}</span>
                                   <span className="leading-relaxed text-lg"><MathText>{step}</MathText></span>
                                 </div>
@@ -307,22 +307,22 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       {/* ── Score Summary ── */}
       {allSubmitted && (
         <motion.div
-          className="shard p-8 mt-8 border border-[var(--laser-cyan)] bg-[rgba(0,240,255,0.05)] flex flex-col items-center text-center gap-6"
+          className="glass p-8 mt-8 border border-[var(--color-accent)] bg-[var(--color-accent-muted)] flex flex-col items-center text-center gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="font-title text-6xl text-[var(--laser-cyan)] shadow-[var(--glow-cyan)] tracking-widest">{earnedPoints}/{totalPoints}</div>
-            <div className="t-mono-label opacity-80">נקודות סנכרון</div>
+            <div className="font-title text-6xl text-[var(--color-accent)] shadow-[var(--glow-cyan)] tracking-widest">{earnedPoints}/{totalPoints}</div>
+            <div className="label-mono opacity-80">נקודות סנכרון</div>
           </div>
           
-          <div className="flex flex-wrap gap-6 justify-center t-mono-label opacity-60">
-            <div className="flex items-center gap-2"><Check size={16} className="text-[var(--neon-emerald)]" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
-            <div className="flex items-center gap-2"><Clock size={16} className="text-[var(--laser-cyan)]" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
-            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-[var(--warning-amber)]" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
+          <div className="flex flex-wrap gap-6 justify-center label-mono opacity-60">
+            <div className="flex items-center gap-2"><Check size={16} className="text-[var(--color-primary)]" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
+            <div className="flex items-center gap-2"><Clock size={16} className="text-[var(--color-accent)]" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
+            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-[var(--color-warning)]" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
-          <button className="cyber-btn mt-4" onClick={handleFinalize}>
+          <button className="btn btn-primary mt-4" onClick={handleFinalize}>
             [ CONTINUE_TO_NEXT ] ➜
           </button>
         </motion.div>
@@ -330,3 +330,4 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     </div>
   );
 }
+

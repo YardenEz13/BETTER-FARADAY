@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Assistant:wght@400;500;600;700;800&display=swap');
+
+@theme {
+  --font-outfit: 'Assistant', sans-serif;
+  --font-display: 'Yarden', 'Assistant', sans-serif;
+  --font-body: 'Assistant', sans-serif;
+  --font-mono: 'Fredoka', 'Assistant', sans-serif;
+
+  --font-weight-normal: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  --font-weight-extrabold: 900;
+
+  --font-headline-xl: 'Yarden', 'Assistant', sans-serif;
+  --font-headline-lg: 'Yarden', 'Assistant', sans-serif;
+  --font-headline-md: 'Fredoka', 'Assistant', sans-serif;
+  --font-headline-sm: 'Fredoka', 'Assistant', sans-serif;
+  --font-body-lg: var(--font-body);
+  --font-body-md: var(--font-body);
+  --font-body-sm: var(--font-body);
+  --font-label-lg: 'Fredoka', 'Assistant', sans-serif;
+  --font-label-md: 'Fredoka', 'Assistant', sans-serif;
+
+  /* Dark Mode Colors (Faraday Logic Immersive) */
+  --color-surface: #131313;
+  --color-surface-dim: #131313;
+  --color-surface-bright: #393939;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #1b1b1b;
+  --color-surface-container: #1f1f1f;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #353535;
+  --color-on-surface: #e2e2e2;
+  --color-on-surface-variant: #becab4;
+  --color-inverse-surface: #e2e2e2;
+  --color-inverse-on-surface: #303030;
+  --color-outline: #899480;
+  --color-outline-variant: #3f4a39;
+  --color-surface-tint: #74de4f;
+  --color-primary: #74de4f;
+  --color-on-primary: #0c3900;
+  --color-primary-container: #3da518;
+  --color-on-primary-container: #093100;
+  --color-inverse-primary: #1e6d00;
+  --color-secondary: #a0d588;
+  --color-on-secondary: #0c3900;
+  --color-secondary-container: #235114;
+  --color-on-secondary-container: #8fc378;
+  --color-tertiary: #ffafd3;
+  --color-on-tertiary: #620040;
+  --color-tertiary-container: #f056ab;
+  --color-on-tertiary-container: #560037;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed: #90fc69;
+  --color-primary-fixed-dim: #74de4f;
+  --color-on-primary-fixed: #042100;
+  --color-on-primary-fixed-variant: #155200;
+  --color-secondary-fixed: #bbf1a2;
+  --color-secondary-fixed-dim: #a0d588;
+  --color-on-secondary-fixed: #042100;
+  --color-on-secondary-fixed-variant: #235114;
+  --color-tertiary-fixed: #ffd8e7;
+  --color-tertiary-fixed-dim: #ffafd3;
+  --color-on-tertiary-fixed: #3d0026;
+  --color-on-tertiary-fixed-variant: #8b005b;
+  --color-background: #131313;
+  --color-on-background: #e2e2e2;
+  --color-surface-variant: #353535;
+
+  /* Spacing (Unified) */
+  --spacing-base: 8px;
+  --spacing-xs: 4px;
+  --spacing-sm: 12px;
+  --spacing-md: 24px;
+  --spacing-lg: 40px;
+  --spacing-xl: 64px;
+  --spacing-gutter: 24px;
+  --spacing-margin: 32px;
+  --spacing-unit: 8px;
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 32px;
+  --spacing-margin-desktop: 40px;
+  --spacing-margin-tablet: 24px;
+  --spacing-margin-mobile: 16px;
+
+  /* Border Radius (Dark Mode default) */
+  --radius-sm: 0.5rem;
+  --radius: 1rem;
+  --radius-md: 1.5rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+}
+
+[data-theme="light"] {
+  /* Light Mode Colors (Faraday Logic System) */
+  --color-surface: #f9f9f9;
+  --color-surface-dim: #dadada;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f3f3;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  --color-on-surface: #1b1b1b;
+  --color-on-surface-variant: #3f4a36;
+  --color-inverse-surface: #303030;
+  --color-inverse-on-surface: #f1f1f1;
+  --color-outline: #6f7b64;
+  --color-outline-variant: #becbb1;
+  --color-surface-tint: #2b6c00;
+  --color-primary: #2b6c00;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #58cc02;
+  --color-on-primary-container: #1e5000;
+  --color-inverse-primary: #6be026;
+  --color-secondary: #4e616b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #cee3ef;
+  --color-on-secondary-container: #52656f;
+  --color-tertiary: #9a397a;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ff8ed4;
+  --color-on-tertiary-container: #7b1f60;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #87fe45;
+  --color-primary-fixed-dim: #6be026;
+  --color-on-primary-fixed: #082100;
+  --color-on-primary-fixed-variant: #1f5100;
+  --color-secondary-fixed: #d1e6f1;
+  --color-secondary-fixed-dim: #b5cad5;
+  --color-on-secondary-fixed: #0a1e26;
+  --color-on-secondary-fixed-variant: #374953;
+  --color-tertiary-fixed: #ffd8eb;
+  --color-tertiary-fixed-dim: #ffaedd;
+  --color-on-tertiary-fixed: #3b002c;
+  --color-on-tertiary-fixed-variant: #7d2061;
+  --color-background: #f9f9f9;
+  --color-on-background: #1b1b1b;
+  --color-surface-variant: #e2e2e2;
+
+  /* Border Radius (Light Mode overrides) */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Loader2, ArrowLeft, Zap } from "lucide-react";
+import { Loader2, ArrowLeft, Zap, Users, Shield, Cpu, Target, Bot, LineChart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function RolePage() {
@@ -21,108 +21,98 @@ export default function RolePage() {
   }, [students, seeded, seeding]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-hidden relative">
+    <div className="min-h-screen w-full flex flex-col overflow-hidden relative bg-background text-on-background font-body-md" dir="rtl">
 
-      {/* ── Green corner accent ── */}
-      <div className="absolute top-0 right-0 w-[380px] h-[380px] pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle at top right, rgba(74,222,128,0.10) 0%, transparent 65%)',
-        }} />
-      <div className="absolute bottom-0 left-0 w-[280px] h-[280px] pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle at bottom left, rgba(251,191,36,0.05) 0%, transparent 65%)',
-        }} />
+      {/* ── Colorful Atmospheric Elements ── */}
+      <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-tertiary/10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* ── Topbar ── */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center justify-between px-8 py-5 relative z-10"
-        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+        className="flex items-center justify-between px-8 py-5 relative z-10 border-b border-outline-variant/30 bg-surface/50 backdrop-blur-md"
       >
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 flex items-center justify-center rounded-lg"
-            style={{ background: 'var(--g-400)', boxShadow: '0 0 20px rgba(74,222,128,0.35)' }}>
-            <Zap size={18} color="#020A04" strokeWidth={2.5} />
+          <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-on-primary shadow-[0_0_20px_var(--color-primary)]">
+            <Zap size={20} strokeWidth={2.5} />
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          <span className="font-label-lg text-primary tracking-tighter">
             FARADAY Logic
           </span>
         </div>
 
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+        <div className="font-label-md text-on-surface-variant tracking-widest bg-surface-container-high px-4 py-1.5 rounded-full border border-outline-variant/50">
           מתמטיקה 581 · v4.1
         </div>
       </motion.div>
 
       {/* ── Main content — split layout ── */}
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10">
 
         {/* LEFT — Big headline */}
         <motion.div
-          initial={{ opacity: 0, x: -30 }}
+          initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, delay: 0.1 }}
-          className="lg:w-[45%] flex flex-col justify-center px-8 lg:px-16 py-16 relative"
-          style={{ borderLeft: '1px solid var(--border-subtle)' }}
+          className="lg:w-[45%] flex flex-col justify-center px-8 lg:px-16 py-16 relative border-l border-outline-variant/30"
         >
           {/* Live status pill */}
-          <div className="inline-flex items-center gap-2.5 mb-10 self-start px-4 py-2 rounded-full"
-            style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid var(--border-primary)' }}>
-            <div className="pulse-dot" style={{ width: 6, height: 6 }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--g-300)', letterSpacing: '0.1em' }}>
+          <div className="inline-flex items-center gap-2.5 mb-10 self-start px-4 py-2 rounded-full bg-primary/10 border border-primary/30 shadow-[0_0_15px_var(--color-primary)]">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
+            <span className="font-label-md text-primary tracking-wider">
               מערכת פעילה · {students?.length ?? '—'} תלמידים
             </span>
           </div>
 
           {/* Hero text */}
           <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--g-400)', letterSpacing: '0.18em', marginBottom: '12px' }}>
+            <div className="font-label-md text-secondary tracking-widest mb-3">
               // IDENTITY_SELECT
             </div>
-            <h1 className="heading-display" style={{ fontSize: 'clamp(2.8rem, 5.5vw, 4.5rem)', lineHeight: 1 }}>
-              <span className="text-gradient-hero">פלטפורמת</span>
+            <h1 className="font-headline-xl text-on-surface leading-tight" style={{ fontSize: 'clamp(2.8rem, 5.5vw, 4.5rem)', fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 900 }}>
+              <span className="text-primary drop-shadow-[0_0_15px_var(--color-primary)]">פלטפורמת</span>
               <br />
-              <span style={{ color: 'var(--g-400)' }}>הלמידה</span>
+              <span className="text-gradient-warm">הלמידה</span>
               <br />
-              <span style={{ color: 'var(--text-primary)' }}>המתקדמת</span>
+              <span className="text-on-surface">המתקדמת</span>
             </h1>
           </div>
 
           {/* Descriptors */}
-          <div className="mt-10 flex flex-col gap-3">
+          <div className="mt-10 flex flex-col gap-4">
             {[
-              { icon: '◆', text: 'תרגול אדפטיבי לפי רמתך' },
-              { icon: '◆', text: 'AI מורה אישי בזמן אמת' },
-              { icon: '◆', text: 'מעקב ביצועים כיתתי חי' },
-            ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-3" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                <span style={{ color: 'var(--g-500)', fontSize: '0.5rem', flexShrink: 0 }}>{icon}</span>
+              { Icon: Target, text: 'תרגול אדפטיבי לפי רמתך', color: 'text-primary' },
+              { Icon: Bot, text: 'AI מורה אישי בזמן אמת', color: 'text-tertiary' },
+              { Icon: LineChart, text: 'מעקב ביצועים כיתתי חי', color: 'text-secondary' },
+            ].map(({ Icon, text, color }) => (
+              <div key={text} className="flex items-center gap-3 font-label-lg text-on-surface-variant">
+                <Icon className={`${color} drop-shadow-[0_0_8px_var(--color-${color.split('-')[1]})] w-6 h-6`} />
                 {text}
               </div>
             ))}
           </div>
 
           {/* Decorative data line */}
-          <div className="mt-12 pt-8" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 2 }}>
-              SYS_STATUS  <span style={{ color: 'var(--g-400)' }}>ONLINE</span>{' · '}
-              TOPICS  <span style={{ color: 'var(--g-300)' }}>LOADED</span>{' · '}
-              AI_ENGINE  <span style={{ color: 'var(--g-400)' }}>READY</span>
+          <div className="mt-12 pt-8 border-t border-outline-variant/30">
+            <div className="font-label-md text-on-surface-variant leading-loose flex flex-wrap gap-4">
+              <span>SYS_STATUS <span className="text-primary font-bold">ONLINE</span></span>
+              <span>TOPICS <span className="text-tertiary font-bold">LOADED</span></span>
+              <span>AI_ENGINE <span className="text-secondary font-bold">READY</span></span>
             </div>
           </div>
         </motion.div>
 
         {/* RIGHT — Role selection */}
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
+          initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, delay: 0.2 }}
           className="lg:flex-1 flex flex-col justify-center px-8 lg:px-16 py-16 gap-6"
         >
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.12em', marginBottom: 4 }}>
+          <div className="font-label-md text-on-surface-variant tracking-widest mb-1">
             // SELECT_MODE
           </div>
 
@@ -133,11 +123,10 @@ export default function RolePage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg overflow-hidden"
-                style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid var(--border-primary)' }}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg overflow-hidden bg-primary/10 border border-primary/30"
               >
-                <Loader2 size={14} className="animate-spin flex-shrink-0" style={{ color: 'var(--g-400)' }} />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--g-300)' }}>
+                <Loader2 size={16} className="animate-spin text-primary" />
+                <span className="font-label-md text-primary">
                   טוען נתוני כיתה...
                 </span>
               </motion.div>
@@ -149,22 +138,25 @@ export default function RolePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="glass relative overflow-hidden"
-            style={{ padding: '28px 32px' }}
+            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-primary/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_var(--color-primary)] transition-shadow duration-500"
+            style={{ padding: '32px' }}
           >
-            <div className="green-line-top" />
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary opacity-90 shadow-[0_0_15px_var(--color-primary)]" />
 
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--g-500)', letterSpacing: '0.12em', marginBottom: 4 }}>
+                <div className="font-label-md text-primary tracking-widest mb-2">
                   MODE_01
                 </div>
-                <h2 className="heading-display" style={{ fontSize: '1.5rem' }}>כניסת תלמיד</h2>
+                <h2 className="font-headline-lg text-on-surface flex items-center gap-2" style={{ fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 700 }}>
+                  <Users className="text-primary" size={28} />
+                  כניסת תלמיד
+                </h2>
               </div>
-              <span className="badge badge-primary">Student</span>
+              <span className="px-3 py-1 bg-primary text-on-primary rounded-full font-label-lg shadow-[0_0_10px_var(--color-primary)]">Student</span>
             </div>
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: 20 }}>
+            <p className="font-body-lg text-on-surface-variant mb-6">
               בחר את שמך והתחל לתרגל — ה-AI ממתין לשאלות שלך.
             </p>
 
@@ -176,27 +168,28 @@ export default function RolePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="glass card-hover relative overflow-hidden"
-            style={{ padding: '24px 32px' }}
+            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-tertiary/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_var(--color-tertiary)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
+            style={{ padding: '32px' }}
             onClick={() => navigate("/teacher")}
           >
-            {/* Amber accent line for teacher */}
-            <div className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{ background: 'linear-gradient(90deg, var(--g-600), var(--amber))' }} />
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-tertiary opacity-90 shadow-[0_0_15px_var(--color-tertiary)]" />
 
             <div className="flex items-center justify-between">
               <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--amber)', letterSpacing: '0.12em', marginBottom: 4 }}>
+                <div className="font-label-md text-tertiary tracking-widest mb-2">
                   MODE_02
                 </div>
-                <h2 className="heading-display" style={{ fontSize: '1.5rem' }}>מרכז פיקוד מורה</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 4 }}>
+                <h2 className="font-headline-lg text-on-surface flex items-center gap-2" style={{ fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 700 }}>
+                  <Shield className="text-tertiary" size={28} />
+                  מרכז פיקוד מורה
+                </h2>
+                <p className="font-body-md text-on-surface-variant mt-2">
                   מפת חום · ניתוח AI · ניהול שיעורי בית
                 </p>
               </div>
-              <button className="btn btn-accent flex-shrink-0" onClick={() => navigate("/teacher")}>
+              <button className="flex items-center gap-2 px-6 py-3 bg-tertiary text-on-tertiary rounded-xl font-label-lg shadow-[0_0_15px_var(--color-tertiary)] group-hover:scale-105 transition-transform" onClick={() => navigate("/teacher")}>
                 כניסה
-                <ArrowLeft size={15} />
+                <ArrowLeft size={18} />
               </button>
             </div>
           </motion.div>
@@ -211,17 +204,17 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
   const navigate = useNavigate();
 
   if (!students) return (
-    <div className="flex flex-col gap-2">
-      {[1, 2, 3].map(i => <div key={i} className="skeleton h-10 w-full" />)}
+    <div className="flex flex-col gap-3">
+      {[1, 2, 3].map(i => <div key={i} className="h-12 w-full rounded-xl bg-surface-container-highest animate-pulse" />)}
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-2">
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 4 }}>
+    <div className="flex flex-col gap-3">
+      <div className="font-label-md text-on-surface-variant tracking-widest mb-1">
         // AVAILABLE_AGENTS
       </div>
-      <div className="flex flex-col gap-1.5 max-h-[220px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+      <div className="flex flex-col gap-2 max-h-[240px] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
         {students.map((s, i) => {
           const hue = [...s.name].reduce((h, c) => c.charCodeAt(0) * 31 + ((h << 5) - h), 0);
           const h = Math.abs(hue) % 360;
@@ -231,39 +224,22 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
               initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05 + i * 0.04 }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-right group transition-all duration-200"
-              style={{
-                background: 'rgba(74,222,128,0.03)',
-                border: '1px solid var(--border-subtle)',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget;
-                el.style.background = 'rgba(74,222,128,0.07)';
-                el.style.borderColor = 'var(--border-primary)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget;
-                el.style.background = 'rgba(74,222,128,0.03)';
-                el.style.borderColor = 'var(--border-subtle)';
-              }}
+              className="w-full flex items-center gap-4 px-5 py-3 rounded-xl text-right group transition-all duration-200 bg-surface border border-outline-variant/40 hover:border-primary/60 hover:bg-primary/10 hover:shadow-[0_0_15px_var(--color-primary)]"
               onClick={() => navigate(`/student/${s._id}`)}
             >
               {/* Colourful initial avatar */}
-              <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-headline-md shadow-sm"
                 style={{
-                  background: `hsl(${h}, 40%, 18%)`,
-                  color: `hsl(${h}, 70%, 65%)`,
-                  border: `1px solid hsl(${h}, 45%, 28%)`,
-                  fontFamily: 'var(--font-display)',
+                  background: `hsl(${h}, 50%, 15%)`,
+                  color: `hsl(${h}, 80%, 70%)`,
+                  border: `1px solid hsl(${h}, 60%, 30%)`,
                 }}>
                 {s.name.slice(0, 1)}
               </div>
-              <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}>
+              <span className="flex-1 font-label-lg text-on-surface group-hover:text-primary transition-colors">
                 {s.name}
               </span>
-              <ArrowLeft size={13} style={{ color: 'var(--g-400)', opacity: 0, transition: 'opacity 0.15s' }}
-                className="group-hover:opacity-100" />
+              <ArrowLeft size={18} className="text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
             </motion.button>
           );
         })}
@@ -271,3 +247,4 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
     </div>
   );
 }
+

@@ -104,7 +104,7 @@ export default function PracticeSession() {
       {/* ── Ambient ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-20%] right-[20%] w-[500px] h-[500px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, var(--color-primary-muted) 0%, transparent 70%)' }} />
       </div>
 
       {/* ── Top nav ── */}
@@ -112,7 +112,7 @@ export default function PracticeSession() {
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4"
-        style={{ background: 'rgba(5,11,24,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}
+        style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}
       >
         <div className="flex items-center gap-4">
           <button className="btn-icon" onClick={() => navigate(`/student/${studentId}`)}>
@@ -388,7 +388,7 @@ function CalculatorCard() {
 
       {/* Display */}
       <div className="rounded-lg px-4 py-3 mb-4 text-left overflow-hidden"
-        style={{ background: 'rgba(0,0,0,0.30)', border: '1px solid var(--border-default)', minHeight: 52 }}>
+        style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-default)', minHeight: 52 }}>
         <span style={{
           fontFamily: 'var(--font-mono)',
           fontSize: eqValue.length > 12 ? '0.85rem' : '1.2rem',

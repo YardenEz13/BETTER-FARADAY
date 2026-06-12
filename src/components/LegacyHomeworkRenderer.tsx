@@ -58,7 +58,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
   return (
     <div className="flex flex-col gap-6">
       <motion.div
-        className="shard p-8 bg-[rgba(0,0,0,0.4)] border border-[#1a3324] relative overflow-hidden"
+        className="glass p-8 bg-[var(--bg-surface)] border border-[var(--border-default)] relative overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -66,18 +66,18 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
         <div className="flex items-center gap-4 mb-6">
           <div className="flex gap-1">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className={`w-2 h-2 rounded-none ${i < question.difficulty ? "bg-[var(--acid-green)] shadow-[var(--glow-acid)]" : "bg-white opacity-20"}`} />
+              <div key={i} className={`w-2 h-2 rounded-none ${i < question.difficulty ? "bg-[var(--color-primary-light)] shadow-[var(--glow-acid)]" : "bg-white opacity-20"}`} />
             ))}
           </div>
-          <span className="t-mono-label opacity-80">רמה {question.difficulty} (שאלה רגילה)</span>
+          <span className="label-mono opacity-80">רמה {question.difficulty} (שאלה רגילה)</span>
         </div>
 
-        <div className="text-xl leading-relaxed text-white"><MathText>{question.stem}</MathText></div>
+        <div className="text-xl leading-relaxed text-[var(--text-primary)]"><MathText>{question.stem}</MathText></div>
       </motion.div>
 
       <div className="flex flex-col gap-4">
         <motion.div
-          className={`shard p-8 border ${isSubmitted ? (isCorrect ? "border-[var(--neon-emerald)] bg-[rgba(0,255,136,0.05)]" : "border-[#ff4b4b] bg-[rgba(255,75,75,0.05)]") : "border-[#1a3324] bg-[rgba(0,0,0,0.6)]"}`}
+          className={`shard p-8 border ${isSubmitted ? (isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] bg-[var(--color-danger-muted)]") : "border-[var(--border-default)] bg-[var(--bg-surface)]"}`}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
@@ -85,13 +85,13 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
             {question.choices.map((choice, idx) => {
               let btnClass = "shard flex justify-start p-6 text-right h-auto w-full transition-all border cursor-pointer font-mono text-lg ";
               if (isSubmitted) {
-                if (idx === question.correctIndex) btnClass += "border-[var(--neon-emerald)] bg-[rgba(0,255,136,0.1)] text-[var(--neon-emerald)] shadow-[var(--glow-emerald)]";
-                else if (idx === selectedIndex) btnClass += "border-[#ff4b4b] bg-[rgba(255,75,75,0.1)] text-[#ff4b4b]";
-                else btnClass += "border-[#1a3324] bg-[rgba(0,0,0,0.4)] opacity-50";
+                if (idx === question.correctIndex) btnClass += "border-[var(--color-primary)] bg-[rgba(0,255,136,0.1)] text-[var(--color-primary)] shadow-[var(--glow-primary)]";
+                else if (idx === selectedIndex) btnClass += "border-[var(--color-danger)] bg-[rgba(255,75,75,0.1)] text-[var(--color-danger)]";
+                else btnClass += "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-50";
               } else if (idx === selectedIndex) {
-                btnClass += "border-[var(--acid-green)] bg-[rgba(180,255,0,0.1)] text-[var(--acid-green)] shadow-[var(--glow-acid)]";
+                btnClass += "border-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)] text-[var(--color-primary-light)] shadow-[var(--glow-acid)]";
               } else {
-                btnClass += "border-[#1a3324] bg-[rgba(0,0,0,0.4)] hover:border-[var(--acid-green)] text-white";
+                btnClass += "border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--color-primary-light)] text-[var(--text-primary)]";
               }
 
               return (
@@ -110,14 +110,14 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
           {!isSubmitted && (
             <div className="flex gap-4">
               <button
-                className={`cyber-btn ${selectedIndex === null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`btn btn-primary ${selectedIndex === null ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={handleSubmit}
                 disabled={selectedIndex === null}
               >
                 <Send size={16} /> [ SUBMIT_ANSWER ]
               </button>
               {aiChatTrigger && (
-                <button className="cyber-btn cyber-btn-ghost" onClick={aiChatTrigger}>
+                <button className="btn btn-primary btn-ghost" onClick={aiChatTrigger}>
                   <Bot size={16} /> [ AI_ASSIST ]
                 </button>
               )}
@@ -126,7 +126,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
 
           {isSubmitted && (
             <motion.div
-              className={`p-6 mt-4 border flex items-center gap-4 fw-700 text-lg ${isCorrect ? "border-[var(--neon-emerald)] text-[var(--neon-emerald)] bg-[rgba(0,255,136,0.05)]" : "border-[#ff4b4b] text-[#ff4b4b] bg-[rgba(255,75,75,0.05)]"}`}
+              className={`p-6 mt-4 border flex items-center gap-4 fw-700 text-lg ${isCorrect ? "border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] text-[var(--color-danger)] bg-[var(--color-danger-muted)]"}`}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
             >
@@ -142,15 +142,15 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
 
       {isSubmitted && (
         <motion.div
-          className="shard p-8 border border-[var(--laser-cyan)] bg-[rgba(0,240,255,0.05)] flex flex-col items-center justify-center text-center gap-6"
+          className="glass p-8 border border-[var(--color-accent)] bg-[var(--color-accent-muted)] flex flex-col items-center justify-center text-center gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="font-title text-6xl text-[var(--laser-cyan)] shadow-[var(--glow-cyan)] tracking-widest">{isCorrect ? "100" : "0"}</div>
-            <div className="t-mono-label opacity-80">נקודות סנכרון</div>
+            <div className="font-title text-6xl text-[var(--color-accent)] shadow-[var(--glow-cyan)] tracking-widest">{isCorrect ? "100" : "0"}</div>
+            <div className="label-mono opacity-80">נקודות סנכרון</div>
           </div>
-          <button className="cyber-btn" onClick={handleFinalize}>
+          <button className="btn btn-primary" onClick={handleFinalize}>
             [ CONTINUE_TO_NEXT ] ➜
           </button>
         </motion.div>
@@ -158,3 +158,4 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
     </div>
   );
 }
+

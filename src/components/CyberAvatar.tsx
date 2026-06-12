@@ -40,7 +40,7 @@ export default function CyberAvatar({ name, size = 48, showText = true }: Avatar
         borderRadius,
         boxShadow: `0 0 12px ${glow}, inset 0 1px 0 rgba(255,255,255,0.05)`,
         fontFamily: 'var(--font-display)',
-        fontWeight: 700,
+        fontWeight: 'var(--font-weight-bold)',
         fontSize,
         color,
         lineHeight: 1,
@@ -52,3 +52,4 @@ export default function CyberAvatar({ name, size = 48, showText = true }: Avatar
     </div>
   );
 }
+

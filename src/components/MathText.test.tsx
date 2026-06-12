@@ -37,3 +37,4 @@ describe("MathText Component", () => {
     expect(container.textContent).toBe("<script>alert('xss')</script>");
   });
 });
+

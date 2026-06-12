@@ -99,11 +99,10 @@ describe("CompoundQuestionRenderer Component", () => {
     );
 
     // Click hint button
-    const hintButton = screen.getByRole("button", { name: /רמז \(0\/2\)/ });
+    const hintButton = screen.getByRole("button", { name: /REQUEST_HINT/ });
     fireEvent.click(hintButton);
 
     // First hint should be revealed
-    expect(screen.getByText(/רמז 1/)).toBeInTheDocument();
     expect(screen.getByText("הצב y = 0")).toBeInTheDocument();
   });
 
@@ -117,8 +116,8 @@ describe("CompoundQuestionRenderer Component", () => {
       />
     );
 
-    const textarea = screen.getByPlaceholderText("כתבו את הפתרון שלכם כאן...");
-    const submitBtn = screen.getByRole("button", { name: /שלח תשובה/ });
+    const textarea = screen.getByPlaceholderText("[ INSERT_SOLUTION_HERE ]");
+    const submitBtn = screen.getByRole("button", { name: /SUBMIT/ });
 
     // Type and submit answer
     fireEvent.change(textarea, { target: { value: "(1,0) וגם (3,0)" } });
@@ -134,10 +133,11 @@ describe("CompoundQuestionRenderer Component", () => {
 
     // Section א should now show result/correct state
     await waitFor(() => {
-      expect(screen.getByText(/כל הכבוד! תשובה נכונה/)).toBeInTheDocument();
+      expect(screen.getByText(/התשובה נכונה/)).toBeInTheDocument();
     });
 
     // Section ב prompt should be visible since it got expanded/unlocked
     expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
   });
 });
+

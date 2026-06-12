@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="dark" dir="rtl" lang="he"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Faraday Logic | Assigned Tasks</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#042100",
+                        "surface": "#131313",
+                        "secondary-fixed-dim": "#a0d588",
+                        "tertiary": "#ffafd3",
+                        "surface-container": "#1f1f1f",
+                        "surface-bright": "#393939",
+                        "error-container": "#93000a",
+                        "on-tertiary": "#620040",
+                        "surface-dim": "#131313",
+                        "on-primary": "#0c3900",
+                        "primary-fixed-dim": "#74de4f",
+                        "surface-container-high": "#2a2a2a",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#353535",
+                        "on-tertiary-fixed": "#3d0026",
+                        "tertiary-fixed": "#ffd8e7",
+                        "on-secondary-fixed-variant": "#235114",
+                        "inverse-surface": "#e2e2e2",
+                        "on-tertiary-container": "#560037",
+                        "on-secondary-container": "#8fc378",
+                        "tertiary-container": "#f056ab",
+                        "on-surface": "#e2e2e2",
+                        "tertiary-fixed-dim": "#ffafd3",
+                        "surface-tint": "#74de4f",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#042100",
+                        "on-secondary": "#0c3900",
+                        "surface-variant": "#353535",
+                        "primary": "#74de4f",
+                        "on-error": "#690005",
+                        "on-background": "#e2e2e2",
+                        "secondary-container": "#235114",
+                        "on-tertiary-fixed-variant": "#8b005b",
+                        "inverse-primary": "#1e6d00",
+                        "on-primary-container": "#093100",
+                        "outline-variant": "#3f4a39",
+                        "outline": "#899480",
+                        "on-surface-variant": "#becab4",
+                        "inverse-on-surface": "#303030",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#155200",
+                        "secondary-fixed": "#bbf1a2",
+                        "primary-container": "#3da518",
+                        "surface-container-low": "#1b1b1b",
+                        "secondary": "#a0d588",
+                        "primary-fixed": "#90fc69",
+                        "background": "#131313"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "lg": "40px",
+                        "md": "24px",
+                        "base": "8px",
+                        "margin": "32px",
+                        "sm": "12px",
+                        "xs": "4px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "label-lg": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "label-md": ["Outfit"],
+                        "headline-xl": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "body-sm": ["Outfit"],
+                        "headline-lg": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "label-lg": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "14px", "fontWeight": "500" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #131313;
+            color: #e2e2e2;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+        }
+        .forest-glow-sm {
+            box-shadow: 0 0 15px rgba(47, 152, 3, 0.15);
+        }
+        .forest-glow-md {
+            box-shadow: 0 0 25px rgba(47, 152, 3, 0.25);
+        }
+        .magenta-glow {
+            box-shadow: 0 0 15px rgba(224, 73, 158, 0.2);
+        }
+        .glass-panel {
+            background: rgba(31, 31, 31, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(137, 148, 128, 0.1);
+        }
+        .hero-text-glow {
+            text-shadow: 0 0 20px rgba(116, 222, 79, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-gutter h-16 rtl:flex-row-reverse bg-surface-container dark:bg-surface-container-lowest shadow-sm">
+<div class="flex items-center gap-md">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">Faraday Logic</span>
+</div>
+<div class="flex items-center gap-base">
+<div class="hidden md:flex gap-md px-md">
+<a class="text-primary dark:text-primary-fixed font-bold border-b-2 border-primary text-label-lg font-label-lg" href="#">ASSIGNED_TASKS</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors text-label-lg font-label-lg" href="#">ANALYTICS</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors text-label-lg font-label-lg" href="#">ARCHIVE</a>
+</div>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary p-xs">bolt</button>
+<button class="material-symbols-outlined text-primary p-xs">database</button>
+<button class="material-symbols-outlined text-primary p-xs">monetization_on</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline">
+<img alt="Student avatar" data-alt="A professional close-up studio portrait of a young male student with a kind and intelligent expression. He is set against a dark, moody background with subtle green and magenta lighting accents that match a technical Biotech Industrial aesthetic. The lighting is soft yet directional, highlighting the contours of his face and the texture of his dark hair. The overall mood is focused, academic, and modern." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBZC1cjYSZRGdROUoivv8WWS--HIdBo03bdTSIVMlJ2vzSjNd2oyiPvk6R7KdPgROIWwwSJRIr0WShSiRk_WulRI1sgvEO0OMO5_ik5Ve00_b006rIIVziCvSUxJlkRoNdk2k0JXmCCrLo-LmZIXQXW7FkpueRLqAqoHitW91BP97TPWMGh0K5Hok18Rs7bu3-j1fpBwSKaSLfUcbtTBx433Cqu1XSIvQxRoX2iJOJMTPKXQ0liUt4m6JMRUOcwt7T71pBYB3BXlM"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Hidden on Mobile) -->
+<aside class="fixed right-0 top-0 h-full w-64 z-40 hidden md:flex flex-col py-lg border-l border-outline-variant bg-surface-container dark:bg-surface-container-high shadow-lg pt-20">
+<div class="px-md mb-lg">
+<div class="text-headline-md font-headline-md font-black text-primary">Faraday Logic</div>
+<div class="text-label-md font-label-md text-on-surface-variant">Premium Learning</div>
+</div>
+<nav class="flex-1 space-y-base">
+<div class="flex items-center gap-sm bg-primary-container dark:bg-primary-container text-on-primary-container dark:text-on-primary-container rounded-lg p-3 mx-2 scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="text-label-lg font-label-lg">Learning Map</span>
+</div>
+<div class="flex items-center gap-sm text-on-surface-variant dark:text-on-surface-variant p-3 mx-2 hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">terminal</span>
+<span class="text-label-lg font-label-lg">AI Tutor</span>
+</div>
+<div class="flex items-center gap-sm text-on-surface-variant dark:text-on-surface-variant p-3 mx-2 hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-label-lg font-label-lg">Archive</span>
+</div>
+<div class="flex items-center gap-sm text-on-surface-variant dark:text-on-surface-variant p-3 mx-2 hover:bg-surface-variant rounded-lg transition-all">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-label-lg font-label-lg">Analytics</span>
+</div>
+</nav>
+<div class="px-md mt-auto">
+<button class="w-full bg-primary text-on-primary font-bold py-md rounded-lg shadow-md hover:opacity-90 transition-opacity">New Challenge</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-xl md:pr-64 px- gutter min-h-screen">
+<div class="max-w-6xl mx-auto px-4">
+<!-- Hero Header -->
+<div class="text-center mb-xl">
+<div class="flex items-center justify-center gap-sm mb-base">
+<button class="flex items-center gap-xs text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-body-sm">arrow_forward</span>
+<span class="text-body-sm font-body-sm tracking-widest">SYSTEM_RETURN</span>
+</button>
+</div>
+<h1 class="text-headline-xl font-headline-xl text-primary hero-text-glow tracking-tighter mb-base">ASSIGNED_TASKS</h1>
+<p class="text-headline-md font-headline-md text-on-surface mb-xs">שיעורי הבית של מיה לוי</p>
+<p class="text-body-md font-body-md text-on-surface-variant max-w-2xl mx-auto">
+                    כל משימות הלמידה שהוקצו לך על ידי המערכת. התחל לפתור כדי לסנכרן נתונים למאגר.
+                </p>
+</div>
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Left Sidebar Cards -->
+<div class="lg:col-span-4 space-y-md">
+<!-- Task Status Card -->
+<div class="glass-panel rounded-lg p-md forest-glow-sm relative overflow-hidden">
+<div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
+<div class="flex items-center justify-between mb-md">
+<h3 class="text-label-lg font-label-lg text-primary flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+                                סטטוס משימות
+                            </h3>
+</div>
+<div class="space-y-md">
+<div class="flex justify-between items-center border-b border-outline-variant pb-xs">
+<span class="text-body-md font-body-md text-on-surface">פתוחות</span>
+<span class="text-headline-md font-headline-md text-on-surface">0</span>
+</div>
+<div class="flex justify-between items-center text-primary">
+<span class="text-body-md font-body-md">הושלמו</span>
+<span class="text-headline-md font-headline-md">3</span>
+</div>
+<!-- Small Progress Bar -->
+<div class="w-full bg-surface-variant h-1 rounded-full mt-lg">
+<div class="bg-primary h-full w-[100%] rounded-full shadow-[0_0_10px_#74de4f]"></div>
+</div>
+</div>
+</div>
+<!-- System Tip Card -->
+<div class="glass-panel rounded-lg p-md magenta-glow relative border-tertiary-container/20">
+<div class="flex items-center gap-sm mb-sm">
+<span class="material-symbols-outlined text-tertiary">lightbulb</span>
+<span class="text-label-lg font-label-lg text-tertiary">טיפ מערכת</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface leading-relaxed">
+                            התחילו מהסעיף הראשון בכל שאלה. האלגוריתם מנתח את הפתרון שלכם ולומד את דרך החשיבה שלכם שלב אחר שלב.
+                        </p>
+</div>
+<!-- Decorative Bio-Grid Animation -->
+<div class="h-32 rounded-lg overflow-hidden relative glass-panel">
+
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-label-md font-label-md text-primary tracking-widest opacity-50 uppercase">Neural Stream Active</span>
+</div>
+</div>
+</div>
+<!-- Main Task List -->
+<div class="lg:col-span-8 space-y-md">
+<!-- Task Item 1 -->
+<div class="glass-panel hover:bg-surface-container-high transition-all rounded-lg p-md group border-r-4 border-primary">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div class="flex items-center gap-md">
+<div class="bg-primary-container/20 border border-primary/30 text-primary px-base py-xs rounded flex items-center gap-xs forest-glow-sm">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-label-md font-label-md">הושלם</span>
+</div>
+<div>
+<h4 class="text-headline-md font-headline-md text-on-surface group-hover:text-primary transition-colors">מטלה 1</h4>
+<div class="flex items-center gap-md text-on-surface-variant text-body-sm font-body-sm mt-xs">
+<span class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+                                            4 שאלות
+                                        </span>
+<span class="flex items-center gap-xs text-error">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                            עבר המועד
+                                        </span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">arrow_back_ios</button>
+</div>
+</div>
+<!-- Task Item 2 -->
+<div class="glass-panel hover:bg-surface-container-high transition-all rounded-lg p-md group border-r-4 border-primary">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div class="flex items-center gap-md">
+<div class="bg-primary-container/20 border border-primary/30 text-primary px-base py-xs rounded flex items-center gap-xs forest-glow-sm">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-label-md font-label-md">הושלם</span>
+</div>
+<div>
+<h4 class="text-headline-md font-headline-md text-on-surface group-hover:text-primary transition-colors">הכנה למונדיאל</h4>
+<div class="flex items-center gap-md text-on-surface-variant text-body-sm font-body-sm mt-xs">
+<span class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+                                            4 שאלות
+                                        </span>
+<span class="flex items-center gap-xs text-error">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                            עבר המועד
+                                        </span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">arrow_back_ios</button>
+</div>
+</div>
+<!-- Task Item 3 -->
+<div class="glass-panel hover:bg-surface-container-high transition-all rounded-lg p-md group border-r-4 border-primary">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div class="flex items-center gap-md">
+<div class="bg-primary-container/20 border border-primary/30 text-primary px-base py-xs rounded flex items-center gap-xs forest-glow-sm">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-label-md font-label-md">הושלם</span>
+</div>
+<div>
+<h4 class="text-headline-md font-headline-md text-on-surface group-hover:text-primary transition-colors">הסתברות כדורגל</h4>
+<div class="flex items-center gap-md text-on-surface-variant text-body-sm font-body-sm mt-xs">
+<span class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+                                            4 שאלות
+                                        </span>
+<span class="flex items-center gap-xs text-error">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                            עבר המועד
+                                        </span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">arrow_back_ios</button>
+</div>
+</div>
+<!-- Notes Section -->
+<div class="pt-lg border-t border-outline-variant mt-xl">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+<span class="text-headline-md font-headline-md text-on-surface">שאלות מעניינות</span>
+</div>
+<button class="text-primary text-label-lg font-label-lg hover:underline transition-all">הצג הכל</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div class="glass-panel rounded-lg p-md border-l-2 border-primary/20 hover:border-primary/60 transition-colors">
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-xs">נושא: הסתברות מותנית</p>
+<p class="text-body-md font-body-md text-on-surface">כיצד משתנה הסיכוי לשער לאחר כרטיס אדום?</p>
+</div>
+<div class="glass-panel rounded-lg p-md border-l-2 border-primary/20 hover:border-primary/60 transition-colors">
+<p class="text-body-sm font-body-sm text-on-surface-variant mb-xs">נושא: סטטיסטיקה תיאורית</p>
+<p class="text-body-md font-body-md text-on-surface">חישוב ממוצע שערים עונתי של קבוצה ביתית.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom NavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center h-16 bg-surface-container dark:bg-surface-container-lowest shadow-lg">
+<button class="flex flex-col items-center gap-xs text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="text-[10px] font-label-md">Learning Map</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">terminal</span>
+<span class="text-[10px] font-label-md">AI Tutor</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-[10px] font-label-md">Archive</span>
+</button>
+<button class="flex flex-col items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-[10px] font-label-md">Analytics</span>
+</button>
+</nav>
+<!-- Background Atmospheric Effect -->
+<div class="fixed inset-0 pointer-events-none -z-10">
+<div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[150px] rounded-full"></div>
+<div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-tertiary/5 blur-[180px] rounded-full"></div>
+</div>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('.glass-panel').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-2px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0px)';
+            });
+        });
+    </script>
+</body></html>

@@ -6,7 +6,9 @@ import PracticeSession from "./pages/PracticeSession";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentHomework from "./pages/StudentHomework";
 import StudentHomeworkList from "./pages/StudentHomeworkList";
+import LearningProgress from "./pages/LearningProgress";
 import { preloadModel } from "./services/localAI";
+import { ThemeProvider } from "./components/ThemeContext";
 
 export default function App() {
   useEffect(() => {
@@ -15,16 +17,20 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RolePage />} />
-        <Route path="/student/:studentId" element={<StudentHome />} />
-        <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
-        <Route path="/student/:studentId/homework" element={<StudentHomeworkList />} />
-        <Route path="/student/:studentId/homework/:homeworkId" element={<StudentHomework />} />
-        <Route path="/teacher" element={<TeacherDashboard />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<RolePage />} />
+          <Route path="/student/:studentId" element={<StudentHome />} />
+          <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
+          <Route path="/student/:studentId/homework" element={<StudentHomeworkList />} />
+          <Route path="/student/:studentId/homework/:homeworkId" element={<StudentHomework />} />
+          <Route path="/student/:studentId/progress" element={<LearningProgress />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
+
