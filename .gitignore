@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI Agents & IDE
+.gemini/
+.agents/
+
+# Generated outputs & Analysis
+graphify-out/
+lint_errors.json
+diff.txt
+app_screenshot.png
+stitch_screens/
