@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import RolePage from "./pages/RolePage";
 import StudentHome from "./pages/StudentHome";
 import PracticeSession from "./pages/PracticeSession";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <SpeedInsights />
     </ThemeProvider>
   );
 }
