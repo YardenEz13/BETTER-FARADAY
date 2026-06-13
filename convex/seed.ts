@@ -397,6 +397,67 @@ export const seedDatabase = mutation({
       await ctx.db.insert("questions", { ...q, topicId: ratId });
     }
 
+    // --- Mock Homework ---
+    const hwOld = await ctx.db.query("homework").collect();
+    for (const h of hwOld) await ctx.db.delete(h._id);
+    const aqOld = await ctx.db.query("assignedQuestions").collect();
+    for (const a of aqOld) await ctx.db.delete(a._id);
+
+    const hwId = await ctx.db.insert("homework", {
+      classroomId,
+      title: "תרגול שבועי - סדרות (הכנה למבחן)",
+      topicIds: [seqId],
+      teacherNotes: "שימו לב לחזור על סדרה הנדסית לפני המטלה.",
+      questionCount: 3,
+      createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000,
+      deadline: Date.now() + 5 * 24 * 60 * 60 * 1000,
+      status: "active",
+    });
+
+    const allSeqQs = await ctx.db.query("questions").withIndex("by_topic", q => q.eq("topicId", seqId)).collect();
+    if (allSeqQs.length >= 3) {
+      for (let i = 0; i < studentIds.length; i++) {
+        const sId = studentIds[i];
+        const rand = Math.random();
+        let status = "pending";
+        let submittedAt = undefined;
+        let score = undefined;
+        let answers: any[] = [];
+        
+        const selectedQs = [allSeqQs[0], allSeqQs[3], allSeqQs[6]];
+
+        if (rand > 0.6) {
+          status = "submitted";
+          submittedAt = Date.now() - Math.random() * 86400000;
+          score = Math.floor(Math.random() * 30) + 70;
+          answers = [
+            { sectionLabel: "1", studentAnswer: "18", isCorrect: true, timeMs: 45000, hintsUsed: 0 },
+            { sectionLabel: "2", studentAnswer: "24", isCorrect: Math.random() > 0.2, timeMs: 65000, hintsUsed: 1 }
+          ];
+        } else if (rand > 0.3) {
+          status = "in_progress";
+          answers = [
+            { sectionLabel: "1", studentAnswer: "18", isCorrect: true, timeMs: 45000, hintsUsed: 0 }
+          ];
+        }
+
+        for (const q of selectedQs) {
+          await ctx.db.insert("assignedQuestions", {
+            homeworkId: hwId,
+            studentId: sId,
+            questionId: q._id,
+            assignedDifficulty: q.difficulty,
+            personalizedReason: "הותאם לפי ביצועים קודמים",
+            status,
+            submittedAt,
+            answers,
+            score,
+            aiInteractions: Math.floor(Math.random() * 3),
+          });
+        }
+      }
+    }
+
     // Done
   },
 });
