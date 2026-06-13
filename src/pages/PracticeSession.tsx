@@ -385,7 +385,7 @@ export default function PracticeSession() {
                               <div>
                                 <div className="text-xs font-semibold mb-1" style={{ color: 'var(--color-success)' }}>התשובה הנכונה:</div>
                                 <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                  {question.choices[question.correctIndex]}
+                                  {activeQuestion.choices[activeQuestion.correctIndex]}
                                 </div>
                               </div>
                             </div>
@@ -398,19 +398,19 @@ export default function PracticeSession() {
                               <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>הסבר:</span>
                             </div>
                             <p className="text-base leading-relaxed" style={{ color: 'var(--text-primary)', lineHeight: 1.75 }}>
-                              {question.explanation}
+                              {activeQuestion.explanation}
                             </p>
                           </div>
 
                           {/* Solution Steps */}
-                          {question.solutionSteps && question.solutionSteps.length > 0 && (
+                          {activeQuestion.solutionSteps && activeQuestion.solutionSteps.length > 0 && (
                             <div>
                               <div className="flex items-center gap-2 mb-3">
                                 <Star size={15} style={{ color: 'var(--color-primary)' }} />
                                 <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>שלבי פתרון:</span>
                               </div>
                               <ol className="flex flex-col gap-2.5">
-                                {question.solutionSteps.map((step: string, i: number) => (
+                                {activeQuestion.solutionSteps.map((step: string, i: number) => (
                                   <li key={i} className="flex items-start gap-3 text-sm"
                                     style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                                     <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
@@ -430,7 +430,7 @@ export default function PracticeSession() {
                 </div>
               </motion.div>
             </AnimatePresence>
-          )}
+          ) : null}
         </div>
 
         {/* Right: Calculator */}
