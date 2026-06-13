@@ -263,3 +263,96 @@ export const closeHomework = mutation({
     );
   },
 });
+
+// -- Teacher: per-student submission details (available while active) --
+export const getStudentSubmissions = query({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const assignments = await ctx.db
+      .query("assignedQuestions")
+      .withIndex("by_homework", (q) => q.eq("homeworkId", homeworkId))
+      .collect();
+
+    const enriched = [];
+    for (const aq of assignments) {
+      const student = await ctx.db.get(aq.studentId);
+      if (!student) continue;
+      enriched.push({
+        assignedQuestionId: aq._id,
+        studentId: aq.studentId,
+        studentName: student.name,
+        avatarColor: student.avatarColor,
+        status: aq.status,
+        score: aq.score ?? null,
+        submittedAt: aq.submittedAt ?? null,
+        assignedDifficulty: aq.assignedDifficulty,
+        personalizedReason: aq.personalizedReason,
+        answersCount: aq.answers?.length ?? 0,
+        correctCount: aq.answers?.filter((a) => a.isCorrect).length ?? 0,
+        aiInteractions: aq.aiInteractions ?? 0,
+        totalTimeMs: aq.answers?.reduce((s, a) => s + (a.timeMs ?? 0), 0) ?? 0,
+      });
+    }
+
+    const statusOrder: Record<string, number> = { submitted: 0, in_progress: 1, pending: 2 };
+    enriched.sort((a, b) => (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3));
+    return enriched;
+  },
+});
+
+// -- Teacher: per-question success stats (works while hw is active) --
+export const getHomeworkQuestionStats = query({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const assignments = await ctx.db
+      .query("assignedQuestions")
+      .withIndex("by_homework", (q) => q.eq("homeworkId", homeworkId))
+      .collect();
+
+    type StatEntry = {
+      questionId: string;
+      label: string;
+      difficulty: number;
+      total: number;
+      correct: number;
+      totalHints: number;
+      totalTimeMs: number;
+    };
+    const statsMap = new Map<string, StatEntry>();
+
+    for (const aq of assignments) {
+      if (!aq.answers) continue;
+      const qId = (aq.questionId ?? aq.compoundQuestionId)?.toString() ?? "unknown";
+      const difficulty = aq.assignedDifficulty;
+      for (const ans of aq.answers) {
+        const key = ${"$"}{qId}::{ans.sectionLabel};
+        const s = statsMap.get(key);
+        if (s) {
+          s.total++;
+          if (ans.isCorrect) s.correct++;
+          s.totalHints += ans.hintsUsed;
+          s.totalTimeMs += ans.timeMs ?? 0;
+        } else {
+          statsMap.set(key, {
+            questionId: qId,
+            label: ans.sectionLabel,
+            difficulty,
+            total: 1,
+            correct: ans.isCorrect ? 1 : 0,
+            totalHints: ans.hintsUsed,
+            totalTimeMs: ans.timeMs ?? 0,
+          });
+        }
+      }
+    }
+
+    return Array.from(statsMap.values())
+      .map((s) => ({
+        ...s,
+        successRate: s.total > 0 ? Math.round((s.correct / s.total) * 100) : null,
+        avgHints: s.total > 0 ? +(s.totalHints / s.total).toFixed(1) : 0,
+        avgTimeSec: s.total > 0 ? Math.round(s.totalTimeMs / s.total / 1000) : 0,
+      }))
+      .sort((a, b) => (a.successRate ?? 101) - (b.successRate ?? 101));
+  },
+});

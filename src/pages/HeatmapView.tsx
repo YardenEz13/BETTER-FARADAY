@@ -289,7 +289,15 @@ export function HeatmapView({
                   {dashboardStats.milestones.map((m: any, i: number) => {
                     const diffSec = Math.floor((Date.now() - m.timestamp) / 1000);
                     const diffMin = Math.floor(diffSec / 60);
-                    const timeStr = diffSec < 60 ? `לפני ${diffSec}ש` : `לפני ${diffMin}ד`;
+                    const diffHours = Math.floor(diffMin / 60);
+                    const diffDays = Math.floor(diffHours / 24);
+                    const timeStr = diffDays >= 2
+                      ? `לפני ${diffDays} ימים`
+                      : diffMin >= 60
+                      ? `לפני ${diffHours} שעות`
+                      : diffSec < 60
+                      ? `לפני ${diffSec}ש`
+                      : `לפני ${diffMin}ד`;
                     const isCorrect = m.isCorrect;
 
                     return (

@@ -429,4 +429,22 @@ body {
   border-radius: 9999px;
   background: linear-gradient(to left, var(--color-tertiary), var(--color-tertiary-container));
   transition: width 0.7s ease-out;
-}
+}
+/* == CARD PADDING FIXES == */
+.glass, .card, .shard {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* == MOBILE RESPONSIVE == */
+@media (max-width: 768px) {
+  header.fixed { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .max-w-6xl { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .stat-chip { font-size: 0.75rem; padding: 6px 10px; }
+  .btn { padding: 0.6rem 1rem; font-size: 0.85rem; }
+  .btn-lg { padding: 0.75rem 1.25rem; font-size: 0.9rem; }
+  .glass { padding: 1.25rem !important; }
+}
+@media (max-width: 480px) {
+  .glass { padding: 1rem !important; }
+}

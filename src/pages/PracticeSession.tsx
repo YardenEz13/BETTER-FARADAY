@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
-  CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock
+  CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock, Star
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 
@@ -37,12 +37,15 @@ export default function PracticeSession() {
 
   const [selected, setSelected]             = useState<number | null>(null);
   const [submitted, setSubmitted]           = useState(false);
+  const [reviewPhase, setReviewPhase]       = useState(false);
+  const [countdown, setCountdown]           = useState(0);
   const [showHint, setShowHint]             = useState(false);
   const [hint, setHint]                     = useState<string | null>(null);
   const [loadingHint, setLoadingHint]       = useState(false);
   const [hintsUsed, setHintsUsed]           = useState(0);
   const [elapsed, setElapsed]               = useState(0);
   const [sessionXP, setSessionXP]           = useState(0);
+  const [earnedXP, setEarnedXP]             = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const startTimeRef = useRef(Date.now());
@@ -53,11 +56,19 @@ export default function PracticeSession() {
     return () => clearInterval(iv);
   }, [questionKey]);
 
+  // Countdown timer during review phase
+  useEffect(() => {
+    if (!reviewPhase || countdown <= 0) return;
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [reviewPhase, countdown]);
+
   useEffect(() => {
     if (activeQuestion) {
-      setSelected(null); setSubmitted(false); setShowHint(false);
+      setSelected(null); setSubmitted(false); setReviewPhase(false);
+      setCountdown(0); setShowHint(false);
       setHint(null); setHintsUsed(0); setElapsed(0);
-      startTimeRef.current = Date.now(); setShowCelebration(false);
+      startTimeRef.current = Date.now(); setShowCelebration(false); setEarnedXP(0);
     }
   }, [activeQuestion?._id]);
 
@@ -68,11 +79,18 @@ export default function PracticeSession() {
     setSelected(idx); setSubmitted(true);
     const isCorrect = idx === activeQuestion.correctIndex;
     setQuestionsAnswered(q => q + 1);
+    const xpGained = isCorrect
+      ? (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0)
+      : 0;
     if (isCorrect) {
-      setSessionXP(x => x + (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0));
+      setSessionXP(x => x + xpGained);
+      setEarnedXP(xpGained);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1800);
     }
+    // Enter review phase with 5-second minimum
+    setReviewPhase(true);
+    setCountdown(5);
     await submitAttempt({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
@@ -91,6 +109,8 @@ export default function PracticeSession() {
   };
 
   const handleNextQuestion = () => {
+    if (countdown > 0) return; // enforce 5s minimum
+    setReviewPhase(false);
     setActiveQuestion(null);
     setQuestionKey(k => k + 1);
   };
@@ -269,65 +289,137 @@ export default function PracticeSession() {
                     })}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-3">
-                    {!submitted ? (
-                      <>
-                        <button
-                          className="btn btn-ghost"
-                          onClick={handleHint}
-                          disabled={loadingHint}
-                        >
-                          <Lightbulb size={15} />
-                          {loadingHint ? 'טוען רמז...' : 'רמז מ-AI'}
-                        </button>
-                      </>
-                    ) : (
-                      <button className="btn btn-primary" onClick={handleNextQuestion}>
-                        שאלה הבאה
-                        <ArrowRight size={16} />
+                  {/* Hint button (pre-submit) */}
+                  {!submitted && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="btn btn-ghost"
+                        onClick={handleHint}
+                        disabled={loadingHint}
+                      >
+                        <Lightbulb size={15} />
+                        {loadingHint ? 'טוען רמז...' : 'רמז מ-AI'}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Hint / Explanation */}
+                  {/* Hint panel */}
                   <AnimatePresence>
                     {(showHint && hint) && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-5 overflow-hidden"
+                        className="mt-4 overflow-hidden"
                       >
                         <div className="p-4 rounded-xl flex items-start gap-3"
                           style={{ background: 'var(--color-warning-muted)', border: '1px solid rgba(245,158,11,0.25)' }}>
                           <Lightbulb size={16} style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
-                          <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{hint}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{hint}</p>
                         </div>
                       </motion.div>
                     )}
-                    {submitted && (
+                  </AnimatePresence>
+
+                  {/* ── Review Phase: Full Explanation Panel ── */}
+                  <AnimatePresence>
+                    {reviewPhase && (
                       <motion.div
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mt-5"
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.35 }}
+                        className="mt-6 rounded-2xl overflow-hidden"
+                        style={{
+                          border: `2px solid ${isCorrect ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`,
+                          background: isCorrect ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+                        }}
                       >
-                        <div className={`p-4 rounded-xl flex items-start gap-3`}
-                          style={{
-                            background: isCorrect ? 'var(--color-success-muted)' : 'var(--color-danger-muted)',
-                            border: `1px solid ${isCorrect ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
-                          }}>
-                          {isCorrect
-                            ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: 2 }} />
-                            : <XCircle size={16} style={{ color: 'var(--color-danger)', flexShrink: 0, marginTop: 2 }} />}
-                          <div>
-                            <div className="font-semibold text-sm mb-1" style={{ color: isCorrect ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                              {isCorrect ? 'תשובה נכונה!' : 'תשובה שגויה'}
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4"
+                          style={{ background: isCorrect ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', borderBottom: `1px solid ${isCorrect ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                          <div className="flex items-center gap-3">
+                            {isCorrect
+                              ? <CheckCircle2 size={22} style={{ color: 'var(--color-success)' }} />
+                              : <XCircle size={22} style={{ color: 'var(--color-danger)' }} />}
+                            <span className="font-bold text-lg" style={{ color: isCorrect ? 'var(--color-success)' : 'var(--color-danger)', fontFamily: "'Yarden', sans-serif" }}>
+                              {isCorrect ? '✓ תשובה נכונה!' : '✗ תשובה שגויה'}
+                            </span>
+                            {isCorrect && earnedXP > 0 && (
+                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                                style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--color-warning)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                                <Zap size={11} /> +{earnedXP} XP
+                              </span>
+                            )}
+                          </div>
+                          {/* Countdown / Next button */}
+                          <button
+                            onClick={handleNextQuestion}
+                            disabled={countdown > 0}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+                            style={{
+                              background: countdown > 0 ? 'var(--bg-elevated)' : 'var(--color-primary)',
+                              color: countdown > 0 ? 'var(--text-muted)' : 'var(--color-on-primary)',
+                              border: countdown > 0 ? '1px solid var(--border-default)' : 'none',
+                              cursor: countdown > 0 ? 'not-allowed' : 'pointer',
+                              opacity: countdown > 0 ? 0.7 : 1,
+                            }}
+                          >
+                            {countdown > 0 ? (
+                              <><Clock size={14} /> {countdown}s...</>
+                            ) : (
+                              <>שאלה הבאה <ArrowRight size={14} /></>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="p-6 flex flex-col gap-5">
+                          {/* If wrong: show correct answer */}
+                          {!isCorrect && (
+                            <div className="flex items-start gap-3 p-4 rounded-xl"
+                              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                              <CheckCircle2 size={16} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: 2 }} />
+                              <div>
+                                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--color-success)' }}>התשובה הנכונה:</div>
+                                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                  {question.choices[question.correctIndex]}
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          )}
+
+                          {/* Explanation */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Lightbulb size={15} style={{ color: 'var(--color-warning)' }} />
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>הסבר:</span>
+                            </div>
+                            <p className="text-base leading-relaxed" style={{ color: 'var(--text-primary)', lineHeight: 1.75 }}>
                               {question.explanation}
                             </p>
                           </div>
+
+                          {/* Solution Steps */}
+                          {question.solutionSteps && question.solutionSteps.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Star size={15} style={{ color: 'var(--color-primary)' }} />
+                                <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>שלבי פתרון:</span>
+                              </div>
+                              <ol className="flex flex-col gap-2.5">
+                                {question.solutionSteps.map((step: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-3 text-sm"
+                                    style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                                      style={{ background: 'var(--color-primary-muted)', color: 'var(--color-primary)', border: '1px solid var(--border-primary)' }}>
+                                      {i + 1}
+                                    </span>
+                                    <span>{step}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
