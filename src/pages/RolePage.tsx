@@ -77,7 +77,7 @@ export default function RolePage() {
               <br />
               <span className="text-gradient-warm">הלמידה</span>
               <br />
-              <span className="text-on-surface">המתקדמת</span>
+              <span className="text-on-tertiary drop-shadow-[0_0_8px_var(--color-tertiary)]">המתקדמת</span>
             </h1>
           </div>
 

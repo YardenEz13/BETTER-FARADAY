@@ -81,6 +81,34 @@ export const generate = mutation({
             }
           });
 
+          const numMessages = Math.floor(Math.random() * 3) * 2 + 2;
+          const userPrompts = [
+            "אני לא כל כך מבין את הנושא, אפשר הסבר פשוט יותר?",
+            "איך הגעת לתוצאה הזו?",
+            "אפשר רמז לתרגיל הזה?",
+            "אני תקוע בשלב ההצבה במשוואה. מה עושים עכשיו?"
+          ];
+          const aiResponses = [
+            "בטח! בוא נפרק את זה לשלבים. קודם כל נסתכל על הנתונים...",
+            "מעולה ששאלת. ברגע שמוצאים את ההפרש, אפשר להציב אותו בנוסחת האיבר הכללי.",
+            "שים לב שהמכנה חייב להיות שונה מאפס. מה מאפס את המכנה כאן?",
+            "כדי לפתור את זה, כדאי להיעזר בנוסחת הסכום. זוכר איך היא נראית?"
+          ];
+          
+          let msgTime = sessionStart + 60000;
+          for (let m = 0; m < numMessages; m++) {
+            const isUser = m % 2 === 0;
+            await ctx.db.insert("aiMessages", {
+              chatId,
+              role: isUser ? "user" : "assistant",
+              content: isUser 
+                ? userPrompts[Math.floor(Math.random() * userPrompts.length)] 
+                : aiResponses[Math.floor(Math.random() * aiResponses.length)],
+              timestamp: msgTime,
+            });
+            msgTime += Math.floor(Math.random() * 60000) + 10000;
+          }
+
           await ctx.db.insert("sessionBriefs", {
             chatId,
             studentId: student._id,
