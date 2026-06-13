@@ -166,27 +166,6 @@ export default function AIChatPanel({
 
 
   const createFreshChat = useCallback(async () => {
-    const title = agentType === "practice"
-      ? `תרגול: ${topicName || "כללי"}`
-      : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
-
-    let newChatId: Id<"aiChats"> | null = null;
-    try {
-      if (online) {
-        newChatId = await startChat({
-          studentId: studentId as Id<"students">,
-          agentType,
-          topicId: topicId ? (topicId as Id<"topics">) : undefined,
-          questionId: questionId ? (questionId as Id<"questions">) : undefined,
-          title,
-        });
-        setChatId(newChatId);
-        chatIdRef.current = newChatId; // sync ref immediately
-      }
-    } catch (e) {
-      console.error("Failed to start chat:", e);
-    }
-
     const context = questionStem
       ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
       : "";
@@ -198,26 +177,12 @@ export default function AIChatPanel({
         ? `🤖 מורה AI מוכן לעזור עם ${topicName || "הנושא הנוכחי"}`
         : "🤖 מורה AI מוכן לעזור עם שיעורי הבית",
     };
-    const initialMessages = [welcome];
-    setMessages(initialMessages);
+    
+    // We defer calling startChat() until the first message is sent
+    // so we don't pollute the DB with empty chats.
+    setMessages([welcome]);
     setIsResumed(false);
-
-    // Persist session + messages to IndexedDB immediately
-    if (newChatId) {
-      await saveActiveSession({
-        chatId: newChatId,
-        studentId,
-        agentType,
-        context,
-        topicName,
-        questionStem,
-        topicId,
-        questionId,
-        startedAt: Date.now(),
-      });
-      await saveMessages(newChatId, initialMessages);
-    }
-  }, [agentType, topicName, online, startChat, studentId, topicId, questionId, questionStem]);
+  }, [agentType, topicName, questionStem]);
 
   // ── Reset on question change ──
   const prevQuestionIdRef = useRef(questionId);
@@ -355,26 +320,8 @@ export default function AIChatPanel({
             userMsgCount.current = 0;
             initGuard.current = false;
             
-            const title = agentType === "practice"
-              ? `תרגול: ${topicName || "כללי"}`
-              : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
-
-            let newChatId: Id<"aiChats"> | null = null;
-            try {
-              if (online) {
-                newChatId = await startChat({
-                  studentId: studentId as Id<"students">,
-                  agentType,
-                  topicId: topicId ? (topicId as Id<"topics">) : undefined,
-                  questionId: questionId ? (questionId as Id<"questions">) : undefined,
-                  title,
-                });
-                setChatId(newChatId);
-                chatIdRef.current = newChatId;
-              }
-            } catch (e) {
-              console.error("Failed to start silent reset chat:", e);
-            }
+            // We defer calling startChat() here just like in createFreshChat,
+            // so we don't open an empty chat in the DB until the student sends a message.
 
             const context = questionStem
               ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
@@ -389,20 +336,6 @@ export default function AIChatPanel({
             };
             const initialMessages = [welcome];
             setMessages(initialMessages);
-            if (newChatId) {
-              await saveActiveSession({
-                chatId: newChatId,
-                studentId,
-                agentType,
-                context,
-                topicName,
-                questionStem,
-                topicId,
-                questionId,
-                startedAt: Date.now(),
-              });
-              await saveMessages(newChatId, initialMessages);
-            }
           };
           resetSession().catch(console.error);
         }
@@ -541,6 +474,37 @@ export default function AIChatPanel({
       }
 
       userMsgCount.current++;
+
+      // ── Ensure chat is created before sending first message ──
+      let currentChatId = chatIdRef.current;
+      if (!currentChatId && online) {
+        const title = agentType === "practice"
+          ? `תרגול: ${topicName || "כללי"}`
+          : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
+
+        currentChatId = await startChat({
+          studentId: studentId as Id<"students">,
+          agentType,
+          topicId: topicId ? (topicId as Id<"topics">) : undefined,
+          questionId: questionId ? (questionId as Id<"questions">) : undefined,
+          title,
+        });
+        setChatId(currentChatId);
+        chatIdRef.current = currentChatId;
+
+        // Persist initial session info now that we have an ID
+        await saveActiveSession({
+          chatId: currentChatId,
+          studentId,
+          agentType,
+          context: currentContext ?? "",
+          topicName,
+          questionStem,
+          topicId,
+          questionId,
+          startedAt: sessionStartedAt.current,
+        });
+      }
 
       // Update state and save to IndexedDB
       const updatedWithUser = [...messages, newUserMsg];
