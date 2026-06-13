@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot } from "lucide-react";
+import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight } from "lucide-react";
 import MathText from "./MathText";
 
 interface Section {
@@ -83,12 +83,8 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       hintsUsed: hintsRevealed[section.label] ?? 0,
     });
 
-    const idx = question.sections.findIndex((s) => s.label === section.label);
-    if (idx < question.sections.length - 1) {
-      const next = question.sections[idx + 1];
-      setExpandedSection(next.label);
-      setSectionStartTime(Date.now());
-    }
+    // We do NOT auto-expand the next section here anymore,
+    // so the student has time to review the solution steps and feedback.
   };
 
   const handleFinalize = async () => {
@@ -294,6 +290,19 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             </motion.div>
                           )}
                         </AnimatePresence>
+
+                        {idx < question.sections.length - 1 && (
+                          <button
+                            className="btn btn-primary mt-4 self-end flex items-center gap-2"
+                            onClick={() => {
+                              const next = question.sections[idx + 1];
+                              setExpandedSection(next.label);
+                              setSectionStartTime(Date.now());
+                            }}
+                          >
+                            המשך לסעיף הבא <ArrowRight size={16} />
+                          </button>
+                        )}
                       </motion.div>
                     )}
                   </motion.div>
