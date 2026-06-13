@@ -39,7 +39,7 @@ export const seedDatabase = mutation({
       "מיה לוי", "דניאל כהן", "נועה ברק", "אריאל שמיר", "תמר גולן",
       "יובל אדר", "שירה אזולאי", "רון פרידמן", "אדם ביטון", "ליה מושה",
     ];
-    const studentIds: string[] = [];
+    const studentIds: Id<"students">[] = [];
     for (let i = 0; i < studentNames.length; i++) {
       const id = await ctx.db.insert("students", {
         name: studentNames[i],
