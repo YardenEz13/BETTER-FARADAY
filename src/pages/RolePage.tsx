@@ -73,11 +73,11 @@ export default function RolePage() {
               // IDENTITY_SELECT
             </div>
             <h1 className="font-headline-xl text-on-surface leading-tight" style={{ fontSize: 'clamp(2.8rem, 5.5vw, 4.5rem)', fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 900 }}>
-              <span className="text-primary drop-shadow-[0_0_15px_var(--color-primary)]">פלטפורמת</span>
+              <span className="text-primary ">פלטפורמת</span>
               <br />
               <span className="text-gradient-warm">הלמידה</span>
               <br />
-              <span className="text-on-tertiary drop-shadow-[0_0_8px_var(--color-tertiary)]">המתקדמת</span>
+              <span className="text-tertiary drop-shadow-[0_0_8px_var(--color-tertiary)]">המתקדמת</span>
             </h1>
           </div>
 
