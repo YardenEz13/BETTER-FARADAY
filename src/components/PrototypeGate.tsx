@@ -29,8 +29,8 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-void)] flex items-center justify-center p-8">
-      <div className="glass p-12 max-w-lg w-full border border-[var(--color-primary)] bg-[var(--color-primary-muted)] relative overflow-hidden shadow-2xl">
+    <div className="min-h-screen w-full bg-[var(--bg-void)] flex items-center justify-center p-8">
+      <div className="glass p-12 max-w-[32rem] w-full border border-[var(--color-primary)] bg-[var(--color-primary-muted)] relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-1 h-full bg-[var(--color-primary)] shadow-[var(--glow-primary)]"></div>
         
         <div className="text-center mb-8">
