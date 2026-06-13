@@ -178,12 +178,12 @@ export default function PracticeSession() {
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
 
-          {question === undefined ? (
+          {!activeQuestion && question === undefined ? (
             <div className="glass p-16 flex flex-col items-center justify-center text-center">
               <RotateCcw size={36} className="animate-spin mb-4" style={{ color: 'var(--color-primary)', opacity: 0.5 }} />
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>טוען שאלה...</p>
             </div>
-          ) : question === null ? (
+          ) : !activeQuestion && question === null ? (
             <div className="glass p-16 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={48} style={{ color: 'var(--color-success)', marginBottom: 16 }} />
               <h2 className="heading-display mb-3" style={{ fontSize: '1.6rem' }}>כל השאלות הושלמו!</h2>
@@ -194,10 +194,10 @@ export default function PracticeSession() {
                 חזרה למפת הלמידה
               </button>
             </div>
-          ) : (
+          ) : activeQuestion ? (
             <AnimatePresence mode="wait">
               <motion.div
-                key={question._id}
+                key={activeQuestion._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -217,7 +217,7 @@ export default function PracticeSession() {
                         borderColor: 'var(--border-default)',
                         color: 'var(--text-secondary)'
                       }}>
-                        {'★'.repeat(Math.max(0, question.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (question.difficulty || 1)))} רמה {question.difficulty}
+                        {'★'.repeat(Math.max(0, activeQuestion.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (activeQuestion.difficulty || 1)))} רמה {activeQuestion.difficulty}
                       </span>
                     </div>
                     <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
@@ -228,7 +228,7 @@ export default function PracticeSession() {
 
                   {/* Stem */}
                   <div className="text-xl leading-relaxed font-medium mb-8" style={{ color: 'var(--text-primary)' }}>
-                    {question.stem}
+                    {activeQuestion.stem}
                   </div>
 
                   {/* Celebration */}
@@ -250,8 +250,8 @@ export default function PracticeSession() {
 
                   {/* Choices */}
                   <div className="flex flex-col gap-3 mb-6">
-                    {question.choices.map((choice: string, idx: number) => {
-                      const isThisCorrect = idx === question.correctIndex;
+                    {activeQuestion.choices.map((choice: string, idx: number) => {
+                      const isThisCorrect = idx === activeQuestion.correctIndex;
                       const isSelected    = selected === idx;
                       const isWrong       = submitted && isSelected && !isThisCorrect;
                       const isRight       = submitted && isThisCorrect;
