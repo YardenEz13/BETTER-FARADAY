@@ -49,6 +49,7 @@ export default function PracticeSession() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const startTimeRef = useRef(Date.now());
+  const transitionLockRef = useRef(false); // prevents click-through to next question
   const [chatOpen, setChatOpen]             = useState(false);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function PracticeSession() {
   if (!student || !currentTopic) return null;
 
   const handleSelect = async (idx: number) => {
-    if (submitted || !activeQuestion) return;
+    if (submitted || !activeQuestion || transitionLockRef.current) return;
     setSelected(idx); setSubmitted(true);
     const isCorrect = idx === activeQuestion.correctIndex;
     setQuestionsAnswered(q => q + 1);
@@ -110,6 +111,8 @@ export default function PracticeSession() {
 
   const handleNextQuestion = () => {
     if (countdown > 0) return; // enforce 5s minimum
+    transitionLockRef.current = true;
+    setTimeout(() => { transitionLockRef.current = false; }, 400);
     setReviewPhase(false);
     setActiveQuestion(null);
     setQuestionKey(k => k + 1);
