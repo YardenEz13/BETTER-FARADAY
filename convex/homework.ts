@@ -325,7 +325,7 @@ export const getHomeworkQuestionStats = query({
       const qId = (aq.questionId ?? aq.compoundQuestionId)?.toString() ?? "unknown";
       const difficulty = aq.assignedDifficulty;
       for (const ans of aq.answers) {
-        const key = ${"$"}{qId}::{ans.sectionLabel};
+        const key = `${qId}::${ans.sectionLabel}`;
         const s = statsMap.get(key);
         if (s) {
           s.total++;
