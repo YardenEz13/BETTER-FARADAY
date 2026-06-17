@@ -85,8 +85,8 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
             {question.choices.map((choice, idx) => {
               let btnClass = "shard flex justify-start p-6 text-right h-auto w-full transition-all border cursor-pointer font-mono text-lg ";
               if (isSubmitted) {
-                if (idx === question.correctIndex) btnClass += "border-[var(--color-primary)] bg-[rgba(0,255,136,0.1)] text-[var(--color-primary)] shadow-[var(--glow-primary)]";
-                else if (idx === selectedIndex) btnClass += "border-[var(--color-danger)] bg-[rgba(255,75,75,0.1)] text-[var(--color-danger)]";
+                if (idx === question.correctIndex) btnClass += "border-[var(--color-primary)] bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)] text-[var(--color-primary)] shadow-[var(--glow-primary)]";
+                else if (idx === selectedIndex) btnClass += "border-[var(--color-danger)] bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)] text-[var(--color-danger)]";
                 else btnClass += "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-50";
               } else if (idx === selectedIndex) {
                 btnClass += "border-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)] text-[var(--color-primary-light)] shadow-[var(--glow-acid)]";

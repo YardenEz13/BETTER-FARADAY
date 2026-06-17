@@ -67,7 +67,7 @@ export default function StudentHomeworkList() {
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.1 }}
-                    className={`bg-surface-container rounded-2xl p-6 cursor-pointer border border-outline-variant hover:border-${colorVariant}/50 hover:bg-${colorVariant}/5 transition-all flex flex-col gap-4 relative overflow-hidden shadow-sm group hover:shadow-[0_8px_32px_rgba(0,0,0,0.1)]`}
+                    className={`bg-surface-container rounded-2xl p-6 cursor-pointer border border-outline-variant hover:border-${colorVariant}/50 hover:bg-${colorVariant}/5 transition-all flex flex-col gap-4 relative overflow-hidden shadow-sm group hover:shadow-[0_8px_32px_color-mix(in srgb, var(--color-on-background) 10%, transparent)]`}
                     onClick={() => navigate(`/student/${studentId}/homework/${hw._id}`)}
                   >
                     {/* Glowing side bar for status */}

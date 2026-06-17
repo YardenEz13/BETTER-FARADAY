@@ -123,7 +123,7 @@ export default function LearningProgress() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.08 }}
                   className="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl overflow-hidden transition-all duration-300 hover:border-primary/30 hover:shadow-lg group cursor-pointer"
-                  style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+                  style={{ boxShadow: '0 4px 12px color-mix(in srgb, var(--color-on-background) 3%, transparent)' }}
                   onClick={() => setExpandedTopic(isExpanded ? null : topic._id)}
                 >
                   <div className="p-8 flex items-center gap-8">
@@ -207,7 +207,7 @@ export default function LearningProgress() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
             className="bg-surface-container-lowest rounded-2xl border border-outline-variant/40 p-8 shadow-sm"
-            style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+            style={{ boxShadow: '0 4px 12px color-mix(in srgb, var(--color-on-background) 3%, transparent)' }}
           >
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-headline-sm text-on-surface" style={{ fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 700 }}>סיכום למידה</h2>

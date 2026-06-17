@@ -193,7 +193,7 @@ export default function StudentHomework() {
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <div className="label-mono px-3 py-1 bg-[rgba(255,255,255,0.05)] border border-[var(--border-default)]">
+                            <div className="label-mono px-3 py-1 bg-[color-mix(in srgb, var(--color-on-surface) 5%, transparent)] border border-[var(--border-default)]">
                               {aq.personalizedReason}
                             </div>
                             {status === "submitted" && aq.score !== undefined && (

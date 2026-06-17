@@ -66,7 +66,7 @@ export default function TeacherDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0"
         style={{
-          background: 'rgba(5,11,24,0.85)',
+          background: 'color-mix(in srgb, var(--bg-surface) 85%, transparent)',
           backdropFilter: 'blur(24px)',
           borderBottom: '1px solid var(--border-subtle)',
         }}
@@ -75,14 +75,14 @@ export default function TeacherDashboard() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--g-400)', boxShadow: '0 0 20px rgba(74,222,128,0.35)' }}>
+              style={{ background: 'var(--color-primary)', boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary) 35%, transparent)' }}>
               <Sparkles size={18} className="text-white" />
             </div>
             <div>
               <div className="font-bold text-sm" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 FARADAY Logic
               </div>
-              <div className="label-mono" style={{ color: 'var(--g-400)', fontSize: '0.58rem' }}>// מרכז פיקוד</div>
+              <div className="label-mono" style={{ color: 'var(--color-primary)', fontSize: '0.58rem' }}>// מרכז פיקוד</div>
             </div>
           </div>
 

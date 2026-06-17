@@ -34,7 +34,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
         <div className="absolute top-0 right-0 w-1 h-full bg-[var(--color-primary)] shadow-[var(--glow-primary)]"></div>
         
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 border border-[var(--color-primary)] bg-[rgba(0,255,136,0.1)] text-[var(--color-primary)] mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 border border-[var(--color-primary)] bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)] text-[var(--color-primary)] mb-4">
             <Lock size={32} />
           </div>
           <h1 className="hud-title text-5xl mb-2" data-text="RESTRICTED">RESTRICTED</h1>

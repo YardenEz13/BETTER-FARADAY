@@ -321,7 +321,7 @@ export default function StudentHome() {
       </div>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant z-50 flex justify-around items-center px-2 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+      <nav className="md:hidden fixed bottom-0 w-full bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant z-50 flex justify-around items-center px-2 py-3 shadow-[0_-4px_12px_color-mix(in srgb, var(--color-on-background) 15%, transparent)]">
         <button className="flex flex-col items-center gap-1 text-primary" onClick={() => navigate(`/student/${studentId}`)}>
           <Map className="text-2xl" />
           <span className="font-label-md" style={{ fontSize: '10px' }}>מפה</span>

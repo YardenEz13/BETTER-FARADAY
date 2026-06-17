@@ -29,7 +29,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
     <div className="w-full h-full flex flex-col xl:flex-row gap-8 p-8 min-h-screen bg-[var(--bg-void)] text-[var(--text-primary)]">
       <div className="flex-1 flex flex-col">
         <div className="mb-12 border-b-2 border-[var(--color-primary)] pb-8">
-          <h1 className="text-6xl font-black mb-4 text-[var(--color-primary)] drop-shadow-[0_0_15px_rgba(0,255,136,0.5)] tracking-tighter uppercase flex items-center gap-4">
+          <h1 className="text-6xl font-black mb-4 text-[var(--color-primary)] drop-shadow-[0_0_15px_color-mix(in srgb, var(--color-primary) 50%, transparent)] tracking-tighter uppercase flex items-center gap-4">
             <Bot size={56} className="text-[var(--color-primary-light)] drop-shadow-[0_0_10px_var(--color-primary-light)]" />
             אנליטיקת<br />שיחות AI
           </h1>
@@ -40,14 +40,14 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
 
         {/* Summary shards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_20px_rgba(0,255,136,0.1)] flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_20px_color-mix(in srgb, var(--color-primary) 10%, transparent)] flex flex-col items-center justify-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-[var(--color-primary)]" />
             <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-[var(--color-primary)]" />
             <div className="label-mono text-[var(--color-primary-light)] mb-3 text-lg uppercase tracking-widest">סך שיחות</div>
-            <div className="text-6xl font-black text-[var(--text-primary)] drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{summary?.totalChats ?? 0}</div>
+            <div className="text-6xl font-black text-[var(--text-primary)] drop-shadow-[0_0_10px_color-mix(in srgb, var(--color-on-surface) 30%, transparent)]">{summary?.totalChats ?? 0}</div>
           </div>
           
-          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_15px_rgba(0,255,136,0.05)] flex flex-col items-center justify-center">
+          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_15px_color-mix(in srgb, var(--color-primary) 5%, transparent)] flex flex-col items-center justify-center">
             <div className="label-mono text-[var(--color-primary-light)] mb-3 text-lg uppercase tracking-widest">ממוצע בלבול</div>
             <div className="text-6xl font-black" style={{ 
               color: (summary?.avgConfusion ?? 0) > 60 ? "#ff4b4b" : "var(--color-primary)", 
@@ -57,7 +57,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             </div>
           </div>
           
-          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_15px_rgba(0,255,136,0.05)] flex flex-col items-center justify-center">
+          <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_15px_color-mix(in srgb, var(--color-primary) 5%, transparent)] flex flex-col items-center justify-center">
             <div className="label-mono text-[var(--color-primary-light)] mb-3 text-lg uppercase tracking-widest">סך הודעות</div>
             <div className="text-6xl font-black text-[var(--text-primary)]">{summary?.totalMessages ?? 0}</div>
           </div>
@@ -106,17 +106,17 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             chats.map((chat: any) => (
               <motion.div
                 key={chat._id}
-                className="glass p-8 cursor-pointer bg-[rgba(0,255,136,0.03)] border transition-all"
+                className="glass p-8 cursor-pointer bg-[color-mix(in srgb, var(--color-primary) 3%, transparent)] border transition-all"
                 style={{ 
-                  borderColor: selectedChatId === chat._id ? 'var(--color-primary)' : '#1a3324',
-                  boxShadow: selectedChatId === chat._id ? '0 0 20px rgba(0,255,136,0.15)' : 'none'
+                  borderColor: selectedChatId === chat._id ? 'var(--color-primary)' : 'var(--border-subtle)',
+                  boxShadow: selectedChatId === chat._id ? '0 0 20px color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'none'
                 }}
                 onClick={() => setSelectedChatId(selectedChatId === chat._id ? null : chat._id)}
                 variants={{
                   hidden: { opacity: 0, x: -20 },
                   visible: { opacity: 1, x: 0 }
                 }}
-                whileHover={{ scale: 1.005, borderColor: 'var(--color-primary)', backgroundColor: 'rgba(0,255,136,0.08)' }}
+                whileHover={{ scale: 1.005, borderColor: 'var(--color-primary)', backgroundColor: 'color-mix(in srgb, var(--color-primary) 8%, transparent)' }}
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-4">
                   <div className="flex items-center gap-6">
@@ -131,7 +131,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                     <span className="label-mono px-3 py-1 border uppercase text-xs tracking-widest" style={{ 
                       borderColor: chat.agentType === 'practice' ? 'var(--color-primary)' : '#f5d44f',
                       color: chat.agentType === 'practice' ? 'var(--color-primary)' : '#f5d44f',
-                      backgroundColor: chat.agentType === 'practice' ? 'rgba(0,255,136,0.1)' : 'rgba(245,212,79,0.1)'
+                      backgroundColor: chat.agentType === 'practice' ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'color-mix(in srgb, var(--color-warning) 10%, transparent)'
                     }}>
                       {chat.agentType === 'practice' ? 'תרגול' : 'שיעורי בית'}
                     </span>
@@ -139,7 +139,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                       <MessageSquare size={16} /> {chat.messageCount} הודעות
                     </div>
                     <button
-                      className="btn btn-primary w-10 h-10 flex items-center justify-center bg-transparent border border-[var(--border-default)] text-[#8ab098] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] hover:bg-[rgba(255,75,75,0.1)] transition-all"
+                      className="btn btn-primary w-10 h-10 flex items-center justify-center bg-transparent border border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] hover:bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)] transition-all"
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(chat._id); }}
                       title="מחק שיחה"
                     >
@@ -175,13 +175,13 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                     )}
                     
                     {chat.metrics.teacherActionItem && (
-                      <div className="mt-3 p-3 bg-[rgba(0,255,136,0.1)] border-l-4 border-[var(--color-primary)] text-[var(--text-primary)] text-sm font-bold flex items-start gap-3">
+                      <div className="mt-3 p-3 bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)] border-l-4 border-[var(--color-primary)] text-[var(--text-primary)] text-sm font-bold flex items-start gap-3">
                         <span className="text-[var(--color-primary)] text-xl">🎯</span> {chat.metrics.teacherActionItem}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="mt-4 pt-4 border-t border-[var(--border-default)] flex items-center justify-between bg-[rgba(245,212,79,0.02)] p-4">
+                  <div className="mt-4 pt-4 border-t border-[var(--border-default)] flex items-center justify-between bg-[color-mix(in srgb, var(--color-warning) 2%, transparent)] p-4">
                     <span className="label-mono text-[var(--color-warning)] flex items-center gap-2">
                       <AlertTriangle size={16} /> שיחה זו נסגרה בטרם נותחה.
                     </span>
@@ -223,16 +223,16 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-6 p-6 bg-[var(--bg-void)] border border-[var(--color-primary)] max-h-[500px] overflow-y-auto relative"
                   >
-                    <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px)', backgroundSize: '100% 4px' }} />
+                    <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ backgroundImage: 'linear-gradient(color-mix(in srgb, var(--color-primary) 3%, transparent) 1px, transparent 1px)', backgroundSize: '100% 4px' }} />
                     
                     {chatMessages.map((msg: any, i: number) => (
                       <div key={i} className="mb-6 relative z-10">
-                        <div className="label-mono mb-2 flex items-center gap-2" style={{ color: msg.role === 'user' ? 'var(--color-primary)' : msg.role === 'assistant' ? 'var(--color-primary-light)' : '#8ab098' }}>
+                        <div className="label-mono mb-2 flex items-center gap-2" style={{ color: msg.role === 'user' ? 'var(--color-primary)' : msg.role === 'assistant' ? 'var(--color-primary-light)' : 'var(--text-muted)' }}>
                           {msg.role === 'user' ? <><User size={14} /> תלמיד</> : msg.role === 'assistant' ? <><Bot size={14} /> ת'אורם</> : <><FileText size={14} /> מערכת</>}
                         </div>
                         <div className="text-base text-[var(--text-primary)] leading-relaxed p-4 border bg-opacity-10" style={{ 
-                          borderColor: msg.role === 'user' ? 'var(--color-primary)' : msg.role === 'assistant' ? 'var(--color-primary-light)' : '#1a3324',
-                          backgroundColor: msg.role === 'user' ? 'rgba(0,255,136,0.05)' : msg.role === 'assistant' ? 'rgba(153,255,0,0.05)' : 'transparent',
+                          borderColor: msg.role === 'user' ? 'var(--color-primary)' : msg.role === 'assistant' ? 'var(--color-primary-light)' : 'var(--border-subtle)',
+                          backgroundColor: msg.role === 'user' ? 'color-mix(in srgb, var(--color-primary) 5%, transparent)' : msg.role === 'assistant' ? 'color-mix(in srgb, var(--color-secondary) 5%, transparent)' : 'transparent',
                           borderLeftWidth: msg.role === 'assistant' ? '4px' : '1px',
                           borderRightWidth: msg.role === 'user' ? '4px' : '1px'
                         }}>
@@ -252,15 +252,15 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 shard p-8 bg-[var(--bg-void)] border-2 border-[var(--color-danger)] shadow-[0_0_40px_rgba(255,75,75,0.3)] flex items-center gap-8"
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 shard p-8 bg-[var(--bg-void)] border-2 border-[var(--color-danger)] shadow-[0_0_40px_color-mix(in srgb, var(--color-danger) 30%, transparent)] flex items-center gap-8"
           >
-            <div className="w-12 h-12 flex items-center justify-center bg-[rgba(255,75,75,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]">
+            <div className="w-12 h-12 flex items-center justify-center bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)] text-[var(--color-danger)] border border-[var(--color-danger)]">
               <AlertTriangle size={24} />
             </div>
             <span className="font-bold text-xl text-[var(--text-primary)]">למחוק את השיחה לצמיתות?</span>
             <div className="flex gap-4">
               <button
-                className="btn btn-primary px-6 py-3 bg-[#ff4b4b] text-black font-black uppercase hover:bg-white hover:text-[var(--color-danger)] transition-all"
+                className="btn btn-primary px-6 py-3 bg-[var(--color-danger)] text-[var(--color-on-error)] font-black uppercase hover:brightness-110 transition-all"
                 onClick={async () => {
                   await deleteChatMut({ chatId: confirmDeleteId as any });
                   setConfirmDeleteId(null);
@@ -270,7 +270,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                 מחק
               </button>
               <button
-                className="btn btn-primary px-6 py-3 bg-transparent border border-[var(--border-default)] text-[#8ab098] hover:border-white hover:text-[var(--text-primary)] transition-all uppercase"
+                className="btn btn-primary px-6 py-3 bg-transparent border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-primary)] hover:text-[var(--text-primary)] transition-all uppercase"
                 onClick={() => setConfirmDeleteId(null)}
               >
                 ביטול
@@ -283,7 +283,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
 
       {/* Right panel: Top struggles */}
       <div className="w-full xl:w-[450px] flex flex-col gap-8">
-        <div className="glass p-8 bg-[rgba(255,75,75,0.02)] border border-[var(--color-danger)]">
+        <div className="glass p-8 bg-[color-mix(in srgb, var(--color-danger) 2%, transparent)] border border-[var(--color-danger)]">
           <div className="label-mono text-[var(--color-danger)] text-xl border-b border-[var(--color-danger)] pb-3 mb-6 uppercase tracking-widest flex items-center gap-3">
             <AlertTriangle size={24} /> נקודות קושי מובילות
           </div>
@@ -291,11 +291,11 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           {summary?.topStruggles?.length > 0 ? (
             <div className="flex flex-col gap-6">
               {summary.topStruggles.map((s: { point: string; count: number }, i: number) => (
-                <div key={i} className="glass p-6 bg-[var(--bg-void)] border border-[var(--border-default)] hover:border-[var(--color-danger)] transition-colors relative overflow-hidden group">
+                <div key={i} className="glass p-6 bg-[var(--bg-surface)] border border-[var(--border-default)] hover:border-[var(--color-danger)] transition-colors relative overflow-hidden group">
                   <div className="absolute left-0 top-0 h-full w-1 bg-[#ff4b4b] opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex justify-between items-center gap-4">
                     <div className="text-base text-[var(--text-primary)] font-bold leading-tight">{s.point}</div>
-                    <div className="label-mono px-3 py-2 bg-[rgba(255,75,75,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)] whitespace-nowrap">
+                    <div className="label-mono px-3 py-2 bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)] text-[var(--color-danger)] border border-[var(--color-danger)] whitespace-nowrap">
                       {s.count} שיחות
                     </div>
                   </div>
@@ -303,7 +303,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center text-[#8ab098] border border-dashed border-[var(--border-default)]">
+            <div className="p-8 text-center text-[var(--text-muted)] border border-dashed border-[var(--border-default)]">
               אין מספיק נתונים עדיין
             </div>
           )}
@@ -315,11 +315,11 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           </div>
           <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center border-b border-[var(--border-default)] pb-4">
-              <span className="label-mono px-4 py-2 bg-[rgba(0,255,136,0.1)] border border-[var(--color-primary)] text-[var(--color-primary)] uppercase tracking-widest text-lg">תרגול</span>
+              <span className="label-mono px-4 py-2 bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)] border border-[var(--color-primary)] text-[var(--color-primary)] uppercase tracking-widest text-lg">תרגול</span>
               <span className="font-black text-4xl text-[var(--text-primary)]">{chats.filter((c: any) => c.agentType === 'practice').length}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="label-mono px-4 py-2 bg-[rgba(245,212,79,0.1)] border border-[var(--color-warning)] text-[var(--color-warning)] uppercase tracking-widest text-lg">שיעורי בית</span>
+              <span className="label-mono px-4 py-2 bg-[color-mix(in srgb, var(--color-warning) 10%, transparent)] border border-[var(--color-warning)] text-[var(--color-warning)] uppercase tracking-widest text-lg">שיעורי בית</span>
               <span className="font-black text-4xl text-[var(--text-primary)]">{chats.filter((c: any) => c.agentType === 'homework').length}</span>
             </div>
           </div>

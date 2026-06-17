@@ -38,7 +38,7 @@ export default function CyberAvatar({ name, size = 48, showText = true }: Avatar
         background: bg,
         border: `1.5px solid ${border}`,
         borderRadius,
-        boxShadow: `0 0 12px ${glow}, inset 0 1px 0 rgba(255,255,255,0.05)`,
+        boxShadow: `0 0 12px ${glow}, inset 0 1px 0 color-mix(in srgb, var(--color-on-surface) 5%, transparent)`,
         fontFamily: 'var(--font-display)',
         fontWeight: 'var(--font-weight-bold)',
         fontSize,

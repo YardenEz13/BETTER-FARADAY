@@ -797,7 +797,7 @@ export default function AIChatPanel({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 220 }}
-          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-[0_-8px_48px_rgba(0,0,0,0.6)] overflow-hidden"
+          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-[0_-8px_48px_color-mix(in srgb, var(--color-on-background) 60%, transparent)] overflow-hidden"
           style={{
             height: '65vh',
             background: 'var(--color-surface)',
@@ -990,7 +990,7 @@ export default function AIChatPanel({
               <div
                 className="rounded-2xl shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'color-mix(in srgb, var(--color-on-surface) 5%, transparent)',
                   backdropFilter: 'blur(8px)',
                   border: '1.5px solid var(--color-outline-variant)',
                 }}

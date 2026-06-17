@@ -138,7 +138,7 @@ export default function RolePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-primary/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_var(--color-primary)] transition-shadow duration-500"
+            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-primary/40 shadow-[0_8px_32px_color-mix(in srgb, var(--color-on-background) 30%, transparent)] hover:shadow-[0_8px_32px_var(--color-primary)] transition-shadow duration-500"
             style={{ padding: '32px' }}
           >
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary opacity-90 shadow-[0_0_15px_var(--color-primary)]" />
@@ -168,7 +168,7 @@ export default function RolePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-tertiary/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_32px_var(--color-tertiary)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
+            className="relative overflow-hidden rounded-2xl bg-surface-container/60 backdrop-blur-xl border border-tertiary/40 shadow-[0_8px_32px_color-mix(in srgb, var(--color-on-background) 30%, transparent)] hover:shadow-[0_8px_32px_var(--color-tertiary)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
             style={{ padding: '32px' }}
             onClick={() => navigate("/teacher")}
           >

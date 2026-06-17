@@ -27,22 +27,22 @@ export function HeatmapView({
   const masteryPercentage = Math.round((counts.green / total) * 100) || 0;
 
   return (
-    <div className="flex flex-col gap-6 min-h-full font-body-md" dir="rtl">
+    <div className="flex flex-col gap-6 min-h-full font-body-md p-6" dir="rtl">
       
       {/* Top Metrics Bento (From Stitch Design) */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
-        <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
+        <div className="glass rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
           <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
-            <h3 className="font-headline-sm text-on-surface">תלמידים פעילים</h3>
+            <h3 className="font-headline-sm text-on-surface mr-6">תלמידים פעילים</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
               <Users className="text-primary" />
             </div>
           </div>
-          <div className="relative z-10 flex items-end gap-3">
-            <span className="font-headline-xl text-primary leading-none">{total}</span>
-            <span className="font-body-sm text-on-surface-variant mb-1">/ {total} רשומים</span>
+          <div className="relative z-10 flex items-baseline gap-2">
+            <span className="font-headline-xl text-primary leading-none -translate-x-2">{total}</span>
+            <span className="font-body-sm text-on-surface-variant mr-6 -translate-x-2">/ {total} רשומים</span>
           </div>
         </div>
 
@@ -50,13 +50,13 @@ export function HeatmapView({
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
           <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
-            <h3 className="font-headline-sm text-on-surface">שליטה כיתתית</h3>
+            <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">שליטה כיתתית</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
               <LineChart className="text-primary" />
             </div>
           </div>
           <div className="relative z-10 flex items-end gap-3">
-            <span className="font-headline-xl text-on-surface leading-none">{masteryPercentage}%</span>
+            <span className="font-headline-xl text-on-surface leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
             <span className="font-body-sm text-primary flex items-center mb-1 bg-primary/10 px-2 py-0.5 rounded-full">
               <TrendingUp className="text-[16px] mr-1" />
               +2% השבוע
@@ -68,12 +68,12 @@ export function HeatmapView({
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group border-tertiary/30 hover:border-tertiary transition-all">
           <div className="absolute inset-0 bg-tertiary/10 group-hover:bg-tertiary/20 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
-            <h3 className="font-headline-sm text-tertiary">יעד קרוב</h3>
+            <h3 className="font-headline-sm text-tertiary mr-6 -translate-x-3">יעד קרוב</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center border border-tertiary/30">
               <Flag className="text-tertiary" />
             </div>
           </div>
-          <div className="relative z-10">
+          <div className="relative z-10 mr-6 -translate-x-2.5 -translate-y-1">
             <p className="font-headline-md text-on-surface leading-tight">מבחן מסכם באלגברה</p>
             <p className="font-body-sm text-on-surface-variant mt-1">בעוד 4 ימים</p>
           </div>
@@ -138,55 +138,48 @@ export function HeatmapView({
               return (
                 <motion.div
                   key={student._id}
-                  className={`relative overflow-hidden cursor-pointer group ${c.bg} border ${c.main.split(' ')[1]} rounded-xl p-5 transition-all duration-300 hover:-translate-y-1 hover:${c.glow}`}
+                  className={`relative cursor-pointer group ${c.bg} border ${c.main.split(' ')[1]} rounded-xl p-4 transition-all duration-300 hover:-translate-y-1 hover:${c.glow} flex flex-col gap-3`}
                   onClick={() => onStudentClick(student._id)}
                   variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
                   transition={{ type: 'spring', stiffness: 300, damping: 28 }}
                 >
-                  {/* Status indicator strip (top) */}
-                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${c.bar} opacity-90`} />
-
-                  {/* Status badge (top-left) */}
-                  <div className="absolute top-4 left-4">
-                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${c.main.split(' ')[1]} bg-surface/50 backdrop-blur-sm`}>
-                      <div className={`w-2 h-2 rounded-full ${c.bar}`} />
+                  {/* Top bar: status badge + accuracy */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border -translate-x-3 ${c.main.split(' ')[1]} bg-surface/60`}>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.bar}`} />
                       <span className={`font-label-md text-xs ${c.main.split(' ')[0]}`}>
                         {labelMap[status as keyof typeof labelMap]}
                       </span>
                     </div>
+                    {accuracy !== null && (
+                      <span className={`text-xs font-bold pl-4 pr-1.5 py-0.5 rounded-full ${c.main.split(' ')[1]} ${c.main.split(' ')[0]} bg-surface/60 inline-block relative translate-y-1 translate-x-2`}>
+                        {accuracy}%
+                      </span>
+                    )}
                   </div>
 
-                  {/* Main content */}
-                  <div className="flex items-start gap-4 mt-6 mb-4">
-                    <CyberAvatar name={student.name} size={44} />
+                  {/* Student info row */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CyberAvatar name={student.name} size={36} />
                     <div className="flex-1 min-w-0">
-                      <div className="font-label-lg text-on-surface truncate mb-1">
+                      <div className="font-label-lg text-on-surface truncate text-sm">
                         {student.name}
                       </div>
-                      <div className="text-xs text-on-surface-variant truncate">
+                      <div className="text-xs text-on-surface-variant truncate mt-0.5">
                         {currentTopicName || '—'}
                       </div>
                     </div>
-                    {accuracy !== null && (
-                      <div className={`text-left flex-shrink-0 bg-surface/50 backdrop-blur-sm px-2 py-1 rounded-lg border ${c.main.split(' ')[1]}`}>
-                        <div className={`font-bold text-sm ${c.main.split(' ')[0]}`}>
-                          {accuracy}%
-                        </div>
+                    {isStuck && (
+                      <div className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-md bg-error/20 border border-error/40">
+                        <AlertTriangle size={12} className="text-error" />
+                        <span className="font-label-md text-xs text-error font-bold">תקוע</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Stuck badge */}
-                  {isStuck && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md mb-3 bg-error/20 border border-error/40">
-                      <AlertTriangle size={14} className="text-error" />
-                      <span className="font-label-md text-xs text-error font-bold">תקוע</span>
-                    </div>
-                  )}
-
                   {/* Attempt mini-bars */}
                   {attempts.length > 0 && (
-                    <div className="flex gap-1 h-2 rounded-full overflow-hidden mt-2 bg-surface/40">
+                    <div className="flex gap-1 h-1.5 rounded-full overflow-hidden bg-surface/40">
                       {attempts.map((a: any, i: number) => (
                         <div key={i} className={`flex-1 h-full rounded-full ${a.isCorrect ? 'bg-primary' : 'bg-error'}`}
                           style={{ opacity: 0.6 + (i / attempts.length) * 0.4 }} />
@@ -310,7 +303,7 @@ export function HeatmapView({
                         </div>
                         <div className="bg-surface-container-low rounded-lg p-2.5 w-full border border-outline-variant/30">
                           <p className="font-body-sm text-on-surface-variant">
-                            <strong className="text-on-surface font-label-md mr-1">{m.studentName}</strong>
+                            <strong className="text-on-surface font-label-md mr-1">{m.studentName +" "}</strong>
                             {m.action} <span className="opacity-70">({m.topicName})</span>
                           </p>
                           <span className={`text-[10px] font-label-md mt-1 block ${isCorrect ? 'text-primary' : 'text-error'}`}>

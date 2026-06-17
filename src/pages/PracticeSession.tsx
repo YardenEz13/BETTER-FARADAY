@@ -239,9 +239,9 @@ export default function PracticeSession() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.3 }}
                         className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-                        style={{ background: 'rgba(16,185,129,0.08)' }}
+                        style={{ background: 'color-mix(in srgb, var(--color-success) 8%, transparent)' }}
                       >
-                        <div className="text-6xl font-black" style={{ color: 'var(--color-success)', textShadow: '0 0 40px rgba(16,185,129,0.6)' }}>
+                        <div className="text-6xl font-black" style={{ color: 'var(--color-success)', textShadow: '0 0 40px color-mix(in srgb, var(--color-success) 60%, transparent)' }}>
                           ✓ מעולה!
                         </div>
                       </motion.div>
@@ -261,8 +261,8 @@ export default function PracticeSession() {
                       let textColor   = 'var(--text-secondary)';
                       let RightIcon: typeof CheckCircle2 | null = null;
 
-                      if (isRight)  { borderColor = 'rgba(16,185,129,0.5)'; bg = 'var(--color-success-muted)'; textColor = 'var(--text-primary)'; RightIcon = CheckCircle2; }
-                      if (isWrong)  { borderColor = 'rgba(239,68,68,0.5)';  bg = 'var(--color-danger-muted)';  textColor = 'var(--text-muted)';    RightIcon = XCircle; }
+                      if (isRight)  { borderColor = 'color-mix(in srgb, var(--color-success) 50%, transparent)'; bg = 'var(--color-success-muted)'; textColor = 'var(--text-primary)'; RightIcon = CheckCircle2; }
+                      if (isWrong)  { borderColor = 'color-mix(in srgb, var(--color-danger) 50%, transparent)';  bg = 'var(--color-danger-muted)';  textColor = 'var(--text-muted)';    RightIcon = XCircle; }
                       if (isSelected && !submitted) { borderColor = 'var(--border-primary)'; bg = 'var(--color-primary-muted)'; textColor = 'var(--text-primary)'; }
 
                       return (
@@ -281,7 +281,7 @@ export default function PracticeSession() {
                           onClick={() => handleSelect(idx)}
                         >
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm"
-                            style={{ background: isRight ? 'rgba(16,185,129,0.2)' : isWrong ? 'rgba(239,68,68,0.2)' : 'var(--bg-elevated)', color: textColor }}>
+                            style={{ background: isRight ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : isWrong ? 'color-mix(in srgb, var(--color-danger) 20%, transparent)' : 'var(--bg-elevated)', color: textColor }}>
                             {isRight && RightIcon ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)' }} /> :
                              isWrong && RightIcon ? <XCircle size={16} style={{ color: 'var(--color-danger)' }} /> :
                              String.fromCharCode(65 + idx)}
@@ -316,7 +316,7 @@ export default function PracticeSession() {
                         className="mt-4 overflow-hidden"
                       >
                         <div className="p-4 rounded-xl flex items-start gap-3"
-                          style={{ background: 'var(--color-warning-muted)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                          style={{ background: 'var(--color-warning-muted)', border: '1px solid color-mix(in srgb, var(--color-warning) 25%, transparent)' }}>
                           <Lightbulb size={16} style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
                           <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{hint}</p>
                         </div>
@@ -334,13 +334,13 @@ export default function PracticeSession() {
                         transition={{ duration: 0.35 }}
                         className="mt-6 rounded-2xl overflow-hidden"
                         style={{
-                          border: `2px solid ${isCorrect ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`,
-                          background: isCorrect ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)',
+                          border: `2px solid ${isCorrect ? 'color-mix(in srgb, var(--color-success) 35%, transparent)' : 'color-mix(in srgb, var(--color-danger) 35%, transparent)'}`,
+                          background: isCorrect ? 'color-mix(in srgb, var(--color-success) 6%, transparent)' : 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
                         }}
                       >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4"
-                          style={{ background: isCorrect ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', borderBottom: `1px solid ${isCorrect ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                          style={{ background: isCorrect ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-danger) 12%, transparent)', borderBottom: `1px solid ${isCorrect ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : 'color-mix(in srgb, var(--color-danger) 20%, transparent)'}` }}>
                           <div className="flex items-center gap-3">
                             {isCorrect
                               ? <CheckCircle2 size={22} style={{ color: 'var(--color-success)' }} />
@@ -350,7 +350,7 @@ export default function PracticeSession() {
                             </span>
                             {isCorrect && earnedXP > 0 && (
                               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--color-warning)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                                style={{ background: 'color-mix(in srgb, var(--color-warning) 15%, transparent)', color: 'var(--color-warning)', border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)' }}>
                                 <Zap size={11} /> +{earnedXP} XP
                               </span>
                             )}
@@ -380,7 +380,7 @@ export default function PracticeSession() {
                           {/* If wrong: show correct answer */}
                           {!isCorrect && (
                             <div className="flex items-start gap-3 p-4 rounded-xl"
-                              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                              style={{ background: 'color-mix(in srgb, var(--color-success) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 20%, transparent)' }}>
                               <CheckCircle2 size={16} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: 2 }} />
                               <div>
                                 <div className="text-xs font-semibold mb-1" style={{ color: 'var(--color-success)' }}>התשובה הנכונה:</div>
@@ -531,7 +531,7 @@ function CalculatorCard() {
                       : isOp     ? 'var(--color-accent)'
                       : 'var(--text-secondary)';
           const border = isEquals ? 'var(--border-primary)'
-                       : isClear  ? 'rgba(239,68,68,0.25)'
+                       : isClear  ? 'color-mix(in srgb, var(--color-danger) 25%, transparent)'
                        : 'var(--border-subtle)';
 
           return (

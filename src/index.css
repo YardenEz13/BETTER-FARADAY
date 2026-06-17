@@ -112,15 +112,16 @@
   --spacing-margin-mobile: 16px;
 
   /* Border Radius */
-  --radius-sm: 0.5rem;
-  --radius: 1rem;
-  --radius-md: 1.5rem;
-  --radius-lg: 2rem;
-  --radius-xl: 3rem;
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
   --radius-full: 9999px;
 }
 
-[data-theme="light"] {
+[data-theme="light"],
+:root[data-theme="light"] {
   /* Light Mode Colors (Faraday Logic System) */
   --color-surface: #f9f9f9;
   --color-surface-dim: #dadada;
@@ -176,6 +177,10 @@
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
+
+  /* Recompute derived tokens with light-mode primary */
+  --color-primary-muted: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  --color-primary-light: color-mix(in srgb, var(--color-primary) 60%, var(--color-on-surface));
 }
 
 /* ═══════════════════ LEGACY MAPPINGS ════════════════════ */
@@ -197,6 +202,13 @@
   --color-accent: var(--color-secondary);
   --amber: var(--color-secondary);
   --amber-dim: var(--color-secondary-container);
+
+  /* Derived semantic tokens used across teacher views */
+  --color-primary-muted: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  --color-primary-light: color-mix(in srgb, var(--color-primary) 70%, var(--color-on-surface));
+  --danger: var(--color-error);
+  --warning: var(--color-tertiary);
+  --color-glow-primary: color-mix(in srgb, var(--color-primary) 35%, transparent);
   
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
@@ -237,6 +249,7 @@ body {
 }
 
 /* ═══════════════════ COMPONENTS ════════════════════ */
+@layer components {
 .glass {
   background-color: var(--color-surface);
   border: 1px solid var(--color-outline-variant);
@@ -354,6 +367,7 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+}
 
 /* ═══════════════════ TYPOGRAPHY UTILITIES ════════════════════ */
 .font-display { font-family: 'Yarden', 'Assistant', serif !important; }

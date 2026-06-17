@@ -120,7 +120,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
           <div className="flex gap-2">
             {question.tags.map((tag) => (
-              <span key={tag} className="label-mono px-3 py-1 bg-[rgba(255,255,255,0.05)] border border-[var(--border-default)]">{tag}</span>
+              <span key={tag} className="label-mono px-3 py-1 bg-[color-mix(in srgb, var(--color-on-surface) 5%, transparent)] border border-[var(--border-default)]">{tag}</span>
             ))}
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           return (
             <motion.div
               key={section.label}
-              className={`shard transition-all border ${!unlocked ? "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-60" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] bg-[rgba(255,75,75,0.02)]") : "border-[var(--color-primary-light)] bg-[var(--bg-surface)] shadow-[0_0_15px_rgba(180,255,0,0.05)]"}`}
+              className={`shard transition-all border ${!unlocked ? "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-60" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] bg-[color-mix(in srgb, var(--color-danger) 2%, transparent)]") : "border-[var(--color-primary-light)] bg-[var(--bg-surface)] shadow-[0_0_15px_rgba(180,255,0,0.05)]"}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1, duration: 0.4 }}
@@ -161,7 +161,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                 onClick={() => unlocked && setExpandedSection(isExpanded ? "" : section.label)}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 flex items-center justify-center border font-title text-xl ${!unlocked ? "border-[var(--border-default)] text-[#1a3324]" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] text-[var(--color-primary)] bg-[rgba(0,255,136,0.1)]" : "border-[var(--color-danger)] text-[var(--color-danger)] bg-[rgba(255,75,75,0.1)]") : "border-[var(--color-primary-light)] text-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)]"}`}>
+                  <div className={`w-8 h-8 flex items-center justify-center border font-title text-xl ${!unlocked ? "border-[var(--border-default)] text-[#1a3324]" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] text-[var(--color-primary)] bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)]" : "border-[var(--color-danger)] text-[var(--color-danger)] bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)]") : "border-[var(--color-primary-light)] text-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)]"}`}>
                     {!unlocked ? <Lock size={14} /> : isSubmitted ? (isCorrect ? <Check size={16} /> : <X size={16} />) : section.label}
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                 <div className="flex items-center gap-4">
                   <div className="hidden md:flex gap-2">
                     {section.skillsTested.slice(0, 2).map((skill) => (
-                      <span key={skill} className="label-mono px-2 py-0.5 bg-[rgba(255,255,255,0.05)] border border-[var(--border-default)] text-[10px]">{skill}</span>
+                      <span key={skill} className="label-mono px-2 py-0.5 bg-[color-mix(in srgb, var(--color-on-surface) 5%, transparent)] border border-[var(--border-default)] text-[10px]">{skill}</span>
                     ))}
                   </div>
                   {unlocked && (isExpanded ? <ChevronUp size={20} className="text-[var(--color-primary-light)]" /> : <ChevronDown size={20} className="opacity-50" />)}
@@ -282,7 +282,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               exit={{ height: 0, opacity: 0 }}
                             >
                               {section.solutionSteps.map((step, i) => (
-                                <div key={i} className="flex gap-4 items-start p-4 bg-[var(--bg-surface)] border border-[rgba(255,255,255,0.1)] text-[var(--text-primary)]">
+                                <div key={i} className="flex gap-4 items-start p-4 bg-[var(--bg-surface)] border border-[color-mix(in srgb, var(--color-on-surface) 10%, transparent)] text-[var(--text-primary)]">
                                   <span className="w-6 h-6 flex items-center justify-center bg-white text-black font-bold shrink-0">{i + 1}</span>
                                   <span className="leading-relaxed text-lg"><MathText>{step}</MathText></span>
                                 </div>

@@ -20,6 +20,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     localStorage.setItem('theme', theme);
+    // Set on both html and body so CSS variables cascade from :root
+    // (needed for Tailwind v4 utility classes which resolve from @theme at :root)
+    document.documentElement.setAttribute('data-theme', theme);
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
