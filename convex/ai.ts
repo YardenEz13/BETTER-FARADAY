@@ -1,6 +1,7 @@
-import { internalAction, mutation } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // Mocking some prompts so the server knows what to expect
 const GEMINI_INSTRUCTIONS = `אתה מערכת אנליזה פדגוגית. נתח את שיחת התלמיד והמורה והחזר אך ורק JSON תקין.
@@ -128,3 +129,170 @@ export const generateHint = mutation({
   },
 });
 
+// ── Personalized Homework: fetch assigned IDs for personalization ──
+export const getAssignedQuestionsForPersonalization = internalQuery({
+  args: {
+    assignedIds: v.array(v.id("assignedQuestions")),
+  },
+  handler: async (ctx, { assignedIds }) => {
+    const results = [];
+    for (const id of assignedIds) {
+      const aq = await ctx.db.get(id);
+      if (!aq) continue;
+
+      let originalStem: string | null = null;
+      let originalPreamble: string | null = null;
+      let questionType: "legacy" | "compound" = "legacy";
+
+      if (aq.compoundQuestionId) {
+        const cq = await ctx.db.get(aq.compoundQuestionId);
+        if (cq) {
+          originalPreamble = cq.preamble;
+          questionType = "compound";
+        }
+      } else if (aq.questionId) {
+        const q = await ctx.db.get(aq.questionId);
+        if (q) {
+          originalStem = q.stem;
+          questionType = "legacy";
+        }
+      }
+
+      const student = await ctx.db.get(aq.studentId);
+      results.push({
+        assignedId: id,
+        originalStem,
+        originalPreamble,
+        questionType,
+        theme: student?.homeworkTheme ?? null,
+        studentId: aq.studentId,
+      });
+    }
+    return results;
+  },
+});
+
+// ── Save personalized text back to assignedQuestion ──
+export const savePersonalizedText = internalMutation({
+  args: {
+    assignedId: v.id("assignedQuestions"),
+    personalizedStem: v.optional(v.string()),
+    personalizedPreamble: v.optional(v.string()),
+    themeApplied: v.string(),
+  },
+  handler: async (ctx, { assignedId, personalizedStem, personalizedPreamble, themeApplied }) => {
+    await ctx.db.patch(assignedId, {
+      personalizedStem,
+      personalizedPreamble,
+      themeApplied,
+    });
+  },
+});
+
+// ── Main: personalize homework questions using Gemini ──
+export const personalizeHomework = internalAction({
+  args: {
+    assignedIds: v.array(v.id("assignedQuestions")),
+  },
+  handler: async (ctx, { assignedIds }) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("[personalizeHomework] GEMINI_API_KEY not set. Skipping personalization.");
+      return;
+    }
+
+    const questions = await ctx.runQuery(internal.ai.getAssignedQuestionsForPersonalization, {
+      assignedIds,
+    });
+
+    // Group questions by theme
+    const byTheme: Record<string, typeof questions> = {};
+    for (const q of questions) {
+      if (!q.theme) continue; // no theme set for this student — skip
+      if (!byTheme[q.theme]) byTheme[q.theme] = [];
+      byTheme[q.theme].push(q);
+    }
+
+    // Process each theme in a single batch call
+    for (const [theme, themeQuestions] of Object.entries(byTheme)) {
+      const inputs = themeQuestions.map(q => {
+        return {
+          id: q.assignedId,
+          original: q.originalStem ?? q.originalPreamble ?? ""
+        };
+      }).filter(i => i.original !== "");
+
+      if (inputs.length === 0) continue;
+
+      const systemPrompt = `אתה עוזר לכתוב מחדש שאלות מתמטיקה בעברית בצורה מהנה לתלמידים.
+כללי ברזל:
+1. שמור את כל הנוסחאות המתמטיות בדיוק כפי שהן — אל תשנה שום דבר בין סימני $ ... $ או \\[ ... \\].
+2. שמור את מבנה השאלה — אל תוסיף פסקאות חדשות, אל תקצר.
+3. הוסף רק הקשר נושאי מהנה: שמות שחקנים, מועדונים, דמויות מהסדרה, וכד' — בהתאם לנושא שנבחר.
+4. כתוב בעברית בלבד. החזר JSON מדויק ללא שום טקסט נוסף.`;
+
+      const userPrompt = `נושא: ${theme}
+
+השאלות (בפורמט JSON):
+${JSON.stringify(inputs, null, 2)}
+
+החזר את אותו ה-JSON עם השאלות משוכתבות בהקשר של "${theme}". חובה להחזיר מערך JSON של אובייקטים המכילים 'id' ו-'rewritten' לכל שאלה.`;
+
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 4096,
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      id: { type: "STRING" },
+                      rewritten: { type: "STRING" }
+                    },
+                    required: ["id", "rewritten"]
+                  }
+                }
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.error(`[personalizeHomework] Gemini error ${response.status} for theme ${theme}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!responseText) continue;
+
+        const results: { id: string; rewritten: string }[] = JSON.parse(responseText);
+
+        for (const res of results) {
+          const q = themeQuestions.find(tq => tq.assignedId === res.id);
+          if (!q) continue;
+
+          await ctx.runMutation(internal.ai.savePersonalizedText, {
+            assignedId: q.assignedId,
+            personalizedStem: q.questionType === "legacy" ? res.rewritten : undefined,
+            personalizedPreamble: q.questionType === "compound" ? res.rewritten : undefined,
+            themeApplied: theme,
+          });
+          console.log(`[personalizeHomework] ✓ Personalized ${q.assignedId} with theme "${theme}"`);
+        }
+      } catch (err) {
+        console.error(`[personalizeHomework] Failed batch for theme ${theme}:`, err);
+      }
+    }
+  },
+});

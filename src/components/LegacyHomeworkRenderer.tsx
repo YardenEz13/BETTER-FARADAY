@@ -20,9 +20,11 @@ interface Props {
   assignedQuestionId: Id<"assignedQuestions">;
   onComplete: () => void;
   aiChatTrigger?: () => void;
+  /** AI-generated stem override (themed version). If undefined, original is shown. */
+  overrideStem?: string;
 }
 
-export default function LegacyHomeworkRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger }: Props) {
+export default function LegacyHomeworkRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, overrideStem }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -72,7 +74,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
           <span className="label-mono opacity-80">רמה {question.difficulty} (שאלה רגילה)</span>
         </div>
 
-        <div className="text-xl leading-relaxed text-[var(--text-primary)]"><MathText>{question.stem}</MathText></div>
+        <div className="text-xl leading-relaxed text-[var(--text-primary)]"><MathText>{overrideStem ?? question.stem}</MathText></div>
       </motion.div>
 
       <div className="flex flex-col gap-4">

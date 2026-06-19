@@ -797,14 +797,20 @@ export default function AIChatPanel({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 220 }}
-          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-[0_-8px_48px_color-mix(in srgb, var(--color-on-background) 60%, transparent)] overflow-hidden"
+          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-[0_-8px_48px_color-mix(in_srgb,var(--color-on-background)_60%,transparent)] overflow-hidden h-[85vh] md:h-[65vh]"
           style={{
-            height: '65vh',
             background: 'var(--color-surface)',
             borderTop: '1px solid var(--color-outline-variant)',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
           }}
           dir="rtl"
         >
+          {/* Mobile Drag Handle Indicator */}
+          <div className="md:hidden w-full flex justify-center pt-3 pb-1 bg-surface-container-lowest relative z-[3]">
+            <div className="w-10 h-1.5 rounded-full bg-outline-variant/60" />
+          </div>
+
           {/* Scanline effect — dark mode only */}
           <div
             className="pointer-events-none absolute inset-0 z-[1] opacity-0"
@@ -814,7 +820,7 @@ export default function AIChatPanel({
             aria-hidden
           />
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
+          <div className="flex items-center justify-between px-6 py-2 md:py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
             {/* AI identity */}
             <div className="flex items-center gap-4">
               <div className="relative">

@@ -33,9 +33,9 @@ export function HeatmapView({
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
         <div className="glass rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
-          <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+          <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/30 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
-            <h3 className="font-headline-sm text-on-surface mr-6">תלמידים פעילים</h3>
+            <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">תלמידים פעילים</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
               <Users className="text-primary" />
             </div>
@@ -48,7 +48,7 @@ export function HeatmapView({
 
         {/* Metric 2 */}
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
-          <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+          <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/30 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">שליטה כיתתית</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
@@ -56,7 +56,7 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 flex items-end gap-3">
-            <span className="font-headline-xl text-on-surface leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
+            <span className="font-headline-xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
             <span className="font-body-sm text-primary flex items-center mb-1 bg-primary/10 px-2 py-0.5 rounded-full">
               <TrendingUp className="text-[16px] mr-1" />
               +2% השבוע
@@ -66,7 +66,7 @@ export function HeatmapView({
 
         {/* Metric 3 (Next Goal) */}
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group border-tertiary/30 hover:border-tertiary transition-all">
-          <div className="absolute inset-0 bg-tertiary/10 group-hover:bg-tertiary/20 transition-colors" />
+          <div className="absolute inset-0 bg-tertiary/20 group-hover:bg-tertiary/30 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-tertiary mr-6 -translate-x-3">יעד קרוב</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center border border-tertiary/30">
@@ -74,7 +74,7 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 mr-6 -translate-x-2.5 -translate-y-1">
-            <p className="font-headline-md text-on-surface leading-tight">מבחן מסכם באלגברה</p>
+            <p className="font-headline-md text-tertiary leading-tight">מבחן מסכם באלגברה</p>
             <p className="font-body-sm text-on-surface-variant mt-1">בעוד 4 ימים</p>
           </div>
         </div>
@@ -86,7 +86,7 @@ export function HeatmapView({
         {/* Heatmap Visualization (Spans 8 cols) */}
         <div className="lg:col-span-8 glass rounded-xl p-6 flex flex-col shadow-lg">
           <div className="flex justify-between items-center mb-6 border-b border-outline-variant/30 pb-4">
-            <h2 className="font-headline-md text-on-surface flex items-center gap-3">
+            <h2 className="font-headline-md text-on-surface flex items-center gap-3 -translate-x-2">
               <Grid className="text-secondary" />
               מפת חום - שליטה נושאית
             </h2>
@@ -112,20 +112,20 @@ export function HeatmapView({
               // High-color mapping based on Stitch
               const colorMap = {
                 green:  { 
-                  main: 'text-primary border-primary/40', 
-                  bg: 'bg-primary/10 hover:bg-primary/20', 
+                  main: 'text-primary border-primary/60', 
+                  bg: 'bg-primary/20 hover:bg-primary/30', 
                   bar: 'bg-primary', 
                   glow: 'shadow-[0_0_20px_var(--color-primary)]' 
                 },
                 yellow: { 
-                  main: 'text-tertiary border-tertiary/40', 
-                  bg: 'bg-tertiary/10 hover:bg-tertiary/20', 
+                  main: 'text-tertiary border-tertiary/60', 
+                  bg: 'bg-tertiary/20 hover:bg-tertiary/30', 
                   bar: 'bg-tertiary', 
                   glow: 'shadow-[0_0_20px_var(--color-tertiary)]' 
                 },
                 red:    { 
-                  main: 'text-error border-error/40', 
-                  bg: 'bg-error/10 hover:bg-error/20', 
+                  main: 'text-error border-error/60', 
+                  bg: 'bg-error/20 hover:bg-error/30', 
                   bar: 'bg-error', 
                   glow: 'shadow-[0_0_20px_var(--color-error)]' 
                 },
@@ -195,7 +195,7 @@ export function HeatmapView({
         {/* Live Insights Feed (Spans 4 cols) */}
         <div className="lg:col-span-4 glass rounded-xl p-6 flex flex-col shadow-lg">
           <div className="flex justify-between items-center mb-6 border-b border-outline-variant/30 pb-4">
-            <h2 className="font-headline-md text-on-surface flex items-center gap-3">
+            <h2 className="font-headline-md text-on-surface flex items-center gap-3 -translate-x-2">
               <Radio className="text-primary" />
               עדכונים חיים
             </h2>
@@ -205,7 +205,7 @@ export function HeatmapView({
 
             {/* Urgent alert */}
             {liveAlerts && liveAlerts.length > 0 ? (
-              <div className="flex gap-3 p-4 rounded-xl bg-error/10 border-l-4 border-l-error border border-error/20 hover:bg-error/15 transition-colors shadow-[0_0_15px_var(--color-error)]">
+              <div className="flex gap-3 p-4 rounded-xl bg-error/20 border-l-4 border-l-error border border-error/40 hover:bg-error/30 transition-colors shadow-[0_0_15px_var(--color-error)]">
                 <div className="mt-1">
                   <AlertTriangle className="text-error" />
                 </div>
@@ -224,7 +224,7 @@ export function HeatmapView({
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3 p-4 rounded-xl bg-primary/10 border-l-4 border-l-primary border border-primary/20">
+              <div className="flex gap-3 p-4 rounded-xl bg-primary/20 border-l-4 border-l-primary border border-primary/40 hover:bg-primary/30 transition-colors">
                 <div className="mt-1">
                   <CheckCircle2 className="text-primary" />
                 </div>

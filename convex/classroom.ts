@@ -134,6 +134,17 @@ export const getFirstClassroom = query({
   },
 });
 
+// Update a student's homework theme preference
+export const updateStudentTheme = mutation({
+  args: {
+    studentId: v.id("students"),
+    theme: v.optional(v.string()), // pass undefined to clear the theme
+  },
+  handler: async (ctx, { studentId, theme }) => {
+    await ctx.db.patch(studentId, { homeworkTheme: theme });
+  },
+});
+
 // Get dashboard real-time stats
 export const getDashboardStats = query({
   args: { classroomId: v.id("classrooms") },
@@ -177,3 +188,5 @@ export const getDashboardStats = query({
     };
   },
 });
+export const getStudents = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("students").collect(); } });
+export const getTopics = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("topics").collect(); } });

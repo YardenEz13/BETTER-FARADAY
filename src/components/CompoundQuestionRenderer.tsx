@@ -33,9 +33,11 @@ interface Props {
   assignedQuestionId: Id<"assignedQuestions">;
   onComplete: () => void;
   aiChatTrigger?: () => void;
+  /** AI-generated preamble override (themed version). If undefined, original is shown. */
+  overridePreamble?: string;
 }
 
-export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger }: Props) {
+export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, overridePreamble }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<Record<string, boolean>>({});
@@ -125,7 +127,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           </div>
         </div>
 
-        <div className="text-xl leading-relaxed text-[var(--text-primary)] mb-6"><MathText>{question.preamble}</MathText></div>
+        <div className="text-xl leading-relaxed text-[var(--text-primary)] mb-6"><MathText>{overridePreamble ?? question.preamble}</MathText></div>
 
         {question.preambleParams.length > 0 && (
           <div className="flex flex-wrap gap-3 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)]">

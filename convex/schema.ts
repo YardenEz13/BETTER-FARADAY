@@ -14,6 +14,7 @@ export default defineSchema({
     currentTopicId: v.optional(v.id("topics")),
     streak: v.number(),
     level: v.optional(v.number()), // 1-5: מתחיל, חוקר, מתקדם, מומחה, מאסטר
+    homeworkTheme: v.optional(v.string()), // e.g. "כדורגל", "חברים" — used to personalize homework questions
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({
@@ -243,6 +244,11 @@ export default defineSchema({
     compoundQuestionId: v.optional(v.id("compoundQuestions")),
     assignedDifficulty: v.number(),
     personalizedReason: v.string(),       // "mastery 35% → difficulty 3"
+
+    // AI-personalized question text (theme-based rewrite)
+    personalizedStem: v.optional(v.string()),       // rewritten stem for legacy questions
+    personalizedPreamble: v.optional(v.string()),   // rewritten preamble for compound questions
+    themeApplied: v.optional(v.string()),           // the theme that was used, e.g. "כדורגל"
 
     // Student's work
     status: v.string(),                   // "pending" | "in_progress" | "submitted"

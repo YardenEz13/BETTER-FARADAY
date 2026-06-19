@@ -10,6 +10,7 @@ import {
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
 import AIChatPanel from "../components/AIChatPanel";
+import { Sparkles, Eye, EyeOff } from "lucide-react";
 
 export default function StudentHomework() {
   const { studentId, homeworkId } = useParams<{ studentId: string; homeworkId: string }>();
@@ -29,6 +30,7 @@ export default function StudentHomework() {
 
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   if (!student || !homework) return null;
 
@@ -67,16 +69,34 @@ export default function StudentHomework() {
                 >
                   <button
                     className="btn btn-primary btn-ghost mb-8"
-                    onClick={() => setActiveQuestionIdx(null)}
+                    onClick={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                   >
-                    <ChevronRight size={16} /> [ RETURN_TO_QUESTIONS ]
+                    <ChevronRight size={16} /> חזרה לרשימה
                   </button>
+
+                  {/* Personalization banner */}
+                  {activeAssignment.themeApplied && (
+                    <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl border" style={{ background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)' }}>
+                      <div className="flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
+                        <Sparkles size={14} />
+                        <span className="text-sm font-semibold">שאלה זו עוצבה לנושא: {activeAssignment.themeApplied}</span>
+                      </div>
+                      <button
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all"
+                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                        onClick={() => setShowOriginal(p => !p)}
+                      >
+                        {showOriginal ? <><EyeOff size={12} /> הסתר מקורי</> : <><Eye size={12} /> הצג מקורי</>}
+                      </button>
+                    </div>
+                  )}
 
                   <CompoundQuestionRenderer
                     question={activeQuestion as any}
                     assignedQuestionId={activeAssignment._id}
-                    onComplete={() => setActiveQuestionIdx(null)}
+                    onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                     aiChatTrigger={() => setChatOpen(true)}
+                    overridePreamble={!showOriginal ? activeAssignment.personalizedPreamble : undefined}
                   />
                 </motion.div>
               ) : (
@@ -90,16 +110,34 @@ export default function StudentHomework() {
                 >
                   <button
                     className="btn btn-primary btn-ghost mb-8"
-                    onClick={() => setActiveQuestionIdx(null)}
+                    onClick={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                   >
-                    <ChevronRight size={16} /> [ RETURN_TO_QUESTIONS ]
+                    <ChevronRight size={16} /> חזרה לרשימה
                   </button>
+
+                  {/* Personalization banner */}
+                  {activeAssignment.themeApplied && (
+                    <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl border" style={{ background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)' }}>
+                      <div className="flex items-center gap-2" style={{ color: 'var(--color-primary)' }}>
+                        <Sparkles size={14} />
+                        <span className="text-sm font-semibold">שאלה זו עוצבה לנושא: {activeAssignment.themeApplied}</span>
+                      </div>
+                      <button
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all"
+                        style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                        onClick={() => setShowOriginal(p => !p)}
+                      >
+                        {showOriginal ? <><EyeOff size={12} /> הסתר מקורי</> : <><Eye size={12} /> הצג מקורי</>}
+                      </button>
+                    </div>
+                  )}
 
                   <LegacyHomeworkRenderer
                     question={activeQuestion as any}
                     assignedQuestionId={activeAssignment._id}
-                    onComplete={() => setActiveQuestionIdx(null)}
+                    onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                     aiChatTrigger={() => setChatOpen(true)}
+                    overrideStem={!showOriginal ? activeAssignment.personalizedStem : undefined}
                   />
                 </motion.div>
               )
@@ -186,10 +224,21 @@ export default function StudentHomework() {
                             </div>
                             <div className="font-mono text-sm opacity-60">
                               {isCompound
-                                ? `${(qData as any).sections?.length || 0} סעיפים · רמה ${(qData as any).difficulty || "?"}`
-                                : qData ? (qData as any).stem?.slice(0, 60) + "..." : "שאלה"
+                                ? (aq.personalizedPreamble
+                                    ? aq.personalizedPreamble.slice(0, 70) + "..."
+                                    : `${(qData as any).sections?.length || 0} סעיפים · רמה ${(qData as any).difficulty || "-"}`)
+                                : qData
+                                  ? (aq.personalizedStem ?? (qData as any).stem ?? "").slice(0, 70) + "..."
+                                  : "שאלה"
                               }
                             </div>
+                            {/* Theme badge */}
+                            {aq.themeApplied && (
+                              <div className="mt-1 flex items-center gap-1 text-xs" style={{ color: 'var(--color-primary)' }}>
+                                <Sparkles size={11} />
+                                <span>ערוך לנושא: {aq.themeApplied}</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-4">

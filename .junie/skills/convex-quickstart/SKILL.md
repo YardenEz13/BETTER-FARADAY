@@ -95,7 +95,7 @@ The user should also run the frontend dev server in a separate terminal:
 npm run dev
 ```
 
-Vite apps serve on `http://localhost:5173`, Next.js on `http://localhost:3000`.
+Vite apps serve on `http://localhost:1311`, Next.js on `http://localhost:3000`.
 
 ### What you get
 

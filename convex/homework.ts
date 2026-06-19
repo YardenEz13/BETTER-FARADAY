@@ -1,6 +1,7 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 // ── Teacher creates a homework assignment ──
 export const createHomework = mutation({
@@ -66,6 +67,7 @@ export const assignToStudents = internalMutation({
       }
     }
 
+    let studentIndex = 0;
     for (const student of students) {
       // 1. Fetch power map for this student
       const powerMap = await ctx.db
@@ -107,6 +109,7 @@ export const assignToStudents = internalMutation({
 
       // 3. Select questions at the target difficulty (± 1 range)
       const selectedIds = new Set<string>();
+      const insertedAssignedIds: Id<"assignedQuestions">[] = [];
 
       // Prefer compound questions
       const matchingCompound = compoundCandidates.filter(
@@ -115,7 +118,7 @@ export const assignToStudents = internalMutation({
       for (const q of matchingCompound) {
         if (selectedIds.size >= questionCount) break;
         selectedIds.add(q._id);
-        await ctx.db.insert("assignedQuestions", {
+        const aqId = await ctx.db.insert("assignedQuestions", {
           homeworkId,
           studentId: student._id,
           compoundQuestionId: q._id,
@@ -123,6 +126,7 @@ export const assignToStudents = internalMutation({
           personalizedReason: reason,
           status: "pending",
         });
+        insertedAssignedIds.push(aqId);
       }
 
       // Fill remaining with legacy questions
@@ -134,7 +138,7 @@ export const assignToStudents = internalMutation({
           if (selectedIds.size >= questionCount) break;
           if (selectedIds.has(q._id)) continue;
           selectedIds.add(q._id);
-          await ctx.db.insert("assignedQuestions", {
+          const aqId = await ctx.db.insert("assignedQuestions", {
             homeworkId,
             studentId: student._id,
             questionId: q._id,
@@ -142,8 +146,18 @@ export const assignToStudents = internalMutation({
             personalizedReason: reason,
             status: "pending",
           });
+          insertedAssignedIds.push(aqId);
         }
       }
+
+      // 4. If this student has a theme, schedule Gemini personalization
+      if (student.homeworkTheme && insertedAssignedIds.length > 0) {
+        // Stagger personalization: 20 seconds per student to avoid Gemini rate limits (15 RPM max)
+        await ctx.scheduler.runAfter(studentIndex * 20000, internal.ai.personalizeHomework, {
+          assignedIds: insertedAssignedIds,
+        });
+      }
+      studentIndex++;
     }
   },
 });

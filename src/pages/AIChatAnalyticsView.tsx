@@ -44,12 +44,12 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-[var(--color-primary)]" />
             <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-[var(--color-primary)]" />
             <div className="label-mono text-[var(--color-primary-light)] mb-3 text-lg uppercase tracking-widest">סך שיחות</div>
-            <div className="text-6xl font-black text-[var(--text-primary)] drop-shadow-[0_0_10px_color-mix(in srgb, var(--color-on-surface) 30%, transparent)]">{summary?.totalChats ?? 0}</div>
+            <div className="text-6xl font-bold text-[var(--color-primary)] drop-shadow-[0_0_10px_color-mix(in srgb, var(--color-on-surface) 30%, transparent)]">{summary?.totalChats ?? 0}</div>
           </div>
           
           <div className="glass p-8 bg-[var(--color-primary-muted)] border border-[var(--color-primary)] shadow-[0_0_15px_color-mix(in srgb, var(--color-primary) 5%, transparent)] flex flex-col items-center justify-center">
             <div className="label-mono text-[var(--color-primary-light)] mb-3 text-lg uppercase tracking-widest">ממוצע בלבול</div>
-            <div className="text-6xl font-black" style={{ 
+            <div className="text-6xl font-bold" style={{ 
               color: (summary?.avgConfusion ?? 0) > 60 ? "#ff4b4b" : "var(--color-primary)", 
               textShadow: (summary?.avgConfusion ?? 0) > 60 ? "0 0 15px #ff4b4b" : "0 0 15px var(--color-primary)" 
             }}>
