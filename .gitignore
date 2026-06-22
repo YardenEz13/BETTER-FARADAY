@@ -41,3 +41,6 @@ __pycache__/
 
 # IDE specific
 .claude/
+
+*storybook.log
+storybook-static
