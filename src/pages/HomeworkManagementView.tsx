@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SignalWave } from "../components/electric";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
@@ -80,9 +81,9 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   ];
 
   return (
-    <div className="flex w-full h-full gap-6 p-6 overflow-hidden" dir="rtl">
+    <div className="flex flex-col lg:flex-row w-full h-full gap-4 lg:gap-6 p-4 lg:p-6 overflow-y-auto lg:overflow-hidden" dir="rtl">
       {/* Left: List */}
-      <div className="flex-1 flex flex-col overflow-y-auto pb-20 min-w-0">
+      <div className="flex-1 flex flex-col lg:overflow-y-auto pb-10 lg:pb-20 min-w-0 w-full">
         <div className="mb-8">
           <h1 className="flex items-center gap-3 mb-2 text-3xl font-bold text-on-surface"
             style={{ fontFamily: "'Yarden', 'Assistant', sans-serif" }}>
@@ -135,7 +136,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                   </div>
                 </div>
 
-                <div className="flex gap-5 mb-5">
+                <div className="flex flex-col sm:flex-row gap-5 mb-5">
                   <div className="flex-1 bg-[var(--bg-elevated)] p-4 border border-[color-mix(in srgb, var(--color-accent) 20%, transparent)] rounded-lg">
                     <label className="label-mono text-[var(--color-accent)] block mb-2 text-xs">שאלות לתלמיד</label>
                     <div className="flex gap-2">
@@ -243,7 +244,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       </div>
 
       {/* Right: Analytics */}
-      <div className="w-[440px] flex-shrink-0 flex flex-col gap-3 pb-20 overflow-y-auto">
+      <div className="w-full lg:w-[440px] lg:flex-shrink-0 flex flex-col gap-3 pb-10 lg:pb-20 lg:overflow-y-auto">
         <div className="flex gap-1 p-1 rounded-xl flex-shrink-0"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
           {tabs.map((tab) => (
@@ -409,7 +410,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                   </div>
                 ) : questionStats.length === 0 ? (
                   <div className="glass p-10 text-center rounded-2xl" style={{ color: "var(--text-muted)" }}>
-                    <Target size={36} className="mx-auto mb-3 opacity-40" />
+                    <SignalWave size={40} glow={0.8} className="mx-auto mb-3 block" />
                     <div className="text-sm">אין נתוני שאלות עדיין</div>
                     <div className="text-xs mt-1 opacity-60">יופיעו כשתלמידים יתחילו לענות</div>
                   </div>

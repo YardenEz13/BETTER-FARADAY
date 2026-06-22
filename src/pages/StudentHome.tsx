@@ -11,7 +11,7 @@ import {
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricField } from "../components/electric";
+import { ElectricField, ElectricLoader } from "../components/electric";
 
 /* ── A single station on the learning circuit ──
    Active node = a "charged" particle: pulsing field-line rings radiate from it. */
@@ -93,14 +93,7 @@ export default function StudentHome() {
   const [activeTab, setActiveTab] = useState<'map' | 'stats'>('map');
   const reducedMotion = !!useReducedMotion();
 
-  if (!student || !topics) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        <span className="font-semibold text-primary tracking-widest text-sm">טוען נתונים אישיים...</span>
-      </div>
-    </div>
-  );
+  if (!student || !topics) return <ElectricLoader label="טוען נתונים אישיים..." />;
 
   const getProgress = (topicId: string) => {
     const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;

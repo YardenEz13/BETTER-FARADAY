@@ -2,8 +2,10 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Loader2, ArrowLeft, Zap, Users, Shield, Target, Bot, LineChart } from "lucide-react";
+import { Loader2, ArrowLeft, Zap, Users, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ElectricBolt, ElectricAtom, SignalWave } from "../components/electric";
+import type { ElectricIconProps, ElectricTone } from "../components/electric";
 
 export default function RolePage() {
   const navigate = useNavigate();
@@ -91,14 +93,14 @@ export default function RolePage() {
 
           {/* Feature list */}
           <div className="relative z-10 mt-10 flex flex-col gap-4">
-            {[
-              { Icon: Target, text: 'תרגול אדפטיבי לפי רמתך', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
-              { Icon: Bot, text: 'AI מורה אישי בזמן אמת', color: 'text-secondary', bg: 'bg-secondary/10 border-secondary/20' },
-              { Icon: LineChart, text: 'מעקב ביצועים כיתתי חי', color: 'text-tertiary', bg: 'bg-tertiary/10 border-tertiary/20' },
-            ].map(({ Icon, text, color, bg }) => (
+            {([
+              { Icon: ElectricBolt, text: 'תרגול אדפטיבי לפי רמתך', tone: 'spark', bg: 'bg-primary/10 border-primary/20' },
+              { Icon: ElectricAtom, text: 'AI מורה אישי בזמן אמת', tone: 'violet', bg: 'bg-secondary/10 border-secondary/20' },
+              { Icon: SignalWave, text: 'מעקב ביצועים כיתתי חי', tone: 'amber', bg: 'bg-tertiary/10 border-tertiary/20' },
+            ] as { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[]).map(({ Icon, text, tone, bg }) => (
               <div key={text} className="flex items-center gap-3 font-semibold text-on-surface-variant">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 flex-shrink-0 ${bg}`}>
-                  <Icon className={`${color} w-5 h-5`} />
+                  <Icon size={24} tone={tone} glow={0.7} />
                 </div>
                 {text}
               </div>

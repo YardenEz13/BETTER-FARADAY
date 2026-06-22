@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { preloadModel } from "./services/localAI";
 import { ThemeProvider } from "./components/ThemeContext";
+import { ElectricLoader } from "./components/electric";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
@@ -17,14 +18,7 @@ const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 
 function RouteFallback() {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        <span className="num text-sm font-semibold text-primary tracking-widest">טוען…</span>
-      </div>
-    </div>
-  );
+  return <ElectricLoader label="טוען…" />;
 }
 
 export default function App() {

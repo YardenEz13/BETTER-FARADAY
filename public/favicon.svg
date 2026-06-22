@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E1B12"/>
+      <stop offset="100%" stop-color="#071109"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5BFF9F"/>
+      <stop offset="100%" stop-color="#17C964"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+  </defs>
+
+  <!-- badge -->
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#tile)"
+        stroke="#17C964" stroke-opacity="0.35" stroke-width="1.5"/>
+
+  <!-- electric bolt: soft halo + crisp fill -->
+  <path d="M37 7 L17 35 H29 L26 58 L48 26 H34 Z"
+        fill="#5BFF9F" opacity="0.55" filter="url(#glow)"/>
+  <path d="M37 7 L17 35 H29 L26 58 L48 26 H34 Z"
+        fill="url(#spark)" stroke="#D6FFE6" stroke-width="0.75" stroke-linejoin="round"/>
+</svg>

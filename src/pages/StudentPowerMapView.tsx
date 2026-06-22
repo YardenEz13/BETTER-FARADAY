@@ -2,8 +2,9 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { ChevronRight, TrendingUp, Zap, ArrowRight } from "lucide-react";
+import { ChevronRight, ArrowRight } from "lucide-react";
 import CyberAvatar from "../components/CyberAvatar";
+import { ElectricBolt } from "../components/electric";
 
 export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> | null; onBack: () => void }) {
   const powerMap = useQuery(
@@ -26,7 +27,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
           <ChevronRight size={16} /> חזרה למפת חום
         </button>
         <div className="bg-surface border border-outline-variant rounded-2xl p-12 text-center w-full max-w-4xl mx-auto mt-8 shadow-sm">
-          <TrendingUp size={64} className="text-primary mb-6 mx-auto opacity-80" />
+          <ElectricBolt size={64} glow={1} className="mb-6 mx-auto block" />
           <div className="text-on-surface font-headline-lg mb-4">בחר תלמיד</div>
           <div className="text-on-surface-variant font-body-lg">
             לחץ על כרטיסיית תלמיד במפת החום כדי לראות את הפרופיל שלו
@@ -45,9 +46,9 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
     new Date(ts).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="flex w-full h-full gap-8 p-8 overflow-hidden bg-background text-on-background font-body-md" dir="rtl">
+    <div className="flex flex-col lg:flex-row w-full h-full gap-6 lg:gap-8 p-4 lg:p-8 overflow-y-auto lg:overflow-hidden bg-background text-on-background font-body-md" dir="rtl">
       {/* Center/Main: Power Map - Expansive */}
-      <div className="flex-1 flex-col overflow-y-auto pr-4 pb-20">
+      <div className="flex-1 min-w-0 lg:overflow-y-auto pr-0 lg:pr-4 pb-10 lg:pb-20">
         <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors mb-8 w-fit shadow-sm font-label-md" onClick={onBack}>
           <ChevronRight size={16} /> חזרה למפת חום
         </button>
@@ -153,7 +154,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
         <div className="font-headline-md text-on-surface mb-6 border-b border-outline-variant pb-2">סיכומים פדגוגיים</div>
         {briefs && briefs.length > 0 ? (
           <motion.div
-            className="flex-col gap-6 mb-12 w-full"
+            className="flex flex-col gap-6 mb-12 w-full"
             initial="hidden"
             animate="visible"
             variants={{
@@ -216,7 +217,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
                 </div>
 
                 <div className="text-on-surface bg-secondary-container/30 border border-secondary/30 p-5 rounded-xl mb-6 flex items-start gap-4 font-body-lg">
-                  <Zap size={24} className="text-secondary flex-shrink-0 mt-0.5" />
+                  <ElectricBolt size={24} tone="violet" glow={0.7} animated={false} className="flex-shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-bold">תובנה:</strong> {brief.keyInsight}
                   </div>
@@ -288,11 +289,11 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
       </div>
 
       {/* Right panel: Engagement - Wide and expansive sidebar */}
-      <div className="w-[420px] flex-shrink-0 flex-col gap-6 pb-20 overflow-y-auto">
+      <div className="w-full lg:w-[420px] lg:flex-shrink-0 flex flex-col gap-6 pb-10 lg:pb-20 lg:overflow-y-auto">
         <div className="font-headline-md text-on-surface border-b border-outline-variant pb-2">מטריקות מעורבות</div>
 
         {powerMap?.engagement ? (
-          <div className="flex-col gap-6 w-full">
+          <div className="flex flex-col gap-6 w-full">
             <div className="bg-surface border border-outline-variant rounded-2xl p-6 w-full relative overflow-hidden shadow-sm">
                <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary to-primary"></div>
               <div className="font-headline-sm text-on-surface mb-5 inline-block">סטטיסטיקות</div>

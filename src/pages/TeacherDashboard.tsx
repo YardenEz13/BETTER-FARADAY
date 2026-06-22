@@ -13,6 +13,7 @@ import { HeatmapView } from "./HeatmapView";
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
+import { ElectricLoader } from "../components/electric";
 
 type TabId = "heatmap" | "aiChats" | "powerMap" | "homework";
 
@@ -39,14 +40,7 @@ export default function TeacherDashboard() {
     ? heatmap.reduce((acc, s) => { acc[s.status]++; return acc; }, { green: 0, yellow: 0, red: 0 })
     : { green: 0, yellow: 0, red: 0 };
 
-  if (!heatmap) return (
-    <div className="min-h-screen bg-background flex items-center justify-center gap-4">
-      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      <span className="text-on-surface-variant text-sm font-medium">
-        טוען נתוני כיתה...
-      </span>
-    </div>
-  );
+  if (!heatmap) return <ElectricLoader label="טוען נתוני כיתה..." />;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
