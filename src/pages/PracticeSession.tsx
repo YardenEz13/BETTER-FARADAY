@@ -3,12 +3,14 @@ import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
   CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock, Star
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
+
+const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
 export default function PracticeSession() {
   const { studentId, topicId } = useParams<{ studentId: string; topicId: string }>();
@@ -51,6 +53,8 @@ export default function PracticeSession() {
   const startTimeRef = useRef(Date.now());
   const transitionLockRef = useRef(false); // prevents click-through to next question
   const [chatOpen, setChatOpen]             = useState(false);
+  const [combo, setCombo]                   = useState(0); // session charge / correct streak
+  const reducedMotion = !!useReducedMotion();
 
   useEffect(() => {
     const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
@@ -80,8 +84,11 @@ export default function PracticeSession() {
     setSelected(idx); setSubmitted(true);
     const isCorrect = idx === activeQuestion.correctIndex;
     setQuestionsAnswered(q => q + 1);
+    const newCombo = isCorrect ? combo + 1 : 0;
+    setCombo(newCombo);
+    const comboBonus = isCorrect ? Math.min(newCombo, CHARGE_MAX) * 10 : 0; // charged-streak reward
     const xpGained = isCorrect
-      ? (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0)
+      ? (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0) + comboBonus
       : 0;
     if (isCorrect) {
       setSessionXP(x => x + xpGained);
@@ -122,50 +129,48 @@ export default function PracticeSession() {
   const timerStr  = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-hidden">
 
-      {/* ── Ambient ── */}
+      {/* ── Ambient glow ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-20%] right-[20%] w-[500px] h-[500px] rounded-full"
-          style={{ background: 'radial-gradient(circle, var(--color-primary-muted) 0%, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(23,201,100,0.07) 0%, transparent 70%)' }} />
       </div>
 
       {/* ── Top nav ── */}
       <motion.header
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4"
-        style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border-subtle)' }}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-surface border-b-2 border-outline backdrop-blur-xl"
+        style={{ boxShadow: 'var(--shadow-sm)' }}
       >
         <div className="flex items-center gap-4">
           <button className="btn-icon" onClick={() => navigate(`/student/${studentId}`)}>
             <ChevronLeft size={18} />
           </button>
           <div>
-            <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{currentTopic.nameHe}</div>
-            <div className="label-mono" style={{ color: 'var(--text-muted)', fontSize: '0.6rem' }}>מצב תרגול</div>
+            <div className="font-semibold text-sm text-on-surface">{currentTopic.nameHe}</div>
+            <div className="label-mono text-[0.6rem]">מצב תרגול</div>
           </div>
         </div>
 
         {/* Session stats */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-            <Activity size={13} style={{ color: 'var(--color-primary-light)' }} />
-            <span className="font-bold text-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-              {questionsAnswered}
-            </span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>שאלות</span>
+          {/* Charge meter — builds with each correct answer in a row */}
+          <ChargeMeter combo={combo} max={CHARGE_MAX} />
+          {/* Questions chip */}
+          <div className="stat-chip">
+            <Activity size={13} className="text-primary" />
+            <span className="num font-bold text-sm text-on-surface">{questionsAnswered}</span>
+            <span className="text-xs text-on-surface-variant">שאלות</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-            <Zap size={13} style={{ color: 'var(--color-warning)' }} />
-            <span className="font-bold text-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-warning)' }}>
-              +{sessionXP}
-            </span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>XP</span>
+          {/* XP chip */}
+          <div className="stat-chip">
+            <Zap size={13} className="text-tertiary" />
+            <span className="num font-bold text-sm text-tertiary">+{sessionXP}</span>
+            <span className="text-xs text-on-surface-variant">XP</span>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setChatOpen(true)}>
+          <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
             <Bot size={14} />
             עזרת AI
           </button>
@@ -173,24 +178,33 @@ export default function PracticeSession() {
       </motion.header>
 
       {/* ── Main arena ── */}
-      <div className="relative z-10 max-w-6xl mx-auto pt-24 px-6 pb-16 flex gap-6 items-start">
+      <div
+        className="relative z-10 min-h-screen flex flex-col"
+        style={{
+          justifyContent: chatOpen ? 'flex-start' : 'center',
+          paddingTop: chatOpen ? '120px' : '96px',
+          paddingBottom: chatOpen ? '58vh' : '64px',
+          transition: 'padding 0.3s ease',
+        }}
+      >
+        <div className="w-full max-w-6xl mx-auto px-6 flex gap-6 items-start">
 
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
 
           {!activeQuestion && question === undefined ? (
-            <div className="glass p-16 flex flex-col items-center justify-center text-center">
-              <RotateCcw size={36} className="animate-spin mb-4" style={{ color: 'var(--color-primary)', opacity: 0.5 }} />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>טוען שאלה...</p>
+            <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
+              <RotateCcw size={36} className="animate-spin mb-4 text-primary opacity-50" />
+              <p className="text-sm text-on-surface-variant">טוען שאלה...</p>
             </div>
           ) : !activeQuestion && question === null ? (
-            <div className="glass p-16 flex flex-col items-center justify-center text-center">
-              <CheckCircle2 size={48} style={{ color: 'var(--color-success)', marginBottom: 16 }} />
-              <h2 className="heading-display mb-3" style={{ fontSize: '1.6rem' }}>כל השאלות הושלמו!</h2>
-              <p className="text-sm mb-8" style={{ color: 'var(--text-secondary)' }}>
+            <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
+              <CheckCircle2 size={48} className="text-primary mb-4" />
+              <h2 className="font-display font-bold text-on-surface mb-3" style={{ fontSize: '1.6rem' }}>כל השאלות הושלמו!</h2>
+              <p className="text-sm text-on-surface-variant mb-8">
                 סיימת את כל השאלות הזמינות בנושא זה.
               </p>
-              <button className="btn btn-primary btn-lg" onClick={() => navigate(`/student/${studentId}`)}>
+              <button className="btn-clay-primary btn-lg" onClick={() => navigate(`/student/${studentId}`)}>
                 חזרה למפת הלמידה
               </button>
             </div>
@@ -204,46 +218,62 @@ export default function PracticeSession() {
                 transition={{ duration: 0.3 }}
               >
                 {/* Question card */}
-                <div className="glass relative overflow-hidden" style={{ padding: '32px' }}>
-                  <div className="absolute top-0 left-0 right-0 h-[2px]"
-                    style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--color-accent))' }} />
+                <div className="clay-card relative overflow-hidden p-8">
+                  {/* Top accent bar */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-primary rounded-t-2xl" />
 
                   {/* Meta row */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <span className="badge badge-primary">שאלה #{questionsAnswered + 1}</span>
-                      <span className="badge" style={{
-                        background: 'var(--bg-elevated)',
-                        borderColor: 'var(--border-default)',
-                        color: 'var(--text-secondary)'
-                      }}>
+                      <span className="badge">שאלה #{questionsAnswered + 1}</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-surface-container border-2 border-outline text-on-surface-variant">
                         {'★'.repeat(Math.max(0, activeQuestion.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (activeQuestion.difficulty || 1)))} רמה {activeQuestion.difficulty}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
+                    <div className="flex items-center gap-2 text-on-surface-variant text-sm">
                       <Clock size={14} />
-                      <span>{timerStr}</span>
+                      <span className="font-medium">{timerStr}</span>
                     </div>
                   </div>
 
                   {/* Stem */}
-                  <div className="text-xl leading-relaxed font-medium mb-8" style={{ color: 'var(--text-primary)' }}>
+                  <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
                     {activeQuestion.stem}
                   </div>
 
-                  {/* Celebration */}
+                  {/* Celebration — electric spark discharge on a correct answer */}
                   <AnimatePresence>
                     {showCelebration && (
                       <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.3 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                         className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-                        style={{ background: 'color-mix(in srgb, var(--color-success) 8%, transparent)' }}
                       >
-                        <div className="text-6xl font-black" style={{ color: 'var(--color-success)', textShadow: '0 0 40px color-mix(in srgb, var(--color-success) 60%, transparent)' }}>
-                          ✓ מעולה!
-                        </div>
+                        {!reducedMotion && <SparkBurst />}
+                        <motion.div
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 1.3, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                          className="relative flex flex-col items-center"
+                        >
+                          <span
+                            className="font-display font-black text-primary text-5xl md:text-6xl"
+                            style={{ textShadow: '0 0 24px rgba(91,255,159,0.6)' }}
+                          >
+                            ✓ מעולה!
+                          </span>
+                          {combo >= 2 && (
+                            <span
+                              className="num mt-2 px-3 py-1 rounded-full text-sm font-bold bg-primary text-on-primary"
+                              style={{ boxShadow: '0 0 16px rgba(91,255,159,0.6)' }}
+                            >
+                              רצף ×{combo}
+                            </span>
+                          )}
+                        </motion.div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -255,38 +285,45 @@ export default function PracticeSession() {
                       const isSelected    = selected === idx;
                       const isWrong       = submitted && isSelected && !isThisCorrect;
                       const isRight       = submitted && isThisCorrect;
+                      const isInactive    = submitted && !isRight && !isWrong;
 
-                      let borderColor = 'var(--border-default)';
-                      let bg          = 'var(--bg-surface)';
-                      let textColor   = 'var(--text-secondary)';
-                      let RightIcon: typeof CheckCircle2 | null = null;
+                      // Determine classes based on state
+                      let cardClasses = "w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-right transition-all duration-200 border-2 font-medium cursor-pointer select-none";
+                      let badgeClasses = "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm";
 
-                      if (isRight)  { borderColor = 'color-mix(in srgb, var(--color-success) 50%, transparent)'; bg = 'var(--color-success-muted)'; textColor = 'var(--text-primary)'; RightIcon = CheckCircle2; }
-                      if (isWrong)  { borderColor = 'color-mix(in srgb, var(--color-danger) 50%, transparent)';  bg = 'var(--color-danger-muted)';  textColor = 'var(--text-muted)';    RightIcon = XCircle; }
-                      if (isSelected && !submitted) { borderColor = 'var(--border-primary)'; bg = 'var(--color-primary-muted)'; textColor = 'var(--text-primary)'; }
+                      if (isRight) {
+                        cardClasses += " bg-primary border-primary text-white";
+                        badgeClasses += " bg-white/20 text-white";
+                      } else if (isWrong) {
+                        cardClasses += " bg-error border-error text-white";
+                        badgeClasses += " bg-white/20 text-white";
+                      } else if (isSelected && !submitted) {
+                        cardClasses += " bg-primary/10 border-primary text-on-surface";
+                        badgeClasses += " bg-primary/20 text-primary";
+                      } else if (isInactive) {
+                        cardClasses += " bg-surface border-outline-variant text-on-surface-variant opacity-50";
+                        badgeClasses += " bg-surface-container text-on-surface-variant";
+                      } else {
+                        cardClasses += " bg-surface border-outline text-on-surface hover:border-primary hover:bg-primary/5";
+                        badgeClasses += " bg-surface-container text-on-surface-variant";
+                        if (!submitted) { cardClasses += " cursor-pointer"; }
+                      }
 
                       return (
                         <motion.button
                           key={idx}
                           whileHover={!submitted ? { scale: 1.01 } : {}}
                           whileTap={!submitted ? { scale: 0.99 } : {}}
-                          className="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-right transition-all duration-200"
-                          style={{
-                            background: bg,
-                            border: `1.5px solid ${borderColor}`,
-                            color: textColor,
-                            cursor: submitted ? 'default' : 'pointer',
-                            opacity: submitted && !isRight && !isWrong ? 0.5 : 1,
-                          }}
+                          className={cardClasses}
+                          style={{ boxShadow: isRight || isWrong ? 'none' : 'var(--shadow-clay)', cursor: submitted ? 'default' : 'pointer' }}
                           onClick={() => handleSelect(idx)}
                         >
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm"
-                            style={{ background: isRight ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : isWrong ? 'color-mix(in srgb, var(--color-danger) 20%, transparent)' : 'var(--bg-elevated)', color: textColor }}>
-                            {isRight && RightIcon ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)' }} /> :
-                             isWrong && RightIcon ? <XCircle size={16} style={{ color: 'var(--color-danger)' }} /> :
-                             String.fromCharCode(65 + idx)}
+                          <div className={badgeClasses}>
+                            {isRight && <CheckCircle2 size={16} className="text-white" />}
+                            {isWrong && <XCircle size={16} className="text-white" />}
+                            {!isRight && !isWrong && String.fromCharCode(65 + idx)}
                           </div>
-                          <span className="flex-1 font-medium">{choice}</span>
+                          <span className="flex-1">{choice}</span>
                         </motion.button>
                       );
                     })}
@@ -296,7 +333,7 @@ export default function PracticeSession() {
                   {!submitted && (
                     <div className="flex items-center gap-3">
                       <button
-                        className="btn btn-ghost"
+                        className="btn-clay-ghost"
                         onClick={handleHint}
                         disabled={loadingHint}
                       >
@@ -315,10 +352,9 @@ export default function PracticeSession() {
                         exit={{ opacity: 0, height: 0 }}
                         className="mt-4 overflow-hidden"
                       >
-                        <div className="p-4 rounded-xl flex items-start gap-3"
-                          style={{ background: 'var(--color-warning-muted)', border: '1px solid color-mix(in srgb, var(--color-warning) 25%, transparent)' }}>
-                          <Lightbulb size={16} style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
-                          <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{hint}</p>
+                        <div className="p-4 rounded-2xl flex items-start gap-3 bg-tertiary/10 border-2 border-tertiary/30">
+                          <Lightbulb size={16} className="text-tertiary mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-on-surface-variant leading-relaxed">{hint}</p>
                         </div>
                       </motion.div>
                     )}
@@ -332,25 +368,19 @@ export default function PracticeSession() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.35 }}
-                        className="mt-6 rounded-2xl overflow-hidden"
-                        style={{
-                          border: `2px solid ${isCorrect ? 'color-mix(in srgb, var(--color-success) 35%, transparent)' : 'color-mix(in srgb, var(--color-danger) 35%, transparent)'}`,
-                          background: isCorrect ? 'color-mix(in srgb, var(--color-success) 6%, transparent)' : 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
-                        }}
+                        className={`mt-6 rounded-2xl overflow-hidden border-2 ${isCorrect ? 'border-primary/40 bg-primary/5' : 'border-error/40 bg-error/5'}`}
                       >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4"
-                          style={{ background: isCorrect ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-danger) 12%, transparent)', borderBottom: `1px solid ${isCorrect ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : 'color-mix(in srgb, var(--color-danger) 20%, transparent)'}` }}>
+                        {/* Review header */}
+                        <div className={`flex items-center justify-between px-6 py-4 border-b-2 ${isCorrect ? 'bg-primary/10 border-primary/20' : 'bg-error/10 border-error/20'}`}>
                           <div className="flex items-center gap-3">
                             {isCorrect
-                              ? <CheckCircle2 size={22} style={{ color: 'var(--color-success)' }} />
-                              : <XCircle size={22} style={{ color: 'var(--color-danger)' }} />}
-                            <span className="font-bold text-lg" style={{ color: isCorrect ? 'var(--color-success)' : 'var(--color-danger)', fontFamily: "'Yarden', sans-serif" }}>
+                              ? <CheckCircle2 size={22} className="text-primary" />
+                              : <XCircle size={22} className="text-error" />}
+                            <span className={`font-bold text-lg font-display ${isCorrect ? 'text-primary' : 'text-error'}`}>
                               {isCorrect ? '✓ תשובה נכונה!' : '✗ תשובה שגויה'}
                             </span>
                             {isCorrect && earnedXP > 0 && (
-                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                style={{ background: 'color-mix(in srgb, var(--color-warning) 15%, transparent)', color: 'var(--color-warning)', border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)' }}>
+                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-tertiary/15 text-tertiary border border-tertiary/30">
                                 <Zap size={11} /> +{earnedXP} XP
                               </span>
                             )}
@@ -359,14 +389,12 @@ export default function PracticeSession() {
                           <button
                             onClick={handleNextQuestion}
                             disabled={countdown > 0}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all"
-                            style={{
-                              background: countdown > 0 ? 'var(--bg-elevated)' : 'var(--color-primary)',
-                              color: countdown > 0 ? 'var(--text-muted)' : 'var(--color-on-primary)',
-                              border: countdown > 0 ? '1px solid var(--border-default)' : 'none',
-                              cursor: countdown > 0 ? 'not-allowed' : 'pointer',
-                              opacity: countdown > 0 ? 0.7 : 1,
-                            }}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all border-2 ${
+                              countdown > 0
+                                ? 'bg-surface-container border-outline text-on-surface-variant cursor-not-allowed opacity-70'
+                                : 'bg-primary border-primary text-white cursor-pointer'
+                            }`}
+                            style={countdown === 0 ? { boxShadow: 'var(--shadow-clay-primary)' } : undefined}
                           >
                             {countdown > 0 ? (
                               <><Clock size={14} /> {countdown}s...</>
@@ -379,12 +407,11 @@ export default function PracticeSession() {
                         <div className="p-6 flex flex-col gap-5">
                           {/* If wrong: show correct answer */}
                           {!isCorrect && (
-                            <div className="flex items-start gap-3 p-4 rounded-xl"
-                              style={{ background: 'color-mix(in srgb, var(--color-success) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 20%, transparent)' }}>
-                              <CheckCircle2 size={16} style={{ color: 'var(--color-success)', flexShrink: 0, marginTop: 2 }} />
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/8 border-2 border-primary/20">
+                              <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" />
                               <div>
-                                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--color-success)' }}>התשובה הנכונה:</div>
-                                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                <div className="text-xs font-semibold mb-1 text-primary">התשובה הנכונה:</div>
+                                <div className="font-medium text-on-surface">
                                   {activeQuestion.choices[activeQuestion.correctIndex]}
                                 </div>
                               </div>
@@ -394,10 +421,10 @@ export default function PracticeSession() {
                           {/* Explanation */}
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb size={15} style={{ color: 'var(--color-warning)' }} />
-                              <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>הסבר:</span>
+                              <Lightbulb size={15} className="text-tertiary" />
+                              <span className="text-sm font-semibold text-on-surface-variant">הסבר:</span>
                             </div>
-                            <p className="text-base leading-relaxed" style={{ color: 'var(--text-primary)', lineHeight: 1.75 }}>
+                            <p className="text-base leading-relaxed text-on-surface" style={{ lineHeight: 1.75 }}>
                               {activeQuestion.explanation}
                             </p>
                           </div>
@@ -406,15 +433,13 @@ export default function PracticeSession() {
                           {activeQuestion.solutionSteps && activeQuestion.solutionSteps.length > 0 && (
                             <div>
                               <div className="flex items-center gap-2 mb-3">
-                                <Star size={15} style={{ color: 'var(--color-primary)' }} />
-                                <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>שלבי פתרון:</span>
+                                <Star size={15} className="text-primary" />
+                                <span className="text-sm font-semibold text-on-surface-variant">שלבי פתרון:</span>
                               </div>
                               <ol className="flex flex-col gap-2.5">
                                 {activeQuestion.solutionSteps.map((step: string, i: number) => (
-                                  <li key={i} className="flex items-start gap-3 text-sm"
-                                    style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                                      style={{ background: 'var(--color-primary-muted)', color: 'var(--color-primary)', border: '1px solid var(--border-primary)' }}>
+                                  <li key={i} className="flex items-start gap-3 text-sm text-on-surface-variant" style={{ lineHeight: 1.6 }}>
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary border border-primary/30">
                                       {i + 1}
                                     </span>
                                     <span>{step}</span>
@@ -437,6 +462,7 @@ export default function PracticeSession() {
         <div className="w-[300px] flex-shrink-0 hidden lg:block">
           <CalculatorCard />
         </div>
+        </div>
       </div>
 
       <AIChatPanel
@@ -449,6 +475,74 @@ export default function PracticeSession() {
         topicId={topicId}
         questionId={activeQuestion?._id}
       />
+    </div>
+  );
+}
+
+/* ── Electric spark discharge — radiating rays + a flash ring on a correct answer ── */
+function SparkBurst() {
+  const rays = Array.from({ length: 12 });
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
+      <div className="relative">
+        {/* flash ring */}
+        <motion.div
+          initial={{ scale: 0, opacity: 0.7 }}
+          animate={{ scale: 2.4, opacity: 0 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="absolute left-1/2 top-1/2 w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary"
+        />
+        {/* rays */}
+        {rays.map((_, i) => (
+          <div
+            key={i}
+            className="absolute left-1/2 top-1/2"
+            style={{ transform: `rotate(${(i / rays.length) * 360}deg)` }}
+          >
+            <motion.div
+              initial={{ scaleY: 0, opacity: 0, y: 0 }}
+              animate={{ scaleY: 1, opacity: [0, 1, 0], y: -52 }}
+              transition={{ duration: 0.55, delay: i * 0.012, ease: 'easeOut' }}
+              style={{
+                width: 3,
+                height: 30,
+                borderRadius: 9999,
+                transformOrigin: 'center',
+                background: 'var(--color-inverse-primary)',
+                boxShadow: '0 0 8px var(--color-inverse-primary)',
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Charge meter — a segmented gauge that fills with each correct answer in a row ── */
+function ChargeMeter({ combo, max }: { combo: number; max: number }) {
+  const level = Math.min(combo, max);
+  const full = level >= max;
+  return (
+    <div
+      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
+      style={{ boxShadow: 'var(--shadow-clay)' }}
+      title="טעינת אנרגיה — רצף תשובות נכונות"
+    >
+      <Zap size={13} className={full ? 'text-primary' : 'text-on-surface-variant'} />
+      <div className="flex items-center gap-1">
+        {Array.from({ length: max }).map((_, i) => (
+          <span
+            key={i}
+            className="w-1.5 h-4 rounded-full transition-all duration-300"
+            style={{
+              background: i < level ? 'var(--color-primary)' : 'var(--color-outline)',
+              boxShadow: i < level && full ? '0 0 6px var(--color-inverse-primary)' : 'none',
+            }}
+          />
+        ))}
+      </div>
+      {full && <span className="num text-[10px] font-bold text-primary">מלא!</span>}
     </div>
   );
 }
@@ -478,38 +572,33 @@ function CalculatorCard() {
   };
 
   return (
-    <div className="glass" style={{ padding: '20px' }}>
-      <div className="label-mono mb-4">מחשבון מדעי</div>
+    <div className="clay-card p-5 sticky top-24">
+      <div className="label-mono mb-4 text-on-surface-variant">מחשבון מדעי</div>
 
       {/* Display */}
-      <div className="rounded-lg px-4 py-3 mb-4 text-left overflow-hidden"
-        style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-default)', minHeight: 52 }}>
-        <span style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: eqValue.length > 12 ? '0.85rem' : '1.2rem',
-          color: 'var(--text-primary)',
-          direction: 'ltr',
-          display: 'block',
-          textAlign: 'right',
-        }}>
-          {eqValue || <span style={{ color: 'var(--text-disabled)' }}>0</span>}
+      <div className="rounded-xl px-4 py-3 mb-4 overflow-hidden bg-surface-container-low border-2 border-outline" style={{ minHeight: 52 }}>
+        <span
+          className="text-on-surface block text-right"
+          style={{
+            fontFamily: 'Assistant, sans-serif',
+            fontSize: eqValue.length > 12 ? '0.85rem' : '1.2rem',
+            direction: 'ltr',
+          }}
+        >
+          {eqValue || <span className="text-on-surface-variant opacity-40">0</span>}
         </span>
       </div>
 
       {/* Scientific row */}
       <div className="grid grid-cols-4 gap-1.5 mb-1.5">
         {["x²", "xⁿ", "√", "π", "sin", "cos", "tan", "log"].map(k => (
-          <button key={k} onClick={() => handleKeyPress(k)}
-            className="h-9 rounded-lg text-xs font-medium transition-all duration-150"
-            style={{
-              background: 'var(--color-primary-muted)',
-              border: '1px solid var(--border-primary)',
-              color: 'var(--color-primary-light)',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = 'rgba(99,102,241,0.25)'; }}
-            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'var(--color-primary-muted)'; }}
-          >{k}</button>
+          <button
+            key={k}
+            onClick={() => handleKeyPress(k)}
+            className="h-9 rounded-xl text-xs font-semibold transition-all duration-150 bg-primary/10 border-2 border-primary/30 text-primary hover:bg-primary/20 active:scale-95"
+          >
+            {k}
+          </button>
         ))}
       </div>
 
@@ -521,29 +610,27 @@ function CalculatorCard() {
           const isOp      = ["÷", "×", "-", "+", "(", ")"].includes(k);
           const isDel     = k === "del";
 
-          const bg = isEquals ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'
-                   : isClear  ? 'var(--color-danger-muted)'
-                   : isDel    ? 'var(--bg-elevated)'
-                   : isOp     ? 'var(--color-accent-muted)'
-                   : 'var(--bg-surface)';
-          const color = isEquals ? '#fff'
-                      : isClear  ? 'var(--color-danger)'
-                      : isOp     ? 'var(--color-accent)'
-                      : 'var(--text-secondary)';
-          const border = isEquals ? 'var(--border-primary)'
-                       : isClear  ? 'color-mix(in srgb, var(--color-danger) 25%, transparent)'
-                       : 'var(--border-subtle)';
+          let btnClass = "h-10 rounded-xl font-semibold text-sm transition-all duration-150 border-2 active:scale-95 cursor-pointer";
+          if (isEquals) btnClass += " bg-primary border-primary text-white col-span-1";
+          else if (isClear) btnClass += " bg-error/10 border-error/30 text-error hover:bg-error/20";
+          else if (isDel) btnClass += " bg-surface-container-high border-outline text-on-surface-variant hover:bg-surface-container";
+          else if (isOp) btnClass += " bg-secondary/10 border-secondary/30 text-secondary hover:bg-secondary/20";
+          else btnClass += " bg-surface border-outline text-on-surface hover:bg-surface-container";
 
           return (
-            <button key={k} onClick={() => handleKeyPress(k)}
-              className="h-10 rounded-lg font-medium text-sm transition-all duration-150"
-              style={{ background: bg, border: `1px solid ${border}`, color, cursor: 'pointer', fontFamily: isEquals ? '' : 'var(--font-mono)' }}
-              onMouseEnter={e => { if (!isEquals) (e.target as HTMLButtonElement).style.background = 'var(--bg-elevated)'; }}
-              onMouseLeave={e => { if (!isEquals) (e.target as HTMLButtonElement).style.background = bg as string; }}
-            >{k}</button>
+            <button
+              key={k}
+              onClick={() => handleKeyPress(k)}
+              className={btnClass}
+              style={isEquals ? { boxShadow: 'var(--shadow-clay-primary)' } : { boxShadow: 'var(--shadow-clay)' }}
+            >
+              {k}
+            </button>
           );
         })}
       </div>
     </div>
   );
 }
+
+

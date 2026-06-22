@@ -305,6 +305,7 @@ export const getStudentSubmissions = query({
         correctCount: aq.answers?.filter((a) => a.isCorrect).length ?? 0,
         aiInteractions: aq.aiInteractions ?? 0,
         totalTimeMs: aq.answers?.reduce((s, a) => s + (a.timeMs ?? 0), 0) ?? 0,
+        answers: aq.answers,
       });
     }
 

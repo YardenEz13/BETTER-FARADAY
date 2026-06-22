@@ -33,3 +33,11 @@ lint_errors.json
 diff.txt
 app_screenshot.png
 stitch_screens/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE specific
+.claude/

@@ -40,105 +40,96 @@ export default function TeacherDashboard() {
     : { green: 0, yellow: 0, red: 0 };
 
   if (!heatmap) return (
-    <div className="min-h-screen flex items-center justify-center gap-4">
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-        style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }} />
-      <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
+    <div className="min-h-screen bg-background flex items-center justify-center gap-4">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <span className="text-on-surface-variant text-sm font-medium">
         טוען נתוני כיתה...
       </span>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-void)' }}>
+    <div className="min-h-screen flex flex-col bg-background">
 
-      {/* ── Ambient ── */}
+      {/* ── Ambient glow ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.05) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.05) 0%, transparent 70%)' }} />
+        <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full opacity-40"
+          style={{ background: 'radial-gradient(circle, rgba(23,201,100,0.06) 0%, transparent 70%)' }} />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-40"
+          style={{ background: 'radial-gradient(circle, rgba(123,97,255,0.06) 0%, transparent 70%)' }} />
       </div>
 
       {/* ── Header ── */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0"
-        style={{
-          background: 'color-mix(in srgb, var(--bg-surface) 85%, transparent)',
-          backdropFilter: 'blur(24px)',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
+        className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0 bg-surface border-b-2 border-outline backdrop-blur-xl"
+        style={{ boxShadow: 'var(--shadow-sm)' }}
       >
         {/* Brand + live stats */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--color-primary)', boxShadow: '0 0 20px color-mix(in srgb, var(--color-primary) 35%, transparent)' }}>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-primary glow-primary">
               <Sparkles size={18} className="text-white" />
             </div>
             <div>
-              <div className="font-bold text-sm" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+              <div className="font-bold text-sm text-on-surface font-display tracking-tight">
                 FARADAY Logic
               </div>
-              <div className="label-mono" style={{ color: 'var(--color-primary)', fontSize: '0.58rem' }}>// מרכז פיקוד</div>
+              <div className="label-mono text-primary" style={{ fontSize: '0.58rem' }}>// מרכז פיקוד</div>
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1" style={{ borderRight: '1px solid var(--border-subtle)', paddingRight: '24px', marginRight: '0' }}>
-            {/* Live indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--bg-surface)' }}>
-              <div className="pulse-dot" style={{ width: 6, height: 6 }} />
-              <span className="label-mono" style={{ color: 'var(--color-success)', fontSize: '0.6rem' }}>Live</span>
-            </div>
+          {/* Live badge */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border-2 border-primary/20">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="label-mono text-primary text-[0.6rem]">Live</span>
           </div>
 
           {/* Quick stats */}
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3">
             <HeaderStat value={heatmap.length} label="תלמידים" icon={<Users size={13} />} />
-            <HeaderStat value={counts.green} label="שולטים" color="var(--color-success)" />
-            <HeaderStat value={counts.yellow} label="מתקשים" color="var(--color-warning)" />
-            <HeaderStat value={counts.red} label="בסיכון" color="var(--color-danger)" />
+            <HeaderStat value={counts.green}  label="שולטים"  colorClass="text-primary" />
+            <HeaderStat value={counts.yellow} label="מתקשים"  colorClass="text-tertiary" />
+            <HeaderStat value={counts.red}    label="בסיכון"  colorClass="text-error" />
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <nav className="flex items-center gap-1 p-1 rounded-xl"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+        {/* ── Tab navigation (pill style) ── */}
+        <nav className="flex items-center gap-1 p-1.5 rounded-2xl bg-surface-container border-2 border-outline">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+              className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-150 focus:outline-none"
               style={{
-                color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: activeTab === tab.id ? 'var(--bg-elevated)' : 'transparent',
+                color: activeTab === tab.id ? 'white' : undefined,
               }}
             >
               {activeTab === tab.id && (
                 <motion.div
                   layoutId="active-tab"
-                  className="absolute inset-0 rounded-lg"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+                  className="absolute inset-0 rounded-xl bg-primary"
+                  style={{ boxShadow: 'var(--shadow-clay-primary)' }}
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-              <span className="relative z-10" style={{ color: activeTab === tab.id ? 'var(--color-primary-light)' : 'var(--text-muted)' }}>
+              <span className={`relative z-10 transition-colors duration-150 ${activeTab === tab.id ? 'text-white' : 'text-on-surface-variant'}`}>
                 {tab.icon}
               </span>
-              <span className="relative z-10 hidden md:inline">{tab.label}</span>
+              <span className={`relative z-10 hidden md:inline transition-colors duration-150 ${activeTab === tab.id ? 'text-white' : 'text-on-surface-variant'}`}>
+                {tab.label}
+              </span>
             </button>
           ))}
         </nav>
 
         {/* Right actions */}
-        <div className="flex items-center gap-3">
-          <button className="btn-icon relative" style={{ color: hasAlerts ? 'var(--color-danger)' : 'var(--text-secondary)' }}>
-            <Bell size={18} />
+        <div className="flex items-center gap-2">
+          <button className="btn-icon relative" aria-label="התראות">
+            <Bell size={18} className={hasAlerts ? 'text-error' : 'text-on-surface-variant'} />
             {hasAlerts && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
-                style={{ background: 'var(--color-danger)', boxShadow: '0 0 6px var(--color-danger)' }} />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-surface" />
             )}
           </button>
           <button className="btn-icon" onClick={() => navigate("/")} title="יציאה">
@@ -186,14 +177,19 @@ export default function TeacherDashboard() {
   );
 }
 
-function HeaderStat({ value, label, icon, color }: { value: any; label: string; icon?: React.ReactNode; color?: string }) {
+function HeaderStat({
+  value, label, icon, colorClass,
+}: {
+  value: any;
+  label: string;
+  icon?: React.ReactNode;
+  colorClass?: string;
+}) {
   return (
-    <div className="flex items-center gap-1.5">
-      {icon && <span style={{ color: color ?? 'var(--text-secondary)' }}>{icon}</span>}
-      <span className="font-bold text-sm" style={{ color: color ?? 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-        {value}
-      </span>
-      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+    <div className="stat-chip">
+      {icon && <span className={colorClass ?? 'text-on-surface-variant'}>{icon}</span>}
+      <span className={`num font-bold text-sm ${colorClass ?? 'text-on-surface'}`}>{value}</span>
+      <span className="text-xs text-on-surface-variant">{label}</span>
     </div>
   );
 }

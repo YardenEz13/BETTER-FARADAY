@@ -33,7 +33,7 @@ export function HeatmapView({
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
         <div className="glass rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
-          <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/30 transition-colors" />
+          <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">תלמידים פעילים</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
@@ -41,14 +41,14 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 flex items-baseline gap-2">
-            <span className="font-headline-xl text-primary leading-none -translate-x-2">{total}</span>
+            <span className="num font-black text-5xl text-primary leading-none -translate-x-2">{total}</span>
             <span className="font-body-sm text-on-surface-variant mr-6 -translate-x-2">/ {total} רשומים</span>
           </div>
         </div>
 
         {/* Metric 2 */}
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
-          <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/30 transition-colors" />
+          <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">שליטה כיתתית</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
@@ -56,7 +56,7 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 flex items-end gap-3">
-            <span className="font-headline-xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
+            <span className="num font-black text-5xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
             <span className="font-body-sm text-primary flex items-center mb-1 bg-primary/10 px-2 py-0.5 rounded-full">
               <TrendingUp className="text-[16px] mr-1" />
               +2% השבוע
@@ -66,7 +66,7 @@ export function HeatmapView({
 
         {/* Metric 3 (Next Goal) */}
         <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group border-tertiary/30 hover:border-tertiary transition-all">
-          <div className="absolute inset-0 bg-tertiary/20 group-hover:bg-tertiary/30 transition-colors" />
+          <div className="absolute inset-0 bg-tertiary/10 group-hover:bg-tertiary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-tertiary mr-6 -translate-x-3">יעד קרוב</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center border border-tertiary/30">
@@ -134,11 +134,17 @@ export function HeatmapView({
               const c = colorMap[status as keyof typeof colorMap] ?? colorMap.green;
               const labelMap = { green: 'שולט', yellow: 'מתקשה', red: 'בסיכון' };
               const accuracy = totalAttempts > 0 ? Math.round((filled / totalAttempts) * 100) : null;
+              const statusVar = status === 'green' ? 'var(--color-primary)' : status === 'yellow' ? 'var(--color-tertiary)' : 'var(--color-error)';
+              const glowI = (accuracy ?? 50) / 100;
 
               return (
                 <motion.div
                   key={student._id}
-                  className={`relative cursor-pointer group ${c.bg} border ${c.main.split(' ')[1]} rounded-xl p-4 transition-all duration-300 hover:-translate-y-1 hover:${c.glow} flex flex-col gap-3`}
+                  className={`intensity-cell relative cursor-pointer group ${c.bg} border-2 rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3`}
+                  style={{
+                    borderColor: `color-mix(in srgb, ${statusVar} 50%, transparent)`,
+                    boxShadow: `var(--shadow-clay), 0 0 ${Math.round(8 + glowI * 20)}px color-mix(in srgb, ${statusVar} ${Math.round(20 + glowI * 30)}%, transparent)`,
+                  }}
                   onClick={() => onStudentClick(student._id)}
                   variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
                   transition={{ type: 'spring', stiffness: 300, damping: 28 }}
@@ -146,13 +152,13 @@ export function HeatmapView({
                   {/* Top bar: status badge + accuracy */}
                   <div className="flex items-center justify-between gap-2">
                     <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border -translate-x-3 ${c.main.split(' ')[1]} bg-surface/60`}>
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.bar}`} />
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.bar} ${status === 'red' ? 'animate-pulse' : ''}`} style={{ boxShadow: `0 0 6px ${statusVar}` }} />
                       <span className={`font-label-md text-xs ${c.main.split(' ')[0]}`}>
                         {labelMap[status as keyof typeof labelMap]}
                       </span>
                     </div>
                     {accuracy !== null && (
-                      <span className={`text-xs font-bold pl-4 pr-1.5 py-0.5 rounded-full ${c.main.split(' ')[1]} ${c.main.split(' ')[0]} bg-surface/60 inline-block relative translate-y-1 translate-x-2`}>
+                      <span className={`num text-xs font-bold pl-4 pr-1.5 py-0.5 rounded-full ${c.main.split(' ')[1]} ${c.main.split(' ')[0]} bg-surface/60 inline-block relative translate-y-1 translate-x-2`}>
                         {accuracy}%
                       </span>
                     )}
@@ -328,7 +334,7 @@ function LegendChip({ count, label, colorClass, textClass }: { count: number; la
   return (
     <div className="flex items-center gap-2 bg-surface-container/50 px-3 py-1.5 rounded-full border border-outline-variant/50">
       <div className={`w-3 h-3 rounded-full ${colorClass}`} />
-      <span className={`font-headline-sm ${textClass}`}>{count}</span>
+      <span className={`num font-bold ${textClass}`}>{count}</span>
       <span className="text-xs text-on-surface-variant">{label}</span>
     </div>
   );

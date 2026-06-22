@@ -20,6 +20,7 @@ import type * as homework from "../homework.js";
 import type * as homeworkRundown from "../homeworkRundown.js";
 import type * as levels from "../levels.js";
 import type * as powerMap from "../powerMap.js";
+import type * as precompute from "../precompute.js";
 import type * as questions from "../questions.js";
 import type * as seed from "../seed.js";
 import type * as seedCompound from "../seedCompound.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   homeworkRundown: typeof homeworkRundown;
   levels: typeof levels;
   powerMap: typeof powerMap;
+  precompute: typeof precompute;
   questions: typeof questions;
   seed: typeof seed;
   seedCompound: typeof seedCompound;

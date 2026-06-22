@@ -43,20 +43,41 @@ export const getNextQuestion = query({
 
     const candidates = allAtDifficulty.filter((q) => !recentIds.has(q._id));
 
+    let selectedQuestion = null;
     if (candidates.length > 0) {
       const idx = Math.floor(Math.random() * candidates.length);
-      return candidates[idx];
+      selectedQuestion = candidates[idx];
+    } else {
+      // Fallback: any question in topic
+      const all = await ctx.db
+        .query("questions")
+        .withIndex("by_topic", (q) => q.eq("topicId", topicId))
+        .collect();
+
+      const fallback = all.filter((q) => !recentIds.has(q._id));
+      if (fallback.length === 0) {
+        selectedQuestion = all[0] ?? null;
+      } else {
+        selectedQuestion = fallback[Math.floor(Math.random() * fallback.length)];
+      }
     }
 
-    // Fallback: any question in topic
-    const all = await ctx.db
-      .query("questions")
-      .withIndex("by_topic", (q) => q.eq("topicId", topicId))
-      .collect();
+    if (!selectedQuestion) return null;
 
-    const fallback = all.filter((q) => !recentIds.has(q._id));
-    if (fallback.length === 0) return all[0] ?? null;
-    return fallback[Math.floor(Math.random() * fallback.length)];
+    // Personalize if theme is precomputed
+    const student = await ctx.db.get(studentId);
+    if (student?.homeworkTheme) {
+      const precomputed = await ctx.db
+        .query("precomputedThemedQuestions")
+        .withIndex("by_question_theme", q => q.eq("questionId", selectedQuestion!._id).eq("theme", student.homeworkTheme!))
+        .first();
+      
+      if (precomputed) {
+        selectedQuestion.stem = precomputed.personalizedText;
+      }
+    }
+
+    return selectedQuestion;
   },
 });
 

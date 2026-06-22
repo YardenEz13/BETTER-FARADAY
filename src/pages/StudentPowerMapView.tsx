@@ -21,7 +21,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
 
   if (!studentId) {
     return (
-      <div className="flex flex-col w-full h-full p-10 items-center justify-center bg-background text-on-background font-body-md" dir="rtl">
+      <div className="flex flex-col w-full min-h-[calc(100vh-6rem)] p-10 items-center justify-center bg-background text-on-background font-body-md" dir="rtl">
         <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors mb-6 shadow-sm font-label-md" onClick={onBack}>
           <ChevronRight size={16} /> חזרה למפת חום
         </button>
@@ -74,20 +74,29 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
         <div className="font-headline-md text-on-surface mb-6 border-b border-outline-variant pb-2">מפת שליטה בנושאים</div>
         {powerMap?.topicMastery && powerMap.topicMastery.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12 w-full">
-            {powerMap.topicMastery.map((t: any) => (
-              <div key={t.topicId} className={`bg-surface-container-low border rounded-xl p-6 transition-all hover:scale-[1.02] hover:shadow-md ${t.masteryScore >= 70 ? 'border-outline-variant hover:border-primary' : t.masteryScore >= 40 ? 'border-outline-variant hover:border-secondary' : 'border-error/50 hover:border-error'}`}>
-                <div className={`font-headline-xl mb-2 ${t.masteryScore >= 70 ? 'text-primary' : t.masteryScore >= 40 ? 'text-secondary' : 'text-error'}`}>
-                  {t.masteryScore}%
+            {powerMap.topicMastery.map((t: any) => {
+              const tierVar = t.masteryScore >= 70 ? 'var(--color-primary)' : t.masteryScore >= 40 ? 'var(--color-secondary)' : 'var(--color-error)';
+              const intensity = Math.max(0, Math.min(100, t.masteryScore)) / 100;
+              return (
+                <div
+                  key={t.topicId}
+                  className="intensity-cell bg-surface rounded-2xl border-2 p-6 transition-all hover:-translate-y-1"
+                  style={{
+                    borderColor: `color-mix(in srgb, ${tierVar} 45%, transparent)`,
+                    boxShadow: `var(--shadow-clay), 0 0 ${Math.round(6 + intensity * 22)}px color-mix(in srgb, ${tierVar} ${Math.round(18 + intensity * 32)}%, transparent)`,
+                  }}
+                >
+                  <div className="num font-black text-4xl mb-2" style={{ color: tierVar }}>{t.masteryScore}%</div>
+                  <div className="text-on-surface font-bold text-sm mb-2 leading-tight">{t.topicName}</div>
+                  <div className="num text-xs text-on-surface-variant mt-2">
+                    {t.sessionCount} שיחות · דיוק {t.avgAccuracy.toFixed(1)}/5
+                  </div>
+                  <div className="text-sm font-semibold mt-4" style={{ color: t.trend === 'improving' ? 'var(--color-primary)' : t.trend === 'declining' ? 'var(--color-error)' : 'var(--color-secondary)' }}>
+                    {t.trend === 'improving' ? '↑ משתפר' : t.trend === 'declining' ? '↓ יורד' : '─ יציב'}
+                  </div>
                 </div>
-                <div className="text-on-surface font-headline-sm mb-2 leading-tight">{t.topicName}</div>
-                <div className="font-label-md text-on-surface-variant opacity-80 mt-2">
-                  {t.sessionCount} שיחות · דיוק {t.avgAccuracy.toFixed(1)}/5
-                </div>
-                <div className={`font-label-lg mt-4 ${t.trend === 'improving' ? 'text-primary' : t.trend === 'declining' ? 'text-error' : 'text-secondary'}`}>
-                  {t.trend === 'improving' ? '↑ משתפר' : t.trend === 'declining' ? '↓ יורד' : '─ יציב'}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-surface border border-outline-variant rounded-2xl p-10 text-center text-on-surface-variant opacity-70 mb-12 w-full font-body-lg shadow-sm">
@@ -103,18 +112,18 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
               <div className="flex items-center gap-10">
                 <div className="flex flex-col">
                   <span className="font-label-md text-on-surface-variant mb-1">שינוי דיוק</span>
-                  <span className={`font-headline-lg ${powerMap.progressVelocity.accuracyDelta > 0 ? "text-primary" : powerMap.progressVelocity.accuracyDelta < 0 ? "text-error" : "text-secondary"}`}>
+                  <span className={`num font-headline-lg ${powerMap.progressVelocity.accuracyDelta > 0 ? "text-primary" : powerMap.progressVelocity.accuracyDelta < 0 ? "text-error" : "text-secondary"}`}>
                     {powerMap.progressVelocity.accuracyDelta > 0 ? "+" : ""}{powerMap.progressVelocity.accuracyDelta}
                   </span>
                 </div>
                 <div className="flex flex-col">
                   <span className="font-label-md text-on-surface-variant mb-1">שינוי עצמאות</span>
-                  <span className={`font-headline-lg ${powerMap.progressVelocity.autonomyDelta > 0 ? "text-primary" : powerMap.progressVelocity.autonomyDelta < 0 ? "text-error" : "text-secondary"}`}>
+                  <span className={`num font-headline-lg ${powerMap.progressVelocity.autonomyDelta > 0 ? "text-primary" : powerMap.progressVelocity.autonomyDelta < 0 ? "text-error" : "text-secondary"}`}>
                     {powerMap.progressVelocity.autonomyDelta > 0 ? "+" : ""}{powerMap.progressVelocity.autonomyDelta}
                   </span>
                 </div>
               </div>
-              <div className="font-label-lg text-on-surface bg-surface-container border border-outline-variant px-4 py-2 rounded-full">
+              <div className="num font-label-lg text-on-surface bg-surface-container border-2 border-outline px-4 py-2 rounded-full">
                 {powerMap.progressVelocity.overall} שיחות/שבוע
               </div>
             </div>
@@ -127,7 +136,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
                   <div className="flex-1 flex gap-1 h-6 bg-surface-container-low rounded-full overflow-hidden border border-outline-variant relative">
                     <div className="h-full bg-primary" style={{ width: `${(w.avgAccuracy / 5) * 100}%` }}></div>
                   </div>
-                  <div className="text-on-surface font-headline-sm w-12 text-center">
+                  <div className="num text-on-surface font-bold w-12 text-center">
                     {w.avgAccuracy.toFixed(1)}
                   </div>
                 </div>
@@ -290,15 +299,15 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
               <div className="flex-col gap-4 text-on-surface">
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">סה"כ שיחות</span>
-                  <span className="font-headline-md text-primary">{powerMap.engagement.totalSessions}</span>
+                  <span className="num font-bold text-lg text-primary">{powerMap.engagement.totalSessions}</span>
                 </div>
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">סה"כ הודעות</span>
-                  <span className="font-headline-md text-primary">{powerMap.engagement.totalMessages}</span>
+                  <span className="num font-bold text-lg text-primary">{powerMap.engagement.totalMessages}</span>
                 </div>
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">משך ממוצע</span>
-                  <span className="font-headline-md text-primary">{formatDuration(powerMap.engagement.avgSessionDuration)}</span>
+                  <span className="num font-bold text-lg text-primary">{formatDuration(powerMap.engagement.avgSessionDuration)}</span>
                 </div>
               </div>
             </div>

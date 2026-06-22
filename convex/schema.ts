@@ -57,6 +57,12 @@ export default defineSchema({
     aiHint: v.string(),
   }).index("by_student", ["studentId"]),
 
+  precomputedThemedQuestions: defineTable({
+    questionId: v.string(), // Works for both legacy and compound questions
+    theme: v.string(),
+    personalizedText: v.string(),
+  }).index("by_question_theme", ["questionId", "theme"]),
+
   sessions: defineTable({
     studentId: v.id("students"),
     topicId: v.id("topics"),

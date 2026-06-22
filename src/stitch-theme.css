@@ -118,7 +118,7 @@
   --color-surface-tint: #2b6c00;
   --color-primary: #2b6c00;
   --color-on-primary: #ffffff;
-  --color-primary-container: #58cc02;
+  --color-primary-container: #17C964;
   --color-on-primary-container: #1e5000;
   --color-inverse-primary: #6be026;
   --color-secondary: #4e616b;
@@ -156,3 +156,4 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 }
+

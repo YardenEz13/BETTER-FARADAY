@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Assistant:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ── Local font: Yarden (used for h1 only) ── */
+/* ── Local font: Yarden (used for display/hero headings only) ── */
 @font-face {
   font-family: 'Yarden';
   src: url('./assets/YardenAlefAlefAlef/web/yarden-regular-alefalefalef.woff2') format('woff2'),
@@ -20,219 +20,264 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   FARADAY Logic — Design System V5 (Stitch Integration)
+   FARADAY Logic — Design System V7 ("Live Wire" Edition)
+   Light-first claymorphic design · electric volt-green identity
+   Primary "Volt" green · "Arc" violet · "Filament" amber · "Lab ink" dark
    ═══════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  --font-outfit: 'Assistant', sans-serif;
-  --font-display: 'Yarden', 'Assistant', sans-serif;
-  --font-body: 'Assistant', sans-serif;
-  --font-mono: 'Fredoka', 'Assistant', sans-serif;
+  /* ── Fonts ── */
+  --font-display:    'Yarden', 'Assistant', sans-serif;
+  --font-body:       'Assistant', sans-serif;
+  --font-outfit:     'Assistant', sans-serif;
+  --font-mono:       'JetBrains Mono', 'Assistant', monospace;
 
-  --font-weight-normal: 500;
-  --font-weight-medium: 600;
-  --font-weight-semibold: 700;
-  --font-weight-bold: 800;
-  --font-weight-extrabold: 900;
-
+  /* Semantic font-family tokens (used as Tailwind classes like font-headline-lg) */
   --font-headline-xl: 'Yarden', 'Assistant', sans-serif;
   --font-headline-lg: 'Yarden', 'Assistant', sans-serif;
-  --font-headline-md: 'Fredoka', 'Assistant', sans-serif;
-  --font-headline-sm: 'Fredoka', 'Assistant', sans-serif;
-  --font-body-lg: var(--font-body);
-  --font-body-md: var(--font-body);
-  --font-body-sm: var(--font-body);
-  --font-label-lg: 'Fredoka', 'Assistant', sans-serif;
-  --font-label-md: 'Fredoka', 'Assistant', sans-serif;
+  --font-headline-md: 'Assistant', sans-serif;
+  --font-headline-sm: 'Assistant', sans-serif;
+  --font-body-lg:    'Assistant', sans-serif;
+  --font-body-md:    'Assistant', sans-serif;
+  --font-body-sm:    'Assistant', sans-serif;
+  --font-label-lg:   'Assistant', sans-serif;
+  --font-label-md:   'Assistant', sans-serif;
 
-  /* Dark Mode Colors (Faraday Logic Immersive) */
-  --color-surface: #131313;
-  --color-surface-dim: #131313;
-  --color-surface-bright: #393939;
-  --color-surface-container-lowest: #0e0e0e;
-  --color-surface-container-low: #1b1b1b;
-  --color-surface-container: #1f1f1f;
-  --color-surface-container-high: #2a2a2a;
-  --color-surface-container-highest: #353535;
-  --color-on-surface: #e2e2e2;
-  --color-on-surface-variant: #becab4;
-  --color-inverse-surface: #e2e2e2;
-  --color-inverse-on-surface: #303030;
-  --color-outline: #899480;
-  --color-outline-variant: #3f4a39;
-  --color-surface-tint: #74de4f;
-  --color-primary: #74de4f;
-  --color-on-primary: #0c3900;
-  --color-primary-container: #3da518;
-  --color-on-primary-container: #093100;
-  --color-inverse-primary: #1e6d00;
-  --color-secondary: #a0d588;
-  --color-on-secondary: #0c3900;
-  --color-secondary-container: #235114;
-  --color-on-secondary-container: #8fc378;
-  --color-tertiary: #ffafd3;
-  --color-on-tertiary: #620040;
-  --color-tertiary-container: #f056ab;
-  --color-on-tertiary-container: #560037;
-  --color-error: #ffb4ab;
-  --color-on-error: #690005;
-  --color-error-container: #93000a;
-  --color-on-error-container: #ffdad6;
-  --color-primary-fixed: #90fc69;
-  --color-primary-fixed-dim: #74de4f;
-  --color-on-primary-fixed: #042100;
-  --color-on-primary-fixed-variant: #155200;
-  --color-secondary-fixed: #bbf1a2;
-  --color-secondary-fixed-dim: #a0d588;
-  --color-on-secondary-fixed: #042100;
-  --color-on-secondary-fixed-variant: #235114;
-  --color-tertiary-fixed: #ffd8e7;
-  --color-tertiary-fixed-dim: #ffafd3;
-  --color-on-tertiary-fixed: #3d0026;
-  --color-on-tertiary-fixed-variant: #8b005b;
-  --color-background: #131313;
-  --color-on-background: #e2e2e2;
-  --color-surface-variant: #353535;
+  --font-weight-normal:    400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+  --font-weight-extrabold: 800;
 
-  /* Spacing */
-  --spacing-base: 8px;
-  --spacing-xs: 4px;
-  --spacing-sm: 12px;
-  --spacing-md: 24px;
-  --spacing-lg: 40px;
-  --spacing-xl: 64px;
-  --spacing-gutter: 24px;
-  --spacing-margin: 32px;
-  --spacing-unit: 8px;
-  --spacing-stack-sm: 8px;
-  --spacing-stack-md: 16px;
-  --spacing-stack-lg: 32px;
-  --spacing-margin-desktop: 40px;
-  --spacing-margin-tablet: 24px;
-  --spacing-margin-mobile: 16px;
+  /* ── PRIMARY — Volt Green (electric, premium) ── */
+  --color-primary:                  #17C964;
+  --color-primary-dark:             #0E9E4D;
+  --color-on-primary:               #ffffff;
+  --color-primary-container:        #d4f7e2;
+  --color-on-primary-container:     #064a26;
+  --color-primary-fixed:            #c3f3d6;
+  --color-primary-fixed-dim:        #17C964;
+  --color-on-primary-fixed:         #042312;
+  --color-on-primary-fixed-variant: #0a7a3b;
+  --color-inverse-primary:          #5BFF9F;  /* "Spark" — live glow accent */
+  --color-surface-tint:             #17C964;
 
-  /* Border Radius */
-  --radius-sm: 0.25rem;
-  --radius: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  /* ── SECONDARY — Arc Violet (high-voltage / AI) ── */
+  --color-secondary:                  #7B61FF;
+  --color-secondary-dark:             #5b41db;
+  --color-on-secondary:               #ffffff;
+  --color-secondary-container:        #e6e0ff;
+  --color-on-secondary-container:     #29166e;
+  --color-secondary-fixed:            #ddd5ff;
+  --color-secondary-fixed-dim:        #7B61FF;
+  --color-on-secondary-fixed:         #160a45;
+  --color-on-secondary-fixed-variant: #4a32c0;
+
+  /* ── TERTIARY — Filament Amber (incandescent wire) ── */
+  --color-tertiary:                  #FFB02E;
+  --color-tertiary-dark:             #d68a00;
+  --color-on-tertiary:               #2b1600;
+  --color-tertiary-container:        #ffe6bf;
+  --color-on-tertiary-container:     #4a2e00;
+  --color-tertiary-fixed:            #ffdca0;
+  --color-tertiary-fixed-dim:        #FFB02E;
+  --color-on-tertiary-fixed:         #2b1600;
+  --color-on-tertiary-fixed-variant: #7d5200;
+
+  /* ── ERROR ── */
+  --color-error:                  #FF4B4B;
+  --color-on-error:               #ffffff;
+  --color-error-container:        #ffd6d6;
+  --color-on-error-container:     #660000;
+
+  /* ── LIGHT MODE SURFACES (default) — faint green-tinted "paper" ── */
+  --color-background:                  #F3F6F2;
+  --color-on-background:               #14201A;
+  --color-surface:                     #ffffff;
+  --color-surface-dim:                 #e8ece8;
+  --color-surface-bright:              #ffffff;
+  --color-surface-container-lowest:    #ffffff;
+  --color-surface-container-low:       #f7f7f7;
+  --color-surface-container:           #f0f0f0;
+  --color-surface-container-high:      #e8e8e8;
+  --color-surface-container-highest:   #dedede;
+  --color-surface-variant:             #e8e8e8;
+  --color-on-surface:                  #3c3c3c;
+  --color-on-surface-variant:          #777777;
+  --color-inverse-surface:             #3c3c3c;
+  --color-inverse-on-surface:          #f7f7f7;
+  --color-outline:                     #e0e0e0;
+  --color-outline-variant:             #ebebeb;
+
+  /* ── BORDER RADIUS — bubbly claymorphic ── */
+  --radius-sm:   0.625rem;  /* 10px */
+  --radius:      0.875rem;  /* 14px */
+  --radius-md:   1rem;      /* 16px */
+  --radius-lg:   1.25rem;   /* 20px */
+  --radius-xl:   1.5rem;    /* 24px */
   --radius-full: 9999px;
+
+  /* ── SPACING ── */
+  --spacing-base:           8px;
+  --spacing-xs:             4px;
+  --spacing-sm:             12px;
+  --spacing-md:             24px;
+  --spacing-lg:             40px;
+  --spacing-xl:             64px;
+  --spacing-gutter:         24px;
+  --spacing-margin:         32px;
+  --spacing-unit:           8px;
+  --spacing-stack-sm:       8px;
+  --spacing-stack-md:       16px;
+  --spacing-stack-lg:       32px;
+  --spacing-margin-desktop: 40px;
+  --spacing-margin-tablet:  24px;
+  --spacing-margin-mobile:  16px;
+
+  /* ── CLAY SHADOWS — 3D offset press style ── */
+  --shadow-clay:           0 4px 0 0 #d2d8d2, 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-clay-primary:   0 4px 0 0 #0E9E4D;
+  --shadow-clay-secondary: 0 4px 0 0 #5b41db;
+  --shadow-clay-tertiary:  0 4px 0 0 #d68a00;
+  --shadow-clay-error:     0 4px 0 0 #cc0000;
+  --shadow-sm:             0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:             0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:             0 8px 24px rgba(0,0,0,0.10);
+
+  /* ── TRANSITIONS ── */
+  --t-fast:   150ms ease-out;
+  --t-normal: 200ms ease-out;
+  --t-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-[data-theme="light"],
-:root[data-theme="light"] {
-  /* Light Mode Colors (Faraday Logic System) */
-  --color-surface: #f9f9f9;
-  --color-surface-dim: #dadada;
-  --color-surface-bright: #f9f9f9;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f3f3f3;
-  --color-surface-container: #eeeeee;
-  --color-surface-container-high: #e8e8e8;
-  --color-surface-container-highest: #e2e2e2;
-  --color-on-surface: #1b1b1b;
-  --color-on-surface-variant: #3f4a36;
-  --color-inverse-surface: #303030;
-  --color-inverse-on-surface: #f1f1f1;
-  --color-outline: #6f7b64;
-  --color-outline-variant: #becbb1;
-  --color-surface-tint: #2b6c00;
-  --color-primary: #45b100;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #58cc02;
-  --color-on-primary-container: #1e5000;
-  --color-inverse-primary: #6be026;
-  --color-secondary: #4e616b;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #cee3ef;
-  --color-on-secondary-container: #52656f;
-  --color-tertiary: #cc2595;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #ff8ed4;
-  --color-on-tertiary-container: #7b1f60;
-  --color-error: #de2828;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-  --color-primary-fixed: #87fe45;
-  --color-primary-fixed-dim: #6be026;
-  --color-on-primary-fixed: #082100;
-  --color-on-primary-fixed-variant: #1f5100;
-  --color-secondary-fixed: #d1e6f1;
-  --color-secondary-fixed-dim: #b5cad5;
-  --color-on-secondary-fixed: #0a1e26;
-  --color-on-secondary-fixed-variant: #374953;
-  --color-tertiary-fixed: #ffd8eb;
-  --color-tertiary-fixed-dim: #ffaedd;
-  --color-on-tertiary-fixed: #3b002c;
-  --color-on-tertiary-fixed-variant: #7d2061;
-  --color-background: #f9f9f9;
-  --color-on-background: #1b1b1b;
-  --color-surface-variant: #e2e2e2;
+/* ═══════════════════ DARK THEME — Lab Ink (green-black) ════════════════════ */
+[data-theme="dark"] {
+  /* Primary — Volt green, pops like a scope trace on lab ink */
+  --color-primary:                  #22D86B;
+  --color-primary-dark:             #128A45;
+  --color-on-primary:               #042312;
+  --color-primary-container:        #0a3d20;
+  --color-on-primary-container:     #8ff0b6;
+  --color-primary-fixed:            #0f5c2f;
+  --color-primary-fixed-dim:        #1fbf60;
+  --color-on-primary-fixed:         #d6ffe6;
+  --color-on-primary-fixed-variant: #5be08f;
+  --color-inverse-primary:          #5BFF9F;
+  --color-surface-tint:             #22D86B;
 
-  /* Light Mode Radius */
-  --radius-sm: 0.25rem;
-  --radius: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  /* Secondary — Arc violet, brighter for dark bg */
+  --color-secondary:                  #9A85FF;
+  --color-secondary-dark:             #6a4fe0;
+  --color-on-secondary:               #140a3a;
+  --color-secondary-container:        #2a1d6b;
+  --color-on-secondary-container:     #d8ccff;
+  --color-secondary-fixed:            #34246b;
+  --color-secondary-fixed-dim:        #7b61ff;
+  --color-on-secondary-fixed:         #e9e2ff;
+  --color-on-secondary-fixed-variant: #b0a0ff;
 
-  /* Recompute derived tokens with light-mode primary */
-  --color-primary-muted: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
-  --color-primary-light: color-mix(in srgb, var(--color-primary) 60%, var(--color-on-surface));
+  /* Tertiary — Filament amber on dark */
+  --color-tertiary:                  #FFBE52;
+  --color-tertiary-dark:             #c08400;
+  --color-on-tertiary:               #1a0e00;
+  --color-tertiary-container:        #3d2a00;
+  --color-on-tertiary-container:     #ffd99a;
+  --color-tertiary-fixed:            #3a2800;
+  --color-tertiary-fixed-dim:        #d09000;
+  --color-on-tertiary-fixed:         #ffe8b8;
+  --color-on-tertiary-fixed-variant: #e0a840;
+
+  /* Error on dark */
+  --color-error:                  #FF6B6B;
+  --color-on-error:               #1a0000;
+  --color-error-container:        #4a0000;
+  --color-on-error-container:     #ffb0b0;
+
+  /* Surfaces — Lab Ink (deep green-black, oscilloscope-at-night) */
+  --color-background:                #0C140E;
+  --color-on-background:             #dce8df;
+  --color-surface:                   #131D17;
+  --color-surface-dim:               #0e1610;
+  --color-surface-bright:            #1d2a21;
+  --color-surface-container-lowest:  #0a110c;
+  --color-surface-container-low:     #101a13;
+  --color-surface-container:         #131D17;
+  --color-surface-container-high:    #1a261d;
+  --color-surface-container-highest: #233227;
+  --color-surface-variant:           #18241b;
+  --color-on-surface:                #dce8df;
+  --color-on-surface-variant:        #8ba593;
+  --color-inverse-surface:           #dce8df;
+  --color-inverse-on-surface:        #131D17;
+  --color-outline:                   #2a3d2f;
+  --color-outline-variant:           #18241b;
+
+  /* Clay shadows on dark */
+  --shadow-clay:           0 4px 0 0 #060b07, 0 1px 4px rgba(0,0,0,0.45);
+  --shadow-clay-primary:   0 4px 0 0 #0c5e30;
+  --shadow-clay-secondary: 0 4px 0 0 #4632a0;
+  --shadow-clay-tertiary:  0 4px 0 0 #7a5200;
+  --shadow-clay-error:     0 4px 0 0 #7a0000;
+  --shadow-sm:             0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:             0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg:             0 8px 24px rgba(0,0,0,0.4);
 }
 
-/* ═══════════════════ LEGACY MAPPINGS ════════════════════ */
-/* These ensure old un-ported files don't break, mapping their variables to the new Design System. */
+/* ═══════════════════ LEGACY VARIABLE MAPPINGS ════════════════════ */
+/* Ensures un-migrated files don't break — all map to new design system */
 :root {
-  --text-primary: var(--color-on-surface);
-  --text-secondary: var(--color-on-surface-variant);
-  --text-muted: var(--color-on-surface-variant);
-  --border-default: var(--color-outline);
-  --border-subtle: var(--color-outline-variant);
-  --border-primary: var(--color-primary);
-  --bg-surface: var(--color-surface);
-  --bg-elevated: var(--color-surface-container-high);
-  --bg-overlay: var(--color-background);
-  --bg-void: var(--color-background);
-  --color-success: var(--color-primary);
-  --color-warning: var(--color-tertiary);
-  --color-danger: var(--color-error);
-  --color-accent: var(--color-secondary);
-  --amber: var(--color-secondary);
-  --amber-dim: var(--color-secondary-container);
-
-  /* Derived semantic tokens used across teacher views */
-  --color-primary-muted: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-  --color-primary-light: color-mix(in srgb, var(--color-primary) 70%, var(--color-on-surface));
-  --danger: var(--color-error);
-  --warning: var(--color-tertiary);
-  --color-glow-primary: color-mix(in srgb, var(--color-primary) 35%, transparent);
-  
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-
-  --t-fast: 150ms ease-out;
-  --t-normal: 250ms ease-out;
+  --text-primary:          var(--color-on-surface);
+  --text-secondary:        var(--color-on-surface-variant);
+  --text-muted:            var(--color-on-surface-variant);
+  --text-disabled:         color-mix(in srgb, var(--color-on-surface) 40%, transparent);
+  --border-default:        var(--color-outline);
+  --border-subtle:         var(--color-outline-variant);
+  --border-primary:        var(--color-primary);
+  --bg-surface:            var(--color-surface);
+  --bg-elevated:           var(--color-surface-container-high);
+  --bg-overlay:            var(--color-background);
+  --bg-void:               var(--color-background);
+  --bg-inset:              var(--color-surface-container-low);
+  --color-success:         var(--color-primary);
+  --color-success-muted:   color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  --color-warning:         var(--color-tertiary);
+  --color-warning-muted:   color-mix(in srgb, var(--color-tertiary) 12%, var(--color-surface));
+  --color-danger:          var(--color-error);
+  --color-danger-muted:    color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
+  --color-accent:          var(--color-secondary);
+  --color-accent-muted:    color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+  --color-primary-muted:   color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  --color-primary-light:   color-mix(in srgb, var(--color-primary) 60%, var(--color-surface));
+  --color-primary-dark-v:  var(--color-primary-dark);
+  --color-glow-primary:    color-mix(in srgb, var(--color-primary) 30%, transparent);
+  --danger:                var(--color-error);
+  --warning:               var(--color-tertiary);
+  --amber:                 var(--color-tertiary);
+  --amber-dim:             var(--color-tertiary-container);
 }
 
 /* ═══════════════════ GLOBAL RESET ════════════════════ */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
+/* Must live inside @layer base so Tailwind's `@layer utilities` (p-*, m-*, etc.)
+   can still override it. An UNLAYERED reset beats all layered utilities in the
+   cascade, which silently kills every padding/margin utility in the project. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
+
 html {
   font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
+
 body {
   font-family: 'Assistant', sans-serif;
-  font-weight: var(--font-weight-normal);
+  font-weight: 400;
   color: var(--color-on-background);
   background-color: var(--color-background);
   direction: rtl;
@@ -250,135 +295,169 @@ body {
 
 /* ═══════════════════ COMPONENTS ════════════════════ */
 @layer components {
-.glass {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-outline-variant);
-  border-radius: var(--radius-lg);
-  position: relative;
-  transition: all var(--t-normal);
-}
-.glass:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-}
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-family: 'Fredoka', 'Assistant', sans-serif;
-  font-size: 0.875rem;
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--t-fast);
-  white-space: nowrap;
-  outline: none;
-}
-.btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* ── Clay Card — the signature Duolingo floating card ── */
+  .clay-card {
+    @apply bg-surface rounded-2xl border-2 border-outline transition-all duration-200;
+    box-shadow: var(--shadow-clay);
+  }
+  .clay-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 0 var(--color-outline), 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .clay-card:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 0 var(--color-outline);
+  }
 
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-.btn-primary:hover { filter: brightness(1.1); }
+  /* ── Clay Buttons — Duolingo 3D press effect ── */
+  .btn-clay-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-2xl cursor-pointer select-none border-2 border-primary;
+    font-family: 'Assistant', sans-serif;
+    box-shadow: var(--shadow-clay-primary);
+    transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .btn-clay-primary:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-clay-primary:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 var(--color-primary-dark);
+  }
+  .btn-clay-primary:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-clay-primary:focus-visible { @apply outline-2 outline-offset-2 outline-primary; }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-outline-variant);
-}
-.btn-ghost:hover {
-  background: var(--color-surface-container-high);
-}
+  .btn-clay-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-secondary text-on-secondary font-semibold rounded-2xl cursor-pointer select-none border-2 border-secondary;
+    font-family: 'Assistant', sans-serif;
+    box-shadow: var(--shadow-clay-secondary);
+    transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .btn-clay-secondary:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-clay-secondary:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 var(--color-secondary-dark);
+  }
 
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-container-low);
-  border: 1px solid var(--color-outline-variant);
-  color: var(--color-on-surface);
-  cursor: pointer;
-  transition: all var(--t-fast);
-}
-.btn-icon:hover {
-  background: var(--color-surface-container-high);
-  color: var(--color-primary);
-}
+  .btn-clay-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-surface text-on-surface-variant font-semibold rounded-2xl cursor-pointer select-none border-2 border-outline;
+    font-family: 'Assistant', sans-serif;
+    box-shadow: var(--shadow-clay);
+    transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms;
+  }
+  .btn-clay-ghost:hover:not(:disabled) {
+    @apply border-primary text-primary;
+    transform: translateY(-1px);
+  }
+  .btn-clay-ghost:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: 'Fredoka', 'Assistant', sans-serif;
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-semibold);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-container);
-  color: var(--color-on-primary-container);
-}
+  /* ── Backward-compatible aliases ── */
+  .glass, .card, .shard {
+    @apply bg-surface rounded-2xl border-2 border-outline transition-all duration-200 cursor-pointer;
+    box-shadow: var(--shadow-clay);
+  }
+  .glass:hover, .card:hover, .shard:hover {
+    @apply border-outline-variant;
+    box-shadow: 0 6px 0 0 var(--color-outline-variant), 0 2px 12px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+  .glass:active, .card:active, .shard:active {
+    box-shadow: 0 0 0 0 var(--color-outline), 0 1px 4px rgba(0,0,0,0.06);
+    transform: translateY(4px);
+  }
+  .btn, .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    background-color: var(--color-primary); color: white; font-weight: 700; border-radius: 1rem; border: 2px solid var(--color-primary-dark); transition: all 0.2s; cursor: pointer;
+    padding: 0.75rem 1.5rem;
+    box-shadow: var(--shadow-clay-primary);
+  }
+  .btn:hover, .btn-primary:hover {
+    box-shadow: 0 6px 0 0 var(--color-primary-dark), 0 2px 12px rgba(23,201,100,0.3);
+    transform: translateY(-2px);
+  }
+  .btn:active:not(:disabled), .btn-primary:active:not(:disabled) {
+    box-shadow: 0 0 0 0 var(--color-primary-dark);
+    transform: translateY(4px);
+  }
+  
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    background-color: var(--color-surface); color: var(--color-on-surface-variant); font-weight: 700; border-radius: 1rem; border: 2px solid var(--color-outline); transition: all 0.2s; cursor: pointer;
+    padding: 0.75rem 1.5rem;
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-outline-variant); color: var(--color-on-surface);
+    box-shadow: 0 4px 0 0 var(--color-outline-variant);
+    transform: translateY(-2px);
+  }
+  .btn-ghost:active:not(:disabled) {
+    box-shadow: none;
+    transform: translateY(2px);
+  }
+  .btn-lg      { @apply px-8 py-4 text-base; }
 
-.label-mono {
-  font-family: 'Fredoka', 'Assistant', sans-serif;
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-on-surface-variant);
-}
+  .btn-icon {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-container border-2 border-outline text-on-surface cursor-pointer transition-all duration-150;
+  }
+  .btn-icon:hover { @apply border-primary text-primary bg-primary/5; }
 
-.field {
-  width: 100%;
-  background: var(--color-surface-container-lowest);
-  border: 1px solid var(--color-outline);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  font-family: 'Assistant', sans-serif;
-  font-size: 1rem;
-  color: var(--color-on-surface);
-  outline: none;
-  transition: border-color var(--t-fast);
-}
-.field:focus { border-color: var(--color-primary); }
+  .badge {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-primary-container text-on-primary-container;
+    font-family: 'Assistant', sans-serif;
+  }
 
-.progress-track {
-  width: 100%;
-  height: 8px;
-  background: var(--color-surface-container-high);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  transition: width 0.7s ease-out;
-}
+  .label-mono {
+    @apply text-xs font-semibold uppercase tracking-widest text-on-surface-variant;
+    font-family: 'Assistant', sans-serif;
+  }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+  .field {
+    @apply w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface outline-none transition-all duration-150;
+    font-family: 'Assistant', sans-serif;
+    font-size: 1rem;
+  }
+  .field:focus { @apply border-primary; }
+  .field::placeholder { @apply text-on-surface-variant; }
+
+  /* ── Progress ── */
+  .progress-track {
+    @apply w-full h-3 bg-surface-container-high rounded-full overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-full rounded-full bg-primary transition-all duration-700;
+  }
+  .progress-fill-gradient {
+    @apply h-full rounded-full transition-all duration-700;
+    background: linear-gradient(to left, var(--color-primary), var(--color-secondary));
+  }
+  .progress-fill-tertiary {
+    @apply h-full rounded-full transition-all duration-700;
+    background: linear-gradient(to left, var(--color-tertiary), var(--color-tertiary-container));
+  }
+
+  /* ── Stat Chip ── */
+  .stat-chip {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border-2 border-outline font-semibold text-sm text-on-surface whitespace-nowrap transition-all duration-200 cursor-pointer;
+    font-family: 'Assistant', sans-serif;
+    box-shadow: var(--shadow-clay);
+  }
+  .stat-chip:hover { @apply border-primary text-primary -translate-y-0.5; }
 }
 
 /* ═══════════════════ TYPOGRAPHY UTILITIES ════════════════════ */
-.font-display { font-family: 'Yarden', 'Assistant', serif !important; }
+.font-display { font-family: 'Yarden', 'Assistant', sans-serif !important; }
+
+/* Instrument-panel numerals — for XP, streaks, %, scores (voltmeter readout) */
+.num {
+  font-family: 'JetBrains Mono', 'Assistant', monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+.text-spark { color: var(--color-inverse-primary); }
 
 /* ═══════════════════ GRADIENT UTILITIES ════════════════════ */
-.gradient-primary {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-}
-.gradient-tertiary {
-  background: linear-gradient(135deg, var(--color-tertiary), var(--color-primary));
-}
+.gradient-primary  { background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); }
+.gradient-tertiary { background: linear-gradient(135deg, var(--color-tertiary), var(--color-primary)); }
+
 .text-gradient-primary {
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   -webkit-background-clip: text;
@@ -393,72 +472,84 @@ body {
 }
 
 /* ═══════════════════ GLOW UTILITIES ════════════════════ */
-.glow-primary { box-shadow: 0 0 20px rgba(116, 222, 79, 0.25); }
-.glow-tertiary { box-shadow: 0 0 20px rgba(255, 175, 211, 0.25); }
-.glow-hover-primary:hover { box-shadow: 0 0 24px rgba(116, 222, 79, 0.35); transition: box-shadow 0.3s; }
+.glow-primary        { box-shadow: 0 0 20px rgba(23, 201, 100, 0.32); }
+.glow-spark          { box-shadow: 0 0 22px rgba(91, 255, 159, 0.45); }
+.glow-tertiary       { box-shadow: 0 0 20px rgba(255, 176, 46, 0.30); }
+.glow-hover-primary:hover { box-shadow: 0 0 24px rgba(23, 201, 100, 0.42); transition: box-shadow 0.3s; }
 
-/* ═══════════════════ CARD UTILITIES ════════════════════ */
-.card {
-  background: var(--color-surface-container-lowest);
-  border: 1px solid var(--color-outline-variant);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.card:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 20px rgba(116, 222, 79, 0.08);
-}
+/* ═══════════════════ ELECTRIC / FIELD-LINE MOTION ════════════════════ */
+/* Signature: current flowing through the learning circuit + charge pulse + field rings.
+   All gated by prefers-reduced-motion at the bottom of this file. */
 
-/* ═══════════════════ STAT CHIP ════════════════════ */
-.stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 9999px;
-  background: var(--color-surface-container-low);
-  border: 1px solid var(--color-outline-variant);
-  font-family: 'Fredoka', 'Assistant', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: all 0.2s;
+/* Current flowing along the charged wire */
+.wire-current {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 9px,
+    var(--color-inverse-primary) 9px, var(--color-inverse-primary) 13px
+  );
+  opacity: 0.65;
+  animation: current-flow 0.9s linear infinite;
 }
-.stat-chip:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-container);
-  color: var(--color-on-primary-container);
+@keyframes current-flow { to { background-position-y: 22px; } }
+
+/* A charge pulse traveling toward the active lesson */
+.charge-pulse { animation: charge-travel 2.1s ease-in-out infinite; }
+@keyframes charge-travel {
+  0%   { top: 0%;   opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
 }
 
-/* ═══════════════════ PROGRESS BAR COLORS ════════════════════ */
-.progress-fill-gradient {
-  height: 100%;
-  border-radius: 9999px;
-  background: linear-gradient(to left, var(--color-primary), var(--color-secondary));
-  transition: width 0.7s ease-out;
-}
-.progress-fill-tertiary {
-  height: 100%;
-  border-radius: 9999px;
-  background: linear-gradient(to left, var(--color-tertiary), var(--color-tertiary-container));
-  transition: width 0.7s ease-out;
-}
-/* == CARD PADDING FIXES == */
-.glass, .card, .shard {
-  min-width: 0;
-  box-sizing: border-box;
+/* Lines of force radiating from a charged (active) node */
+.field-ring { animation: field-pulse 2.4s ease-out infinite; }
+.field-ring--2 { animation-delay: 1.2s; }
+@keyframes field-pulse {
+  0%   { transform: translate(-50%, -50%) scale(0.75); opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(1.55); opacity: 0; }
 }
 
-/* == MOBILE RESPONSIVE == */
+/* Ambient circuit field — faint dotted grid for hero/section backdrops */
+.circuit-grid {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 24%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Drifting charge particle */
+.charge-drift { animation: charge-drift 4.5s ease-in-out infinite; }
+@keyframes charge-drift {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+  50%      { transform: translateY(-14px) scale(1.25); opacity: 1; }
+}
+
+/* Mastery/intensity dot — a charged cell whose glow scales with --intensity (0–1) */
+.intensity-cell {
+  position: relative;
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+
+/* ═══════════════════ SCROLLBAR ════════════════════ */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-outline); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+/* ═══════════════════ RESPONSIVE ════════════════════ */
 @media (max-width: 768px) {
-  header.fixed { padding-left: 1rem !important; padding-right: 1rem !important; }
-  .max-w-6xl { padding-left: 1rem !important; padding-right: 1rem !important; }
-  .stat-chip { font-size: 0.75rem; padding: 6px 10px; }
-  .btn { padding: 0.6rem 1rem; font-size: 0.85rem; }
-  .btn-lg { padding: 0.75rem 1.25rem; font-size: 0.9rem; }
-  .glass { padding: 1.25rem !important; }
+  .stat-chip       { font-size: 0.75rem; padding: 6px 12px; }
+  .clay-card       { padding: 1.25rem !important; }
+  .glass           { padding: 1.25rem !important; }
+  .btn-clay-primary, .btn-clay-ghost { padding: 0.6rem 1.2rem; font-size: 0.875rem; }
 }
 @media (max-width: 480px) {
-  .glass { padding: 1rem !important; }
+  .clay-card, .glass { padding: 1rem !important; }
+}
+
+/* ═══════════════════ REDUCED MOTION ════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { X, Send, Bot, BookOpen, Zap, WifiOff, History, MessageSquare, Sparkles, Clock, Terminal, ChevronDown, ChevronUp, Copy, ThumbsUp, Calculator, Paperclip, Settings, User } from "lucide-react";
+import { X, Send, BookOpen, Zap, WifiOff, History, MessageSquare, Sparkles, Clock, Terminal, ChevronDown, ChevronUp, Copy, ThumbsUp, Calculator, Paperclip, Settings, User } from "lucide-react";
 import {
   isLocalAIAvailable,
   getAIStatus,
@@ -33,6 +33,7 @@ import {
   flushAllPending,
 } from "../services/chatStorage";
 import MathText from "./MathText";
+import FaradayAvatar from "./FaradayAvatar";
 
 interface AIChatPanelProps {
   isOpen: boolean;
@@ -784,6 +785,12 @@ export default function AIChatPanel({
 
   if (!isOpen) return null;
 
+  // Until the first real exchange, show a richer intro instead of a bare system pill
+  const hasConversation = messages.some((m) => m.role === "user" || m.role === "model");
+  const starterPrompts = agentType === "practice"
+    ? ["לא הבנתי את השאלה", "תן לי רמז קטן", "איך מתחילים?"]
+    : ["אני תקוע בסעיף הזה", "תסביר לי את הנושא", "בדוק את הפתרון שלי"];
+
   const formatTime = (ms: number) => {
     const d = new Date(ms);
     return d.toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -797,10 +804,10 @@ export default function AIChatPanel({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 220 }}
-          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-[0_-8px_48px_color-mix(in_srgb,var(--color-on-background)_60%,transparent)] overflow-hidden h-[85vh] md:h-[65vh]"
+          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-2xl overflow-hidden h-[58vh] md:h-[50vh]"
           style={{
             background: 'var(--color-surface)',
-            borderTop: '1px solid var(--color-outline-variant)',
+            borderTop: '2px solid var(--color-outline-variant)',
             borderTopLeftRadius: '24px',
             borderTopRightRadius: '24px',
           }}
@@ -815,7 +822,7 @@ export default function AIChatPanel({
           <div
             className="pointer-events-none absolute inset-0 z-[1] opacity-0"
             style={{
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(116,222,79,0.015) 2px, rgba(116,222,79,0.015) 4px)',
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(91,255,159,0.015) 2px, rgba(91,255,159,0.015) 4px)',
             }}
             aria-hidden
           />
@@ -824,13 +831,13 @@ export default function AIChatPanel({
             {/* AI identity */}
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center shadow-[0_0_15px_rgba(116,222,79,0.25)]">
-                  <Bot className="text-primary text-2xl" />
+                <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
+                  <FaradayAvatar px={48} fill />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(116,222,79,0.6)]" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
               </div>
               <div>
-                <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(116,222,79,0.08)' }}>
+                <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
                   פרופסור פאראדיי
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -903,7 +910,43 @@ export default function AIChatPanel({
                 </div>
               )}
 
-              {messages.map((msg, i) => {
+              {/* Intro / starter state — shown until the first real message */}
+              {!hasConversation && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-1 flex-col items-center justify-center text-center gap-5 py-8"
+                >
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_rgba(91,255,159,0.3)]">
+                      <FaradayAvatar px={64} fill />
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
+                    <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
+                      {agentType === "practice"
+                        ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — לא נותן תשובות, בונה איתך את הדרך.`
+                        : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
+                    {starterPrompts.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setInput(s)}
+                        className="px-4 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface text-sm font-medium hover:border-primary hover:text-primary transition-all"
+                        style={{ boxShadow: 'var(--shadow-clay)' }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {hasConversation && messages.map((msg, i) => {
                 if (msg.role === "system") return (
                   <div key={i} className="flex justify-center">
                     <div className="px-4 py-2 rounded-full text-xs font-label-md bg-surface-container-highest text-on-surface-variant border border-outline-variant">
@@ -923,9 +966,9 @@ export default function AIChatPanel({
                     className={`flex gap-4 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
                   >
                     {/* Avatar */}
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(116,222,79,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
+                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(91,255,159,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
                       {isAI ? (
-                        <Bot size={20} className="text-primary" />
+                        <FaradayAvatar px={40} fill />
                       ) : (
                         <User size={20} className="text-on-secondary-container" />
                       )}
@@ -953,18 +996,14 @@ export default function AIChatPanel({
               {/* Typing indicator */}
               {isTyping && (
                 <div className="flex gap-4 w-full max-w-4xl mr-auto">
-                  <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center shadow-[0_0_15px_rgba(116,222,79,0.15)]">
-                    <Bot className="text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.15)]">
+                    <FaradayAvatar px={40} fill />
                   </div>
-                  <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-6 py-5 shadow-lg flex items-center gap-2">
-                    {[0, 1, 2].map(i => (
-                      <motion.div
-                        key={i}
-                        className="w-2.5 h-2.5 rounded-full bg-primary"
-                        animate={{ opacity: [0.3, 1, 0.3], y: [0, -6, 0] }}
-                        transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }}
-                      />
-                    ))}
+                  <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-5 py-4 shadow-lg flex items-center gap-3">
+                    <ThinkingWave />
+                    <span className="font-label-md text-on-surface-variant" style={{ fontSize: '12px' }}>
+                      פאראדיי חושב…
+                    </span>
                   </div>
                 </div>
               )}
@@ -993,14 +1032,7 @@ export default function AIChatPanel({
           <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
             <div className="max-w-4xl mx-auto">
               {/* Console panel */}
-              <div
-                className="rounded-2xl shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all"
-                style={{
-                  background: 'color-mix(in srgb, var(--color-on-surface) 5%, transparent)',
-                  backdropFilter: 'blur(8px)',
-                  border: '1.5px solid var(--color-outline-variant)',
-                }}
-              >
+              <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
                 {/* Console title bar */}
                 <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
                   <Calculator className="" />
@@ -1056,6 +1088,38 @@ export default function AIChatPanel({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/* ── "Faraday is thinking" — a live voltage signal reading on an oscilloscope ── */
+function ThinkingWave() {
+  const reducedMotion = useReducedMotion();
+  const bars = [0, 1, 2, 3, 4];
+  if (reducedMotion) {
+    return (
+      <div className="flex items-end gap-1 h-5" aria-hidden>
+        {bars.map(i => (
+          <span
+            key={i}
+            className="w-1 rounded-full bg-primary"
+            style={{ height: i % 2 ? '100%' : '55%' }}
+          />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-end gap-1 h-5" aria-hidden>
+      {bars.map(i => (
+        <motion.span
+          key={i}
+          className="w-1 h-5 rounded-full bg-primary origin-bottom"
+          style={{ boxShadow: '0 0 6px var(--color-inverse-primary)' }}
+          animate={{ scaleY: [0.3, 1, 0.3] }}
+          transition={{ duration: 0.7, delay: i * 0.1, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
   );
 }
 

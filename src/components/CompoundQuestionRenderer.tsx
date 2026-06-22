@@ -105,7 +105,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     <div className="flex flex-col gap-6">
       {/* ── Preamble ── */}
       <motion.div
-        className="glass p-8 bg-[var(--bg-surface)] border border-[var(--border-default)] relative overflow-hidden"
+        className="glass p-8 bg-surface border border-outline relative overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -114,7 +114,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           <div className="flex items-center gap-4">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className={`w-2 h-2 rounded-none ${i < question.difficulty ? "bg-[var(--color-primary-light)] shadow-[var(--glow-acid)]" : "bg-white opacity-20"}`} />
+                <div key={i} className={`w-2 h-2 rounded-sm ${i < question.difficulty ? "bg-primary/80" : "bg-on-surface/15"}`} />
               ))}
             </div>
             <span className="label-mono opacity-80">רמה {question.difficulty}</span>
@@ -122,17 +122,17 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
           <div className="flex gap-2">
             {question.tags.map((tag) => (
-              <span key={tag} className="label-mono px-3 py-1 bg-[color-mix(in srgb, var(--color-on-surface) 5%, transparent)] border border-[var(--border-default)]">{tag}</span>
+              <span key={tag} className="label-mono px-3 py-1 bg-surface-container-low border border-outline">{tag}</span>
             ))}
           </div>
         </div>
 
-        <div className="text-xl leading-relaxed text-[var(--text-primary)] mb-6"><MathText>{overridePreamble ?? question.preamble}</MathText></div>
+        <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText>{overridePreamble ?? question.preamble}</MathText></div>
 
         {question.preambleParams.length > 0 && (
-          <div className="flex flex-wrap gap-3 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)]">
+          <div className="flex flex-wrap gap-3 p-4 bg-surface border border-outline">
             {question.preambleParams.map((p) => (
-              <span key={p.symbol} className="label-mono text-[var(--color-primary-light)]">
+              <span key={p.symbol} className="label-mono text-primary/80">
                 {p.displayHe} <span className="opacity-50 ml-1">({p.type === "find" ? "למציאה" : p.type === "given" ? "נתון" : "טווח"})</span>
               </span>
             ))}
@@ -152,7 +152,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           return (
             <motion.div
               key={section.label}
-              className={`shard transition-all border ${!unlocked ? "border-[var(--border-default)] bg-[var(--bg-surface)] opacity-60" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)]" : "border-[var(--color-danger)] bg-[color-mix(in srgb, var(--color-danger) 2%, transparent)]") : "border-[var(--color-primary-light)] bg-[var(--bg-surface)] shadow-[0_0_15px_rgba(180,255,0,0.05)]"}`}
+              className={`shard transition-all border ${!unlocked ? "border-outline bg-surface opacity-60" : isSubmitted ? (isCorrect ? "border-primary bg-primary/10" : "border-error bg-error/10") : "border-primary/40 bg-surface"}`}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1, duration: 0.4 }}
@@ -163,21 +163,21 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                 onClick={() => unlocked && setExpandedSection(isExpanded ? "" : section.label)}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-8 h-8 flex items-center justify-center border font-title text-xl ${!unlocked ? "border-[var(--border-default)] text-[#1a3324]" : isSubmitted ? (isCorrect ? "border-[var(--color-primary)] text-[var(--color-primary)] bg-[color-mix(in srgb, var(--color-primary) 10%, transparent)]" : "border-[var(--color-danger)] text-[var(--color-danger)] bg-[color-mix(in srgb, var(--color-danger) 10%, transparent)]") : "border-[var(--color-primary-light)] text-[var(--color-primary-light)] bg-[rgba(180,255,0,0.1)]"}`}>
+                  <div className={`w-8 h-8 flex items-center justify-center border font-display text-xl ${!unlocked ? "border-outline text-on-surface-variant/40" : isSubmitted ? (isCorrect ? "border-primary text-primary bg-primary/10" : "border-error text-error bg-error/10") : "border-primary/60 text-primary/80 bg-primary/10"}`}>
                     {!unlocked ? <Lock size={14} /> : isSubmitted ? (isCorrect ? <Check size={16} /> : <X size={16} />) : section.label}
                   </div>
                   <div>
-                    <div className="font-bold text-[var(--text-primary)] tracking-wider">סעיף {section.label}׳</div>
+                    <div className="font-bold text-on-surface tracking-wider">סעיף {section.label}׳</div>
                     <div className="label-mono opacity-60 text-[10px]">{section.points} נקודות סנכרון</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="hidden md:flex gap-2">
                     {section.skillsTested.slice(0, 2).map((skill) => (
-                      <span key={skill} className="label-mono px-2 py-0.5 bg-[color-mix(in srgb, var(--color-on-surface) 5%, transparent)] border border-[var(--border-default)] text-[10px]">{skill}</span>
+                      <span key={skill} className="label-mono px-2 py-0.5 bg-surface-container-low border border-outline text-[10px]">{skill}</span>
                     ))}
                   </div>
-                  {unlocked && (isExpanded ? <ChevronUp size={20} className="text-[var(--color-primary-light)]" /> : <ChevronDown size={20} className="opacity-50" />)}
+                  {unlocked && (isExpanded ? <ChevronUp size={20} className="text-primary/80" /> : <ChevronDown size={20} className="opacity-50" />)}
                 </div>
               </div>
 
@@ -189,12 +189,12 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="px-6 pb-6 overflow-hidden border-t border-[var(--border-default)] pt-6"
+                    className="px-6 pb-6 overflow-hidden border-t border-outline pt-6"
                   >
-                    <div className="text-lg mb-6 leading-relaxed text-[var(--text-primary)]"><MathText>{section.prompt}</MathText></div>
+                    <div className="text-lg mb-6 leading-relaxed text-on-surface"><MathText>{section.prompt}</MathText></div>
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
-                      <div className="label-mono text-[var(--color-warning)] mb-6 p-4 border border-[var(--color-warning)] bg-[rgba(255,170,0,0.05)] flex items-center gap-2">
+                      <div className="label-mono text-tertiary mb-6 p-4 border border-tertiary/40 bg-tertiary/10 flex items-center gap-2">
                         <Lightbulb size={16} /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
                       </div>
                     )}
@@ -202,7 +202,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     {!isSubmitted && (
                       <div className="flex flex-col gap-4">
                         <textarea
-                          className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] p-4 text-[var(--text-primary)] font-mono focus:border-[var(--color-primary-light)] focus:outline-none transition-colors"
+                          className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
                           placeholder="[ INSERT_SOLUTION_HERE ]"
                           value={answers[section.label] ?? ""}
                           onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
@@ -243,11 +243,11 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         {section.hints.slice(0, hintCount).map((hint, i) => (
                           <motion.div
                             key={i}
-                            className="p-4 border border-[var(--color-accent)] bg-[var(--color-accent-muted)] label-mono flex items-start gap-3 text-[var(--text-primary)] normal-case"
+                            className="p-4 border border-tertiary/30 bg-tertiary/10 label-mono flex items-start gap-3 text-on-surface normal-case rounded-xl"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
-                            <Lightbulb size={16} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
+                            <Lightbulb size={16} className="text-tertiary shrink-0 mt-0.5" />
                             <span className="leading-relaxed"><MathText>{hint}</MathText></span>
                           </motion.div>
                         ))}
@@ -256,11 +256,11 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                     {isSubmitted && (
                       <motion.div
-                        className={`p-6 mt-6 border flex flex-col gap-4 ${isCorrect ? "border-[var(--color-primary)] bg-[var(--color-primary-muted)] text-[var(--color-primary)]" : "border-[var(--color-danger)] bg-[var(--color-danger-muted)] text-[var(--color-danger)]"}`}
+                        className={`p-6 mt-6 border flex flex-col gap-4 rounded-2xl ${isCorrect ? "border-primary bg-primary/10 text-primary" : "border-error bg-error/10 text-error"}`}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                       >
-                        <div className="flex items-center gap-3 font-title text-2xl tracking-wider">
+                        <div className="flex items-center gap-3 font-display text-2xl tracking-wider">
                           {isCorrect ? (
                             <><Check size={24} /> סנכרון נתונים מלא! התשובה נכונה 🎉</>
                           ) : (
@@ -284,8 +284,8 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               exit={{ height: 0, opacity: 0 }}
                             >
                               {section.solutionSteps.map((step, i) => (
-                                <div key={i} className="flex gap-4 items-start p-4 bg-[var(--bg-surface)] border border-[color-mix(in srgb, var(--color-on-surface) 10%, transparent)] text-[var(--text-primary)]">
-                                  <span className="w-6 h-6 flex items-center justify-center bg-white text-black font-bold shrink-0">{i + 1}</span>
+                                <div key={i} className="flex gap-4 items-start p-4 bg-surface border border-outline rounded-xl text-on-surface">
+                                  <span className="w-6 h-6 flex items-center justify-center bg-primary text-white font-bold shrink-0 rounded-full text-sm">{i + 1}</span>
                                   <span className="leading-relaxed text-lg"><MathText>{step}</MathText></span>
                                 </div>
                               ))}
@@ -318,19 +318,19 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       {/* ── Score Summary ── */}
       {allSubmitted && (
         <motion.div
-          className="glass p-8 mt-8 border border-[var(--color-accent)] bg-[var(--color-accent-muted)] flex flex-col items-center text-center gap-6"
+          className="glass p-8 mt-8 border border-secondary bg-secondary/10 flex flex-col items-center text-center gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="font-title text-6xl text-[var(--color-accent)] shadow-[var(--glow-cyan)] tracking-widest">{earnedPoints}/{totalPoints}</div>
+            <div className="font-display text-6xl text-secondary tracking-widest">{earnedPoints}/{totalPoints}</div>
             <div className="label-mono opacity-80">נקודות סנכרון</div>
           </div>
           
           <div className="flex flex-wrap gap-6 justify-center label-mono opacity-60">
-            <div className="flex items-center gap-2"><Check size={16} className="text-[var(--color-primary)]" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
-            <div className="flex items-center gap-2"><Clock size={16} className="text-[var(--color-accent)]" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
-            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-[var(--color-warning)]" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
+            <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
+            <div className="flex items-center gap-2"><Clock size={16} className="text-secondary" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
+            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-tertiary" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
           <button className="btn btn-primary mt-4" onClick={handleFinalize}>
@@ -341,4 +341,3 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     </div>
   );
 }
-

@@ -190,3 +190,5 @@ export const getDashboardStats = query({
 });
 export const getStudents = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("students").collect(); } });
 export const getTopics = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("topics").collect(); } });
+export const getCounts = query({ args: {}, handler: async (ctx) => { const q = await ctx.db.query("questions").collect(); const cq = await ctx.db.query("compoundQuestions").collect(); return { q: q.length, cq: cq.length }; } });
+export const getPrecomputedCount = query({ args: {}, handler: async (ctx) => { const q = await ctx.db.query("precomputedThemedQuestions").collect(); return q.length; } });

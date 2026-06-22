@@ -28,6 +28,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const [selectedHwId, setSelectedHwId] = useState<Id<"homework"> | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "questions">("students");
   const [studentFilter, setStudentFilter] = useState<"all" | "submitted" | "pending">("all");
+  const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
 
   const rundown = useQuery(
     api.homeworkRundown.getRundown,
@@ -74,8 +75,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
   const tabs = [
     { id: "students" as const, label: "תלמידים", icon: <Users size={15} /> },
-    { id: "questions" as const, label: "ניתוח שאלות", icon: <Target size={15} /> },
-    { id: "overview" as const, label: "סקירת כיתה", icon: <BarChart2 size={15} /> },
+    { id: "questions" as const, label: "איפה נתקעו?", icon: <Target size={15} /> },
+    { id: "overview" as const, label: "תמונת מצב", icon: <BarChart2 size={15} /> },
   ];
 
   return (
@@ -83,18 +84,21 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       {/* Left: List */}
       <div className="flex-1 flex flex-col overflow-y-auto pb-20 min-w-0">
         <div className="mb-8">
-          <h1 className="flex items-center gap-3 mb-2 text-4xl font-black"
-            style={{ color: "var(--color-accent)", fontFamily: "'Yarden', sans-serif", textShadow: "0 0 20px var(--color-accent)" }}>
-            <FileText size={40} style={{ filter: "drop-shadow(0 0 10px var(--color-primary))", color: "var(--color-primary)" }} />
+          <h1 className="flex items-center gap-3 mb-2 text-3xl font-bold text-on-surface"
+            style={{ fontFamily: "'Yarden', 'Assistant', sans-serif" }}>
+            <span className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex items-center justify-center flex-shrink-0"
+              style={{ boxShadow: 'var(--shadow-clay-primary)' }}>
+              <FileText size={24} className="text-white" />
+            </span>
             ניהול שיעורי בית
           </h1>
-          <p className="text-base opacity-70" style={{ color: "var(--color-primary)" }}>
+          <p className="text-base text-on-surface-variant">
             צרו שיעורי בית מותאמים אישית לכל תלמיד.
           </p>
         </div>
 
         <button className="btn btn-primary mb-8 w-fit flex items-center gap-3 px-8 py-4 text-base font-bold"
-          style={{ boxShadow: "0 0 20px var(--color-primary)" }}
+          style={{ boxShadow: "var(--shadow-clay-primary)" }}
           onClick={() => setShowCreate(!showCreate)}>
           <Plus size={20} /> צור שיעורי בית חדשים
         </button>
@@ -162,7 +166,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
                 <div className="flex gap-3">
                   <button className="btn btn-primary flex items-center gap-2 px-6 py-2.5 text-sm font-bold"
-                    style={{ boxShadow: "0 0 16px var(--color-primary)", opacity: (creating || !title.trim() || selectedTopics.length === 0) ? 0.5 : 1 }}
+                    style={{ boxShadow: "var(--shadow-clay-primary)", opacity: (creating || !title.trim() || selectedTopics.length === 0) ? 0.5 : 1 }}
                     onClick={handleCreate} disabled={creating || !title.trim() || selectedTopics.length === 0}>
                     <Send size={16} /> {creating ? "מפעיל..." : "צור מטלות אישיות"}
                   </button>
@@ -193,8 +197,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             const sl = hw.status === "graded" ? "הוערך" : hw.status === "closed" ? "נסגר" : isExpired ? "עבר מועד" : "פעיל";
             return (
               <motion.div key={hw._id}
-                className={`bg-[var(--color-primary-muted)] p-4 cursor-pointer border-2 transition-all w-full relative overflow-hidden rounded-xl ${selectedHwId === hw._id ? "border-[var(--color-accent)]" : "border-[color-mix(in srgb, var(--color-primary) 30%, transparent)] hover:border-[var(--color-primary)]"}`}
-                style={{ boxShadow: selectedHwId === hw._id ? "0 0 20px color-mix(in srgb, var(--color-accent) 12%, transparent)" : "none" }}
+                className={`bg-surface p-4 cursor-pointer border-2 transition-all w-full relative overflow-hidden rounded-2xl hover:-translate-y-0.5 ${selectedHwId === hw._id ? "border-primary" : "border-outline hover:border-primary/50"}`}
+                style={{ boxShadow: 'var(--shadow-clay)' }}
                 onClick={() => setSelectedHwId(selectedHwId === hw._id ? null : hw._id)}
                 variants={{ hidden: { opacity: 0, x: -12 }, visible: { opacity: 1, x: 0 } }}>
                 {selectedHwId === hw._id && <div className="absolute top-0 right-0 w-1 h-full bg-[var(--color-accent)] rounded-r-xl" />}
@@ -215,7 +219,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                     <span className="px-2.5 py-1 text-xs font-black border rounded"
                       style={{ background: `color-mix(in srgb, ${sc} 15%, transparent)`, color: sc, borderColor: sc }}>{sl}</span>
                     <div className="flex flex-col items-center bg-[var(--bg-surface)] border border-[color-mix(in srgb, var(--color-primary) 30%, transparent)] px-2.5 py-1 rounded-lg text-center">
-                      <span className="font-black text-base text-[var(--color-primary)]">{hw.questionCount}</span>
+                      <span className="num font-black text-base text-[var(--color-primary)]">{hw.questionCount}</span>
                       <span className="label-mono text-[var(--color-primary)] opacity-60 text-xs">שאלות</span>
                     </div>
                     {hw.status === "active" && (
@@ -269,7 +273,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 <div className="flex gap-2 flex-wrap">
                   {([
                     { label: "הכל", value: "all" as const, count: totalStudents, color: "var(--color-accent)" },
-                    { label: "הגישו", value: "submitted" as const, count: submittedCount, color: "#10b981" },
+                    { label: "הגישו", value: "submitted" as const, count: submittedCount, color: "var(--color-primary)" },
                     { label: "טרם הגישו", value: "pending" as const, count: pendingCount + inProgressCount, color: "var(--danger)" },
                   ] as const).map((f) => (
                     <button key={f.value} onClick={() => setStudentFilter(f.value)}
@@ -305,39 +309,89 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                     {filteredStudents.map((s) => {
                       const isSub = s.status === "submitted";
                       const isIP = s.status === "in_progress";
+                      const isExpanded = expandedStudent === s.assignedQuestionId;
                       return (
                         <div key={s.assignedQuestionId}
-                          className="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                          className="flex flex-col rounded-xl border transition-all"
                           style={{ background: "var(--bg-surface)", borderColor: isSub ? "color-mix(in srgb, var(--color-success) 20%, transparent)" : isIP ? "color-mix(in srgb, var(--color-warning) 20%, transparent)" : "var(--border-subtle)" }}>
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"
-                            style={{ background: s.avatarColor + "33", border: `2px solid ${s.avatarColor}66`, color: s.avatarColor }}>
-                            {s.studentName.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>{s.studentName}</div>
-                            <div className="text-xs flex items-center gap-2 mt-0.5" style={{ color: "var(--text-muted)" }}>
-                              {isSub && s.submittedAt && <span className="flex items-center gap-1"><Clock size={10} /> {formatDate(s.submittedAt)}</span>}
-                              {isIP && <span style={{ color: "var(--color-warning)" }}>בתהליך</span>}
-                              {s.status === "pending" && <span style={{ color: "var(--danger)" }}>טרם התחיל</span>}
-                              <span className="text-xs px-1.5 rounded" style={{ background: "var(--bg-elevated)" }}>רמה {s.assignedDifficulty}</span>
+                          
+                          {/* Row Header */}
+                          <div 
+                            className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] transition-colors"
+                            onClick={() => setExpandedStudent(isExpanded ? null : s.assignedQuestionId)}
+                          >
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"
+                              style={{ background: s.avatarColor + "33", border: `2px solid ${s.avatarColor}66`, color: s.avatarColor }}>
+                              {s.studentName.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate" style={{ color: "var(--text-primary)" }}>{s.studentName}</div>
+                              <div className="text-xs flex flex-wrap items-center gap-2 mt-0.5" style={{ color: "var(--text-muted)" }}>
+                                {isSub && s.submittedAt && <span className="flex items-center gap-1"><CheckCircle2 size={10} /> הושלם במלואו</span>}
+                                {isIP && <span style={{ color: "var(--color-warning)" }}>פתר/ה {s.answersCount} מתוך {s.answersCount + 1 /* approx */} סעיפים</span>}
+                                {s.status === "pending" && <span style={{ color: "var(--danger)" }}>טרם התחיל</span>}
+                                <span className="text-xs px-1.5 rounded" style={{ background: "var(--bg-elevated)" }}>רמה {s.assignedDifficulty}</span>
+                                
+                                {/* New stats */}
+                                {s.totalTimeMs > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock size={10} /> {Math.ceil(s.totalTimeMs / 60000)} דקות
+                                  </span>
+                                )}
+                                {s.aiInteractions > 0 && (
+                                  <span className="flex items-center gap-1" style={{ color: "var(--color-accent)" }}>
+                                    <Zap size={10} /> {s.aiInteractions} עזרים מ-AI
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0 flex items-center gap-1.5">
+                              {isSub ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="num font-black text-base"
+                                    style={{ color: s.score !== null && s.score >= 70 ? "var(--color-primary)" : s.score !== null && s.score >= 40 ? "var(--color-warning)" : "var(--danger)" }}>
+                                    {s.score !== null ? `${s.score}%` : "—"}
+                                  </span>
+                                </div>
+                              ) : isIP ? (
+                                <Loader2 size={16} style={{ color: "var(--color-warning)" }} className="animate-spin" />
+                              ) : (
+                                <Circle size={16} style={{ color: "var(--text-muted)", opacity: 0.35 }} />
+                              )}
+                              {isSub && s.score === 100 && <CheckCircle2 size={15} style={{ color: "color-mix(in srgb, var(--color-success) 70%, transparent)" }} />}
                             </div>
                           </div>
-                          <div className="flex-shrink-0 flex items-center gap-1.5">
-                            {isSub ? (
-                              <div className="flex flex-col items-end">
-                                <span className="font-black text-base"
-                                  style={{ color: s.score !== null && s.score >= 70 ? "var(--color-primary)" : s.score !== null && s.score >= 40 ? "var(--color-warning)" : "var(--danger)" }}>
-                                  {s.score !== null ? `${s.score}%` : "—"}
-                                </span>
-                                <span className="text-xs" style={{ color: "var(--text-muted)" }}>{s.correctCount}/{s.answersCount} נכון</span>
+
+                          {/* Expanded Details */}
+                          {isExpanded && s.answers && s.answers.length > 0 && (
+                            <div className="p-4 border-t border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-elevated)_50%,transparent)] rounded-b-xl">
+                              <h4 className="text-xs font-bold mb-3" style={{ color: "var(--color-accent)" }}>פירוט תשובות ({s.answers.length}):</h4>
+                              <div className="flex flex-col gap-2">
+                                {s.answers.map((ans: any, idx: number) => (
+                                  <div key={idx} className="bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border-subtle)] text-sm">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>סעיף {ans.sectionLabel}</span>
+                                      {ans.isCorrect !== undefined ? (
+                                        <span className="text-xs font-bold" style={{ color: ans.isCorrect ? "var(--color-success)" : "var(--danger)" }}>
+                                          {ans.isCorrect ? "נכון ✓" : "שגוי ✗"}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-muted">ממתין לבדיקה</span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs opacity-80 mb-1" style={{ color: "var(--text-primary)" }}>
+                                      <span className="opacity-50 mr-1">תשובה:</span>
+                                      {ans.studentAnswer}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
+                                      {ans.hintsUsed > 0 && <span className="flex items-center gap-1"><Zap size={10} style={{ color: "var(--color-warning)" }} />{ans.hintsUsed} רמזים</span>}
+                                      {ans.timeMs > 0 && <span className="flex items-center gap-1"><Clock size={10} />{Math.ceil(ans.timeMs / 1000)} שניות</span>}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ) : isIP ? (
-                              <Loader2 size={16} style={{ color: "var(--color-warning)" }} className="animate-spin" />
-                            ) : (
-                              <Circle size={16} style={{ color: "var(--text-muted)", opacity: 0.35 }} />
-                            )}
-                            {isSub && <CheckCircle2 size={15} style={{ color: "color-mix(in srgb, var(--color-success) 70%, transparent)" }} />}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -362,7 +416,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 ) : questionStats.map((q) => {
                   const red = q.successRate !== null && q.successRate < 40;
                   const green = q.successRate !== null && q.successRate >= 70;
-                  const qColor = red ? "var(--danger)" : green ? "#10b981" : "var(--color-warning)";
+                  const qColor = red ? "var(--danger)" : green ? "var(--color-primary)" : "var(--color-warning)";
                   return (
                     <div key={`${q.questionId}-${q.label}`} className="p-4 rounded-xl border transition-all"
                       style={{ background: "var(--bg-surface)", borderColor: red ? "color-mix(in srgb, var(--color-danger) 25%, transparent)" : green ? "color-mix(in srgb, var(--color-success) 20%, transparent)" : "var(--border-subtle)", borderRight: `4px solid ${qColor}` }}>
@@ -370,7 +424,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                         <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
                           סעיף {q.label} <span className="opacity-40 text-xs">(רמה {q.difficulty})</span>
                         </span>
-                        <span className="font-black text-lg" style={{ color: qColor }}>
+                        <span className="num font-black text-lg" style={{ color: qColor }}>
                           {q.successRate !== null ? `${q.successRate}%` : "—"}
                         </span>
                       </div>
@@ -395,19 +449,19 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                   <>
                     <div className="glass bg-[var(--color-primary-muted)] border border-[var(--color-primary)] p-7 text-center relative rounded-2xl">
                       <div className="label-mono text-[var(--color-accent)] mb-2 text-sm">ציון ממוצע כיתתי</div>
-                      <div className="font-black text-6xl"
-                        style={{ color: rundown.classAvgScore >= 70 ? "var(--color-primary)" : rundown.classAvgScore >= 40 ? "var(--warning)" : "var(--danger)", textShadow: "0 0 20px currentColor" }}>
+                      <div className="num font-black text-6xl"
+                        style={{ color: rundown.classAvgScore >= 70 ? "var(--color-primary)" : rundown.classAvgScore >= 40 ? "var(--warning)" : "var(--danger)" }}>
                         {rundown.classAvgScore}%
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1 glass bg-[var(--bg-surface)] border border-[var(--color-accent)] p-4 text-center rounded-xl">
                         <div className="label-mono text-[var(--color-accent)] mb-1 text-xs">אחוז השלמה</div>
-                        <div className="font-black text-3xl text-[var(--color-accent)]">{rundown.completionRate}%</div>
+                        <div className="num font-black text-3xl text-[var(--color-accent)]">{rundown.completionRate}%</div>
                       </div>
                       <div className="flex-1 glass bg-[var(--bg-surface)] border border-[var(--color-accent)] p-4 text-center rounded-xl">
                         <div className="label-mono text-[var(--color-accent)] mb-1 text-xs">זמן ממוצע</div>
-                        <div className="font-black text-3xl text-[var(--color-accent)]">{rundown.avgTimeMinutes}ד'</div>
+                        <div className="num font-black text-3xl text-[var(--color-accent)]">{rundown.avgTimeMinutes}ד'</div>
                       </div>
                     </div>
                     {rundown.clusters.length > 0 && (
@@ -416,17 +470,23 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                         <div className="flex flex-col gap-2">
                           {rundown.clusters.map((cl: any, i: number) => {
                             const cc = cl.label === "מצטיינים" ? "var(--color-primary)" : cl.label === "צריכים חיזוק" ? "var(--danger)" : "var(--warning)";
+                            const clusterNames = cl.studentIds.map((id: string) => studentSubmissions?.find(s => s.studentId === id)?.studentName).filter(Boolean);
                             return (
                               <div key={i} className="bg-[var(--bg-surface)] border p-3 rounded-lg"
                                 style={{ borderColor: "color-mix(in srgb, var(--color-accent) 15%, transparent)", borderRight: `4px solid ${cc}` }}>
                                 <div className="flex items-center gap-2 mb-1.5">
                                   <Users size={14} style={{ color: cc }} />
                                   <span className="font-bold text-xs" style={{ color: "var(--color-accent)" }}>{cl.label}</span>
-                                  <span className="label-mono px-1.5 py-0.5 rounded border text-xs"
-                                    style={{ background: "color-mix(in srgb, var(--color-accent) 8%, transparent)", borderColor: "color-mix(in srgb, var(--color-accent) 25%, transparent)", color: "var(--color-accent)" }}>
-                                    {cl.studentIds.length}
-                                  </span>
                                 </div>
+                                {clusterNames.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {clusterNames.map((name: string, idx: number) => (
+                                      <span key={idx} className="text-xs px-1.5 py-0.5 rounded border" style={{ background: "color-mix(in srgb, var(--color-accent) 8%, transparent)", borderColor: "color-mix(in srgb, var(--color-accent) 20%, transparent)", color: "var(--color-accent)" }}>
+                                        {name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 <div className="text-xs" style={{ color: "var(--color-primary)", lineHeight: 1.5 }}>{cl.recommendedAction}</div>
                               </div>
                             );
@@ -437,13 +497,18 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                     {rundown.flagged.length > 0 && (
                       <div className="bg-[color-mix(in srgb, var(--color-danger) 5%, transparent)] border border-[var(--danger)] p-4 rounded-xl">
                         <div className="label-mono text-[var(--danger)] mb-3 text-xs flex items-center gap-2 border-b border-[color-mix(in srgb, var(--color-danger) 20%, transparent)] pb-2">
-                          <AlertTriangle size={14} /> תלמידים בסיכון
+                          <AlertTriangle size={14} /> תלמידים שזקוקים לעזרה
                         </div>
                         <div className="flex flex-col gap-2">
-                          {rundown.flagged.map((f: any, i: number) => (
-                            <div key={i} className="bg-[var(--bg-surface)] border p-2.5 rounded-lg text-xs font-medium"
-                              style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--color-danger) 25%, transparent)", borderRight: "3px solid var(--danger)" }}>{f.reason}</div>
-                          ))}
+                          {rundown.flagged.map((f: any, i: number) => {
+                            const studentName = studentSubmissions?.find(s => s.studentId === f.studentId)?.studentName || "תלמיד";
+                            return (
+                              <div key={i} className="bg-[var(--bg-surface)] border p-2.5 rounded-lg text-xs font-medium"
+                                style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--color-danger) 25%, transparent)", borderRight: "3px solid var(--danger)" }}>
+                                <span className="font-bold underline ml-1">{studentName}:</span> {f.reason}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
