@@ -2,7 +2,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { CheckCircle2, TrendingUp, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, LineChart, Grid, Radio, History } from "lucide-react";
+import { CheckCircle2, TrendingUp, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, Radio, History } from "lucide-react";
+import { SignalWave, CircuitNode } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
 
 export function HeatmapView({
@@ -52,7 +53,7 @@ export function HeatmapView({
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">שליטה כיתתית</h3>
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant/50">
-              <LineChart className="text-primary" />
+              <SignalWave size={24} glow={0.6} animated={false} />
             </div>
           </div>
           <div className="relative z-10 flex items-end gap-3">
@@ -87,7 +88,7 @@ export function HeatmapView({
         <div className="lg:col-span-8 glass rounded-xl p-6 flex flex-col shadow-lg">
           <div className="flex justify-between items-center mb-6 border-b border-outline-variant/30 pb-4">
             <h2 className="font-headline-md text-on-surface flex items-center gap-3 -translate-x-2">
-              <Grid className="text-secondary" />
+              <CircuitNode size={24} tone="violet" glow={0.55} animated={false} />
               מפת חום - שליטה נושאית
             </h2>
             <div className="flex gap-4">

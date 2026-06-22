@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Bot, TrendingUp, FileText,
   Bell, LogOut, Sparkles, Users, Zap
 } from "lucide-react";
 
@@ -13,15 +12,16 @@ import { HeatmapView } from "./HeatmapView";
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
-import { ElectricLoader } from "../components/electric";
+import { ElectricLoader, ElectricBolt, ElectricAtom, CircuitNode, FieldLines } from "../components/electric";
+import type { ElectricIconProps } from "../components/electric";
 
 type TabId = "heatmap" | "aiChats" | "powerMap" | "homework";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "heatmap",  label: "מפת חום",       icon: <Activity size={16} /> },
-  { id: "aiChats",  label: "שיחות AI",      icon: <Bot size={16} /> },
-  { id: "powerMap", label: "מפת כוח",       icon: <TrendingUp size={16} /> },
-  { id: "homework", label: "שיעורי בית",    icon: <FileText size={16} /> },
+const TABS: { id: TabId; label: string; Icon: (p: ElectricIconProps) => JSX.Element }[] = [
+  { id: "heatmap",  label: "מפת חום",       Icon: FieldLines },
+  { id: "aiChats",  label: "שיחות AI",      Icon: ElectricAtom },
+  { id: "powerMap", label: "מפת כוח",       Icon: ElectricBolt },
+  { id: "homework", label: "שיעורי בית",    Icon: CircuitNode },
 ];
 
 export default function TeacherDashboard() {
@@ -108,8 +108,8 @@ export default function TeacherDashboard() {
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-              <span className={`relative z-10 transition-colors duration-150 ${activeTab === tab.id ? 'text-white' : 'text-on-surface-variant'}`}>
-                {tab.icon}
+              <span className="relative z-10 flex items-center">
+                <tab.Icon size={18} animated={false} glow={0.55} tone={activeTab === tab.id ? 'ghost' : 'spark'} />
               </span>
               <span className={`relative z-10 hidden md:inline transition-colors duration-150 ${activeTab === tab.id ? 'text-white' : 'text-on-surface-variant'}`}>
                 {tab.label}

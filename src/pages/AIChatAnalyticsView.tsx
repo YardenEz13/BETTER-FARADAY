@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, FileText, Zap, Target } from "lucide-react";
+import { ElectricAtom, ElectricBolt } from "../components/electric";
 import { analyzeConversation } from "../services/localAI";
 import CyberAvatar from "../components/CyberAvatar";
 
@@ -48,7 +49,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             className="w-14 h-14 rounded-2xl bg-primary border-2 border-primary-dark flex items-center justify-center flex-shrink-0"
             style={{ boxShadow: 'var(--shadow-clay-primary)' }}
           >
-            <Bot size={28} className="text-white" />
+            <ElectricAtom size={30} tone="ghost" glow={0.6} />
           </div>
           <div>
             <h1 className="font-display font-bold text-3xl text-on-surface leading-tight">אנליטיקת שיחות AI</h1>
@@ -82,7 +83,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           <div className="clay-card p-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-on-surface-variant">סך הודעות</span>
-              <Zap size={18} className="text-tertiary" />
+              <ElectricBolt size={22} tone="amber" glow={0.6} animated={false} />
             </div>
             <div className="num text-4xl font-bold text-on-surface">{summary?.totalMessages ?? 0}</div>
           </div>
@@ -129,7 +130,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
         >
           {chats.length === 0 ? (
             <div className="clay-card p-16 text-center border-dashed">
-              <Bot size={56} className="text-primary opacity-40 mx-auto mb-5" />
+              <ElectricAtom size={56} glow={0.9} className="mx-auto mb-5 block opacity-80" />
               <div className="text-xl font-bold text-on-surface mb-2">עוד אין שיחות AI</div>
               <div className="text-sm text-on-surface-variant">כשתלמידים ישתמשו במורה AI, השיחות יופיעו כאן.</div>
             </div>

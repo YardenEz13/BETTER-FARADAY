@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SignalWave } from "../components/electric";
+import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
@@ -75,9 +75,9 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   }) ?? [];
 
   const tabs = [
-    { id: "students" as const, label: "תלמידים", icon: <Users size={15} /> },
-    { id: "questions" as const, label: "איפה נתקעו?", icon: <Target size={15} /> },
-    { id: "overview" as const, label: "תמונת מצב", icon: <BarChart2 size={15} /> },
+    { id: "students" as const, label: "תלמידים", Icon: FieldLines },
+    { id: "questions" as const, label: "איפה נתקעו?", Icon: SignalWave },
+    { id: "overview" as const, label: "תמונת מצב", Icon: ElectricBolt },
   ];
 
   return (
@@ -255,7 +255,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 color: activeTab === tab.id ? "var(--color-primary)" : "var(--text-muted)",
                 border: activeTab === tab.id ? "1px solid var(--border-primary)" : "1px solid transparent",
               }}>
-              {tab.icon} {tab.label}
+              <tab.Icon size={16} glow={0.5} animated={false} /> {tab.label}
             </button>
           ))}
         </div>

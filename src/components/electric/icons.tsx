@@ -17,13 +17,15 @@ import { useId } from "react";
  */
 
 /** Color families, each a [light-stop, base-stop] pair. */
-export type ElectricTone = "spark" | "violet" | "amber" | "danger";
+export type ElectricTone = "spark" | "violet" | "amber" | "danger" | "ghost";
 
 const TONES: Record<ElectricTone, [string, string]> = {
   spark: ["var(--color-inverse-primary)", "var(--color-primary)"],
   violet: ["color-mix(in srgb, var(--color-secondary) 50%, white)", "var(--color-secondary)"],
   amber: ["color-mix(in srgb, var(--color-tertiary) 50%, white)", "var(--color-tertiary)"],
   danger: ["color-mix(in srgb, var(--color-error) 50%, white)", "var(--color-error)"],
+  // "ghost" = white, for use on filled/colored (e.g. green primary) backgrounds
+  ghost: ["#ffffff", "rgba(255,255,255,0.88)"],
 };
 
 export interface ElectricIconProps {
