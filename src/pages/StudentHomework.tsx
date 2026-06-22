@@ -11,6 +11,7 @@ import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
 import AIChatPanel from "../components/AIChatPanel";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { ElectricAtom } from "../components/electric";
 
 export default function StudentHomework() {
   const { studentId, homeworkId } = useParams<{ studentId: string; homeworkId: string }>();
@@ -317,12 +318,12 @@ export default function StudentHomework() {
           {/* AI Tutor CTA */}
           <div className="glass p-8 border border-primary bg-primary/5 relative overflow-hidden">
             <div className="absolute -top-4 -right-4 opacity-10">
-              <Bot size={120} color="var(--color-primary)" />
+              <ElectricAtom size={120} glow={1} animated={false} />
             </div>
             
             <div className="flex items-center gap-3 mb-6 relative z-10">
               <div className="w-10 h-10 rounded-xl border border-primary flex items-center justify-center bg-primary text-white">
-                <Bot size={20} />
+                <ElectricAtom size={22} tone="ghost" glow={0.6} />
               </div>
               <div className="font-display text-3xl text-primary">מורה AI פאראדיי</div>
             </div>

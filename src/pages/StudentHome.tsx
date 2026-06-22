@@ -11,7 +11,7 @@ import {
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricField, ElectricLoader } from "../components/electric";
+import { ElectricField, ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
 
 /* ── A single station on the learning circuit ──
    Active node = a "charged" particle: pulsing field-line rings radiate from it. */
@@ -166,7 +166,7 @@ export default function StudentHome() {
         {/* Center: stats */}
         <div className="hidden md:flex items-center gap-3">
           <div className="stat-chip">
-            <Zap className="text-primary" size={15} />
+            <ElectricBolt tone="spark" size={18} glow={0.55} animated={false} />
             <span>{totalXP.toLocaleString()} XP</span>
           </div>
           <div className="stat-chip">
@@ -411,7 +411,7 @@ export default function StudentHome() {
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex-shrink-0 flex items-center justify-center"
                   style={{ boxShadow: 'var(--shadow-clay-primary)' }}>
-                  <Bot className="text-white" size={22} />
+                  <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
                   <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>פרופסור פאראדיי</h4>
@@ -435,7 +435,7 @@ export default function StudentHome() {
             <div className="flex md:hidden items-center justify-around bg-surface rounded-2xl p-4 border-2 border-outline gap-4"
               style={{ boxShadow: 'var(--shadow-clay)' }}>
               <div className="flex items-center gap-2">
-                <Zap className="text-primary" size={18} />
+                <ElectricBolt tone="spark" size={20} glow={0.55} animated={false} />
                 <span className="font-bold text-on-surface text-sm">{totalXP.toLocaleString()} XP</span>
               </div>
               <div className="w-0.5 h-6 bg-outline" />

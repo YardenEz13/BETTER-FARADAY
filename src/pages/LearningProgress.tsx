@@ -5,6 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight, Target, TrendingUp, Zap, Trophy, BookOpen, CheckCircle2, Flame, ChevronLeft } from "lucide-react";
+import { ElectricBolt, SignalWave } from "../components/electric";
 
 export default function LearningProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -99,7 +100,7 @@ export default function LearningProgress() {
             className="flex items-center gap-2 bg-primary/10 border-2 border-primary/30 px-3 py-1.5 rounded-2xl"
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
-            <Zap size={15} className="text-primary" />
+            <ElectricBolt size={18} tone="spark" glow={0.5} animated={false} />
             <span className="num font-bold text-primary text-sm">{totalXP.toLocaleString()} XP</span>
           </div>
           {/* Streak chip */}
@@ -273,7 +274,7 @@ export default function LearningProgress() {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-bold text-on-surface text-base" style={{ fontFamily: "'Yarden', 'Assistant', sans-serif", fontWeight: 700 }}>סיכום למידה</h2>
-              <TrendingUp size={18} className="text-primary" />
+              <SignalWave size={20} tone="spark" glow={0.5} animated={false} />
             </div>
             <div className="space-y-5">
               {/* Topics completed */}
@@ -362,7 +363,7 @@ export default function LearningProgress() {
               style={{ boxShadow: 'var(--shadow-clay)' }}
               onClick={() => navigate(`/student/${studentId}/homework`)}
             >
-              <Zap size={20} className="text-secondary" />
+              <ElectricBolt size={22} tone="violet" glow={0.5} animated={false} />
               שיעורי בית
             </button>
           </motion.div>

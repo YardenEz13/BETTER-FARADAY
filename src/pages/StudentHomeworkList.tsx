@@ -7,6 +7,7 @@ import {
   ArrowLeft, BookOpen, FileText, Clock, CheckCircle2,
   Zap, AlertTriangle, Bot, Edit, Lightbulb,
 } from "lucide-react";
+import { ElectricBolt, ElectricAtom } from "../components/electric";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -188,7 +189,7 @@ export default function StudentHomeworkList() {
           >
             <div className="font-bold text-on-surface mb-5 flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-primary-container flex items-center justify-center">
-                <Zap size={16} className="text-primary" />
+                <ElectricBolt size={18} tone="spark" glow={0.5} animated={false} />
               </div>
               סטטוס משימות
             </div>
@@ -216,7 +217,7 @@ export default function StudentHomeworkList() {
           >
             {/* Decorative Bot watermark */}
             <div className="absolute -bottom-4 -left-4 opacity-[0.06]">
-              <Bot size={100} className="text-tertiary" />
+              <ElectricAtom size={100} tone="amber" glow={1} animated={false} />
             </div>
             <div className="relative">
               <div className="flex items-center gap-2 mb-3">
