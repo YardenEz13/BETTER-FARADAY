@@ -1,13 +1,14 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
+import QuestionImportModal from "../components/QuestionImportModal";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
-  Loader2, Target, Zap
+  Loader2, Zap, Sparkles, Check
 } from "lucide-react";
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
@@ -31,6 +32,11 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const [studentFilter, setStudentFilter] = useState<"all" | "submitted" | "pending">("all");
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
 
+  // Teacher-imported questions pinned to the homework being created
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [pinnedQuestionIds, setPinnedQuestionIds] = useState<Id<"questions">[]>([]);
+  const [pinnedCompoundIds, setPinnedCompoundIds] = useState<Id<"compoundQuestions">[]>([]);
+
   const rundown = useQuery(
     api.homeworkRundown.getRundown,
     selectedHwId ? { homeworkId: selectedHwId } : "skip"
@@ -43,6 +49,37 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
     api.homework.getHomeworkQuestionStats,
     selectedHwId ? { homeworkId: selectedHwId } : "skip"
   );
+  const approvedImports = useQuery(
+    api.teacherImport.listImports,
+    classroomId ? { classroomId, status: "approved" } : "skip"
+  );
+
+  const pinnedCount = pinnedQuestionIds.length + pinnedCompoundIds.length;
+
+  const isImportPinned = (imp: Doc<"teacherImportedQuestions">) =>
+    (!!imp.publishedQuestionId && pinnedQuestionIds.includes(imp.publishedQuestionId)) ||
+    (!!imp.publishedCompoundId && pinnedCompoundIds.includes(imp.publishedCompoundId));
+
+  const togglePinnedImport = (imp: Doc<"teacherImportedQuestions">) => {
+    const qid = imp.publishedQuestionId;
+    const cid = imp.publishedCompoundId;
+    if (qid) {
+      setPinnedQuestionIds((prev) => prev.includes(qid) ? prev.filter((id) => id !== qid) : [...prev, qid]);
+    } else if (cid) {
+      setPinnedCompoundIds((prev) => prev.includes(cid) ? prev.filter((id) => id !== cid) : [...prev, cid]);
+    }
+  };
+
+  const handleImportApproved = (ref: {
+    questionId: Id<"questions"> | null;
+    compoundId: Id<"compoundQuestions"> | null;
+    label: string;
+  }) => {
+    const qid = ref.questionId;
+    const cid = ref.compoundId;
+    if (qid) setPinnedQuestionIds((prev) => prev.includes(qid) ? prev : [...prev, qid]);
+    else if (cid) setPinnedCompoundIds((prev) => prev.includes(cid) ? prev : [...prev, cid]);
+  };
 
   const handleCreate = async () => {
     if (!classroomId || !title.trim() || selectedTopics.length === 0) return;
@@ -51,9 +88,12 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       classroomId, title: title.trim(), topicIds: selectedTopics,
       teacherNotes: teacherNotes.trim() || undefined, questionCount,
       deadline: Date.now() + deadlineDays * 24 * 60 * 60 * 1000,
+      pinnedQuestionIds: pinnedQuestionIds.length ? pinnedQuestionIds : undefined,
+      pinnedCompoundIds: pinnedCompoundIds.length ? pinnedCompoundIds : undefined,
     });
     setTitle(""); setSelectedTopics([]); setTeacherNotes("");
     setQuestionCount(4); setDeadlineDays(3); setShowCreate(false); setCreating(false);
+    setPinnedQuestionIds([]); setPinnedCompoundIds([]);
   };
 
   const handleClose = async (hwId: Id<"homework">) => { await closeHomework({ homeworkId: hwId }); };
@@ -134,6 +174,45 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="mb-5">
+                  <label className="label-mono text-[var(--color-primary)] block mb-2 text-sm">שאלות מהספר (ייבוא AI)</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 mb-3 border-2 border-dashed border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
+                  >
+                    <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
+                  </button>
+                  {approvedImports && approvedImports.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      {approvedImports.map((imp) => {
+                        const pinned = isImportPinned(imp);
+                        return (
+                          <button
+                            type="button"
+                            key={imp._id}
+                            onClick={() => togglePinnedImport(imp)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-right transition-all ${pinned ? "border-[var(--color-primary)] bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)]" : "border-[var(--border-subtle)] hover:border-[color-mix(in_srgb,var(--color-primary)_50%,transparent)]"}`}
+                          >
+                            <span className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center ${pinned ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--border-subtle)]"}`}>
+                              {pinned && <Check size={13} className="text-white" />}
+                            </span>
+                            <span className="flex-1 text-sm text-[var(--color-accent)] truncate min-w-0">{imp.draft?.stem ?? "שאלה מיובאת"}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] flex-shrink-0">
+                              {imp.draft?.format === "multiple_choice" ? "אמריקאית" : "השלמה"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {pinnedCount > 0 && (
+                    <div className="mt-2 text-xs text-[var(--color-primary)] font-bold">
+                      {pinnedCount} שאלות מיובאות יתווספו לכל תלמיד
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-5 mb-5">
@@ -368,7 +447,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                             <div className="p-4 border-t border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-elevated)_50%,transparent)] rounded-b-xl">
                               <h4 className="text-xs font-bold mb-3" style={{ color: "var(--color-accent)" }}>פירוט תשובות ({s.answers.length}):</h4>
                               <div className="flex flex-col gap-2">
-                                {s.answers.map((ans: any, idx: number) => (
+                                {s.answers.map((ans, idx: number) => (
                                   <div key={idx} className="bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border-subtle)] text-sm">
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="font-semibold" style={{ color: "var(--text-primary)" }}>סעיף {ans.sectionLabel}</span>
@@ -386,7 +465,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                                     </div>
                                     <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
                                       {ans.hintsUsed > 0 && <span className="flex items-center gap-1"><Zap size={10} style={{ color: "var(--color-warning)" }} />{ans.hintsUsed} רמזים</span>}
-                                      {ans.timeMs > 0 && <span className="flex items-center gap-1"><Clock size={10} />{Math.ceil(ans.timeMs / 1000)} שניות</span>}
+                                      {ans.timeMs != null && ans.timeMs > 0 && <span className="flex items-center gap-1"><Clock size={10} />{Math.ceil(ans.timeMs / 1000)} שניות</span>}
                                     </div>
                                   </div>
                                 ))}
@@ -469,9 +548,9 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                       <div className="bg-[var(--color-primary-muted)] border border-[var(--color-primary)] p-4 rounded-xl">
                         <div className="label-mono text-[var(--color-accent)] mb-3 text-xs border-b border-[color-mix(in srgb, var(--color-accent) 20%, transparent)] pb-2">אשכולות למידה</div>
                         <div className="flex flex-col gap-2">
-                          {rundown.clusters.map((cl: any, i: number) => {
+                          {rundown.clusters.map((cl, i: number) => {
                             const cc = cl.label === "מצטיינים" ? "var(--color-primary)" : cl.label === "צריכים חיזוק" ? "var(--danger)" : "var(--warning)";
-                            const clusterNames = cl.studentIds.map((id: string) => studentSubmissions?.find(s => s.studentId === id)?.studentName).filter(Boolean);
+                            const clusterNames = cl.studentIds.map((id) => studentSubmissions?.find(s => s.studentId === id)?.studentName).filter((n): n is string => Boolean(n));
                             return (
                               <div key={i} className="bg-[var(--bg-surface)] border p-3 rounded-lg"
                                 style={{ borderColor: "color-mix(in srgb, var(--color-accent) 15%, transparent)", borderRight: `4px solid ${cc}` }}>
@@ -501,7 +580,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                           <AlertTriangle size={14} /> תלמידים שזקוקים לעזרה
                         </div>
                         <div className="flex flex-col gap-2">
-                          {rundown.flagged.map((f: any, i: number) => {
+                          {rundown.flagged.map((f, i: number) => {
                             const studentName = studentSubmissions?.find(s => s.studentId === f.studentId)?.studentName || "תלמיד";
                             return (
                               <div key={i} className="bg-[var(--bg-surface)] border p-2.5 rounded-lg text-xs font-medium"
@@ -526,6 +605,14 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           </>
         )}
       </div>
+
+      {showImportModal && classroomId && (
+        <QuestionImportModal
+          classroomId={classroomId}
+          onClose={() => setShowImportModal(false)}
+          onApproved={handleImportApproved}
+        />
+      )}
     </div>
   );
 }

@@ -12,6 +12,9 @@ export const createHomework = mutation({
     teacherNotes: v.optional(v.string()),
     questionCount: v.number(),
     deadline: v.number(),
+    // Teacher-imported questions to pin to this homework (assigned to everyone).
+    pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
+    pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
   },
   handler: async (ctx, args) => {
     const homeworkId = await ctx.db.insert("homework", {
@@ -23,6 +26,8 @@ export const createHomework = mutation({
       createdAt: Date.now(),
       deadline: args.deadline,
       status: "active",
+      pinnedQuestionIds: args.pinnedQuestionIds,
+      pinnedCompoundIds: args.pinnedCompoundIds,
     });
 
     // Schedule personalized assignment for each student
@@ -31,6 +36,8 @@ export const createHomework = mutation({
       classroomId: args.classroomId,
       topicIds: args.topicIds,
       questionCount: args.questionCount,
+      pinnedQuestionIds: args.pinnedQuestionIds,
+      pinnedCompoundIds: args.pinnedCompoundIds,
     });
 
     return homeworkId;
@@ -44,8 +51,10 @@ export const assignToStudents = internalMutation({
     classroomId: v.id("classrooms"),
     topicIds: v.array(v.id("topics")),
     questionCount: v.number(),
+    pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
+    pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
   },
-  handler: async (ctx, { homeworkId, classroomId, topicIds, questionCount }) => {
+  handler: async (ctx, { homeworkId, classroomId, topicIds, questionCount, pinnedQuestionIds, pinnedCompoundIds }) => {
     const students = await ctx.db
       .query("students")
       .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
@@ -107,7 +116,35 @@ export const assignToStudents = internalMutation({
         }
       }
 
-      // 3. Select questions at the target difficulty (± 1 range)
+      // 2.5 Pin teacher-imported questions — every student gets these verbatim.
+      // Intentionally NOT theme-personalized (teacher wants them as-is), so their
+      // ids are kept out of insertedAssignedIds.
+      let pinnedCount = 0;
+      for (const qId of pinnedQuestionIds ?? []) {
+        await ctx.db.insert("assignedQuestions", {
+          homeworkId,
+          studentId: student._id,
+          questionId: qId,
+          assignedDifficulty: targetDifficulty,
+          personalizedReason: 'שאלה שנבחרה ע"י המורה',
+          status: "pending",
+        });
+        pinnedCount++;
+      }
+      for (const cId of pinnedCompoundIds ?? []) {
+        await ctx.db.insert("assignedQuestions", {
+          homeworkId,
+          studentId: student._id,
+          compoundQuestionId: cId,
+          assignedDifficulty: targetDifficulty,
+          personalizedReason: 'שאלה שנבחרה ע"י המורה',
+          status: "pending",
+        });
+        pinnedCount++;
+      }
+
+      // 3. Auto-select the remaining questions at the target difficulty (± 1 range)
+      const remaining = Math.max(0, questionCount - pinnedCount);
       const selectedIds = new Set<string>();
       const insertedAssignedIds: Id<"assignedQuestions">[] = [];
 
@@ -116,7 +153,7 @@ export const assignToStudents = internalMutation({
         (q) => Math.abs(q.difficulty - targetDifficulty) <= 1
       );
       for (const q of matchingCompound) {
-        if (selectedIds.size >= questionCount) break;
+        if (selectedIds.size >= remaining) break;
         selectedIds.add(q._id);
         const aqId = await ctx.db.insert("assignedQuestions", {
           homeworkId,
@@ -130,12 +167,12 @@ export const assignToStudents = internalMutation({
       }
 
       // Fill remaining with legacy questions
-      if (selectedIds.size < questionCount) {
+      if (selectedIds.size < remaining) {
         const matchingLegacy = legacyCandidates.filter(
           (q) => Math.abs(q.difficulty - targetDifficulty) <= 1
         );
         for (const q of matchingLegacy) {
-          if (selectedIds.size >= questionCount) break;
+          if (selectedIds.size >= remaining) break;
           if (selectedIds.has(q._id)) continue;
           selectedIds.add(q._id);
           const aqId = await ctx.db.insert("assignedQuestions", {

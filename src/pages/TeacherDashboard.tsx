@@ -14,6 +14,7 @@ import { StudentPowerMapView } from "./StudentPowerMapView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import { ElectricLoader, ElectricBolt, ElectricAtom, CircuitNode, FieldLines } from "../components/electric";
 import type { ElectricIconProps } from "../components/electric";
+import FaradayCanvas from "../components/FaradayCanvas";
 
 type TabId = "heatmap" | "aiChats" | "powerMap" | "homework";
 
@@ -43,22 +44,17 @@ export default function TeacherDashboard() {
   if (!heatmap) return <ElectricLoader label="טוען נתוני כיתה..." />;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="relative min-h-screen flex flex-col bg-background">
 
-      {/* ── Ambient glow ── */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 right-0 w-[500px] h-[400px] rounded-full opacity-40"
-          style={{ background: 'radial-gradient(circle, rgba(23,201,100,0.06) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-40"
-          style={{ background: 'radial-gradient(circle, rgba(123,97,255,0.06) 0%, transparent 70%)' }} />
-      </div>
+      {/* ── Electromagnetic-induction field (full-bleed backdrop) ── */}
+      <FaradayCanvas variant="induction" style={{ position: 'fixed', zIndex: 0 }} />
 
       {/* ── Header ── */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0 bg-surface border-b-2 border-outline backdrop-blur-xl"
-        style={{ boxShadow: 'var(--shadow-sm)' }}
+        className="relative z-40 flex items-center justify-between px-6 py-4 flex-shrink-0 border-b-2 border-outline backdrop-blur-xl"
+        style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
       >
         {/* Brand + live stats */}
         <div className="flex items-center gap-5">

@@ -1,15 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id, Doc } from "../../convex/_generated/dataModel";
-import { X, Send, BookOpen, Zap, WifiOff, History, MessageSquare, Sparkles, Clock, Terminal, ChevronDown, ChevronUp, Copy, ThumbsUp, Calculator, Paperclip, Settings, User } from "lucide-react";
+import { Id } from "../../convex/_generated/dataModel";
+import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "lucide-react";
 import {
   isLocalAIAvailable,
   getAIStatus,
   createSession,
   destroySession,
   streamMessage,
+  checkNotebookImage,
   analyzeConversation,
   generateCompositeBrief,
   getMockResponse,
@@ -22,6 +23,7 @@ import {
   type PartialBrief,
   type AIDebugState,
 } from "../services/localAI";
+import { prepareImageForUpload, type PreparedImage } from "../services/imageUpload";
 import { queueMessage, getPendingMessages, clearPendingMessages, isOnline, onOnline } from "../services/offlineQueue";
 import {
   saveActiveSession,
@@ -34,6 +36,8 @@ import {
 } from "../services/chatStorage";
 import MathText from "./MathText";
 import FaradayAvatar from "./FaradayAvatar";
+import QRBridgeModal from "./QRBridgeModal";
+import FaradayCanvas from "./FaradayCanvas";
 
 interface AIChatPanelProps {
   isOpen: boolean;
@@ -44,11 +48,15 @@ interface AIChatPanelProps {
   topicName?: string;
   topicId?: string;
   questionId?: string;
+  /** External trigger (e.g. the homework question) to open the phone-photo bridge. */
+  requestBridge?: boolean;
+  onBridgeRequestHandled?: () => void;
 }
 
 export default function AIChatPanel({
   isOpen, onClose, studentId, agentType,
   questionStem, topicName, topicId, questionId,
+  requestBridge, onBridgeRequestHandled,
 }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -58,8 +66,7 @@ export default function AIChatPanel({
   const [loadProgress, setLoadProgress] = useState<{ percent: number; stage: string } | null>(null);
   const [chatId, setChatId] = useState<Id<"aiChats"> | null>(null);
   const [online, setOnline] = useState(isOnline());
-  const [isResumed, setIsResumed] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [, setIsResumed] = useState(false);
 
   // Session Cycling state
   const [cycleState, setCycleState] = useState<"active" | "cycling" | "self_assess">("active");
@@ -67,9 +74,15 @@ export default function AIChatPanel({
   const [partialBriefs, setPartialBriefs] = useState<PartialBrief[]>([]);
   const [awaitingSelfAssess, setAwaitingSelfAssess] = useState(false);
   const [pendingNextQuestion, setPendingNextQuestion] = useState(false);
-  const [selfAssessment, setSelfAssessment] = useState<string | null>(null);
+  const [, setSelfAssessment] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<AIDebugState | null>(null);
+
+  // Notebook image-check state
+  const [attachedImage, setAttachedImage] = useState<PreparedImage | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [showQRBridge, setShowQRBridge] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const currentContext = questionStem
     ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
@@ -100,12 +113,6 @@ export default function AIChatPanel({
   const syncMessages = useMutation(api.aiChat.syncMessages);
   const createBriefMut = useMutation(api.sessionBriefs.createBrief);
 
-  // Chat history for the sidebar
-  const chatHistory = useQuery(
-    api.aiChat.getStudentChats,
-    showHistory ? { studentId: studentId as Id<"students"> } : "skip"
-  );
-
   // Track AI status
   useEffect(() => {
     setAiStatus(getAIStatus());
@@ -124,6 +131,14 @@ export default function AIChatPanel({
     const unsub = onDebugUpdate((state) => setDebugInfo(state));
     return unsub;
   }, []);
+
+  // External trigger (e.g. from the homework question) to open the phone-photo bridge
+  useEffect(() => {
+    if (requestBridge && isOpen) {
+      setShowQRBridge(true);
+      onBridgeRequestHandled?.();
+    }
+  }, [requestBridge, isOpen, onBridgeRequestHandled]);
 
   // Track online status
   useEffect(() => {
@@ -444,6 +459,124 @@ export default function AIChatPanel({
     setCycleState("active");
   }, [cycleState, messages, sessionIndex, online, agentType, topicName, questionStem, topicId, questionId, studentId, startChat, endChatMut]);
 
+  // ── Notebook image check ──
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setImageError(null);
+    try {
+      const prepared = await prepareImageForUpload(file);
+      setAttachedImage(prepared);
+    } catch (err) {
+      console.error("[AIChatPanel] Image prepare failed:", err);
+      setImageError(err instanceof Error ? err.message : "לא ניתן לטעון את התמונה.");
+      setTimeout(() => setImageError(null), 5000);
+    }
+  };
+
+  const handleImageCheck = async () => {
+    if (!attachedImage || isTyping || isSendingRef.current) return;
+
+    if (!online) {
+      setImageError("בדיקת תמונה דורשת חיבור לאינטרנט.");
+      setTimeout(() => setImageError(null), 5000);
+      return;
+    }
+
+    isSendingRef.current = true;
+    const img = attachedImage;
+    const question = input.trim();
+
+    try {
+      setInput("");
+      setAttachedImage(null);
+
+      const userMsg: Message = {
+        role: "user",
+        content: question || "📷 בדוק בבקשה את הפתרון שלי במחברת",
+        imageUrl: img.dataUrl,
+      };
+
+      // Ensure a chat exists so the exchange lands in history (mirrors handleSend)
+      let currentChatId = chatIdRef.current;
+      if (!currentChatId && online) {
+        const title = agentType === "practice"
+          ? `תרגול: ${topicName || "כללי"}`
+          : `שיעורי בית: ${new Date().toLocaleDateString("he-IL")}`;
+        currentChatId = await startChat({
+          studentId: studentId as Id<"students">,
+          agentType,
+          topicId: topicId ? (topicId as Id<"topics">) : undefined,
+          questionId: questionId ? (questionId as Id<"questions">) : undefined,
+          title,
+        });
+        setChatId(currentChatId);
+        chatIdRef.current = currentChatId;
+        await saveActiveSession({
+          chatId: currentChatId,
+          studentId,
+          agentType,
+          context: currentContext ?? "",
+          topicName,
+          questionStem,
+          topicId,
+          questionId,
+          startedAt: sessionStartedAt.current,
+        });
+      }
+
+      const updatedWithUser = [...messages, userMsg];
+      setMessages(updatedWithUser);
+      if (chatIdRef.current) saveMessages(chatIdRef.current, updatedWithUser).catch(console.error);
+      await persistMessage("user", userMsg.content);
+
+      setIsTyping(true);
+
+      let feedback = "";
+      const controller = new AbortController();
+      activeAbortControllerRef.current = controller;
+      try {
+        feedback = await checkNotebookImage(
+          { mimeType: img.mimeType, data: img.base64 },
+          question,
+          currentContext,
+          controller.signal
+        );
+      } finally {
+        if (activeAbortControllerRef.current === controller) {
+          activeAbortControllerRef.current = null;
+        }
+      }
+
+      if (!feedback) {
+        feedback = "לא הצלחתי לנתח את התמונה. נסה לצלם שוב באור טוב, במיקוד חד וכך שכל הפתרון נראה.";
+      }
+
+      setMessages((prev) => {
+        const updated = [...prev, { role: "model" as const, content: feedback }];
+        if (chatIdRef.current) saveMessages(chatIdRef.current, updated).catch(console.error);
+        return updated;
+      });
+      await persistMessage("model", feedback);
+    } catch (e) {
+      if (e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"))) {
+        return;
+      }
+      console.error("[AIChatPanel] Notebook check error:", e);
+      const fallback = "מצטער, נתקלתי בבעיה בניתוח התמונה. נסה שוב בעוד רגע.";
+      setMessages((prev) => {
+        const updated = [...prev, { role: "model" as const, content: fallback }];
+        if (chatIdRef.current) saveMessages(chatIdRef.current, updated).catch(console.error);
+        return updated;
+      });
+      await persistMessage("model", fallback);
+    } finally {
+      setIsTyping(false);
+      isSendingRef.current = false;
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isTyping || isSendingRef.current) return;
     isSendingRef.current = true;
@@ -590,8 +723,8 @@ export default function AIChatPanel({
           startedAt: sessionStartedAt.current,
         });
       }
-    } catch (e: any) {
-      if (e?.name === "AbortError" || e?.message?.includes("aborted")) {
+    } catch (e) {
+      if (e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"))) {
         console.log("[AIChatPanel] streamMessage was aborted, skipping error display.");
         return;
       }
@@ -606,6 +739,15 @@ export default function AIChatPanel({
     } finally {
       setIsTyping(false);
       isSendingRef.current = false;
+    }
+  };
+
+  // Route the send action: image attached → notebook check, otherwise normal chat
+  const handleSubmit = () => {
+    if (attachedImage) {
+      handleImageCheck();
+    } else {
+      handleSend();
     }
   };
 
@@ -771,18 +913,6 @@ export default function AIChatPanel({
     onClose();
   };
 
-  // Resume a historical chat from the sidebar
-  const handleResumeHistoryChat = async (historyChatId: string) => {
-    setShowHistory(false);
-    const cached = await getMessages(historyChatId);
-    if (cached.length > 0) {
-      setChatId(historyChatId as Id<"aiChats">);
-      chatIdRef.current = historyChatId as Id<"aiChats">;
-      setMessages(cached);
-      setIsResumed(true);
-    }
-  };
-
   if (!isOpen) return null;
 
   // Until the first real exchange, show a richer intro instead of a bare system pill
@@ -791,12 +921,8 @@ export default function AIChatPanel({
     ? ["לא הבנתי את השאלה", "תן לי רמז קטן", "איך מתחילים?"]
     : ["אני תקוע בסעיף הזה", "תסביר לי את הנושא", "בדוק את הפתרון שלי"];
 
-  const formatTime = (ms: number) => {
-    const d = new Date(ms);
-    return d.toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  };
-
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -892,11 +1018,8 @@ export default function AIChatPanel({
           {/* ── Body: messages + optional debug ── */}
           <div className="flex flex-1 overflow-hidden relative">
 
-            {/* Background Decoration */}
-            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-              <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
-              <div className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-secondary/5 blur-[100px]"></div>
-            </div>
+            {/* Knowledge constellation field — particle network with named concept nodes */}
+            <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col gap-6 scroll-smooth z-10">
@@ -985,6 +1108,13 @@ export default function AIChatPanel({
                           <button className="text-on-surface-variant hover:text-primary"><ThumbsUp className="text-[18px]" /></button>
                         </div>
                       )}
+                      {msg.imageUrl && (
+                        <img
+                          src={msg.imageUrl}
+                          alt="המחברת שצולמה"
+                          className="rounded-xl mb-3 max-h-72 w-auto border border-outline/40 shadow-md"
+                        />
+                      )}
                       <div className="text-on-background leading-relaxed">
                         <MathText>{msg.content}</MathText>
                       </div>
@@ -1040,13 +1170,52 @@ export default function AIChatPanel({
                   <div className="flex-1" />
                   <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
                 </div>
+                {/* Attached image preview */}
+                {attachedImage && (
+                  <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
+                    <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
+                      <ImagePlus size={14} className="flex-shrink-0" />
+                      <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי יבדוק את הפתרון שלך</span>
+                    </div>
+                    <button
+                      onClick={() => setAttachedImage(null)}
+                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-variant/50 transition-colors flex-shrink-0"
+                      title="הסר תמונה"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+                {imageError && (
+                  <div className="px-4 py-2 border-b border-outline-variant/40 bg-error/10 text-error font-label-md" style={{ fontSize: '12px' }}>
+                    {imageError}
+                  </div>
+                )}
                 {/* Input row */}
                 <div className="flex items-center p-2 gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
                   <button
-                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
-                    title="צרף קובץ"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isTyping || isAnalyzing}
+                    className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                    title="צלם או צרף תמונת מחברת לבדיקה"
                   >
-                    <Paperclip className="" />
+                    <ImagePlus className="" />
+                  </button>
+                  <button
+                    onClick={() => setShowQRBridge(true)}
+                    disabled={isTyping || isAnalyzing}
+                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="צלם מהטלפון (QR)"
+                  >
+                    <QrCode className="" />
                   </button>
                   <button
                     className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
@@ -1058,10 +1227,10 @@ export default function AIChatPanel({
                     <input
                       type="text"
                       className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
-                      placeholder="הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"
+                      placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
                       value={input}
                       onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+                      onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSubmit()}
                       disabled={isTyping || isAnalyzing}
                     />
                   </div>
@@ -1074,9 +1243,9 @@ export default function AIChatPanel({
                     </button>
                     <button
                       className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-                      onClick={handleSend}
-                      disabled={!input.trim() || isTyping || isAnalyzing}
-                      title="שלח"
+                      onClick={handleSubmit}
+                      disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
+                      title={attachedImage ? "בדוק את התמונה" : "שלח"}
                     >
                       <Send className="" />
                     </button>
@@ -1088,6 +1257,16 @@ export default function AIChatPanel({
         </motion.div>
       )}
     </AnimatePresence>
+
+      {showQRBridge && (
+        <QRBridgeModal
+          studentId={studentId}
+          label={topicName || "בדיקת מחברת"}
+          onClose={() => setShowQRBridge(false)}
+          onImageReceived={(img) => { setAttachedImage(img); setShowQRBridge(false); }}
+        />
+      )}
+    </>
   );
 }
 

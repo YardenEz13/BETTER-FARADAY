@@ -4,9 +4,19 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft, Zap, Users, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import FaradayCanvas from "../components/FaradayCanvas";
 import { ElectricBolt, ElectricAtom, SignalWave } from "../components/electric";
 import type { ElectricIconProps, ElectricTone } from "../components/electric";
 
+/**
+ * RolePage — role-select entry point.
+ *
+ * "Live Wire" redesign: a full-bleed Faraday-cage canvas sits behind a
+ * glassmorphic two-column shell — a hero on the inline-start and a translucent
+ * role panel (student + teacher cards) on the inline-end. The cage animation is
+ * the most on-brand background for a product named after Faraday: external field
+ * noise is excluded from a shielded interior.
+ */
 export default function RolePage() {
   const navigate = useNavigate();
   const [seeded, setSeeded] = useState(false);
@@ -22,182 +32,160 @@ export default function RolePage() {
     if (students && students.length > 0) setSeeded(true);
   }, [students, seeded, seeding]);
 
+  const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
+    { Icon: ElectricBolt, text: "תרגול אדפטיבי לפי רמתך", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
+    { Icon: ElectricAtom, text: "AI מורה אישי בזמן אמת", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
+    { Icon: SignalWave, text: "מעקב ביצועים כיתתי חי", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
+  ];
+
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-hidden relative bg-background text-on-background" dir="rtl">
+    <div className="relative min-h-screen w-full overflow-hidden bg-background text-on-surface" dir="rtl">
+      {/* ── Full-bleed cage field (z-1) ── */}
+      <FaradayCanvas variant="cage" style={{ zIndex: 1 }} />
 
-      {/* ── Top bar ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex items-center justify-between px-6 py-4 bg-surface border-b-2 border-outline relative z-10"
-        style={{ boxShadow: 'var(--shadow-clay)' }}
-      >
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center rounded-2xl bg-primary border-2 border-primary-dark text-white"
-            style={{ boxShadow: 'var(--shadow-clay-primary)' }}>
-            <Zap size={20} strokeWidth={2.5} />
-          </div>
-          <span className="font-bold text-xl text-on-surface tracking-tight" style={{ fontFamily: "'Assistant', sans-serif" }}>
-            FARADAY <span className="text-primary">Logic</span>
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container border-2 border-outline text-sm font-semibold text-on-surface-variant"
-          style={{ boxShadow: 'var(--shadow-clay)' }}>
-          מתמטיקה 581 · v4.1
-        </div>
-      </motion.div>
-
-      {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col lg:flex-row relative z-10">
-
-        {/* RIGHT (RTL) — Hero text */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.1 }}
-          className="lg:w-[45%] flex flex-col justify-center px-8 lg:px-16 py-16 relative overflow-hidden border-l-2 border-outline bg-gradient-to-br from-surface to-primary/5"
+      {/* ── UI overlay (z-2) ── */}
+      <div className="relative z-[2] flex min-h-screen flex-col">
+        {/* Nav */}
+        <motion.nav
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center justify-between px-6 py-5 lg:px-12"
         >
-          {/* ── Ambient electric field (signature backdrop) ── */}
-          <div className="absolute inset-0 circuit-grid opacity-[0.35] pointer-events-none" aria-hidden />
-          <div className="absolute -top-24 left-[-80px] w-[440px] h-[440px] pointer-events-none" aria-hidden>
-            <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 70%)' }} />
-            <span className="field-ring absolute left-1/2 top-1/2 w-60 h-60 rounded-full border-2 border-primary/30" />
-            <span className="field-ring field-ring--2 absolute left-1/2 top-1/2 w-60 h-60 rounded-full border-2 border-primary/25" />
-          </div>
-          <div className="absolute bottom-20 left-24 w-2.5 h-2.5 rounded-full bg-primary charge-drift pointer-events-none" style={{ boxShadow: '0 0 10px var(--color-inverse-primary)' }} aria-hidden />
-          <div className="absolute top-32 left-1/3 w-2 h-2 rounded-full bg-secondary charge-drift pointer-events-none" style={{ animationDelay: '1.6s', boxShadow: '0 0 8px var(--color-secondary)' }} aria-hidden />
-
-          {/* Live status pill */}
-          <div className="relative z-10 inline-flex items-center gap-2.5 mb-10 self-start px-4 py-2 rounded-full bg-primary/10 border-2 border-primary/30"
-            style={{ boxShadow: '0 2px 0 0 rgba(23,201,100,0.2)' }}>
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="font-semibold text-sm text-primary">
-              מערכת פעילה · {students?.length ?? '—'} תלמידים
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-primary-dark bg-primary text-white"
+              style={{ boxShadow: "var(--shadow-clay-primary)" }}
+            >
+              <Zap size={20} strokeWidth={2.5} />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
+              FARADAY <span className="text-primary">Logic</span>
             </span>
           </div>
+          <span
+            className="rounded-full border-2 border-outline bg-surface/70 px-4 py-1.5 text-sm font-semibold text-on-surface-variant backdrop-blur"
+            style={{ boxShadow: "var(--shadow-clay)" }}
+          >
+            מתמטיקה 581 · v4.1
+          </span>
+        </motion.nav>
 
-          {/* Hero text */}
-          <div className="relative z-10">
-            <h1 className="font-display font-black text-on-surface leading-tight" style={{ fontSize: 'clamp(2.6rem, 5vw, 4.2rem)' }}>
-              תכיר את התלמידים שלך
+        {/* Body grid: hero (1.18fr) + role panel (0.82fr) */}
+        <div className="grid flex-1 grid-cols-1 lg:grid-cols-[1.18fr_0.82fr]">
+          {/* Hero (inline-start / right in RTL) */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="flex flex-col justify-center px-8 py-12 lg:px-16"
+          >
+            <span className="mb-6 inline-flex items-center gap-2.5 self-start rounded-full border-2 border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" style={{ boxShadow: "0 0 9px var(--color-primary)" }} />
+              מערכת פעילה · {students?.length ?? "—"} תלמידים מחוברים
+            </span>
+
+            <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.7rem, 5vw, 3.6rem)" }}>
+              מרחב למידה
               <br />
-              <span className="text-primary">מחדש</span>
+              <span className="text-primary">מוגן מרעש</span>
             </h1>
-            <p className="mt-4 text-on-surface-variant text-lg font-medium leading-relaxed">
-              AI שמלמד בדיוק ברמה שלך
+            <p className="mt-5 max-w-[27rem] text-lg font-medium leading-relaxed text-on-surface-variant">
+              הפרעות חיצוניות נחסמות בגבול הכלוב — בפנים נשאר רק מה שחשוב. בחר כיצד להיכנס.
             </p>
-          </div>
 
-          {/* Feature list */}
-          <div className="relative z-10 mt-10 flex flex-col gap-4">
-            {([
-              { Icon: ElectricBolt, text: 'תרגול אדפטיבי לפי רמתך', tone: 'spark', bg: 'bg-primary/10 border-primary/20' },
-              { Icon: ElectricAtom, text: 'AI מורה אישי בזמן אמת', tone: 'violet', bg: 'bg-secondary/10 border-secondary/20' },
-              { Icon: SignalWave, text: 'מעקב ביצועים כיתתי חי', tone: 'amber', bg: 'bg-tertiary/10 border-tertiary/20' },
-            ] as { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[]).map(({ Icon, text, tone, bg }) => (
-              <div key={text} className="flex items-center gap-3 font-semibold text-on-surface-variant">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 flex-shrink-0 ${bg}`}>
-                  <Icon size={24} tone={tone} glow={0.7} />
+            <div className="mt-9 flex flex-col gap-4">
+              {features.map(({ Icon, text, tone, bg }) => (
+                <div key={text} className="flex items-center gap-3 font-semibold text-on-surface-variant">
+                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 ${bg}`}>
+                    <Icon size={22} tone={tone} glow={0.7} />
+                  </div>
+                  {text}
                 </div>
-                {text}
-              </div>
-            ))}
-          </div>
-        </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
-        {/* LEFT (RTL) — Role selection */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.55, delay: 0.2 }}
-          className="lg:flex-1 flex flex-col justify-center px-8 lg:px-16 py-16 gap-6"
-        >
-          <div className="font-semibold text-on-surface-variant mb-1">בחר מצב כניסה</div>
-
-          {/* Loading indicator */}
-          <AnimatePresence>
-            {seeding && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl overflow-hidden bg-primary/10 border-2 border-primary/30"
-              >
-                <Loader2 size={16} className="animate-spin text-primary" />
-                <span className="font-semibold text-sm text-primary">טוען נתוני כיתה...</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Student card */}
+          {/* Role panel (inline-end / left in RTL) — glassmorphic */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="relative overflow-hidden rounded-3xl bg-surface border-2 border-outline p-8"
-            style={{ boxShadow: 'var(--shadow-clay)' }}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.55, delay: 0.2 }}
+            className="flex flex-col justify-center gap-4 border-outline px-6 py-12 lg:border-s-2 lg:px-10"
+            style={{
+              background: "color-mix(in srgb, var(--color-surface) 78%, transparent)",
+              backdropFilter: "blur(7px)",
+              WebkitBackdropFilter: "blur(7px)",
+            }}
           >
-            {/* Green top accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary rounded-t-3xl" />
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+              SELECT MODE · בחר כניסה
+            </div>
 
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <div className="font-semibold text-xs text-primary mb-1.5 uppercase tracking-widest">תלמידים</div>
-                <h2 className="font-bold text-2xl text-on-surface flex items-center gap-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
-                    <Users className="text-primary" size={20} />
-                  </div>
+            {/* Seeding indicator */}
+            <AnimatePresence>
+              {seeding && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex items-center gap-3 overflow-hidden rounded-2xl border-2 border-primary/30 bg-primary/10 px-4 py-3"
+                >
+                  <Loader2 size={16} className="animate-spin text-primary" />
+                  <span className="text-sm font-semibold text-primary">טוען נתוני כיתה...</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Student card */}
+            <div
+              className="relative overflow-hidden rounded-[22px] border-2 border-outline bg-surface p-6 transition-transform duration-150 hover:-translate-y-0.5"
+              style={{ boxShadow: "var(--shadow-clay)" }}
+            >
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-primary" />
+              <div className="mb-2 flex items-center gap-2.5">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/10 text-primary">
+                  <Users size={18} />
+                </span>
+                <span className="text-xl font-extrabold text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
                   כניסת תלמיד
-                </h2>
+                </span>
               </div>
+              <p className="mb-4 text-sm font-medium text-on-surface-variant">
+                בחר את שמך והתחל לתרגל — ה‑AI ממתין לשאלות.
+              </p>
+              <StudentSelector students={students} />
             </div>
 
-            <p className="text-on-surface-variant mb-5 font-medium text-sm">
-              בחר את שמך והתחל לתרגל — ה-AI ממתין לשאלות שלך.
-            </p>
-
-            <StudentSelector students={students} />
-          </motion.div>
-
-          {/* Teacher card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="relative overflow-hidden rounded-3xl bg-surface border-2 border-secondary/40 p-8 hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
-            style={{ boxShadow: '0 4px 0 0 rgba(123,97,255,0.3), 0 1px 4px rgba(0,0,0,0.06)' }}
-            onClick={() => navigate("/teacher")}
-          >
-            {/* Blue top accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-secondary rounded-t-3xl" />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-xs text-secondary mb-1.5 uppercase tracking-widest">מורים</div>
-                <h2 className="font-bold text-2xl text-on-surface flex items-center gap-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
-                  <div className="w-9 h-9 rounded-xl bg-secondary/10 border-2 border-secondary/30 flex items-center justify-center">
-                    <Shield className="text-secondary" size={20} />
-                  </div>
+            {/* Teacher card */}
+            <button
+              type="button"
+              onClick={() => navigate("/teacher")}
+              className="group relative overflow-hidden rounded-[22px] border-2 border-secondary/40 bg-surface p-6 text-right transition-transform duration-150 hover:-translate-y-0.5"
+              style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-secondary) 32%, var(--color-outline)), 0 2px 10px rgba(20,40,30,.05)" }}
+            >
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-secondary" />
+              <div className="mb-2 flex items-center gap-2.5">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 border-secondary/30 bg-secondary/10 text-secondary">
+                  <Shield size={18} />
+                </span>
+                <span className="text-xl font-extrabold text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
                   מרכז פיקוד מורה
-                </h2>
-                <p className="font-medium text-on-surface-variant mt-2 text-sm">
-                  מפת חום · ניתוח AI · ניהול שיעורי בית
-                </p>
+                </span>
               </div>
-              <button
-                className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-on-secondary rounded-2xl font-semibold text-sm border-2 border-secondary group-hover:scale-105 transition-transform"
-                style={{ boxShadow: 'var(--shadow-clay-secondary)' }}
-                onClick={() => navigate("/teacher")}
-              >
-                כניסה
-                <ArrowLeft size={16} />
-              </button>
-            </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-on-surface-variant">מפת חום · ניתוח AI · שיעורי בית</p>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-bold text-white transition-transform group-hover:scale-105"
+                  style={{ boxShadow: "var(--shadow-clay-secondary)" }}
+                >
+                  כניסה
+                  <ArrowLeft size={15} strokeWidth={2.4} />
+                </span>
+              </div>
+            </button>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
@@ -206,52 +194,41 @@ export default function RolePage() {
 function StudentSelector({ students }: { students: any[] | undefined }) {
   const navigate = useNavigate();
 
-  if (!students) return (
-    <div className="flex flex-col gap-3">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="h-14 w-full rounded-2xl bg-surface-container animate-pulse border-2 border-outline" />
-      ))}
-    </div>
-  );
+  if (!students) {
+    return (
+      <div className="flex flex-col gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-12 w-full animate-pulse rounded-xl border-2 border-outline bg-surface-container" />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="font-semibold text-xs text-on-surface-variant mb-1 uppercase tracking-widest">בחר תלמיד</div>
-      <div className="flex flex-col gap-2 max-h-[240px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-        {students.map((s, i) => {
-          const hue = [...s.name].reduce((h, c) => c.charCodeAt(0) * 31 + ((h << 5) - h), 0);
-          const h = Math.abs(hue) % 360;
-          return (
-            <motion.button
-              key={s._id}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 + i * 0.04 }}
-              className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-right group transition-all duration-200 bg-surface border-2 border-outline hover:border-primary hover:bg-primary/5 active:scale-95 cursor-pointer"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
-              onClick={() => navigate(`/student/${s._id}`)}
+    <div className="flex max-h-[232px] flex-col gap-2 overflow-y-auto pe-1" style={{ scrollbarWidth: "thin" }}>
+      {students.map((s, i) => {
+        const hue = [...s.name].reduce((acc: number, c: string) => c.charCodeAt(0) * 31 + ((acc << 5) - acc), 0);
+        const h = Math.abs(hue) % 360;
+        return (
+          <motion.button
+            key={s._id}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.05 + i * 0.04 }}
+            onClick={() => navigate(`/student/${s._id}`)}
+            className="group flex w-full items-center gap-3 rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-right transition-all duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
+          >
+            <span
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold"
+              style={{ background: `hsl(${h}, 50%, 88%)`, color: `hsl(${h}, 60%, 30%)`, borderColor: `hsl(${h}, 50%, 72%)` }}
             >
-              {/* Colored initial avatar */}
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold border-2"
-                style={{
-                  background: `hsl(${h}, 50%, 88%)`,
-                  color: `hsl(${h}, 60%, 30%)`,
-                  borderColor: `hsl(${h}, 50%, 72%)`,
-                }}
-              >
-                {s.name.slice(0, 1)}
-              </div>
-              <span className="flex-1 font-semibold text-on-surface group-hover:text-primary transition-colors">
-                {s.name}
-              </span>
-              <ArrowLeft size={16} className="text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-            </motion.button>
-          );
-        })}
-      </div>
+              {s.name.slice(0, 1)}
+            </span>
+            <span className="flex-1 font-semibold text-on-surface transition-colors group-hover:text-primary">{s.name}</span>
+            <ArrowLeft size={15} className="-translate-x-2 text-primary opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+          </motion.button>
+        );
+      })}
     </div>
   );
 }
-
-

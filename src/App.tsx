@@ -16,6 +16,7 @@ const StudentHomework    = lazy(() => import("./pages/StudentHomework"));
 const StudentHomeworkList = lazy(() => import("./pages/StudentHomeworkList"));
 const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
+const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 
 function RouteFallback() {
   return <ElectricLoader label="טוען…" />;
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/student/:studentId/progress" element={<LearningProgress />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
+            <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

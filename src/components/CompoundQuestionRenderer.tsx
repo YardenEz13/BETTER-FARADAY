@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight } from "lucide-react";
+import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "lucide-react";
 import MathText from "./MathText";
 
 interface Section {
@@ -33,11 +33,12 @@ interface Props {
   assignedQuestionId: Id<"assignedQuestions">;
   onComplete: () => void;
   aiChatTrigger?: () => void;
+  onQrBridge?: () => void;
   /** AI-generated preamble override (themed version). If undefined, original is shown. */
   overridePreamble?: string;
 }
 
-export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, overridePreamble }: Props) {
+export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, onQrBridge, overridePreamble }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<Record<string, boolean>>({});
@@ -232,6 +233,12 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           {aiChatTrigger && (
                             <button className="btn btn-primary btn-ghost" onClick={aiChatTrigger}>
                               <Bot size={16} /> [ AI_ASSIST ]
+                            </button>
+                          )}
+
+                          {onQrBridge && (
+                            <button className="btn btn-primary btn-ghost" onClick={onQrBridge}>
+                              <Smartphone size={16} /> צלם מהטלפון
                             </button>
                           )}
                         </div>

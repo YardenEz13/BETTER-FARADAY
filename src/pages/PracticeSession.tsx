@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock, Star
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
+import FaradayCanvas from "../components/FaradayCanvas";
 
 const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
@@ -131,18 +132,15 @@ export default function PracticeSession() {
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
 
-      {/* ── Ambient glow ── */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-20%] right-[20%] w-[500px] h-[500px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(23,201,100,0.07) 0%, transparent 70%)' }} />
-      </div>
+      {/* ── Faraday-effect polarization field (full-bleed backdrop) ── */}
+      <FaradayCanvas variant="effect" style={{ position: 'fixed', zIndex: 0 }} />
 
       {/* ── Top nav ── */}
       <motion.header
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-surface border-b-2 border-outline backdrop-blur-xl"
-        style={{ boxShadow: 'var(--shadow-sm)' }}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b-2 border-outline backdrop-blur-xl"
+        style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         <div className="flex items-center gap-4">
           <button className="btn-icon" onClick={() => navigate(`/student/${studentId}`)}>
@@ -218,7 +216,10 @@ export default function PracticeSession() {
                 transition={{ duration: 0.3 }}
               >
                 {/* Question card */}
-                <div className="clay-card relative overflow-hidden p-8">
+                <div
+                  className="clay-card relative overflow-hidden p-8 backdrop-blur-md"
+                  style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
+                >
                   {/* Top accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-primary rounded-t-2xl" />
 
@@ -572,7 +573,10 @@ function CalculatorCard() {
   };
 
   return (
-    <div className="clay-card p-5 sticky top-24">
+    <div
+      className="clay-card p-5 sticky top-24 backdrop-blur-md"
+      style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
+    >
       <div className="label-mono mb-4 text-on-surface-variant">מחשבון מדעי</div>
 
       {/* Display */}

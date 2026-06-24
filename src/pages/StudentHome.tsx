@@ -11,7 +11,8 @@ import {
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricField, ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
+import { ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
+import FaradayCanvas from "../components/FaradayCanvas";
 
 /* ── A single station on the learning circuit ──
    Active node = a "charged" particle: pulsing field-line rings radiate from it. */
@@ -82,6 +83,69 @@ const SkillNode = memo(function SkillNode({
   );
 });
 
+/* ── Daily-goal ring + weekday streak strip ──
+   Both derive from the real streak: the ring shows days active this week
+   (capped at 7), and the strip lights the weekdays covered by the streak. */
+function WeeklyStreakCard({ streak }: { streak: number }) {
+  const days = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+  const today = new Date().getDay(); // 0 = Sunday → matches days[]
+  const activeThisWeek = Math.min(today + 1, streak, 7);
+  const R = 25;
+  const CIRC = 2 * Math.PI * R;
+  const ratio = Math.min(activeThisWeek / 7, 1);
+
+  return (
+    <div
+      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md"
+      style={{ background: "color-mix(in srgb, var(--color-surface) 85%, transparent)", boxShadow: "var(--shadow-clay)" }}
+    >
+      <div className="flex items-center gap-4 mb-4">
+        <div className="relative w-[60px] h-[60px] flex-shrink-0">
+          <svg width="60" height="60" viewBox="0 0 60 60" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="30" cy="30" r={R} fill="none" stroke="var(--color-outline)" strokeWidth="7" />
+            <circle
+              cx="30" cy="30" r={R} fill="none" stroke="var(--color-primary)" strokeWidth="7" strokeLinecap="round"
+              strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - ratio)} style={{ transition: "stroke-dashoffset 0.7s ease" }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="num font-bold text-[15px] text-primary">{activeThisWeek}/7</span>
+          </div>
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-[15px] text-on-surface mb-0.5" style={{ fontFamily: "'Assistant', sans-serif" }}>עקביות שבועית</h4>
+          <p className="font-medium text-xs text-on-surface-variant leading-snug">
+            {activeThisWeek >= 7
+              ? "שבוע מושלם — כל הכבוד! ✨"
+              : `${activeThisWeek} ${activeThisWeek === 1 ? "יום פעיל" : "ימים פעילים"} השבוע`}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-3.5 border-t-2 border-outline">
+        <span className="font-semibold text-[11px] text-on-surface-variant">השבוע</span>
+        <div className="flex gap-2">
+          {days.map((d, i) => {
+            const filled = i <= today && today - i < streak;
+            const isToday = i === today;
+            return (
+              <div key={d} className="flex flex-col items-center gap-1.5">
+                <span className={`font-semibold text-[10px] ${isToday ? "text-primary" : "text-on-surface-variant"}`}>{d}</span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{
+                    background: filled ? "var(--color-primary)" : "var(--color-outline)",
+                    boxShadow: isToday && filled ? "0 0 0 2.5px color-mix(in srgb, var(--color-primary) 30%, transparent)" : "none",
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -119,14 +183,17 @@ export default function StudentHome() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
+    <div className="relative min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
+
+      {/* ── Magnetic lines-of-force field (full-bleed backdrop) ── */}
+      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
 
       {/* ── Top Navigation ── */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 bg-surface border-b-2 border-outline"
-        style={{ boxShadow: 'var(--shadow-clay)' }}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md"
+        style={{ boxShadow: 'var(--shadow-clay)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         {/* Left: back + student info */}
         <div className="flex items-center gap-3">
@@ -197,14 +264,13 @@ export default function StudentHome() {
       </motion.header>
 
       {/* ── Main Content ── */}
-      <div className="pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen px-6 md:px-16 py-6 w-full max-w-[1600px] mx-auto">
+      <div className="relative z-10 pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen px-6 md:px-16 py-6 w-full max-w-[1600px] mx-auto">
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
           {/* Section header — circuit-field hero band */}
-          <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline"
-            style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-clay)' }}>
-            <ElectricField intensity={0.6} density="normal" style={{ zIndex: 0 }} />
+          <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline backdrop-blur-md"
+            style={{ background: 'color-mix(in srgb, var(--color-surface) 82%, transparent)', boxShadow: 'var(--shadow-clay)' }}>
             <div className="relative z-10 flex items-center justify-between px-6 py-6">
               <div>
                 <h1 className="font-bold text-2xl text-on-surface mb-1" style={{ fontFamily: "'Assistant', sans-serif" }}>
@@ -342,8 +408,8 @@ export default function StudentHome() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-surface rounded-3xl p-6 border-2 border-outline"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="rounded-3xl p-6 border-2 border-outline backdrop-blur-md"
+              style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)', boxShadow: 'var(--shadow-clay)' }}
             >
               <h3 className="font-bold text-on-surface mb-5" style={{ fontFamily: "'Assistant', sans-serif" }}>סקירת התקדמות</h3>
               <div className="space-y-4">
@@ -381,6 +447,15 @@ export default function StudentHome() {
               </div>
             </motion.div>
 
+            {/* Daily goal + weekday streak */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <WeeklyStreakCard streak={student.streak} />
+            </motion.div>
+
             {/* Theme badge */}
             {student.homeworkTheme && (
               <motion.button
@@ -405,8 +480,8 @@ export default function StudentHome() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-surface rounded-2xl p-5 border-2 border-outline"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="rounded-2xl p-5 border-2 border-outline backdrop-blur-md"
+              style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)', boxShadow: 'var(--shadow-clay)' }}
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex-shrink-0 flex items-center justify-center"

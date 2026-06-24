@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { Check, X, Send, Bot } from "lucide-react";
+import { Check, X, Send, Bot, Smartphone } from "lucide-react";
 import MathText from "./MathText";
 
 interface LegacyQuestionData {
@@ -20,10 +20,11 @@ interface Props {
   assignedQuestionId: Id<"assignedQuestions">;
   onComplete: () => void;
   aiChatTrigger?: () => void;
+  onQrBridge?: () => void;
   overrideStem?: string;
 }
 
-export default function LegacyHomeworkRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, overrideStem }: Props) {
+export default function LegacyHomeworkRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, onQrBridge, overrideStem }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -119,11 +120,11 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
           </div>
 
           {!isSubmitted && (
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <button
                 className={`flex-1 flex justify-center items-center gap-2 px-6 py-4 rounded-2xl font-bold text-lg border-2 transition-all ${
-                  selectedIndex === null 
-                    ? 'bg-surface-container text-on-surface-variant border-outline cursor-not-allowed' 
+                  selectedIndex === null
+                    ? 'bg-surface-container text-on-surface-variant border-outline cursor-not-allowed'
                     : 'bg-primary text-white border-primary-dark hover:-translate-y-1 active:translate-y-0.5 cursor-pointer'
                 }`}
                 style={selectedIndex !== null ? { boxShadow: 'var(--shadow-clay-primary)' } : {}}
@@ -133,12 +134,21 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
                 <Send size={20} /> בדוק תשובה
               </button>
               {aiChatTrigger && (
-                <button 
+                <button
                   className="flex justify-center items-center gap-2 px-6 py-4 rounded-2xl font-bold text-lg border-2 bg-surface text-secondary border-outline hover:border-secondary transition-all cursor-pointer hover:-translate-y-1 active:translate-y-0.5"
                   style={{ boxShadow: 'var(--shadow-clay)' }}
                   onClick={aiChatTrigger}
                 >
                   <Bot size={20} /> מורה AI
+                </button>
+              )}
+              {onQrBridge && (
+                <button
+                  className="flex justify-center items-center gap-2 px-6 py-4 rounded-2xl font-bold text-lg border-2 bg-surface text-primary border-outline hover:border-primary transition-all cursor-pointer hover:-translate-y-1 active:translate-y-0.5"
+                  style={{ boxShadow: 'var(--shadow-clay)' }}
+                  onClick={onQrBridge}
+                >
+                  <Smartphone size={20} /> צלם מהטלפון
                 </button>
               )}
             </div>

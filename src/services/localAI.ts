@@ -5,6 +5,11 @@ export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief };
 export interface Message {
   role: "user" | "model" | "system";
   content: string;
+  // Ephemeral, local-only preview for notebook-check messages. This is a
+  // compressed data URL kept in React state + IndexedDB for rendering. It is
+  // NEVER sent to Convex (would blow past the ~1MB document limit) and is not
+  // part of the text history handed to the tutor.
+  imageUrl?: string;
 }
 
 const PRACTICE_AGENT_PROMPT = `אתה פאראדיי — מורה פרטי למתמטיקה בשיטה הסוקרטית. מטרתך לעזור לתלמיד להבין ולפתור בעיות מתמטיות בעצמו.
@@ -69,7 +74,7 @@ export function violatesSocraticRules(text: string): boolean {
     }
 
     // Check if the math block contains active math operations/operators
-    const hasOperators = /[\+\-\*\/\^]|\\[f]rac|\\cdot|\\times|\\div|\\pm|\\sqrt/g.test(mathContent);
+    const hasOperators = /[+\-*/^]|\\[f]rac|\\cdot|\\times|\\div|\\pm|\\sqrt/g.test(mathContent);
     if (hasOperators) {
       const numbers = mathContent.match(/\d+/g);
       if (numbers) {
@@ -90,7 +95,7 @@ export function violatesSocraticRules(text: string): boolean {
   }
 
   // 2. Check for explicit arithmetic calculations or assignments outside math blocks or across the text
-  const equalsMatch = text.match(/=\s*[\+\-]?\s*(\d+)/g);
+  const equalsMatch = text.match(/=\s*[+-]?\s*(\d+)/g);
   if (equalsMatch) {
     for (const matchStr of equalsMatch) {
       const numMatch = matchStr.match(/\d+/);
@@ -142,7 +147,7 @@ export async function createSession(
   return true;
 }
 
-export function handleAICrash(error: any) {
+export function handleAICrash(error: unknown) {
   console.error("[localAI] AI System error. Error:", error);
   isReady = false;
   isFailed = false;
@@ -175,7 +180,7 @@ export function needsCompaction(history: Message[]): boolean {
 
 export function heuristicSummary(messages: Message[]): string {
   const userMsgs = messages.filter((m) => m.role === "user");
-  const modelMsgs = messages.filter((m) => m.role === "model" || (m as any).role === "assistant");
+  const modelMsgs = messages.filter((m) => m.role === "model" || (m as { role: string }).role === "assistant");
   const points: string[] = [];
   for (const m of userMsgs) {
     const trimmed = m.content.slice(0, 60);
@@ -218,7 +223,7 @@ export interface AIDebugState {
   lastUpdateMs: number;
 }
 
-let _debugState: AIDebugState = {
+const _debugState: AIDebugState = {
   promptMessages: null,
   promptTokenEstimate: 0,
   historyLength: 0,
@@ -306,7 +311,7 @@ function buildGeminiPayload(
     historyToUse.shift();
   }
 
-  const contents: any[] = [];
+  const contents: Array<{ role: string; parts: { text: string }[] }> = [];
 
   // Clear few-shot examples from here. They are now safely isolated in the system prompt.
 
@@ -446,9 +451,9 @@ export async function streamMessage(
       try {
         console.log(`[localAI] streamMessage: trying model ${model}...`);
         return await fetchWithRetry(model, signal);
-      } catch (e: any) {
-        lastErr = e;
-        if (e?.message?.includes("429")) {
+      } catch (e) {
+        lastErr = e instanceof Error ? e : new Error(String(e));
+        if (lastErr.message.includes("429")) {
           console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
           continue;
         }
@@ -520,8 +525,8 @@ export async function streamMessage(
       }
     }
     console.log("[localAI] streamMessage: stream complete. Total chunks:", chunkCount);
-  } catch (error: any) {
-    if (error?.name === "AbortError" || error?.message?.includes("aborted")) {
+  } catch (error) {
+    if (error instanceof Error && (error.name === "AbortError" || error.message.includes("aborted"))) {
       console.log("[localAI] streamMessage was intentionally aborted.");
       throw error;
     }
@@ -547,10 +552,14 @@ export async function streamMessage(
 }
 
 // ── Shared non-streaming Gemini helper with retry + model fallback ──
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+}
+
 async function geminiGenerateContent(
   payload: object,
   signal?: AbortSignal
-): Promise<any> {
+): Promise<GeminiResponse> {
   const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
   if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
@@ -582,6 +591,164 @@ async function geminiGenerateContent(
     console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
   }
   throw lastErr!;
+}
+
+// ── Notebook Vision Check ──
+// The student photographs their handwritten solution and asks Faraday to check
+// it. CRUCIAL DIFFERENCE from the Socratic tutor: this path is *allowed* to
+// reveal the mistake, the correct step, and a verdict — that is the entire
+// point of "check my work". It therefore deliberately does NOT run
+// violatesSocraticRules() (which would strip every correction as a violation).
+export interface NotebookImage {
+  mimeType: string; // "image/jpeg" | "image/png" | "image/webp"
+  data: string; // base64, no "data:" prefix
+}
+
+const NOTEBOOK_CHECKER_PROMPT = `אתה פאראדיי — בודק פתרונות במתמטיקה. התלמיד צילם את המחברת שלו ומבקש שתבדוק את העבודה שלו.
+
+כללים:
+1. השב תמיד בעברית בלבד.
+2. עבור על הפתרון שלב אחר שלב וזהה במדויק היכן (אם בכלל) נפלה טעות.
+3. כאן — בניגוד לתרגול מודרך — מותר ורצוי להצביע על הטעות המדויקת, להסביר מדוע היא שגויה ולהראות את הצעד הנכון.
+4. אם הפתרון נכון לחלוטין — אמור זאת בבירור ושבח את התלמיד.
+5. אם התמונה מטושטשת, חתוכה או אינה מכילה פתרון מתמטי — אמור זאת בנימוס ובקש תמונה ברורה יותר.
+6. השתמש ב-LaTeX (בין $...$) לכל ביטוי מתמטי.
+7. מבנה התשובה: שורת פסק-דין קצרה (✓ נכון / ✗ יש טעות) ← היכן הטעות ← הסבר קצר ← הצעד הנכון.
+8. היה תומך, חברי ומעודד — לעולם אל תזלזל.`;
+
+export async function checkNotebookImage(
+  image: NotebookImage,
+  userQuestion: string,
+  questionContext?: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) {
+    return "שגיאה: מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר. אנא הגדר אותו בקובץ .env.local.";
+  }
+
+  let systemContent = NOTEBOOK_CHECKER_PROMPT;
+  if (questionContext) {
+    systemContent += `\n\n=== השאלה שעליה התלמיד עובד (להקשר בלבד) ===\n${questionContext}\n=== סוף ההקשר ===`;
+  }
+
+  const promptText = userQuestion && userQuestion.trim()
+    ? userQuestion.trim()
+    : "בדוק בבקשה את הפתרון בתמונה. האם הוא נכון? אם לא — היכן בדיוק הטעות וכיצד לתקן אותה?";
+
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType: image.mimeType, data: image.data } },
+          { text: promptText },
+        ],
+      },
+    ],
+    systemInstruction: { parts: [{ text: systemContent }] },
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1500,
+    },
+  };
+
+  const data = await geminiGenerateContent(payload, signal);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return text.trim();
+}
+
+// ── Teacher Question Import (vision extraction) ──
+// One Gemini pass over a textbook photo/PDF: read the question AND decide the
+// best format (multiple-choice vs fill-in-the-blank), returning an editable
+// draft. `topicId` is intentionally absent — the teacher picks the topic in the
+// review UI before publishing.
+export interface ExtractedQuestionDraft {
+  format: "multiple_choice" | "fill_blank";
+  difficulty: number; // 1-5
+  stem: string;
+  choices: string[]; // multiple_choice only ([] for fill_blank)
+  correctIndex?: number; // multiple_choice
+  correctAnswer?: string; // fill_blank
+  solutionSteps: string[];
+  hint: string;
+  explanation: string;
+}
+
+const QUESTION_EXTRACT_PROMPT = `אתה עוזר למורה למתמטיקה. לפניך תמונה או PDF של שאלה מספר לימוד בעברית. חלץ את השאלה והחזר JSON בלבד (ללא markdown, ללא תגיות \`\`\`) במבנה הבא:
+{
+  "format": "multiple_choice" או "fill_blank",
+  "stem": "ניסוח השאלה המלא בעברית, עם נוסחאות ב-LaTeX בין $...$",
+  "choices": ["אפשרות 1", "אפשרות 2", "אפשרות 3", "אפשרות 4"],
+  "correctIndex": 0,
+  "correctAnswer": "",
+  "difficulty": 3,
+  "solutionSteps": ["שלב 1", "שלב 2"],
+  "hint": "רמז מנחה אחד",
+  "explanation": "הסבר קצר לפתרון",
+  "rawText": "כל הטקסט שזיהית בתמונה"
+}
+
+כללים:
+- בחר "multiple_choice" אם לשאלה יש תשובה אחת נכונה שניתן להציג כבחירה מרובה; אחרת בחר "fill_blank".
+- עבור multiple_choice: מלא 4 אפשרויות (כולל הסחות דעת סבירות), קבע "correctIndex" (0-3), והשאר "correctAnswer" ריק.
+- עבור fill_blank: מלא "correctAnswer" עם התשובה הנכונה, והשאר "choices" כמערך ריק [].
+- "difficulty" הוא הערכה 1-5.
+- אם התמונה אינה ברורה או אינה מכילה שאלה מתמטית — החזר "stem" ריק.`;
+
+export async function extractQuestionFromMedia(
+  media: { mimeType: string; data: string },
+  signal?: AbortSignal
+): Promise<{ rawText: string; draft: ExtractedQuestionDraft }> {
+  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+  if (!apiKey) throw new Error("מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר.");
+
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { inlineData: { mimeType: media.mimeType, data: media.data } },
+          { text: QUESTION_EXTRACT_PROMPT },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      responseMimeType: "application/json",
+    },
+  };
+
+  const data = await geminiGenerateContent(payload, signal);
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const clean = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  const parsed = JSON.parse(clean);
+
+  const format: ExtractedQuestionDraft["format"] =
+    parsed.format === "multiple_choice" ? "multiple_choice" : "fill_blank";
+
+  const draft: ExtractedQuestionDraft = {
+    format,
+    difficulty: Math.max(1, Math.min(5, Number(parsed.difficulty) || 3)),
+    stem: String(parsed.stem || ""),
+    choices: Array.isArray(parsed.choices) ? parsed.choices.map((c: unknown) => String(c)) : [],
+    correctIndex:
+      typeof parsed.correctIndex === "number"
+        ? parsed.correctIndex
+        : format === "multiple_choice" ? 0 : undefined,
+    correctAnswer: parsed.correctAnswer ? String(parsed.correctAnswer) : format === "fill_blank" ? "" : undefined,
+    solutionSteps: Array.isArray(parsed.solutionSteps) ? parsed.solutionSteps.map((s: unknown) => String(s)) : [],
+    hint: String(parsed.hint || ""),
+    explanation: String(parsed.explanation || ""),
+  };
+
+  if (!draft.stem.trim()) {
+    throw new Error("לא זוהתה שאלה מתמטית בתמונה. נסה קובץ ברור יותר.");
+  }
+
+  const rawText = String(parsed.rawText || draft.stem);
+  return { rawText, draft };
 }
 
 // ── Analysis ──
@@ -740,7 +907,7 @@ ${conversationText}`
       questionDepth: Math.max(1, Math.min(5, parsed.questionDepth ?? fallback.questionDepth)),
       independenceRatio: Math.max(0, Math.min(1, parsed.independenceRatio ?? fallback.independenceRatio)),
     };
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
     console.error("[localAI] analyzeConversation failed, using fallback:", error);
     return fallback;
@@ -873,7 +1040,7 @@ ${analysisText}`
       autonomyLevel: Math.max(1, Math.min(5, parsed.autonomyLevel ?? fallback.autonomyLevel)),
       solutionAccuracy: Math.max(1, Math.min(5, parsed.solutionAccuracy ?? fallback.solutionAccuracy)),
     };
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
     console.error("[localAI] generateCompositeBrief failed, using fallback:", error);
     return fallback;

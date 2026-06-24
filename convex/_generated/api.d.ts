@@ -12,6 +12,7 @@ import type * as addMore from "../addMore.js";
 import type * as ai from "../ai.js";
 import type * as aiChat from "../aiChat.js";
 import type * as attempts from "../attempts.js";
+import type * as bridge from "../bridge.js";
 import type * as classroom from "../classroom.js";
 import type * as clear from "../clear.js";
 import type * as compoundQuestions from "../compoundQuestions.js";
@@ -26,6 +27,7 @@ import type * as seed from "../seed.js";
 import type * as seedCompound from "../seedCompound.js";
 import type * as seedInteractions from "../seedInteractions.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
+import type * as teacherImport from "../teacherImport.js";
 import type * as topics from "../topics.js";
 
 import type {
@@ -39,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   aiChat: typeof aiChat;
   attempts: typeof attempts;
+  bridge: typeof bridge;
   classroom: typeof classroom;
   clear: typeof clear;
   compoundQuestions: typeof compoundQuestions;
@@ -53,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   seedCompound: typeof seedCompound;
   seedInteractions: typeof seedInteractions;
   sessionBriefs: typeof sessionBriefs;
+  teacherImport: typeof teacherImport;
   topics: typeof topics;
 }>;
 

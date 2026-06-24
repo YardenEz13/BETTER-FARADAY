@@ -32,6 +32,7 @@ export default function StudentHomework() {
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [bridgeRequested, setBridgeRequested] = useState(false);
 
   if (!student || !homework) return null;
 
@@ -99,6 +100,7 @@ export default function StudentHomework() {
                     assignedQuestionId={activeAssignment._id}
                     onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                     aiChatTrigger={() => setChatOpen(true)}
+                    onQrBridge={() => { setChatOpen(true); setBridgeRequested(true); }}
                     overridePreamble={!showOriginal ? activeAssignment.personalizedPreamble : undefined}
                   />
                 </motion.div>
@@ -139,6 +141,7 @@ export default function StudentHomework() {
                     assignedQuestionId={activeAssignment._id}
                     onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                     aiChatTrigger={() => setChatOpen(true)}
+                    onQrBridge={() => { setChatOpen(true); setBridgeRequested(true); }}
                     overrideStem={!showOriginal ? activeAssignment.personalizedStem : undefined}
                   />
                 </motion.div>
@@ -348,6 +351,8 @@ export default function StudentHomework() {
         agentType="homework"
         questionStem={activeQuestion ? ("preamble" in activeQuestion ? (activeQuestion as any).preamble : (activeQuestion as any).stem) : undefined}
         questionId={activeAssignment?.questionId || undefined}
+        requestBridge={bridgeRequested}
+        onBridgeRequestHandled={() => setBridgeRequested(false)}
       />
     </div>
   );

@@ -44,3 +44,11 @@ __pycache__/
 
 *storybook.log
 storybook-static
+
+# design-sync artifacts
+.design-sync/sb-reference/
+.design-sync/learnings/
+.design-sync/.cache/
+.design-sync/node_modules
+.ds-sync/
+ds-bundle/

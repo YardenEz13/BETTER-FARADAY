@@ -24,4 +24,11 @@ crons.interval(
   internal.ai.processAbandonedChats,
 );
 
+// Reclaim expired / consumed QR bridge sessions every 15 minutes
+crons.interval(
+  "sweep-bridge-sessions",
+  { minutes: 15 },
+  internal.bridge.sweepExpired,
+);
+
 export default crons;
