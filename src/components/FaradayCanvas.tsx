@@ -776,7 +776,10 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
     let teardown: (() => void) | null = null;
 
     const start = () => {
-      const rect = parent.getBoundingClientRect();
+      // Measure the canvas's OWN box, not the parent's. For a `fixed` canvas
+      // this is the viewport; for an `absolute` one it's the parent. Either way
+      // the backing store matches the displayed size exactly — no distortion.
+      const rect = canvas.getBoundingClientRect();
       const w = Math.max(1, Math.round(rect.width));
       const h = Math.max(1, Math.round(rect.height));
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -819,11 +822,13 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
 
     start();
 
-    // Re-initialize on meaningful container resize (debounced by size delta).
-    let prevW = Math.round(parent.getBoundingClientRect().width);
-    let prevH = Math.round(parent.getBoundingClientRect().height);
+    // Re-initialize on meaningful canvas resize (debounced by size delta).
+    // Observing the canvas itself catches both parent-driven resizes (absolute)
+    // and viewport resizes (a fixed, 100%-sized canvas reflows with the window).
+    let prevW = Math.round(canvas.getBoundingClientRect().width);
+    let prevH = Math.round(canvas.getBoundingClientRect().height);
     const ro = new ResizeObserver(() => {
-      const r = parent.getBoundingClientRect();
+      const r = canvas.getBoundingClientRect();
       const nw = Math.round(r.width), nh = Math.round(r.height);
       if (Math.abs(nw - prevW) < 2 && Math.abs(nh - prevH) < 2) return;
       prevW = nw;
@@ -831,7 +836,7 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       teardown?.();
       start();
     });
-    ro.observe(parent);
+    ro.observe(canvas);
 
     return () => {
       ro.disconnect();
