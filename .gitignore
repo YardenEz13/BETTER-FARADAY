@@ -39,6 +39,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Crash artifacts
+*.stackdump
+
 # IDE specific
 .claude/
 

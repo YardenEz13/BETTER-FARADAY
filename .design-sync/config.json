@@ -1,0 +1,10 @@
+{
+  "projectId": "0eb241e5-9fab-4d06-9c9c-53b8d1bc00ea",
+  "shape": "storybook",
+  "pkg": "cobalt-apollo",
+  "globalName": "CobaltApollo",
+  "storybookConfigDir": ".storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "entry": "src/components/electric/index.ts",
+  "readmeHeader": ".design-sync/conventions.md"
+}
