@@ -479,7 +479,7 @@ export default function AIChatPanel({
     if (!attachedImage || isTyping || isSendingRef.current) return;
 
     if (!online) {
-      setImageError("בדיקת תמונה דורשת חיבור לאינטרנט.");
+      setImageError("ניתוח התמונה דורש חיבור לאינטרנט.");
       setTimeout(() => setImageError(null), 5000);
       return;
     }
@@ -494,7 +494,7 @@ export default function AIChatPanel({
 
       const userMsg: Message = {
         role: "user",
-        content: question || "📷 בדוק בבקשה את הפתרון שלי במחברת",
+        content: question || "📷 עזור לי להתקדם — מה הצעד הבא לפי המחברת שלי?",
         imageUrl: img.dataUrl,
       };
 
@@ -919,7 +919,7 @@ export default function AIChatPanel({
   const hasConversation = messages.some((m) => m.role === "user" || m.role === "model");
   const starterPrompts = agentType === "practice"
     ? ["לא הבנתי את השאלה", "תן לי רמז קטן", "איך מתחילים?"]
-    : ["אני תקוע בסעיף הזה", "תסביר לי את הנושא", "בדוק את הפתרון שלי"];
+    : ["אני תקוע בסעיף הזה", "תסביר לי את הנושא", "תן לי רמז לצעד הבא"];
 
   return (
     <>
@@ -1176,7 +1176,7 @@ export default function AIChatPanel({
                     <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
                     <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
                       <ImagePlus size={14} className="flex-shrink-0" />
-                      <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי יבדוק את הפתרון שלך</span>
+                      <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
                     </div>
                     <button
                       onClick={() => setAttachedImage(null)}
@@ -1245,7 +1245,7 @@ export default function AIChatPanel({
                       className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
                       onClick={handleSubmit}
                       disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                      title={attachedImage ? "בדוק את התמונה" : "שלח"}
+                      title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
                     >
                       <Send className="" />
                     </button>
@@ -1261,7 +1261,7 @@ export default function AIChatPanel({
       {showQRBridge && (
         <QRBridgeModal
           studentId={studentId}
-          label={topicName || "בדיקת מחברת"}
+          label={topicName || "רמז מהמחברת"}
           onClose={() => setShowQRBridge(false)}
           onImageReceived={(img) => { setAttachedImage(img); setShowQRBridge(false); }}
         />

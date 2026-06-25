@@ -593,28 +593,32 @@ async function geminiGenerateContent(
   throw lastErr!;
 }
 
-// ── Notebook Vision Check ──
-// The student photographs their handwritten solution and asks Faraday to check
-// it. CRUCIAL DIFFERENCE from the Socratic tutor: this path is *allowed* to
-// reveal the mistake, the correct step, and a verdict — that is the entire
-// point of "check my work". It therefore deliberately does NOT run
-// violatesSocraticRules() (which would strip every correction as a violation).
+// ── Notebook Vision Hint ──
+// The student photographs their handwritten work so Faraday can see where they
+// are and nudge them forward. This path is intentionally Socratic: it must NOT
+// reveal the final answer or a full corrected solution — only the single next
+// step or one guiding hint. The prompt itself is the guardrail here (the regex
+// violatesSocraticRules() would over-strip legitimate hints that mention a
+// number), so keep the prompt strict.
 export interface NotebookImage {
   mimeType: string; // "image/jpeg" | "image/png" | "image/webp"
   data: string; // base64, no "data:" prefix
 }
 
-const NOTEBOOK_CHECKER_PROMPT = `אתה פאראדיי — בודק פתרונות במתמטיקה. התלמיד צילם את המחברת שלו ומבקש שתבדוק את העבודה שלו.
+const NOTEBOOK_CHECKER_PROMPT = `אתה פאראדיי — מורה מנחה למתמטיקה. התלמיד צילם את המחברת שלו כדי שתעזור לו להתקדם. אתה רואה את מה שכתב עד עכשיו.
+
+המטרה שלך: לעזור לתלמיד להתקדם בכוחות עצמו — לא לפתור עבורו ולא לחשוף את התשובה.
 
 כללים:
 1. השב תמיד בעברית בלבד.
-2. עבור על הפתרון שלב אחר שלב וזהה במדויק היכן (אם בכלל) נפלה טעות.
-3. כאן — בניגוד לתרגול מודרך — מותר ורצוי להצביע על הטעות המדויקת, להסביר מדוע היא שגויה ולהראות את הצעד הנכון.
-4. אם הפתרון נכון לחלוטין — אמור זאת בבירור ושבח את התלמיד.
-5. אם התמונה מטושטשת, חתוכה או אינה מכילה פתרון מתמטי — אמור זאת בנימוס ובקש תמונה ברורה יותר.
-6. השתמש ב-LaTeX (בין $...$) לכל ביטוי מתמטי.
-7. מבנה התשובה: שורת פסק-דין קצרה (✓ נכון / ✗ יש טעות) ← היכן הטעות ← הסבר קצר ← הצעד הנכון.
-8. היה תומך, חברי ומעודד — לעולם אל תזלזל.`;
+2. עבור על מה שהתלמיד כתב והבן היכן הוא נמצא בפתרון.
+3. אסור לחשוף את התשובה הסופית, ואסור לכתוב את הפתרון המלא או את השלב המתוקן עבורו.
+4. תן רק את הצעד הבא האחד שכדאי לעשות, או רמז מנחה אחד — בלי לבצע את הצעד במקומו.
+5. אם זיהית טעות — אל תתקן אותה ישירות. כוון את התלמיד אל האזור שבו כדאי לבדוק שוב, ושאל שאלה מנחה שתעזור לו לגלות אותה בעצמו.
+6. אם מה שכתב נראה נכון עד כה — עודד אותו והצע מהו הצעד הבא להמשך.
+7. אם התמונה מטושטשת, חתוכה או אינה מכילה פתרון מתמטי — אמור זאת בנימוס ובקש תמונה ברורה יותר.
+8. השתמש ב-LaTeX (בין $...$) רק לביטוי מתמטי קצר בתוך רמז, ולעולם לא כדי לחשוף את התשובה.
+9. שמור על תשובה קצרה (1-3 משפטים), תומכת ומעודדת.`;
 
 export async function checkNotebookImage(
   image: NotebookImage,
@@ -634,7 +638,7 @@ export async function checkNotebookImage(
 
   const promptText = userQuestion && userQuestion.trim()
     ? userQuestion.trim()
-    : "בדוק בבקשה את הפתרון בתמונה. האם הוא נכון? אם לא — היכן בדיוק הטעות וכיצד לתקן אותה?";
+    : "הסתכל בבקשה על מה שכתבתי עד עכשיו. מה הצעד הבא שכדאי לי לעשות? תן לי רמז אחד בלי לפתור או לחשוף את התשובה.";
 
   const payload = {
     contents: [

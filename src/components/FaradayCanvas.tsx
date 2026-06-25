@@ -789,8 +789,12 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       if (!ctx) return;
       ctx.scale(dpr, dpr);
 
+      // Pointer Events cover mouse, touch and pen with one code path, so the
+      // canvas is reactive on phones too (a finger drag drives the same
+      // parallax/ripple/field-bend a cursor does on desktop). We never call
+      // preventDefault, so page scrolling is unaffected.
       const mouse: Mouse = { x: w / 2, y: h / 2, active: false };
-      const onMove = (e: MouseEvent) => {
+      const onMove = (e: PointerEvent) => {
         const r = canvas.getBoundingClientRect();
         mouse.x = e.clientX - r.left;
         mouse.y = e.clientY - r.top;
@@ -799,8 +803,13 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       const onLeave = () => {
         mouse.active = false;
       };
-      parent.addEventListener("mousemove", onMove);
-      parent.addEventListener("mouseleave", onLeave);
+      parent.addEventListener("pointermove", onMove);
+      // A tap should activate the effect even without a prior move (touch has
+      // no hover); lifting/cancelling the touch releases it.
+      parent.addEventListener("pointerdown", onMove);
+      parent.addEventListener("pointerup", onLeave);
+      parent.addEventListener("pointercancel", onLeave);
+      parent.addEventListener("pointerleave", onLeave);
 
       const draw = makeVariant(variant, ctx, w, h, mouse, () => paletteRef.current);
       if (reduce) {
@@ -815,8 +824,11 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
 
       teardown = () => {
         cancelAnimationFrame(raf);
-        parent.removeEventListener("mousemove", onMove);
-        parent.removeEventListener("mouseleave", onLeave);
+        parent.removeEventListener("pointermove", onMove);
+        parent.removeEventListener("pointerdown", onMove);
+        parent.removeEventListener("pointerup", onLeave);
+        parent.removeEventListener("pointercancel", onLeave);
+        parent.removeEventListener("pointerleave", onLeave);
       };
     };
 
