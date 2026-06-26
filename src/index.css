@@ -553,3 +553,29 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════ MATH PLAYGROUND (MathLive) ════════════════════ */
+/* Theme the <math-field> web component to the app's surface/primary tokens.
+   Math stays LTR even inside the RTL panel. */
+math-field.faraday-mathfield {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 1.25rem;
+  color: var(--color-on-surface);
+  background: transparent;
+  border: none;
+  outline: none;
+  direction: ltr;
+  --primary: var(--color-primary);
+  --caret-color: var(--color-primary);
+  --selection-background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --contains-highlight-background-color: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --smart-fence-color: var(--color-primary);
+  --placeholder-color: color-mix(in srgb, var(--color-on-surface-variant) 70%, transparent);
+}
+math-field.faraday-mathfield::part(virtual-keyboard-toggle),
+math-field.faraday-mathfield::part(menu-toggle) {
+  color: var(--color-on-surface-variant);
+}

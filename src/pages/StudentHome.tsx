@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, memo } from "react";
+import { useState, memo, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   LogOut, BookOpen, BarChart2, Bot, Play, Zap, Flame, Check,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
+
+const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -153,6 +155,7 @@ export default function StudentHome() {
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
   const [chatOpen, setChatOpen] = useState(false);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'map' | 'stats'>('map');
   const reducedMotion = !!useReducedMotion();
@@ -566,7 +569,12 @@ export default function StudentHome() {
         onClose={() => setChatOpen(false)}
         studentId={studentId!}
         agentType="homework"
+        onOpenPlayground={() => setPlaygroundOpen(true)}
       />
+
+      <Suspense fallback={null}>
+        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
+      </Suspense>
     </div>
   );
 }

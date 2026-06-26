@@ -51,12 +51,14 @@ interface AIChatPanelProps {
   /** External trigger (e.g. the homework question) to open the phone-photo bridge. */
   requestBridge?: boolean;
   onBridgeRequestHandled?: () => void;
+  /** Opens the math playground (wired to the math-keyboard button in the console). */
+  onOpenPlayground?: () => void;
 }
 
 export default function AIChatPanel({
   isOpen, onClose, studentId, agentType,
   questionStem, topicName, topicId, questionId,
-  requestBridge, onBridgeRequestHandled,
+  requestBridge, onBridgeRequestHandled, onOpenPlayground,
 }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -1218,8 +1220,10 @@ export default function AIChatPanel({
                     <QrCode className="" />
                   </button>
                   <button
-                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
-                    title="מקלדת מתמטית"
+                    onClick={onOpenPlayground}
+                    disabled={!onOpenPlayground}
+                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="מגרש המתמטיקה — פתרון בלי דף ועיפרון"
                   >
                     <Calculator className="" />
                   </button>

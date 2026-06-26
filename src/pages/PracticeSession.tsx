@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
+
+const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
 const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
@@ -54,6 +56,7 @@ export default function PracticeSession() {
   const startTimeRef = useRef(Date.now());
   const transitionLockRef = useRef(false); // prevents click-through to next question
   const [chatOpen, setChatOpen]             = useState(false);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
   const reducedMotion = !!useReducedMotion();
 
@@ -475,7 +478,12 @@ export default function PracticeSession() {
         topicName={currentTopic?.nameHe}
         topicId={topicId}
         questionId={activeQuestion?._id}
+        onOpenPlayground={() => setPlaygroundOpen(true)}
       />
+
+      <Suspense fallback={null}>
+        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
+      </Suspense>
     </div>
   );
 }

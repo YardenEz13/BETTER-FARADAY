@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Clock, CheckCircle2, Circle, Bot, Zap, ChevronRight
@@ -12,6 +12,8 @@ import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
 import AIChatPanel from "../components/AIChatPanel";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
 import { ElectricAtom } from "../components/electric";
+
+const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
 export default function StudentHomework() {
   const { studentId, homeworkId } = useParams<{ studentId: string; homeworkId: string }>();
@@ -31,6 +33,7 @@ export default function StudentHomework() {
 
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
   const [bridgeRequested, setBridgeRequested] = useState(false);
 
@@ -353,7 +356,12 @@ export default function StudentHomework() {
         questionId={activeAssignment?.questionId || undefined}
         requestBridge={bridgeRequested}
         onBridgeRequestHandled={() => setBridgeRequested(false)}
+        onOpenPlayground={() => setPlaygroundOpen(true)}
       />
+
+      <Suspense fallback={null}>
+        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
+      </Suspense>
     </div>
   );
 }
