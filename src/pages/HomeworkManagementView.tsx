@@ -5,10 +5,11 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
 import QuestionImportModal from "../components/QuestionImportModal";
+import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
-  Loader2, Zap, Sparkles, Check
+  Loader2, Zap, Sparkles, Check, Scissors, User, ChevronDown
 } from "lucide-react";
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
@@ -53,6 +54,14 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
     api.teacherImport.listImports,
     classroomId ? { classroomId, status: "approved" } : "skip"
   );
+  const pdfAssignments = useQuery(
+    api.pdfAssignments.listForClassroom,
+    classroomId ? { classroomId } : "skip"
+  );
+
+  const [showPdfBuilder, setShowPdfBuilder] = useState(false);
+  const [pdfToast, setPdfToast] = useState<string | null>(null);
+  const [expandedPdfId, setExpandedPdfId] = useState<Id<"pdfAssignments"> | null>(null);
 
   const pinnedCount = pinnedQuestionIds.length + pinnedCompoundIds.length;
 
@@ -138,11 +147,69 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           </p>
         </div>
 
-        <button className="btn btn-primary mb-8 w-fit flex items-center gap-3 px-8 py-4 text-base font-bold"
-          style={{ boxShadow: "var(--shadow-clay-primary)" }}
-          onClick={() => setShowCreate(!showCreate)}>
-          <Plus size={20} /> צור שיעורי בית חדשים
-        </button>
+        <div className="flex flex-wrap gap-3 mb-8">
+          <button className="btn btn-primary w-fit flex items-center gap-3 px-8 py-4 text-base font-bold"
+            style={{ boxShadow: "var(--shadow-clay-primary)" }}
+            onClick={() => setShowCreate(!showCreate)}>
+            <Plus size={20} /> צור שיעורי בית חדשים
+          </button>
+          <button className="w-fit flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl border-2 border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all"
+            onClick={() => setShowPdfBuilder(true)}>
+            <Scissors size={20} /> מטלת PDF אישית
+          </button>
+        </div>
+
+        {/* Personal PDF assignments */}
+        {pdfAssignments && pdfAssignments.length > 0 && (
+          <div className="mb-8">
+            <div className="label-mono text-[var(--color-accent)] mb-3 text-lg border-b border-[color-mix(in srgb, var(--color-accent) 20%, transparent)] pb-2 inline-block">
+              מטלות PDF אישיות
+            </div>
+            <div className="flex flex-col gap-2">
+              {pdfAssignments.map((a) => {
+                const isOpen = expandedPdfId === a._id;
+                return (
+                <div key={a._id} className="bg-surface rounded-2xl border-2 border-outline overflow-hidden"
+                  style={{ boxShadow: "var(--shadow-clay)" }}>
+                  <div className="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-[color-mix(in_srgb,var(--color-primary)_4%,transparent)] transition-colors"
+                    onClick={() => setExpandedPdfId(isOpen ? null : a._id)}>
+                    <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: a.avatarColor + "22", border: `2px solid ${a.avatarColor}66`, color: a.avatarColor }}>
+                      <Scissors size={18} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-black text-base text-[var(--color-primary)] truncate">{a.title}</div>
+                      <div className="label-mono text-[var(--color-accent)] opacity-70 flex items-center gap-2.5 text-xs mt-0.5 flex-wrap">
+                        <span className="flex items-center gap-1"><User size={11} /> {a.studentName}</span>
+                        <span className="flex items-center gap-1"><FileText size={11} /> {a.questionCount} שאלות · {a.partCount} סעיפים</span>
+                        {a.completedAt && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded font-bold"
+                            style={{ background: "color-mix(in srgb, var(--color-success) 15%, transparent)", color: "var(--color-success)" }}>
+                            <CheckCircle2 size={11} /> הושלם · {formatDate(a.completedAt)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center bg-[var(--bg-surface)] border border-[color-mix(in srgb, var(--color-primary) 30%, transparent)] px-3 py-1 rounded-lg text-center flex-shrink-0">
+                      <span className="num font-black text-base text-[var(--color-primary)]">{a.answeredCount}/{a.partCount}</span>
+                      <span className="label-mono text-[var(--color-primary)] opacity-60 text-xs">נענו</span>
+                    </div>
+                    {a.answeredCount > 0 && (
+                      <div className="flex flex-col items-center px-3 py-1 rounded-lg text-center flex-shrink-0"
+                        style={{ background: a.scorePercent >= 70 ? "color-mix(in srgb, var(--color-success) 12%, transparent)" : a.scorePercent >= 40 ? "color-mix(in srgb, var(--color-warning) 14%, transparent)" : "color-mix(in srgb, var(--color-danger) 12%, transparent)", border: `1px solid ${a.scorePercent >= 70 ? "color-mix(in srgb, var(--color-success) 30%, transparent)" : a.scorePercent >= 40 ? "color-mix(in srgb, var(--color-warning) 30%, transparent)" : "color-mix(in srgb, var(--color-danger) 30%, transparent)"}` }}>
+                        <span className="num font-black text-base" style={{ color: a.scorePercent >= 70 ? "var(--color-success)" : a.scorePercent >= 40 ? "var(--color-warning)" : "var(--danger)" }}>{a.scorePercent}%</span>
+                        <span className="label-mono opacity-60 text-xs" style={{ color: a.scorePercent >= 70 ? "var(--color-success)" : a.scorePercent >= 40 ? "var(--color-warning)" : "var(--danger)" }}>ציון</span>
+                      </div>
+                    )}
+                    <ChevronDown size={18} className={`text-[var(--color-accent)] opacity-60 flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </div>
+                  {isOpen && <PdfAssignmentDetail assignmentId={a._id} />}
+                </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <AnimatePresence>
           {showCreate && (
@@ -612,6 +679,92 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           onClose={() => setShowImportModal(false)}
           onApproved={handleImportApproved}
         />
+      )}
+
+      {showPdfBuilder && classroomId && (
+        <PdfAssignmentBuilder
+          classroomId={classroomId}
+          onClose={() => setShowPdfBuilder(false)}
+          onPublished={(name) => setPdfToast(`המטלה נשלחה אל ${name}`)}
+        />
+      )}
+
+      <AnimatePresence>
+        {pdfToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: 12, x: "-50%" }}
+            onAnimationComplete={() => setTimeout(() => setPdfToast(null), 2400)}
+            className="fixed bottom-6 left-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-[13.5px]"
+            style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
+          >
+            <CheckCircle2 size={16} style={{ color: "var(--color-primary)" }} /> {pdfToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Per-part breakdown for one PDF assignment (teacher review) ──
+function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignments"> }) {
+  const detail = useQuery(api.pdfAssignments.getAssignment, { assignmentId });
+
+  if (detail === undefined) {
+    return (
+      <div className="flex items-center justify-center py-6 text-[var(--text-muted)] border-t border-outline">
+        <Loader2 size={18} className="animate-spin ml-2" /> טוען...
+      </div>
+    );
+  }
+  if (!detail) return null;
+
+  return (
+    <div className="border-t border-outline bg-[color-mix(in_srgb,var(--bg-elevated)_40%,transparent)] p-4 flex flex-col gap-3">
+      {detail.pdfUrl && (
+        <a href={detail.pdfUrl} target="_blank" rel="noreferrer"
+          className="self-start flex items-center gap-1.5 text-xs font-bold text-[var(--color-accent)] hover:text-[var(--color-primary)] transition-colors">
+          <FileText size={13} /> פתח את ה-PDF המקורי
+        </a>
+      )}
+      {detail.questions.length === 0 ? (
+        <div className="text-sm text-[var(--text-muted)] py-2">אין שאלות במטלה זו.</div>
+      ) : (
+        detail.questions.map((q, qi) => (
+          <div key={q._id} className="flex gap-3 bg-surface rounded-xl border border-outline p-2.5">
+            <img src={`data:${q.imageMimeType};base64,${q.imageBase64}`} alt={`שאלה ${qi + 1}`}
+              className="w-20 h-20 object-cover rounded-lg border border-outline bg-white flex-shrink-0" />
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+              <div className="text-xs font-bold text-[var(--color-primary)]">שאלה {qi + 1}</div>
+              {q.parts.map((p, pi) => {
+                const answered = p.studentAnswer != null;
+                const correct = p.isCorrect === true;
+                return (
+                  <div key={pi} className="flex items-center gap-2 text-xs flex-wrap">
+                    {p.label && <span className="w-5 h-5 flex-shrink-0 rounded bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] text-[var(--color-accent)] flex items-center justify-center font-bold">{p.label}</span>}
+                    {!answered ? (
+                      <span className="text-[var(--text-muted)]">טרם נענה</span>
+                    ) : (
+                      <>
+                        {correct
+                          ? <CheckCircle2 size={14} style={{ color: "var(--color-success)" }} className="flex-shrink-0" />
+                          : <XCircle size={14} style={{ color: "var(--danger)" }} className="flex-shrink-0" />}
+                        <span className="text-[var(--text-primary)]">
+                          <span className="opacity-50">ענה: </span>
+                          <strong style={{ color: correct ? "var(--color-success)" : "var(--danger)" }}>{p.studentAnswer}</strong>
+                        </span>
+                        {!correct && (
+                          <span className="text-[var(--text-muted)]">
+                            <span className="opacity-50">נכון: </span><strong className="text-[var(--color-primary)]">{p.correctAnswer}</strong>
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
       )}
     </div>
   );

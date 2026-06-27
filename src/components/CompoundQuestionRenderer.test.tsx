@@ -136,8 +136,13 @@ describe("CompoundQuestionRenderer Component", () => {
       expect(screen.getByText(/התשובה נכונה/)).toBeInTheDocument();
     });
 
-    // Section ב prompt should be visible since it got expanded/unlocked
-    expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
+    // Section ב is now unlocked — click its header to expand it
+    fireEvent.click(screen.getByText("סעיף ב׳"));
+
+    // Section ב prompt should now be visible
+    await waitFor(() => {
+      expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
+    });
   });
 });
 

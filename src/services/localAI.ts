@@ -2,6 +2,18 @@ import type { AgentType, ChatMetrics, PartialBrief, CompositeBrief } from "./loc
 
 export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief };
 
+// ── Gemini proxy ──
+// All Gemini traffic goes through Convex httpActions so the API key stays on the
+// server (never in the browser bundle). Convex HTTP endpoints live on the
+// `.convex.site` host, which is the `.convex.cloud` deployment URL with the TLD
+// swapped. See convex/http.ts.
+const CONVEX_SITE_URL = ((import.meta.env.VITE_CONVEX_URL as string) || "").replace(
+  /\.convex\.cloud$/,
+  ".convex.site"
+);
+const GEMINI_STREAM_URL = `${CONVEX_SITE_URL}/gemini-stream`;
+const GEMINI_GENERATE_URL = `${CONVEX_SITE_URL}/gemini-generate`;
+
 export interface Message {
   role: "user" | "model" | "system";
   content: string;
@@ -235,7 +247,7 @@ const _debugState: AIDebugState = {
   chunkCount: 0,
   generationParams: null,
   gpuMode: false,
-  modelUrl: "Google Gemini 2.0 Flash",
+  modelUrl: "Google Gemini 2.5 Flash",
   lastUpdateMs: 0,
 };
 
@@ -365,11 +377,10 @@ export async function streamMessage(
   contextOverride?: { agentType?: AgentType; questionContext?: string }
 ): Promise<string> {
   console.log("[localAI] streamMessage called. isReady:", isReady);
-  
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) {
-    console.warn("[localAI] VITE_GEMINI_API_KEY is not defined in environment variables!");
-    return "שגיאה: מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר. אנא הגדר אותו בקובץ .env.local.";
+
+  if (!CONVEX_SITE_URL) {
+    console.warn("[localAI] VITE_CONVEX_URL is not defined — cannot reach the Gemini proxy.");
+    return "שגיאה: כתובת השרת (VITE_CONVEX_URL) אינה מוגדרת.";
   }
 
   const wasCompacted = !!(conversationHistory && needsCompaction(conversationHistory));
@@ -408,17 +419,12 @@ export async function streamMessage(
   let rawText = "";
   let lastVisible = "";
 
-  // Models to try in order. If 2.0-flash hits rate limit, fall back to 1.5-flash.
-  // Models in priority order, based on confirmed quota on this API key:
-  // gemini-3.1-flash-lite: 15 RPM, 500 RPD (best free tier)
-  // gemini-2.5-flash-lite: 10 RPM,  20 RPD
-  // gemini-2.5-flash:       5 RPM,  20 RPD (highest quality fallback)
-  // NOTE: gemini-2.0-flash has 0/0/0 quota on this project — skip it.
-  const MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  // Models to try in order. 2.0-flash-lite has the best free-tier quota;
+  // fall back to 2.0-flash then 1.5-flash on rate-limit (429).
+  const MODELS = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
   const MAX_RETRIES = 2; // per model
 
   async function fetchWithRetry(modelName: string, signal?: AbortSignal): Promise<Response> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
     let lastErr: Error | null = null;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       if (attempt > 0) {
@@ -427,10 +433,12 @@ export async function streamMessage(
         console.log(`[localAI] Retry ${attempt}/${MAX_RETRIES - 1} for ${modelName} after ${delay}ms...`);
         await new Promise(res => setTimeout(res, delay));
       }
-      const res = await fetch(url, {
+      // POST to the Convex proxy (server adds the key) — same payload as before,
+      // now tagged with the model so the proxy knows which Gemini model to call.
+      const res = await fetch(GEMINI_STREAM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ model: modelName, payload }),
         signal,
       });
       if (res.ok) return res;
@@ -477,6 +485,7 @@ export async function streamMessage(
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
     let chunkCount = 0;
+    let socraticViolation = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -505,6 +514,7 @@ export async function streamMessage(
               if (visible && violatesSocraticRules(visible)) {
                 console.log("[localAI] streamMessage: detected Socratic rule violation during stream, breaking.");
                 rawText = "";
+                socraticViolation = true;
                 break;
               }
               // Live debug tracking on every chunk
@@ -522,6 +532,12 @@ export async function streamMessage(
             console.error("Error parsing Gemini SSE chunk:", e, jsonStr);
           }
         }
+      }
+      // A Socratic violation means we discard the answer and fall back — stop
+      // pulling (and paying for) the rest of the stream instead of looping on.
+      if (socraticViolation) {
+        await reader.cancel().catch(() => {});
+        break;
       }
     }
     console.log("[localAI] streamMessage: stream complete. Total chunks:", chunkCount);
@@ -560,37 +576,17 @@ async function geminiGenerateContent(
   payload: object,
   signal?: AbortSignal
 ): Promise<GeminiResponse> {
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
-
-  const MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
-  const MAX_RETRIES = 2;
-
-  let lastErr: Error | null = null;
-  for (const model of MODELS) {
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        const delay = 2000 * Math.pow(2, attempt - 1);
-        await new Promise(res => setTimeout(res, delay));
-      }
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal,
-      });
-      if (res.ok) return await res.json();
-      if (res.status === 429) {
-        lastErr = new Error(`Gemini 429 on ${model}`);
-        console.warn(`[localAI] geminiGenerateContent: ${model} rate limited (429) attempt=${attempt}`);
-        continue;
-      }
-      throw new Error(`Gemini API error: ${res.status} ${res.statusText}`);
-    }
-    console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
-  }
-  throw lastErr!;
+  if (!CONVEX_SITE_URL) throw new Error("Missing VITE_CONVEX_URL");
+  // The Convex proxy does the model-fallback loop server-side and returns the
+  // raw Gemini JSON. The key never reaches the browser.
+  const res = await fetch(GEMINI_GENERATE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ payload }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`Gemini proxy error: ${res.status} ${res.statusText}`);
+  return await res.json();
 }
 
 // ── Notebook Vision Hint ──
@@ -626,11 +622,6 @@ export async function checkNotebookImage(
   questionContext?: string,
   signal?: AbortSignal
 ): Promise<string> {
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) {
-    return "שגיאה: מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר. אנא הגדר אותו בקובץ .env.local.";
-  }
-
   let systemContent = NOTEBOOK_CHECKER_PROMPT;
   if (questionContext) {
     systemContent += `\n\n=== השאלה שעליה התלמיד עובד (להקשר בלבד) ===\n${questionContext}\n=== סוף ההקשר ===`;
@@ -704,9 +695,6 @@ export async function extractQuestionFromMedia(
   media: { mimeType: string; data: string },
   signal?: AbortSignal
 ): Promise<{ rawText: string; draft: ExtractedQuestionDraft }> {
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) throw new Error("מפתח ה-API (VITE_GEMINI_API_KEY) אינו מוגדר.");
-
   const payload = {
     contents: [
       {
@@ -860,8 +848,6 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
 
 export async function analyzeConversation(messages: Message[]): Promise<ChatMetrics> {
   const fallback = heuristicAnalysis(messages);
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) return fallback;
 
   const conversationText = messages
     .filter((m) => m.role !== "system")
@@ -988,8 +974,6 @@ export async function generateCompositeBrief(
   selfAssessment: string
 ): Promise<CompositeBrief> {
   const fallback = heuristicBrief(finalSessionMessages, partialBriefs, selfAssessment);
-  const apiKey = (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
-  if (!apiKey) return fallback;
 
   const partialSummaries = partialBriefs.map((b, i) => `סבב ${i + 1}: ${b.summary}`).join("\n");
   const finalConvo = finalSessionMessages

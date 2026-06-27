@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft, BookOpen, FileText, Clock, CheckCircle2,
-  Zap, AlertTriangle, Bot, Edit, Lightbulb,
+  Zap, AlertTriangle, Edit, Lightbulb, Scissors, ChevronLeft,
 } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom } from "../components/electric";
@@ -18,6 +18,10 @@ export default function StudentHomeworkList() {
   const homeworkList = useQuery(
     api.homework.getHomeworkForClassroom,
     student?.classroomId ? { classroomId: student.classroomId } : "skip"
+  );
+  const pdfAssignments = useQuery(
+    api.pdfAssignments.listForStudent,
+    studentId ? { studentId: studentId as Id<"students"> } : "skip"
   );
 
   if (!student) return null;
@@ -69,10 +73,74 @@ export default function StudentHomeworkList() {
       <div className="max-w-[1200px] w-full mx-auto px-4 md:px-8 py-8 flex flex-col lg:flex-row gap-8 flex-1">
 
         {/* ── Main List ── */}
-        <div className={`flex-1 w-full flex flex-col gap-4 ${(!homeworkList || homeworkList.length === 0) ? 'justify-center' : ''}`}>
+        <div className={`flex-1 w-full flex flex-col gap-4 ${(!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? 'justify-center' : ''}`}>
+
+          {/* Personal PDF assignments */}
+          {pdfAssignments && pdfAssignments.length > 0 && pdfAssignments.map((a, idx) => {
+            const done = a.answeredCount >= a.partCount && a.partCount > 0;
+            const isExpired = a.deadline ? Date.now() > a.deadline : false;
+            const daysLeft = a.deadline ? Math.max(0, Math.ceil((a.deadline - Date.now()) / (1000 * 60 * 60 * 24))) : null;
+            const pct = a.partCount > 0 ? Math.round((a.answeredCount / a.partCount) * 100) : 0;
+            return (
+              <motion.div
+                key={a._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.08 }}
+                className="bg-surface rounded-2xl border-2 overflow-hidden cursor-pointer group transition-all hover:-translate-y-0.5"
+                style={{ borderColor: done ? 'var(--color-primary)' : 'var(--color-secondary)', boxShadow: 'var(--shadow-clay)' }}
+                onClick={() => navigate(`/student/${studentId}/pdf/${a._id}`)}
+              >
+                <div className="flex">
+                  <div className={`w-1.5 flex-shrink-0 ${done ? 'bg-primary' : 'bg-secondary'}`} />
+                  <div className="flex-1 p-5 flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="w-10 h-10 rounded-xl bg-secondary-container flex items-center justify-center flex-shrink-0">
+                          <Scissors size={18} className="text-secondary" />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-bold text-base text-on-surface group-hover:text-primary transition-colors truncate">{a.title}</div>
+                          <div className="flex gap-4 mt-1.5 flex-wrap">
+                            <span className="text-xs text-on-surface-variant flex items-center gap-1.5">
+                              <FileText size={13} className="text-secondary" /> {a.questionCount} שאלות{a.partCount > a.questionCount ? ` · ${a.partCount} סעיפים` : ""}
+                            </span>
+                            {daysLeft !== null && (
+                              <span className={`text-xs flex items-center gap-1.5 ${isExpired && !done ? 'text-error font-semibold' : 'text-on-surface-variant'}`}>
+                                <Clock size={13} /> {isExpired ? 'עבר המועד' : `נשארו ${daysLeft} ימים`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {done ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container border-2 border-primary">
+                            <CheckCircle2 size={13} /> הושלם
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-secondary-container text-on-secondary-container border-2 border-secondary">
+                            המשך <ChevronLeft size={13} />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* progress bar */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex-1 h-2 rounded-full overflow-hidden bg-surface-container-high">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, background: done ? 'var(--color-primary)' : 'var(--color-secondary)' }} />
+                      </div>
+                      <span className="num text-xs font-bold text-on-surface-variant">{a.answeredCount}/{a.partCount}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
 
           {/* Empty state */}
-          {!homeworkList || homeworkList.length === 0 ? (
+          {(!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -88,7 +156,7 @@ export default function StudentHomeworkList() {
               </div>
             </motion.div>
           ) : (
-            homeworkList.map((hw, idx) => {
+            (homeworkList ?? []).map((hw, idx) => {
               const isExpired = Date.now() > hw.deadline;
               const isGraded = hw.status === "graded";
               const isClosed = hw.status === "closed";

@@ -134,6 +134,40 @@ export const getFirstClassroom = query({
   },
 });
 
+// ── Teacher: add a new student to a classroom ──
+// Students otherwise only exist via the seed script; this lets a teacher
+// create one (e.g. אלמוג עציוני) straight from the dashboard.
+const AVATAR_COLORS = [
+  "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981",
+  "#06b6d4", "#ef4444", "#6366f1", "#14b8a6", "#f97316",
+];
+
+export const addStudent = mutation({
+  args: {
+    classroomId: v.id("classrooms"),
+    name: v.string(),
+    homeworkTheme: v.optional(v.string()),
+  },
+  handler: async (ctx, { classroomId, name, homeworkTheme }) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("שם התלמיד ריק");
+    // Spread avatar colors deterministically by current roster size.
+    const existing = await ctx.db
+      .query("students")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
+      .collect();
+    const avatarColor = AVATAR_COLORS[existing.length % AVATAR_COLORS.length];
+    return await ctx.db.insert("students", {
+      name: trimmed,
+      classroomId,
+      avatarColor,
+      streak: 0,
+      level: 1,
+      homeworkTheme: homeworkTheme?.trim() || undefined,
+    });
+  },
+});
+
 // Update a student's homework theme preference
 export const updateStudentTheme = mutation({
   args: {

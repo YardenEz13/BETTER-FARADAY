@@ -97,8 +97,9 @@ describe("AIChatPanel Component", () => {
       />
     );
 
-    // Should display Hebrew title indicating AI tutor asynchronously
-    expect(await screen.findByText(/מורה AI/)).toBeInTheDocument();
+    // Should display the tutor's name in the header
+    const nameEls = await screen.findAllByText(/פרופסור פאראדיי/);
+    expect(nameEls.length).toBeGreaterThan(0);
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
@@ -140,11 +141,11 @@ describe("AIChatPanel Component", () => {
       />
     );
 
-    // Find close button containing lucide-x
-    await screen.findByText(/מורה AI/);
-    const closeButton = container.querySelector(".lucide-x")?.closest("button");
+    // Find the minimize button (ChevronDown, title="מזעור")
+    await screen.findAllByText(/פרופסור פאראדיי/);
+    const closeButton = container.querySelector('[title="מזעור"]') as HTMLButtonElement | null;
     expect(closeButton).toBeDefined();
-    
+
     fireEvent.click(closeButton!);
 
     await waitFor(() => {
