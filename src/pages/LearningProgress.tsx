@@ -5,6 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight, Target, TrendingUp, Zap, Trophy, BookOpen, CheckCircle2, Flame, ChevronLeft } from "lucide-react";
+import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, SignalWave } from "../components/electric";
 
 export default function LearningProgress() {
@@ -95,6 +96,7 @@ export default function LearningProgress() {
 
         {/* Stat chips row */}
         <div className="flex items-center gap-2 flex-wrap">
+          <ThemeToggle />
           {/* XP chip */}
           <div
             className="flex items-center gap-2 bg-primary/10 border-2 border-primary/30 px-3 py-1.5 rounded-2xl"

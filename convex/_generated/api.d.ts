@@ -15,6 +15,7 @@ import type * as attempts from "../attempts.js";
 import type * as bridge from "../bridge.js";
 import type * as classroom from "../classroom.js";
 import type * as clear from "../clear.js";
+import type * as commandCenter from "../commandCenter.js";
 import type * as compoundQuestions from "../compoundQuestions.js";
 import type * as crons from "../crons.js";
 import type * as homework from "../homework.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   bridge: typeof bridge;
   classroom: typeof classroom;
   clear: typeof clear;
+  commandCenter: typeof commandCenter;
   compoundQuestions: typeof compoundQuestions;
   crons: typeof crons;
   homework: typeof homework;

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Clock, CheckCircle2, Circle, Bot, Zap, ChevronRight
 } from "lucide-react";
+import { ThemeToggle } from "../components/ThemeContext";
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
 import AIChatPanel from "../components/AIChatPanel";
@@ -55,6 +56,7 @@ export default function StudentHomework() {
       <button className="fixed top-6 left-6 z-40 btn btn-primary btn-ghost" onClick={() => navigate(`/student/${studentId}/homework`)}>
         <ArrowLeft size={16} /> [ BACK_TO_LIST ]
       </button>
+      <ThemeToggle className="btn-icon fixed top-6 right-6 z-40" />
 
       {/* Main Container */}
       <div

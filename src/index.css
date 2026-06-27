@@ -523,6 +523,26 @@ body {
   50%      { transform: translateY(-14px) scale(1.25); opacity: 1; }
 }
 
+/* ═══════════ COMMAND CENTER — lift / urgent / marquee / scroll ═══════════ */
+/* Card hover lift used across the teacher command center */
+.fdr-lift { transition: transform .16s ease-out, box-shadow .16s ease-out, border-color .16s ease-out; }
+.fdr-lift:hover { transform: translateY(-3px); }
+
+/* Pulsing ring on the "needs intervention" banner */
+.fdr-urgent { animation: fdr-urgent 2.2s ease-in-out infinite; }
+@keyframes fdr-urgent {
+  0%, 100% { box-shadow: 0 4px 0 0 color-mix(in srgb, var(--color-error) 50%, transparent), 0 0 0 0 color-mix(in srgb, var(--color-error) 30%, transparent); }
+  50%      { box-shadow: 0 4px 0 0 color-mix(in srgb, var(--color-error) 50%, transparent), 0 0 0 7px color-mix(in srgb, var(--color-error) 0%, transparent); }
+}
+
+/* Live ticker marquee (RTL-safe — duplicated content, translate -50%) */
+.cc-marquee { animation: cc-marquee 32s linear infinite; will-change: transform; }
+@keyframes cc-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Hide scrollbars on horizontally-scrolling rails (tab bar, KPI strip) */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* Mastery/intensity dot — a charged cell whose glow scales with --intensity (0–1) */
 .intensity-cell {
   position: relative;

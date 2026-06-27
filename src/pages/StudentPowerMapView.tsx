@@ -1,10 +1,12 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { motion } from "framer-motion";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { ChevronRight, ArrowRight, ChevronDown, MessageSquare, Bot, GraduationCap } from "lucide-react";
 import CyberAvatar from "../components/CyberAvatar";
 import { ElectricBolt } from "../components/electric";
+import MathText from "../components/MathText";
 
 export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> | null; onBack: () => void }) {
   const powerMap = useQuery(
@@ -19,6 +21,11 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
     api.classroom.get,
     studentId ? { id: studentId } : "skip"
   );
+  const recentChats = useQuery(
+    api.aiChat.getRecentChatsWithMessages,
+    studentId ? { studentId, limit: 5 } : "skip"
+  );
+  const [openChatId, setOpenChatId] = useState<string | null>(null);
 
   if (!studentId) {
     return (
@@ -44,6 +51,21 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
 
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  // First chat is open by default; "__none__" means the user explicitly collapsed it.
+  const effectiveOpen =
+    openChatId === null ? recentChats?.[0]?._id ?? null : openChatId === "__none__" ? null : openChatId;
+  const toggleChat = (id: string) =>
+    setOpenChatId((prev) => {
+      const cur = prev === null ? recentChats?.[0]?._id ?? null : prev === "__none__" ? null : prev;
+      return cur === id ? "__none__" : id;
+    });
+
+  const SENTIMENT: Record<string, { he: string; color: string }> = {
+    frustrated: { he: "מתוסכל", color: "var(--color-error)" },
+    neutral: { he: "ניטרלי", color: "var(--color-secondary)" },
+    confident: { he: "בטוח", color: "var(--color-primary)" },
+  };
 
   return (
     <div className="flex flex-col lg:flex-row w-full h-full gap-6 lg:gap-8 p-4 lg:p-8 overflow-y-auto lg:overflow-hidden bg-background text-on-background font-body-md" dir="rtl">
@@ -284,6 +306,86 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
         ) : (
           <div className="bg-surface border border-outline-variant rounded-2xl p-12 text-center text-on-surface-variant opacity-70 mb-12 w-full font-body-lg shadow-sm">
             אין סיכומים פדגוגיים עדיין
+          </div>
+        )}
+
+        {/* Recent AI Conversations — the actual transcripts */}
+        <div className="font-headline-md text-on-surface mb-6 border-b border-outline-variant pb-2 flex items-center gap-3">
+          שיחות AI אחרונות
+          {recentChats && recentChats.length > 0 && (
+            <span className="num text-sm font-bold text-secondary bg-secondary/10 border border-secondary/25 px-2.5 py-0.5 rounded-full">{recentChats.length}</span>
+          )}
+        </div>
+        {recentChats && recentChats.length > 0 ? (
+          <div className="flex flex-col gap-4 mb-12 w-full">
+            {recentChats.map((chat) => {
+              const open = effectiveOpen === chat._id;
+              const isHomework = chat.agentType === "homework";
+              const sent = chat.sentiment ? SENTIMENT[chat.sentiment] : null;
+              return (
+                <div key={chat._id} className="bg-surface border border-outline-variant rounded-2xl w-full shadow-sm overflow-hidden">
+                  <button
+                    onClick={() => toggleChat(chat._id)}
+                    className="w-full flex items-center gap-4 p-5 text-right hover:bg-surface-container-low transition-colors"
+                  >
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "color-mix(in srgb, var(--color-secondary) 14%, transparent)", color: "var(--color-secondary)" }}>
+                      {isHomework ? <GraduationCap size={20} /> : <Bot size={20} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-on-surface text-base truncate">
+                        {chat.title || (isHomework ? "עזרה בשיעורי בית" : "תרגול עם פאראדיי")}
+                      </div>
+                      <div className="num text-xs text-on-surface-variant mt-0.5 flex items-center gap-2 flex-wrap">
+                        {chat.topicName && <><span>{chat.topicName}</span><span>·</span></>}
+                        <span>{formatDate(chat.startedAt)}</span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1"><MessageSquare size={12} /> {chat.messageCount}</span>
+                      </div>
+                    </div>
+                    {sent && (
+                      <span className="font-label-md px-3 py-1 rounded-full flex-shrink-0 whitespace-nowrap" style={{ background: `color-mix(in srgb, ${sent.color} 12%, transparent)`, color: sent.color }}>
+                        {sent.he}
+                      </span>
+                    )}
+                    <ChevronDown size={20} className={`text-on-surface-variant flex-shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {open && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-5 pb-5 pt-4 border-t border-outline-variant flex flex-col gap-3 max-h-[460px] overflow-y-auto">
+                          {chat.messages.filter((m) => m.role !== "system").length === 0 && (
+                            <div className="text-on-surface-variant text-sm py-4 text-center">אין הודעות בשיחה זו</div>
+                          )}
+                          {chat.messages.map((m, i) => {
+                            if (m.role === "system") return null;
+                            const isUser = m.role === "user";
+                            return (
+                              <div key={i} className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
+                                <div
+                                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${isUser ? "bg-primary text-white rounded-br-sm" : "bg-surface-container border border-outline-variant text-on-surface rounded-bl-sm"}`}
+                                >
+                                  <MathText>{m.content}</MathText>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-surface border border-outline-variant rounded-2xl p-10 text-center text-on-surface-variant opacity-70 mb-12 w-full font-body-lg shadow-sm">
+            אין שיחות AI עדיין
           </div>
         )}
       </div>

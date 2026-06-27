@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
+import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
@@ -224,11 +225,15 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
-              {student.homeworkTheme ? (
-                <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
-              ) : (
-                <div className="font-medium text-on-surface-variant text-[10px]">בחר נושא ✨</div>
-              )}
+              {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
+              <div className="num font-bold text-primary text-[10px] md:hidden">{totalXP.toLocaleString()} XP</div>
+              <div className="hidden md:block">
+                {student.homeworkTheme ? (
+                  <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
+                ) : (
+                  <div className="font-medium text-on-surface-variant text-[10px]">בחר נושא ✨</div>
+                )}
+              </div>
             </div>
           </button>
         </div>
@@ -247,6 +252,12 @@ export default function StudentHome() {
 
         {/* Right: actions */}
         <div className="flex items-center gap-2">
+          {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
+          <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30" style={{ boxShadow: 'var(--shadow-clay)' }}>
+            <Flame className="text-tertiary" size={14} />
+            <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
+          </div>
+          <ThemeToggle />
           <button
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer"
             style={{ boxShadow: 'var(--shadow-clay)' }}

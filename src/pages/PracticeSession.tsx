@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
+import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -171,6 +172,7 @@ export default function PracticeSession() {
             <span className="num font-bold text-sm text-tertiary">+{sessionXP}</span>
             <span className="text-xs text-on-surface-variant">XP</span>
           </div>
+          <ThemeToggle />
           <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
             <Bot size={14} />
             עזרת AI
@@ -192,6 +194,30 @@ export default function PracticeSession() {
 
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
+
+          {/* Mobile streak bar — the header ChargeMeter is desktop-only, so the
+              correct-answer streak still has a home on small screens. */}
+          <div className="sm:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3" style={{ boxShadow: 'var(--shadow-clay)' }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-on-surface-variant">רצף תשובות</span>
+              <span className="num text-xs font-extrabold text-primary flex items-center gap-1">
+                {Math.min(combo, CHARGE_MAX)} / {CHARGE_MAX} <Zap size={12} />
+              </span>
+            </div>
+            <div className="flex gap-1.5">
+              {Array.from({ length: CHARGE_MAX }).map((_, i) => {
+                const on = i < Math.min(combo, CHARGE_MAX);
+                const full = combo >= CHARGE_MAX;
+                return (
+                  <span
+                    key={i}
+                    className="flex-1 rounded-full transition-all duration-300"
+                    style={{ height: 7, background: on ? 'var(--color-primary)' : 'var(--color-outline)', boxShadow: on && full ? '0 0 6px var(--color-inverse-primary)' : 'none' }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
           {!activeQuestion && question === undefined ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">

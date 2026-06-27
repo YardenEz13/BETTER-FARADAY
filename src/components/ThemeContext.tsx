@@ -32,15 +32,24 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
-      <button
-        onClick={toggleTheme}
-        className="fixed bottom-6 left-6 z-[100] w-12 h-12 rounded-full bg-surface border-2 border-outline text-on-surface cursor-pointer transition-all duration-200 hover:border-primary hover:text-primary flex items-center justify-center"
-        style={{ boxShadow: 'var(--shadow-clay)' }}
-        title={theme === 'dark' ? 'מצב יום' : 'מצב לילה'}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
     </ThemeContext.Provider>
+  );
+};
+
+/**
+ * ThemeToggle — drop-in header button (same look as the teacher command bar's).
+ * Each page mounts its own, so there's no global floating control.
+ */
+export const ThemeToggle: React.FC<{ className?: string; size?: number }> = ({ className, size = 17 }) => {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className={className ?? 'btn-icon'}
+      title={theme === 'dark' ? 'מצב יום' : 'מצב לילה'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? <Sun size={size} /> : <Moon size={size} />}
+    </button>
   );
 };

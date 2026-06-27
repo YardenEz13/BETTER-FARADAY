@@ -150,6 +150,46 @@ export const getChatMessages = query({
   },
 });
 
+// ── Recent chats WITH their full message threads (for the teacher profile) ──
+export const getRecentChatsWithMessages = query({
+  args: { studentId: v.id("students"), limit: v.optional(v.number()) },
+  handler: async (ctx, { studentId, limit }) => {
+    const chats = await ctx.db
+      .query("aiChats")
+      .withIndex("by_student", (q) => q.eq("studentId", studentId))
+      .order("desc")
+      .take(limit ?? 5);
+
+    const result = [];
+    for (const chat of chats) {
+      const messages = await ctx.db
+        .query("aiMessages")
+        .withIndex("by_chat", (q) => q.eq("chatId", chat._id))
+        .order("asc")
+        .collect();
+      const topic = chat.topicId ? await ctx.db.get(chat.topicId) : null;
+      result.push({
+        _id: chat._id,
+        title: chat.title,
+        agentType: chat.agentType,
+        startedAt: chat.startedAt,
+        endedAt: chat.endedAt,
+        messageCount: chat.messageCount,
+        topicName: topic ? ((topic as any).nameHe || (topic as any).name) : null,
+        sentiment: chat.metrics?.sentiment ?? null,
+        confusionScore: chat.metrics?.confusionScore ?? null,
+        keyStrugglePoints: chat.metrics?.keyStrugglePoints ?? [],
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp,
+        })),
+      });
+    }
+    return result;
+  },
+});
+
 // ── Teacher analytics: all chats across a classroom ──
 export const getTeacherChatAnalytics = query({
   args: { classroomId: v.id("classrooms") },

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft, Zap, Users, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
+import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, SignalWave } from "../components/electric";
 import type { ElectricIconProps, ElectricTone } from "../components/electric";
 
@@ -63,12 +64,15 @@ export default function RolePage() {
               FARADAY <span className="text-primary">Logic</span>
             </span>
           </div>
-          <span
-            className="rounded-full border-2 border-outline bg-surface/70 px-4 py-1.5 text-sm font-semibold text-on-surface-variant backdrop-blur"
-            style={{ boxShadow: "var(--shadow-clay)" }}
-          >
-            מתמטיקה 581 · v4.1
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="rounded-full border-2 border-outline bg-surface/70 px-4 py-1.5 text-sm font-semibold text-on-surface-variant backdrop-blur"
+              style={{ boxShadow: "var(--shadow-clay)" }}
+            >
+              מתמטיקה 581 · v4.1
+            </span>
+            <ThemeToggle />
+          </div>
         </motion.nav>
 
         {/* Body grid: hero (1.18fr) + role panel (0.82fr) */}
@@ -78,23 +82,25 @@ export default function RolePage() {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.55, delay: 0.1 }}
-            className="flex flex-col justify-center px-8 py-12 lg:px-16"
+            className="flex flex-col justify-center px-6 pt-4 pb-2 lg:px-16 lg:py-12"
           >
-            <span className="mb-6 inline-flex items-center gap-2.5 self-start rounded-full border-2 border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+            <span className="mb-4 lg:mb-6 inline-flex items-center gap-2.5 self-start rounded-full border-2 border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary" style={{ boxShadow: "0 0 9px var(--color-primary)" }} />
               מערכת פעילה · {students?.length ?? "—"} תלמידים מחוברים
             </span>
 
-            <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.7rem, 5vw, 3.6rem)" }}>
+            <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.4rem, 11vw, 3.6rem)" }}>
               מרחב למידה
               <br />
               <span className="text-primary">מוגן מרעש</span>
             </h1>
-            <p className="mt-5 max-w-[27rem] text-lg font-medium leading-relaxed text-on-surface-variant">
-              הפרעות חיצוניות נחסמות בגבול הכלוב — בפנים נשאר רק מה שחשוב. בחר כיצד להיכנס.
+            <p className="mt-4 lg:mt-5 max-w-[27rem] text-base lg:text-lg font-medium leading-relaxed text-on-surface-variant">
+              <span className="lg:hidden">בחר כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
+              <span className="hidden lg:inline">הפרעות חיצוניות נחסמות בגבול הכלוב — בפנים נשאר רק מה שחשוב. בחר כיצד להיכנס.</span>
             </p>
 
-            <div className="mt-9 flex flex-col gap-4">
+            {/* Feature list is desktop-only — on mobile the role cards come first (matches the phone design) */}
+            <div className="mt-9 hidden lg:flex flex-col gap-4">
               {features.map(({ Icon, text, tone, bg }) => (
                 <div key={text} className="flex items-center gap-3 font-semibold text-on-surface-variant">
                   <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 ${bg}`}>
@@ -111,7 +117,7 @@ export default function RolePage() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.55, delay: 0.2 }}
-            className="flex flex-col justify-center gap-4 border-outline px-6 py-12 lg:border-s-2 lg:px-10"
+            className="flex flex-col justify-center gap-3.5 border-outline px-6 pt-2 pb-8 lg:gap-4 lg:border-s-2 lg:px-10 lg:py-12"
             style={{
               background: "color-mix(in srgb, var(--color-surface) 78%, transparent)",
               backdropFilter: "blur(7px)",

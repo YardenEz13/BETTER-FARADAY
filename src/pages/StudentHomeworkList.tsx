@@ -7,6 +7,7 @@ import {
   ArrowLeft, BookOpen, FileText, Clock, CheckCircle2,
   Zap, AlertTriangle, Bot, Edit, Lightbulb,
 } from "lucide-react";
+import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom } from "../components/electric";
 
 export default function StudentHomeworkList() {
@@ -50,16 +51,19 @@ export default function StudentHomeworkList() {
           </div>
         </div>
 
-        {/* Assignment count badge */}
-        {homeworkList && homeworkList.length > 0 && (
-          <div
-            className="flex items-center gap-2 px-4 py-2 bg-surface rounded-full border-2 border-outline text-sm font-semibold text-on-surface"
-            style={{ boxShadow: 'var(--shadow-clay)' }}
-          >
-            <BookOpen size={15} className="text-primary" />
-            {homeworkList.length} משימות
-          </div>
-        )}
+        <div className="flex items-center gap-2.5">
+          {/* Assignment count badge */}
+          {homeworkList && homeworkList.length > 0 && (
+            <div
+              className="flex items-center gap-2 px-4 py-2 bg-surface rounded-full border-2 border-outline text-sm font-semibold text-on-surface"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+            >
+              <BookOpen size={15} className="text-primary" />
+              {homeworkList.length} משימות
+            </div>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="max-w-[1200px] w-full mx-auto px-4 md:px-8 py-8 flex flex-col lg:flex-row gap-8 flex-1">
