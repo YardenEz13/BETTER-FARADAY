@@ -112,8 +112,8 @@ export const getLiveAlerts = query({
     // Enrich with question stem
     const alerts = [];
     for (const qid of Object.keys(byQuestion)) {
-      const question = await ctx.db.get(qid as Id<"questions">) as any;
-      const topic = question?.topicId ? await ctx.db.get(question.topicId) as any : null;
+      const question = await ctx.db.get(qid as Id<"questions">);
+      const topic = question?.topicId ? await ctx.db.get(question.topicId) : null;
       alerts.push({
         ...byQuestion[qid],
         questionStem: (question?.stem as string | undefined)?.slice(0, 60) ?? "Unknown question",
@@ -198,13 +198,13 @@ export const getDashboardStats = query({
     const milestones = [];
     for (const a of classAttempts.slice(0, 5)) {
       const student = students.find(s => s._id === a.studentId);
-      const question = await ctx.db.get(a.questionId) as any;
+      const question = await ctx.db.get(a.questionId);
       const topic = question?.topicId ? await ctx.db.get(question.topicId) : null;
-      
+
       milestones.push({
         studentName: student?.name ?? "תלמיד",
         action: a.isCorrect ? "השלים שאלה" : "טעה בשאלה",
-        topicName: topic ? (topic as any).name : "נושא כללי",
+        topicName: topic?.name ?? "נושא כללי",
         timestamp: a._creationTime,
         isCorrect: a.isCorrect
       });

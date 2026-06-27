@@ -11,7 +11,7 @@ const mockSyncMessages = vi.fn().mockResolvedValue(true);
 const mockCreateBrief = vi.fn().mockResolvedValue(true);
 
 vi.mock("convex/react", () => ({
-  useMutation: (apiPath: any) => {
+  useMutation: (apiPath: string) => {
     if (apiPath.includes("startChat")) return mockStartChat;
     if (apiPath.includes("addMessage")) return mockAddMessage;
     if (apiPath.includes("endChat")) return mockEndChat;
@@ -104,7 +104,7 @@ describe("AIChatPanel Component", () => {
   });
 
   it("should send message and display response", async () => {
-    const { container } = render(
+    render(
       <AIChatPanel
         isOpen={true}
         onClose={onCloseMock}
