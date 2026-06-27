@@ -359,6 +359,47 @@ export default defineSchema({
   }).index("by_classroom", ["classroomId"])
     .index("by_classroom_status", ["classroomId", "status"]),
 
+  // ── PDF personal assignments (single-student, image-per-question) ──
+  // A teacher uploads a multi-page PDF (e.g. a summer workbook), crops each
+  // question out as an image, and types the correct answer. The whole PDF is
+  // saved to Convex file storage; each question is one small cropped JPEG plus
+  // its answer. Unlike `homework`, this is assigned to ONE student — the target
+  // is on the row itself, so it bypasses the classroom-wide fan-out entirely.
+  pdfAssignments: defineTable({
+    classroomId: v.id("classrooms"),
+    studentId: v.id("students"),          // the single target student
+    title: v.string(),
+    pdfStorageId: v.optional(v.id("_storage")), // full source PDF (file storage)
+    pdfFileName: v.optional(v.string()),
+    createdAt: v.number(),
+    deadline: v.optional(v.number()),
+    status: v.string(),                   // "active" | "completed" | "closed"
+    completedAt: v.optional(v.number()),  // set when the student answers every part
+  })
+    .index("by_student", ["studentId"])
+    .index("by_classroom", ["classroomId"]),
+
+  // ── One question = a cropped image + one or more answerable parts ──
+  // A multi-part question (סעיף א/ב/ג sharing one figure) is a single image
+  // with several labeled parts. A simple one-answer question is just one part
+  // with an empty label. Student work is stored inline per part (there is
+  // exactly one solver per assignment), graded part-by-part.
+  pdfQuestions: defineTable({
+    assignmentId: v.id("pdfAssignments"),
+    order: v.number(),
+    imageBase64: v.string(),              // cropped JPEG, kept under the 1MB doc limit
+    imageMimeType: v.string(),            // "image/jpeg"
+    parts: v.array(v.object({
+      label: v.string(),                  // "א" / "ב" / "" for single-answer questions
+      correctAnswer: v.string(),
+      points: v.optional(v.number()),
+      // Student's solve for this part — filled by submitPdfAnswer
+      studentAnswer: v.optional(v.string()),
+      isCorrect: v.optional(v.boolean()),
+      answeredAt: v.optional(v.number()),
+    })),
+  }).index("by_assignment", ["assignmentId"]),
+
   // ── QR bridge: hand a handwritten-work photo from phone → desktop chat ──
   // Short-lived, single-use capability sessions. The desktop creates one and
   // shows its token as a QR; the phone opens /bridge/<token>, uploads a

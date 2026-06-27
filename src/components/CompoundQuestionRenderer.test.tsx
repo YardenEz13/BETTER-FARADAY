@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import CompoundQuestionRenderer from "./CompoundQuestionRenderer";
+import type { Id } from "../../convex/_generated/dataModel";
 
 // Mock Convex hooks
 const mockSubmitAnswer = vi.fn().mockResolvedValue(true);
 const mockFinalizeSubmission = vi.fn().mockResolvedValue(true);
 
 vi.mock("convex/react", () => ({
-  useMutation: (apiPath: any) => {
+  useMutation: (apiPath: string) => {
     if (apiPath.includes("submitAnswer")) return mockSubmitAnswer;
     if (apiPath.includes("finalizeSubmission")) return mockFinalizeSubmission;
     return vi.fn();
@@ -26,7 +27,7 @@ vi.mock("../../convex/_generated/api", () => ({
 }));
 
 const mockQuestion = {
-  _id: "cq-1" as any,
+  _id: "cq-1" as Id<"compoundQuestions">,
   preamble: "נתונה פונקציה $f(x) = x^2 - 4x + 3$",
   preambleParams: [
     { symbol: "a", displayHe: "הפרמטר a", type: "given", value: "3" }
@@ -71,7 +72,7 @@ describe("CompoundQuestionRenderer Component", () => {
     render(
       <CompoundQuestionRenderer
         question={mockQuestion}
-        assignedQuestionId={"aq-1" as any}
+        assignedQuestionId={"aq-1" as Id<"assignedQuestions">}
         onComplete={onCompleteMock}
         aiChatTrigger={aiChatTriggerMock}
       />
@@ -93,7 +94,7 @@ describe("CompoundQuestionRenderer Component", () => {
     render(
       <CompoundQuestionRenderer
         question={mockQuestion}
-        assignedQuestionId={"aq-1" as any}
+        assignedQuestionId={"aq-1" as Id<"assignedQuestions">}
         onComplete={onCompleteMock}
       />
     );
@@ -110,7 +111,7 @@ describe("CompoundQuestionRenderer Component", () => {
     render(
       <CompoundQuestionRenderer
         question={mockQuestion}
-        assignedQuestionId={"aq-1" as any}
+        assignedQuestionId={"aq-1" as Id<"assignedQuestions">}
         onComplete={onCompleteMock}
         aiChatTrigger={aiChatTriggerMock}
       />
@@ -136,8 +137,13 @@ describe("CompoundQuestionRenderer Component", () => {
       expect(screen.getByText(/התשובה נכונה/)).toBeInTheDocument();
     });
 
-    // Section ב prompt should be visible since it got expanded/unlocked
-    expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
+    // Section ב is now unlocked — click its header to expand it
+    fireEvent.click(screen.getByText("סעיף ב׳"));
+
+    // Section ב prompt should now be visible
+    await waitFor(() => {
+      expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
+    });
   });
 });
 

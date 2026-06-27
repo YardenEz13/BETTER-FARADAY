@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock environment variable
+// Mock environment variables. Gemini now goes through the Convex httpAction
+// proxy on `.convex.site`, so the client only needs the Convex URL.
 vi.stubEnv("VITE_GEMINI_API_KEY", "test-api-key");
+vi.stubEnv("VITE_CONVEX_URL", "https://test.convex.cloud");
 
 const mockStream = {
   getReader() {
@@ -22,13 +24,13 @@ const mockStream = {
 };
 
 const mockFetch = vi.fn().mockImplementation((url: string) => {
-  if (url.includes("streamGenerateContent")) {
+  if (url.includes("/gemini-stream")) {
     return Promise.resolve({
       ok: true,
       status: 200,
       body: mockStream,
     });
-  } else if (url.includes("generateContent")) {
+  } else if (url.includes("/gemini-generate")) {
     const responseJson = {
       candidates: [
         {

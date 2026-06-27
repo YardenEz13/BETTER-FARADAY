@@ -14,6 +14,7 @@ const PracticeSession    = lazy(() => import("./pages/PracticeSession"));
 const TeacherDashboard   = lazy(() => import("./pages/TeacherDashboard"));
 const StudentHomework    = lazy(() => import("./pages/StudentHomework"));
 const StudentHomeworkList = lazy(() => import("./pages/StudentHomeworkList"));
+const StudentPdfAssignment = lazy(() => import("./pages/StudentPdfAssignment"));
 const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
             <Route path="/student/:studentId/homework" element={<StudentHomeworkList />} />
             <Route path="/student/:studentId/homework/:homeworkId" element={<StudentHomework />} />
+            <Route path="/student/:studentId/pdf/:assignmentId" element={<StudentPdfAssignment />} />
             <Route path="/student/:studentId/progress" element={<LearningProgress />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />

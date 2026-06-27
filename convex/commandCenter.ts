@@ -231,6 +231,30 @@ export const getCommandCenter = query({
         });
       }
     }
+    // PDF personal-assignment completions — "אלמוג finished" notifications
+    const completedPdf = await ctx.db
+      .query("pdfAssignments")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
+      .collect();
+    for (const a of completedPdf) {
+      if (!a.completedAt || a.completedAt < now - 2 * WEEK) continue;
+      const st = studentById.get(a.studentId);
+      if (!st) continue;
+      const qs = await ctx.db
+        .query("pdfQuestions")
+        .withIndex("by_assignment", (q) => q.eq("assignmentId", a._id))
+        .collect();
+      const parts = qs.flatMap((q) => q.parts);
+      const correct = parts.filter((p) => p.isCorrect === true).length;
+      const pct = parts.length > 0 ? Math.round((correct / parts.length) * 100) : 0;
+      alertCandidates.push({
+        tone: "primary",
+        who: st.name,
+        text: `סיים/ה את מטלת "${a.title}" · ${pct}%`,
+        ms: a.completedAt,
+      });
+    }
+
     const alerts = alertCandidates
       .sort((a, b) => b.ms - a.ms)
       .slice(0, 7)

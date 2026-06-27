@@ -11,7 +11,7 @@ const mockSyncMessages = vi.fn().mockResolvedValue(true);
 const mockCreateBrief = vi.fn().mockResolvedValue(true);
 
 vi.mock("convex/react", () => ({
-  useMutation: (apiPath: any) => {
+  useMutation: (apiPath: string) => {
     if (apiPath.includes("startChat")) return mockStartChat;
     if (apiPath.includes("addMessage")) return mockAddMessage;
     if (apiPath.includes("endChat")) return mockEndChat;
@@ -97,13 +97,14 @@ describe("AIChatPanel Component", () => {
       />
     );
 
-    // Should display Hebrew title indicating AI tutor asynchronously
-    expect(await screen.findByText(/מורה AI/)).toBeInTheDocument();
+    // Should display the tutor's name in the header
+    const nameEls = await screen.findAllByText(/פרופסור פאראדיי/);
+    expect(nameEls.length).toBeGreaterThan(0);
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
   it("should send message and display response", async () => {
-    const { container } = render(
+    render(
       <AIChatPanel
         isOpen={true}
         onClose={onCloseMock}
@@ -140,11 +141,11 @@ describe("AIChatPanel Component", () => {
       />
     );
 
-    // Find close button containing lucide-x
-    await screen.findByText(/מורה AI/);
-    const closeButton = container.querySelector(".lucide-x")?.closest("button");
+    // Find the minimize button (ChevronDown, title="מזעור")
+    await screen.findAllByText(/פרופסור פאראדיי/);
+    const closeButton = container.querySelector('[title="מזעור"]') as HTMLButtonElement | null;
     expect(closeButton).toBeDefined();
-    
+
     fireEvent.click(closeButton!);
 
     await waitFor(() => {
