@@ -18,6 +18,7 @@ interface ProofMeta {
   given: string;
   toProve: string;
   diagramDescription?: string;
+  diagramSvg?: string;
 }
 
 interface Section {

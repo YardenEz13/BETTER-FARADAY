@@ -17,6 +17,7 @@ interface ProofMeta {
   given: string;
   toProve: string;
   diagramDescription?: string;
+  diagramSvg?: string;
 }
 
 interface StepResult {
@@ -109,6 +110,17 @@ export default function ProofSectionRenderer({
 
   return (
     <div className="flex flex-col gap-6" dir="rtl">
+      {/* ── Diagram ── */}
+      {proofMeta.diagramSvg && (
+        <div className="flex justify-center p-4 bg-surface-container-low border border-outline/50 rounded-xl">
+          <div
+            className="w-full"
+            style={{ maxWidth: 340 }}
+            dangerouslySetInnerHTML={{ __html: proofMeta.diagramSvg }}
+          />
+        </div>
+      )}
+
       {/* ── Given / To Prove header ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 bg-surface-container-low border border-outline rounded-xl">

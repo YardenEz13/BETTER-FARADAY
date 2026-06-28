@@ -62,6 +62,23 @@ export const seedGeometryProof = mutation({
           proofMeta: {
             given: "ABCD מקבילית, O הוא חיתוך האלכסונים AC ו-BD",
             toProve: "משולש AOB ≅ משולש COD",
+            diagramSvg: `<svg viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+  <polygon points="80,50 220,50 260,150 120,150" fill="rgba(56,189,248,0.06)" stroke="#38bdf8" stroke-width="2" stroke-linejoin="round"/>
+  <line x1="80" y1="50" x2="260" y2="150" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="7,4" opacity="0.8"/>
+  <line x1="220" y1="50" x2="120" y2="150" stroke="#7dd3fc" stroke-width="1.5" stroke-dasharray="7,4" opacity="0.8"/>
+  <polygon points="80,50 220,50 170,100" fill="rgba(99,102,241,0.15)" stroke="none"/>
+  <polygon points="260,150 120,150 170,100" fill="rgba(99,102,241,0.15)" stroke="none"/>
+  <circle cx="80" cy="50" r="3.5" fill="#38bdf8"/>
+  <circle cx="220" cy="50" r="3.5" fill="#38bdf8"/>
+  <circle cx="260" cy="150" r="3.5" fill="#38bdf8"/>
+  <circle cx="120" cy="150" r="3.5" fill="#38bdf8"/>
+  <circle cx="170" cy="100" r="4.5" fill="#f0abfc" stroke="#e879f9" stroke-width="1"/>
+  <text x="62" y="46" fill="#e2e8f0" font-size="15" font-family="monospace" font-weight="bold">A</text>
+  <text x="226" y="46" fill="#e2e8f0" font-size="15" font-family="monospace" font-weight="bold">B</text>
+  <text x="266" y="166" fill="#e2e8f0" font-size="15" font-family="monospace" font-weight="bold">C</text>
+  <text x="104" y="166" fill="#e2e8f0" font-size="15" font-family="monospace" font-weight="bold">D</text>
+  <text x="177" y="97" fill="#f0abfc" font-size="13" font-family="monospace" font-weight="bold">O</text>
+</svg>`,
           },
           proofSteps: [
             {

@@ -230,6 +230,7 @@ export default defineSchema({
         given: v.string(),                // נתון
         toProve: v.string(),              // להוכיח
         diagramDescription: v.optional(v.string()),
+        diagramSvg: v.optional(v.string()), // inline SVG string for the geometric figure
       })),
       proofSteps: v.optional(v.array(v.object({
         stepIndex: v.number(),
