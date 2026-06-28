@@ -92,24 +92,28 @@ export const seedGeometryProof = mutation({
     }
 
     // Find ALL compoundQuestions that contain a proof section with our specific tags
-    // (tags array contains both "מקבילית" and "SAS")
+    // (tags array contains both "מקבילית" and "SAS"). There may be duplicates from
+    // earlier seed runs; assignedQuestions reference them, so we patch every match
+    // rather than deleting (which would orphan those assignments).
     const allCompound = await ctx.db.query("compoundQuestions").collect();
-    const existingProofQ = allCompound.find(
+    const existingProofQs = allCompound.filter(
       (q) =>
         q.tags.includes("מקבילית") &&
         q.tags.includes("SAS") &&
         q.sections.some((s) => s.answerType === "proof")
     );
 
-    if (existingProofQ) {
-      // UPSERT: patch sections to include diagram and latest proofSteps
-      await ctx.db.patch(existingProofQ._id, {
-        sections: PROOF_SECTIONS,
-        topicIds: [topicId],
-      });
+    if (existingProofQs.length > 0) {
+      // UPSERT: patch every matching question to include diagram + latest proofSteps
+      for (const q of existingProofQs) {
+        await ctx.db.patch(q._id, {
+          sections: PROOF_SECTIONS,
+          topicIds: [topicId],
+        });
+      }
       return {
-        message: "Geometry proof question updated with diagram",
-        questionId: existingProofQ._id,
+        message: `Geometry proof question(s) updated with diagram (${existingProofQs.length} patched)`,
+        questionIds: existingProofQs.map((q) => q._id),
         topicId,
       };
     }
