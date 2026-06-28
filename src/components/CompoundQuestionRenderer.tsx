@@ -5,6 +5,20 @@ import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "lucide-react";
 import MathText from "./MathText";
+import ProofSectionRenderer from "./ProofSectionRenderer";
+
+interface ProofStep {
+  stepIndex: number;
+  expectedClaim: string;
+  expectedReason: string;
+  clueIfWrong?: string;
+}
+
+interface ProofMeta {
+  given: string;
+  toProve: string;
+  diagramDescription?: string;
+}
 
 interface Section {
   label: string;
@@ -16,6 +30,8 @@ interface Section {
   hints: string[];
   points: number;
   skillsTested: string[];
+  proofMeta?: ProofMeta;
+  proofSteps?: ProofStep[];
 }
 
 interface CompoundQuestionData {
@@ -200,7 +216,20 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                       </div>
                     )}
 
-                    {!isSubmitted && (
+                    {!isSubmitted && section.answerType === "proof" && section.proofSteps && section.proofMeta ? (
+                      <ProofSectionRenderer
+                        sectionLabel={section.label}
+                        proofMeta={section.proofMeta}
+                        proofSteps={section.proofSteps}
+                        hints={section.hints}
+                        assignedQuestionId={assignedQuestionId}
+                        onSectionComplete={(isCorrect) => {
+                          setSubmitted((prev) => ({ ...prev, [section.label]: true }));
+                          setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
+                        }}
+                        aiChatTrigger={aiChatTrigger}
+                      />
+                    ) : !isSubmitted ? (
                       <div className="flex flex-col gap-4">
                         <textarea
                           className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
@@ -243,7 +272,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           )}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {hintCount > 0 && (
                       <div className="flex flex-col gap-3 mt-6">
