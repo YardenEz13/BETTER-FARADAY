@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useAction } from "convex/react";
+import { useState, useEffect } from "react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Lock, Send, Lightbulb, Bot, Loader2 } from "lucide-react";
+import { Check, X, Lock, Send, Lightbulb, Bot, Loader2, AlertTriangle } from "lucide-react";
 import MathText from "./MathText";
 
 interface ProofStep {
@@ -63,14 +63,51 @@ export default function ProofSectionRenderer({
   const [isGrading, setIsGrading] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [gradeError, setGradeError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const gradeStep = useAction(api.proofGrading.gradeProofStep);
+  const savedSteps = useQuery(api.proofGrading.getSavedSteps, { assignedQuestionId, sectionLabel });
+
+  // Hydrate from previously saved progress so reload / navigation doesn't lose work.
+  useEffect(() => {
+    if (hydrated || savedSteps === undefined) return;
+    if (savedSteps.length > 0) {
+      const results: Record<number, StepResult> = {};
+      const inputs: Record<number, { claim: string; reason: string }> = {};
+      for (const s of savedSteps) {
+        results[s.stepIndex] = {
+          claimCorrect: !!s.claimCorrect,
+          reasonCorrect: !!s.reasonCorrect,
+          stepScore: s.stepScore,
+          feedback: s.feedback ?? "",
+        };
+        inputs[s.stepIndex] = { claim: s.studentClaim, reason: s.studentReason };
+      }
+      setStepResults(results);
+      setStepInputs(inputs);
+      // current step = first index that isn't passed yet
+      let cur = 0;
+      while (cur < proofSteps.length && results[cur] && results[cur].stepScore >= 0.5) cur++;
+      setCurrentStep(cur);
+      if (cur >= proofSteps.length) {
+        setCompleted(true);
+        // Tell parent so it marks the section submitted (lets the student finalize).
+        const allCorrect = proofSteps.every((s) => results[s.stepIndex]?.stepScore >= 0.5);
+        onSectionComplete(allCorrect);
+      }
+    }
+    setHydrated(true);
+    // onSectionComplete intentionally omitted from deps (stable callback, run-once hydration)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedSteps, hydrated, proofSteps.length]);
 
   const handleSubmitStep = async (stepIdx: number) => {
     const input = stepInputs[stepIdx];
     if (!input?.claim?.trim() || !input?.reason?.trim()) return;
 
     setIsGrading(true);
+    setGradeError(null);
     try {
       const result = await gradeStep({
         assignedQuestionId,
@@ -96,6 +133,9 @@ export default function ProofSectionRenderer({
         }
       }
       // If stepScore === 0: stay on current step, show feedback
+    } catch {
+      // Gemini overloaded / network — step NOT saved, let student retry.
+      setGradeError("הבדיקה נכשלה זמנית (העומס על השרת גבוה). נסה לשלוח את הצעד שוב.");
     } finally {
       setIsGrading(false);
     }
@@ -305,6 +345,14 @@ export default function ProofSectionRenderer({
                   </button>
                 )}
               </div>
+
+              {/* Transient grading error (e.g. Gemini 503) */}
+              {gradeError && (
+                <div className="p-3 rounded-lg border border-error/40 bg-error/10 text-error text-sm label-mono normal-case flex items-start gap-2">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  <span>{gradeError}</span>
+                </div>
+              )}
 
               {/* Gemini step feedback */}
               <AnimatePresence>

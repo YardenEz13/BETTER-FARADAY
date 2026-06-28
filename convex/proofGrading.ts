@@ -1,6 +1,20 @@
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+
+// ── Public query: saved proof progress for a section (for UI hydration) ──
+export const getSavedSteps = query({
+  args: {
+    assignedQuestionId: v.id("assignedQuestions"),
+    sectionLabel: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const aq = await ctx.db.get(args.assignedQuestionId);
+    if (!aq) return [];
+    const answer = (aq.answers ?? []).find((a) => a.sectionLabel === args.sectionLabel);
+    return answer?.proofStepResults ?? [];
+  },
+});
 
 // ── Internal query: fetch the expected proof step ──
 export const getExpectedStep = internalQuery({
@@ -143,65 +157,84 @@ export const gradeProofStep = action({
 החזר JSON בדיוק:
 {"claimCorrect": bool, "reasonCorrect": bool, "feedback": "...", "stepScore": 0|0.5|1}`;
 
-    const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+    // Try each model; on transient errors (429 rate-limit, 5xx overload) retry
+    // with backoff and fall through to the next model. 503 = Gemini overloaded,
+    // very common and transient — must not fail the student's step.
+    const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"];
+    const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+    const MAX_ATTEMPTS_PER_MODEL = 3;
     let lastError = "";
 
     for (const model of models) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        }),
-      });
 
-      if (!res.ok) {
-        lastError = `Gemini ${model} returned ${res.status}`;
-        if (res.status !== 429) break;
-        continue;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS_PER_MODEL; attempt++) {
+        let res: Response;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1,
+              },
+            }),
+          });
+        } catch (e) {
+          lastError = `Gemini ${model} fetch failed: ${String(e)}`;
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          continue;
+        }
+
+        if (!res.ok) {
+          lastError = `Gemini ${model} returned ${res.status}`;
+          if (TRANSIENT.has(res.status)) {
+            // backoff then retry same model; loop exhaustion falls to next model
+            await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+            continue;
+          }
+          break; // non-transient (e.g. 400/403) → next model won't help much, but try
+        }
+
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+        let parsed: { claimCorrect: boolean; reasonCorrect: boolean; stepScore: number; feedback: string };
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          lastError = "Gemini returned invalid JSON";
+          break; // try next model
+        }
+
+        const claimCorrect = Boolean(parsed.claimCorrect);
+        const reasonCorrect = Boolean(parsed.reasonCorrect);
+        const rawScore = Number(parsed.stepScore);
+        const stepScore = [0, 0.5, 1].includes(rawScore) ? rawScore : (claimCorrect && reasonCorrect ? 1 : claimCorrect || reasonCorrect ? 0.5 : 0);
+        const feedback = String(parsed.feedback ?? "");
+
+        const totalSteps = await ctx.runQuery(internal.proofGrading.getTotalSteps, {
+          assignedQuestionId: args.assignedQuestionId,
+          sectionLabel: args.sectionLabel,
+        });
+
+        await ctx.runMutation(internal.proofGrading.saveStepResult, {
+          assignedQuestionId: args.assignedQuestionId,
+          sectionLabel: args.sectionLabel,
+          stepIndex: args.stepIndex,
+          studentClaim: args.studentClaim,
+          studentReason: args.studentReason,
+          claimCorrect,
+          reasonCorrect,
+          stepScore,
+          feedback,
+          totalSteps: totalSteps ?? 1,
+        });
+
+        return { claimCorrect, reasonCorrect, stepScore, feedback };
       }
-
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-      let parsed: { claimCorrect: boolean; reasonCorrect: boolean; stepScore: number; feedback: string };
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        lastError = "Gemini returned invalid JSON";
-        break;
-      }
-
-      const claimCorrect = Boolean(parsed.claimCorrect);
-      const reasonCorrect = Boolean(parsed.reasonCorrect);
-      const rawScore = Number(parsed.stepScore);
-      const stepScore = [0, 0.5, 1].includes(rawScore) ? rawScore : (claimCorrect && reasonCorrect ? 1 : claimCorrect || reasonCorrect ? 0.5 : 0);
-      const feedback = String(parsed.feedback ?? "");
-
-      const totalSteps = await ctx.runQuery(internal.proofGrading.getTotalSteps, {
-        assignedQuestionId: args.assignedQuestionId,
-        sectionLabel: args.sectionLabel,
-      });
-
-      await ctx.runMutation(internal.proofGrading.saveStepResult, {
-        assignedQuestionId: args.assignedQuestionId,
-        sectionLabel: args.sectionLabel,
-        stepIndex: args.stepIndex,
-        studentClaim: args.studentClaim,
-        studentReason: args.studentReason,
-        claimCorrect,
-        reasonCorrect,
-        stepScore,
-        feedback,
-        totalSteps: totalSteps ?? 1,
-      });
-
-      return { claimCorrect, reasonCorrect, stepScore, feedback };
     }
 
     throw new Error(lastError || "Gemini grading failed");
