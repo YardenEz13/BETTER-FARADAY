@@ -34,9 +34,9 @@ export default function RolePage() {
   }, [students, seeded, seeding]);
 
   const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
-    { Icon: ElectricBolt, text: "תרגול אדפטיבי לפי רמתך", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
-    { Icon: ElectricAtom, text: "AI מורה אישי בזמן אמת", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
-    { Icon: SignalWave, text: "מעקב ביצועים כיתתי חי", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
+    { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה שלך — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
+    { Icon: ElectricAtom, text: "מורה AI אישי, זמין בכל רגע", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
+    { Icon: SignalWave, text: "מעקב חי אחרי כל הכיתה", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
   ];
 
   return (

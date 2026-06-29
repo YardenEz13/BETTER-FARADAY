@@ -291,7 +291,7 @@ export default function StudentHome() {
                   מפת הלמידה שלי
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm translate-y-2">
-                  יחידה {completedTopics + 1} מתוך {topics.length} · המשך את המסע שלך
+                  יחידה {completedTopics + 1} מתוך {topics.length} · כל שאלה מקרבת אותך ליעד
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm"
@@ -345,7 +345,7 @@ export default function StudentHome() {
                         {topic.nameHe}
                       </div>
                       <div className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% הושלם` : "לחץ להתחיל ▶"}
+                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% — תמשיך מכאן` : "מוכן? בוא נתחיל ▶"}
                       </div>
                       {progress > 0 && progress < 80 && (
                         <div className="mt-2 w-full bg-surface-container rounded-full h-2 overflow-hidden border border-outline">
@@ -503,10 +503,10 @@ export default function StudentHome() {
                   <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>פרופסור פאראדיי</h4>
+                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>מייקל פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
-                    שלום! ראיתי שאתה מתקדם יפה.{completedTopics > 0 ? ` השלמת ${completedTopics} נושאים — ` : ' '}
-                    מוכן להמשיך? אני כאן אם תצטרך רמז!
+                    אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
+                    בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
                   </p>
                   <button
                     className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer"

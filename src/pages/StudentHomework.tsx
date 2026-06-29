@@ -54,7 +54,7 @@ export default function StudentHomework() {
     <div className="min-h-screen bg-background text-on-surface relative overflow-hidden flex flex-col">
       {/* ── Return Link ── */}
       <button className="fixed top-6 left-6 z-40 btn btn-primary btn-ghost" onClick={() => navigate(`/student/${studentId}/homework`)}>
-        <ArrowLeft size={16} /> [ BACK_TO_LIST ]
+        <ArrowLeft size={16} /> חזרה לרשימה
       </button>
       <ThemeToggle className="btn-icon fixed top-6 right-6 z-40" />
 
@@ -161,10 +161,10 @@ export default function StudentHomework() {
               >
                 <div className="mb-12">
                   <h1 className="font-display text-6xl font-black text-on-surface mb-4">
-                    {currentHw?.title || "TASK_LIST"}
+                    {currentHw?.title || "רשימת המשימות"}
                   </h1>
                   <p className="font-mono text-primary opacity-80 text-lg uppercase tracking-widest">
-                    {student.name}, {totalCount} שאלות להשלמה.
+                    {student.name}, {totalCount} שאלות מחכות לך.
                     {isDeadlinePassed && <span className="text-error ml-4 font-bold"> — עבר המועד!</span>}
                   </p>
                 </div>
@@ -172,7 +172,7 @@ export default function StudentHomework() {
                 {/* Progress bar */}
                 <div className="glass p-8 mb-12 relative overflow-hidden">
                   <div className="flex justify-between items-end mb-4">
-                    <div className="label-mono text-primary text-lg">התקדמות סנכרון</div>
+                    <div className="label-mono text-primary text-lg">ההתקדמות שלך</div>
                     <div className="num font-black text-4xl text-primary">{progress}%</div>
                   </div>
                   <div className="w-full h-3 bg-surface-container-low relative border border-outline rounded-full overflow-hidden">
@@ -333,15 +333,15 @@ export default function StudentHomework() {
               <div className="w-10 h-10 rounded-xl border border-primary flex items-center justify-center bg-primary text-white">
                 <ElectricAtom size={22} tone="ghost" glow={0.6} />
               </div>
-              <div className="font-display text-3xl text-primary">מורה AI פאראדיי</div>
+              <div className="font-display text-3xl text-primary">מייקל פאראדיי</div>
             </div>
-            
+
             <div className="font-mono text-sm leading-relaxed text-on-surface opacity-80 mb-8 relative z-10">
-              נתקעת? פאראדיי מחובר כעת לרשת ויכול לכוון אותך צעד-אחר-צעד, ללא חשיפת התשובה הסופית.
+              נתקעת? פאראדיי כאן כדי לכוון אותך צעד אחר צעד — בלי לחשוף את התשובה הסופית.
             </div>
-            
+
             <button className="btn btn-primary w-full justify-center relative z-10" onClick={() => setChatOpen(true)}>
-              [ INITIATE_AI_ASSIST ]
+              דבר עם פאראדיי
             </button>
           </div>
 

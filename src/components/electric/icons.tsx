@@ -211,12 +211,275 @@ export function FieldLines({ size = 64, animated = true, glow = 1, tone = "spark
   );
 }
 
+/* -------------------------------------------------------------- Resistor */
+
+export function Resistor({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  const d = "M3 32 H14 L19 20 L27 44 L35 20 L43 44 L49 32 H61";
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+        filter={glow > 0 ? `url(#${filter})` : undefined}
+        strokeDasharray={animated ? "6 10" : undefined}>
+        {animated && (
+          <animate attributeName="stroke-dashoffset" from="120" to="0" dur="1.8s" repeatCount="indefinite" />
+        )}
+      </path>
+      {[[3, 32], [61, 32]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="2.6" fill={c0}
+          filter={glow > 0 ? `url(#${filter})` : undefined} />
+      ))}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------- Capacitor */
+
+export function Capacitor({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  const d = "M4 32 H27 M27 16 V48 M37 16 V48 M37 32 H60";
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" fill="none"
+        filter={glow > 0 ? `url(#${filter})` : undefined} />
+      {/* charge crossing the gap */}
+      {animated && (
+        <circle cy="32" r="2.6" fill={c0}>
+          <animate attributeName="cx" values="4;25" dur="1.3s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;1;0" dur="1.3s" repeatCount="indefinite" />
+        </circle>
+      )}
+    </svg>
+  );
+}
+
+/* --------------------------------------------------------------- Battery */
+
+export function Battery({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  void animated;
+  const d = "M4 32 H22 M22 16 V48 M30 23 V41 M38 16 V48 M46 23 V41 M54 16 V48 M54 32 H60";
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" fill="none"
+        filter={glow > 0 ? `url(#${filter})` : undefined} />
+      {/* terminal plus mark */}
+      <path d="M14 12 H22 M18 8 V16" stroke={c1} strokeWidth={2} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------- Inductor / coil */
+
+export function Inductor({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  const d = "M3 38 H10 A7 7 0 1 1 24 38 A7 7 0 1 1 38 38 A7 7 0 1 1 52 38 H61";
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" fill="none"
+        filter={glow > 0 ? `url(#${filter})` : undefined}
+        strokeDasharray={animated ? "6 10" : undefined}>
+        {animated && (
+          <animate attributeName="stroke-dashoffset" from="160" to="0" dur="2s" repeatCount="indefinite" />
+        )}
+      </path>
+      {[[3, 38], [61, 38]].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="2.6" fill={c0}
+          filter={glow > 0 ? `url(#${filter})` : undefined} />
+      ))}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------ Lightbulb */
+
+export function Lightbulb({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  const bulb = "M32 6 C20 6 12 14 12 25 C12 33 17 38 21 43 V48 H43 V43 C47 38 52 33 52 25 C52 14 44 6 32 6 Z";
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d={bulb} stroke={`url(#${grad})`} strokeWidth={2.2} strokeLinejoin="round"
+        fill={`color-mix(in srgb, ${c1} 12%, transparent)`}
+        filter={glow > 0 ? `url(#${filter})` : undefined} />
+      {/* filament */}
+      <path d="M25 30 L29 24 L32 32 L35 24 L39 30" stroke={c0} strokeWidth={2}
+        strokeLinecap="round" strokeLinejoin="round"
+        filter={glow > 0 ? `url(#${filter})` : undefined}>
+        {animated && (
+          <animate attributeName="opacity" values="0.4;1;0.4" dur="1.6s" repeatCount="indefinite" />
+        )}
+      </path>
+      {/* base */}
+      <g stroke={`url(#${grad})`} strokeWidth={2.2} strokeLinecap="round">
+        <path d="M24 53 H40" />
+        <path d="M26 58 H38" />
+      </g>
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------- Gauge / meter */
+
+export function Gauge({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d="M8 44 A26 26 0 0 1 56 44" stroke={`url(#${grad})`} strokeWidth={2.6}
+        strokeLinecap="round" fill="none" filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <g stroke={`url(#${grad})`} strokeWidth={2} strokeLinecap="round" opacity={0.7}>
+        <path d="M13 32 L17 35" />
+        <path d="M32 19 V24" />
+        <path d="M51 32 L47 35" />
+      </g>
+      {/* needle */}
+      <g>
+        {animated && (
+          <animateTransform attributeName="transform" type="rotate"
+            values="-46 32 44; 46 32 44; -46 32 44" dur="3.2s" repeatCount="indefinite" />
+        )}
+        <path d="M32 44 L32 24" stroke={c1} strokeWidth={2.6} strokeLinecap="round"
+          filter={glow > 0 ? `url(#${filter})` : undefined} />
+      </g>
+      <circle cx="32" cy="44" r="3.6" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined} />
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------------- Magnet */
+
+export function Magnet({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d="M16 50 V30 A16 16 0 0 1 48 30 V50" stroke={`url(#${grad})`} strokeWidth={6}
+        fill="none" filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <g strokeLinecap="round">
+        <path d="M13 50 H19" stroke={c1} strokeWidth={6} />
+        <path d="M45 50 H51" stroke={c0} strokeWidth={6} />
+      </g>
+      <g stroke={c0} strokeWidth={1.8} strokeLinecap="round" opacity={0.8}>
+        <path d="M16 18 L10 12" />
+        <path d="M32 12 V4" />
+        <path d="M48 18 L54 12" />
+        {animated && (
+          <animate attributeName="opacity" values="0.2;0.9;0.2" dur="1.8s" repeatCount="indefinite" />
+        )}
+      </g>
+    </svg>
+  );
+}
+
+/* ----------------------------------------------------------- Lens / optics */
+
+export function Lens({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  void animated;
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d="M32 8 C40 20 40 44 32 56 C24 44 24 20 32 8 Z" stroke={`url(#${grad})`} strokeWidth={2.2}
+        fill={`color-mix(in srgb, ${c1} 12%, transparent)`} filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <g stroke={c0} strokeWidth={1.8} strokeLinecap="round" opacity={0.85}>
+        <path d="M4 20 H26" />
+        <path d="M4 32 H24" />
+        <path d="M4 44 H26" />
+        <path d="M40 32 H60" />
+        <path d="M38 20 L58 28" />
+        <path d="M38 44 L58 36" />
+      </g>
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------- Pendulum */
+
+export function Pendulum({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d="M14 10 H50" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
+        filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <g>
+        {animated && (
+          <animateTransform attributeName="transform" type="rotate"
+            values="-30 32 10; 30 32 10; -30 32 10" dur="2.4s" repeatCount="indefinite"
+            calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1; 0.4 0 0.6 1" />
+        )}
+        <path d="M32 10 L32 46" stroke={`url(#${grad})`} strokeWidth={2} strokeLinecap="round" />
+        <circle cx="32" cy="50" r="6" fill={c1} stroke={c0} strokeWidth={1.6}
+          filter={glow > 0 ? `url(#${filter})` : undefined} />
+      </g>
+      <circle cx="32" cy="10" r="2.6" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined} />
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------------- Vector */
+
+export function Vector({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
+  const grad = useId();
+  const filter = useId();
+  const [c0, c1] = TONES[tone];
+  void animated;
+  void c1;
+  return (
+    <svg {...svgProps(size, className, title)}>
+      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
+      <path d="M10 54 L46 18" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
+        filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <path d="M34 16 L48 16 L48 30" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
+        strokeLinejoin="round" fill="none" filter={glow > 0 ? `url(#${filter})` : undefined} />
+      <g stroke={c0} strokeWidth={1.6} strokeDasharray="3 4" strokeLinecap="round" opacity={0.75}>
+        <path d="M10 54 H46" />
+        <path d="M46 54 V18" />
+      </g>
+      <circle cx="10" cy="54" r="2.8" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined} />
+    </svg>
+  );
+}
+
 export const ELECTRIC_ICONS = {
   bolt: ElectricBolt,
   atom: ElectricAtom,
   circuit: CircuitNode,
   wave: SignalWave,
   field: FieldLines,
+  resistor: Resistor,
+  capacitor: Capacitor,
+  battery: Battery,
+  inductor: Inductor,
+  bulb: Lightbulb,
+  gauge: Gauge,
+  magnet: Magnet,
+  lens: Lens,
+  pendulum: Pendulum,
+  vector: Vector,
 } as const;
 
 export type ElectricIconName = keyof typeof ELECTRIC_ICONS;

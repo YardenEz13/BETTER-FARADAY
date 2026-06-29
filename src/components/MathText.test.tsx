@@ -22,6 +22,13 @@ describe("MathText Component", () => {
     expect(container.textContent).toContain("בסדרה.");
   });
 
+  it("should render Hebrew text with multiple inline math fractions correctly", () => {
+    const text = "כד יש 10 כדורים (4 אדומים ו-6 כחולים). ההסתברות לכדור אדום ראשון היא $\\frac{4}{10}$. כעת נשארו 9 כדורים, מתוכם 3 אדומים, ולכן ההסתברות לאדום שני היא $\\frac{3}{9}$. ההסתברות הכוללת היא $\\frac{4}{10} \\cdot \\frac{3}{9} = \\frac{12}{90} = \\frac{2}{15}$.";
+    const { container } = render(<MathText>{text}</MathText>);
+    console.log("RENDERED HTML:", container.innerHTML);
+    expect(container.querySelectorAll(".katex")).toHaveLength(3);
+  });
+
   it("should render display math expressions with displayMode=true", () => {
     const { container } = render(
       <MathText>{"חישוב הגבול: $$\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$$"}</MathText>

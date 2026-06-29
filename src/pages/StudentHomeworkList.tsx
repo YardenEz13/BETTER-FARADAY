@@ -150,9 +150,9 @@ export default function StudentHomeworkList() {
               <div className="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-6 border-2 border-outline">
                 <FileText size={36} className="text-on-surface-variant" />
               </div>
-              <div className="font-bold text-xl text-on-surface mb-2">אין משימות כרגע</div>
+              <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
-                המורה טרם הקצה שיעורי בית. חזור מאוחר יותר.
+                אין משימות פתוחות כרגע. ברגע שהמורה ישלח אחת — היא תופיע כאן.
               </div>
             </motion.div>
           ) : (

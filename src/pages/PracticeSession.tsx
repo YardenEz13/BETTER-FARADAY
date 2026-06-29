@@ -11,6 +11,7 @@ import {
 import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
+import MathText from "../components/MathText";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -227,9 +228,9 @@ export default function PracticeSession() {
           ) : !activeQuestion && question === null ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={48} className="text-primary mb-4" />
-              <h2 className="font-display font-bold text-on-surface mb-3" style={{ fontSize: '1.6rem' }}>כל השאלות הושלמו!</h2>
+              <h2 className="font-display font-bold text-on-surface mb-3" style={{ fontSize: '1.6rem' }}>כיסית את כל הנושא! ⚡</h2>
               <p className="text-sm text-on-surface-variant mb-8">
-                סיימת את כל השאלות הזמינות בנושא זה.
+                אין עוד שאלות כאן — סימן שאתה שולט בחומר. קדימה לנושא הבא.
               </p>
               <button className="btn-clay-primary btn-lg" onClick={() => navigate(`/student/${studentId}`)}>
                 חזרה למפת הלמידה
@@ -268,7 +269,7 @@ export default function PracticeSession() {
 
                   {/* Stem */}
                   <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
-                    {activeQuestion.stem}
+                    <MathText>{activeQuestion.stem}</MathText>
                   </div>
 
                   {/* Celebration — electric spark discharge on a correct answer */}
@@ -353,7 +354,7 @@ export default function PracticeSession() {
                             {isWrong && <XCircle size={16} className="text-white" />}
                             {!isRight && !isWrong && String.fromCharCode(65 + idx)}
                           </div>
-                          <span className="flex-1">{choice}</span>
+                          <span className="flex-1"><MathText>{choice}</MathText></span>
                         </motion.button>
                       );
                     })}
@@ -442,7 +443,7 @@ export default function PracticeSession() {
                               <div>
                                 <div className="text-xs font-semibold mb-1 text-primary">התשובה הנכונה:</div>
                                 <div className="font-medium text-on-surface">
-                                  {activeQuestion.choices[activeQuestion.correctIndex]}
+                                  <MathText>{activeQuestion.choices[activeQuestion.correctIndex]}</MathText>
                                 </div>
                               </div>
                             </div>
@@ -455,7 +456,7 @@ export default function PracticeSession() {
                               <span className="text-sm font-semibold text-on-surface-variant">הסבר:</span>
                             </div>
                             <p className="text-base leading-relaxed text-on-surface" style={{ lineHeight: 1.75 }}>
-                              {activeQuestion.explanation}
+                              <MathText>{activeQuestion.explanation ?? ""}</MathText>
                             </p>
                           </div>
 
@@ -472,7 +473,7 @@ export default function PracticeSession() {
                                     <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary border border-primary/30">
                                       {i + 1}
                                     </span>
-                                    <span>{step}</span>
+                                    <MathText>{step}</MathText>
                                   </li>
                                 ))}
                               </ol>

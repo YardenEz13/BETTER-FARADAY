@@ -336,7 +336,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             <div className="glass bg-[var(--color-primary-muted)] border border-[var(--color-primary)] p-12 text-center rounded-xl"
               style={{ color: "var(--color-primary)", opacity: 0.6 }}>
               <FileText size={48} className="mx-auto mb-3" />
-              <div className="font-black text-xl mb-1">אין מטלות במערכת</div>
+              <div className="font-black text-xl mb-1">עוד לא יצרת מטלות</div>
+              <div className="text-sm font-semibold opacity-80">התחל מ״צור שיעורי בית חדשים״ למעלה</div>
             </div>
           ) : homeworkList.map((hw) => {
             const isExpired = Date.now() > hw.deadline;

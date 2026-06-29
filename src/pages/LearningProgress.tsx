@@ -260,7 +260,7 @@ export default function LearningProgress() {
                 <Flame size={28} className="text-yellow-300" />
                 <div className="text-right">
                   <p className="font-black text-lg leading-none" style={{ fontFamily: 'Assistant, sans-serif' }}>{student.streak} ימים ברצף</p>
-                  <p className="text-white/70 text-sm mt-0.5">אתה בדרך הנכונה!</p>
+                  <p className="text-white/70 text-sm mt-0.5">אל תשבור את הרצף 🔥</p>
                 </div>
               </div>
             </div>
@@ -336,11 +336,11 @@ export default function LearningProgress() {
               <Trophy size={20} className="text-tertiary" />
             </div>
             <div>
-              <h4 className="font-bold text-on-surface text-sm">הישג חדש מחכה!</h4>
+              <h4 className="font-bold text-on-surface text-sm">הישג חדש במרחק נגיעה!</h4>
               <p className="text-on-surface-variant text-xs mt-0.5">
                 {completedTopics < topics.length
-                  ? `סיים עוד נושא אחד לקבלת תג "המתמיד"`
-                  : `כל הכבוד! השלמת את כל הנושאים 🎉`}
+                  ? `עוד נושא אחד והתג "המתמיד" שלך`
+                  : `כל הכבוד! כבשת את כל הנושאים 🎉`}
               </p>
             </div>
           </motion.div>
