@@ -8,9 +8,9 @@ import QuestionImportModal from "../components/QuestionImportModal";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
-  BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
-  Loader2, Zap, Sparkles, Check, Scissors, User, ChevronDown
-} from "lucide-react";
+  BarChart2, Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
+  Loader as Loader2, Zap, Sparkles, Check, Scissors, User, ChevronDown
+} from "../components/electric";
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
   const topics = useQuery(api.topics.list);

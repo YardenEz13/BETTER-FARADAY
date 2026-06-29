@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
-import { Smartphone, X, Loader2, CheckCircle2 } from "lucide-react";
+import { Smartphone, X, Loader as Loader2, CheckCircle as CheckCircle2 } from "./electric";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 

@@ -3,8 +3,8 @@ import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, FileText, Zap, Target } from "lucide-react";
-import { ElectricAtom, ElectricBolt } from "../components/electric";
+import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, FileText, Zap } from "../components/electric";
+import { ElectricAtom, ElectricBolt, Lens } from "../components/electric";
 import { analyzeConversation } from "../services/localAI";
 import CyberAvatar from "../components/CyberAvatar";
 
@@ -73,7 +73,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           <div className="clay-card p-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-on-surface-variant">ממוצע בלבול</span>
-              <Target size={18} className={confusionHigh ? 'text-error' : 'text-primary'} />
+              <Lens size={20} tone={confusionHigh ? 'danger' : 'spark'} glow={0.5} />
             </div>
             <div className="num text-4xl font-bold" style={{ color: confusionHigh ? 'var(--color-error)' : 'var(--color-primary)' }}>
               {summary?.avgConfusion ?? 0}%
@@ -203,7 +203,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
 
                       {chat.metrics.teacherActionItem && (
                         <div className="mt-1 p-4 rounded-2xl bg-primary/10 border-2 border-primary/25 text-on-surface text-sm font-medium flex items-start gap-3">
-                          <Target size={18} className="text-primary flex-shrink-0 mt-0.5" />
+                          <Lens size={20} tone="spark" glow={0.5} className="flex-shrink-0 mt-0.5" />
                           <span>{chat.metrics.teacherActionItem}</span>
                         </div>
                       )}

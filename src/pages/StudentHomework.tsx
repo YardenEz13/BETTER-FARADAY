@@ -5,14 +5,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Clock, CheckCircle2, Circle, Bot, Zap, ChevronRight
-} from "lucide-react";
+  ArrowLeft, Clock, CheckCircle as CheckCircle2, CircleIcon as Circle, Bot, ChevronRight
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
 import AIChatPanel from "../components/AIChatPanel";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
-import { ElectricAtom } from "../components/electric";
+import { Sparkles, Eye, EyeOff } from "../components/electric";
+import { ElectricAtom, ElectricBolt } from "../components/electric";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -288,7 +288,7 @@ export default function StudentHomework() {
           
           <div className="glass p-8 flex flex-col gap-6">
             <div className="label-mono text-primary border-b border-outline-variant pb-2 flex items-center gap-2">
-              <Zap size={16} /> נתוני משימה
+              <ElectricBolt size={18} tone="spark" glow={0.5} /> נתוני משימה
             </div>
 
             <div className="flex justify-between items-center">

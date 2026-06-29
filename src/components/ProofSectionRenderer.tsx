@@ -3,7 +3,8 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Lock, Send, Lightbulb, Bot, Loader2, AlertTriangle } from "lucide-react";
+import { Check, X, Lock, Send, Bot, Loader as Loader2, AlertTriangle } from "../components/electric";
+import { Lightbulb as ElectricBulb } from "../components/electric";
 import MathText from "./MathText";
 
 interface ProofStep {
@@ -332,7 +333,7 @@ export default function ProofSectionRenderer({
                     onClick={() => setHintsRevealed((h) => Math.min(h + 1, hints.length))}
                     disabled={hintsRevealed >= hints.length}
                   >
-                    <Lightbulb size={14} /> רמז ({hintsRevealed}/{hints.length})
+                    <ElectricBulb size={16} tone="current" animated={false} glow={0.4} /> רמז ({hintsRevealed}/{hints.length})
                   </button>
                 )}
 
@@ -400,7 +401,7 @@ export default function ProofSectionRenderer({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
-                <Lightbulb size={16} className="text-tertiary shrink-0 mt-0.5" />
+                <ElectricBulb size={18} tone="amber" glow={0.55} className="shrink-0 mt-0.5" />
                 <span className="leading-relaxed"><MathText>{hint}</MathText></span>
               </motion.div>
             ))}

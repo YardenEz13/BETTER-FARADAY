@@ -4,9 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ArrowRight, Target, TrendingUp, Zap, Trophy, BookOpen, CheckCircle2, Flame, ChevronLeft } from "lucide-react";
+import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
-import { ElectricBolt, SignalWave } from "../components/electric";
+import { ElectricBolt, SignalWave, Lens } from "../components/electric";
 
 export default function LearningProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -118,7 +118,7 @@ export default function LearningProgress() {
             className="flex items-center gap-2 bg-secondary/10 border-2 border-secondary/30 px-3 py-1.5 rounded-2xl"
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
-            <Target size={15} className="text-secondary" />
+            <Lens size={18} tone="violet" glow={0.5} />
             <span className="num font-bold text-secondary text-sm">{overallAcc}% דיוק</span>
           </div>
           {/* Completed chip */}
@@ -216,7 +216,7 @@ export default function LearningProgress() {
                       >
                         <div className="flex gap-5 flex-wrap">
                           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
-                            <Target size={15} className="text-primary" />
+                            <Lens size={18} tone="spark" glow={0.5} />
                             <span>{correct} תשובות נכונות מתוך {total}</span>
                           </div>
                         </div>

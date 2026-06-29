@@ -5,9 +5,9 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, FileText, CheckCircle2, XCircle, Loader2, Send,
+  ArrowLeft, FileText, CheckCircle as CheckCircle2, XCircle, Loader as Loader2, Send,
   ExternalLink, Scissors, Trophy,
-} from "lucide-react";
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricLoader } from "../components/electric";
 

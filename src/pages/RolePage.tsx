@@ -1,7 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Zap, Users, Shield } from "lucide-react";
+import { ArrowLeft, Users, Shield } from "../components/electric";
 import { motion, AnimatePresence } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -46,7 +46,7 @@ export default function RolePage() {
               className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-primary-dark bg-primary text-white"
               style={{ boxShadow: "var(--shadow-clay-primary)" }}
             >
-              <Zap size={20} strokeWidth={2.5} />
+              <ElectricBolt size={22} tone="ghost" glow={0.6} />
             </div>
             <span className="text-xl font-extrabold tracking-tight text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
               FARADAY <span className="text-primary">Logic</span>

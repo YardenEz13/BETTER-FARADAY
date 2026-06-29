@@ -1,7 +1,8 @@
 import { useState, useRef, type ChangeEvent } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
-import { Camera, Loader2, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
+import { Camera, Loader as Loader2, CheckCircle as CheckCircle2, AlertTriangle } from "../components/electric";
+import { ElectricBolt } from "../components/electric";
 import { api } from "../../convex/_generated/api";
 import { prepareImageForUpload } from "../services/imageUpload";
 
@@ -44,7 +45,7 @@ export default function MobileBridgeUpload() {
     >
       {/* Branding */}
       <div className="flex items-center gap-2 text-primary">
-        <Zap size={22} className="fill-current" />
+        <ElectricBolt size={26} tone="spark" glow={0.7} />
         <span className="font-headline-md">פאראדיי</span>
       </div>
 

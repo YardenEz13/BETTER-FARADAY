@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { Upload, FileText, Loader2, Check, X, Sparkles, AlertTriangle, RefreshCw } from "lucide-react";
+import { Upload, FileText, Loader as Loader2, Check, X, Sparkles, AlertTriangle, RefreshCw } from "./electric";
 import MathText from "./MathText";
 import { prepareMediaForUpload, type PreparedMedia } from "../services/imageUpload";
 import { extractQuestionFromMedia, type ExtractedQuestionDraft } from "../services/localAI";

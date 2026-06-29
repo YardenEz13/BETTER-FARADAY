@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ChevronRight, ArrowRight, ChevronDown, MessageSquare, Bot, GraduationCap } from "lucide-react";
+import { ChevronRight, ArrowRight, ChevronDown, MessageSquare, Bot, GraduationCap } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
 import { ElectricBolt } from "../components/electric";
 import MathText from "../components/MathText";

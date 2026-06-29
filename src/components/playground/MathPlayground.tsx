@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sigma, PencilLine, BookOpen } from "lucide-react";
+import { X, Sigma, PencilLine, BookOpen } from "../electric";
 import FaradayCanvas from "../FaradayCanvas";
 import Worksheet from "./Worksheet";
 import FormulaDrawer from "./FormulaDrawer";

@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "lucide-react";
+import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "./electric";
 import {
   isLocalAIAvailable,
   getAIStatus,

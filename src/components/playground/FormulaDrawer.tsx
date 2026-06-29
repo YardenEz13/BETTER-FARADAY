@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown } from "../electric";
 import MathText from "../MathText";
 import { FORMULA_BANK } from "../../data/formulaBank";
 

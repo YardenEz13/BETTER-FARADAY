@@ -5,16 +5,16 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, memo, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  LogOut, BookOpen, BarChart2, Bot, Play, Zap, Flame, Check,
-  MessageSquare, CheckCircle2, Map, Activity, Package, Palette, Star,
-} from "lucide-react";
+  LogOut, BookOpen, BarChart2, Bot, Play, Flame, Check,
+  MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
+} from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
+import { ElectricLoader, ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import FaradayCanvas from "../components/FaradayCanvas";
 
 /* ── A single station on the learning circuit ──
@@ -453,8 +453,8 @@ export default function StudentHome() {
                 {/* XP */}
                 <div className="pt-3 flex items-center justify-between border-t-2 border-outline">
                   <span className="font-medium text-on-surface-variant text-sm">נקודות אנרגיה</span>
-                  <span className="font-bold text-primary flex items-center gap-1">
-                    <Zap size={15} />
+                  <span className="font-bold text-primary flex items-center gap-1.5">
+                    <Battery size={20} tone="spark" glow={0.5} />
                     {totalXP.toLocaleString()}
                   </span>
                 </div>

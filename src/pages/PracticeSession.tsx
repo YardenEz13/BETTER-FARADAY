@@ -6,12 +6,13 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
-  CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock, Star
-} from "lucide-react";
+  CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
+} from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
+import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -368,7 +369,7 @@ export default function PracticeSession() {
                         onClick={handleHint}
                         disabled={loadingHint}
                       >
-                        <Lightbulb size={15} />
+                        <ElectricBulb size={17} tone="current" animated={false} glow={0.4} />
                         {loadingHint ? 'טוען רמז...' : 'רמז מ-AI'}
                       </button>
                     </div>
@@ -384,7 +385,7 @@ export default function PracticeSession() {
                         className="mt-4 overflow-hidden"
                       >
                         <div className="p-4 rounded-2xl flex items-start gap-3 bg-tertiary/10 border-2 border-tertiary/30">
-                          <Lightbulb size={16} className="text-tertiary mt-0.5 flex-shrink-0" />
+                          <ElectricBulb size={18} tone="amber" glow={0.55} className="mt-0.5 flex-shrink-0" />
                           <p className="text-sm text-on-surface-variant leading-relaxed">{hint}</p>
                         </div>
                       </motion.div>
@@ -452,7 +453,7 @@ export default function PracticeSession() {
                           {/* Explanation */}
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb size={15} className="text-tertiary" />
+                              <ElectricBulb size={17} tone="amber" glow={0.5} />
                               <span className="text-sm font-semibold text-on-surface-variant">הסבר:</span>
                             </div>
                             <p className="text-base leading-relaxed text-on-surface" style={{ lineHeight: 1.75 }}>
@@ -565,7 +566,7 @@ function ChargeMeter({ combo, max }: { combo: number; max: number }) {
       style={{ boxShadow: 'var(--shadow-clay)' }}
       title="טעינת אנרגיה — רצף תשובות נכונות"
     >
-      <Zap size={13} className={full ? 'text-primary' : 'text-on-surface-variant'} />
+      <Battery size={18} tone="spark" glow={full ? 0.9 : 0.3} animated={full} />
       <div className="flex items-center gap-1">
         {Array.from({ length: max }).map((_, i) => (
           <span

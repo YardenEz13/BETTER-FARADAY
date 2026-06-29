@@ -3,7 +3,8 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "../components/electric";
+import { Lightbulb as ElectricBulb } from "../components/electric";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
 
@@ -213,7 +214,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
                       <div className="label-mono text-tertiary mb-6 p-4 border border-tertiary/40 bg-tertiary/10 flex items-center gap-2">
-                        <Lightbulb size={16} /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
+                        <ElectricBulb size={18} tone="amber" glow={0.55} className="shrink-0" /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
                       </div>
                     )}
 
@@ -255,7 +256,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               onClick={() => handleRevealHint(section.label, section.hints.length)}
                               disabled={hintCount >= section.hints.length}
                             >
-                              <Lightbulb size={16} />
+                              <ElectricBulb size={18} tone="current" animated={false} glow={0.4} />
                               [ REQUEST_HINT ] ({hintCount}/{section.hints.length})
                             </button>
                           )}
@@ -284,7 +285,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
-                            <Lightbulb size={16} className="text-tertiary shrink-0 mt-0.5" />
+                            <ElectricBulb size={18} tone="amber" glow={0.55} className="shrink-0 mt-0.5" />
                             <span className="leading-relaxed"><MathText>{hint}</MathText></span>
                           </motion.div>
                         ))}
@@ -367,7 +368,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           <div className="flex flex-wrap gap-6 justify-center label-mono opacity-60">
             <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
             <div className="flex items-center gap-2"><Clock size={16} className="text-secondary" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
-            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-tertiary" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
+            <div className="flex items-center gap-2"><ElectricBulb size={18} tone="amber" glow={0.5} /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
           <button className="btn btn-primary mt-4" onClick={handleFinalize}>

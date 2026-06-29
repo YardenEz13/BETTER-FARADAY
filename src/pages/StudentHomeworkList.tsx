@@ -4,11 +4,11 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, BookOpen, FileText, Clock, CheckCircle2,
-  Zap, AlertTriangle, Edit, Lightbulb, Scissors, ChevronLeft,
-} from "lucide-react";
+  ArrowLeft, BookOpen, FileText, Clock, CheckCircle as CheckCircle2,
+  Zap, AlertTriangle, Edit, Scissors, ChevronLeft,
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
-import { ElectricBolt, ElectricAtom } from "../components/electric";
+import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -294,7 +294,7 @@ export default function StudentHomeworkList() {
             <div className="relative">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-xl bg-tertiary-container flex items-center justify-center">
-                  <Lightbulb size={15} className="text-tertiary" />
+                  <ElectricBulb size={18} tone="amber" glow={0.5} />
                 </div>
                 <span className="font-bold text-sm text-tertiary">טיפ מהמערכת</span>
               </div>
