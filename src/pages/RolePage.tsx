@@ -1,8 +1,7 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Loader2, ArrowLeft, Zap, Users, Shield } from "lucide-react";
+import { ArrowLeft, Zap, Users, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -20,18 +19,7 @@ import type { ElectricIconProps, ElectricTone } from "../components/electric";
  */
 export default function RolePage() {
   const navigate = useNavigate();
-  const [seeded, setSeeded] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const seedDatabase = useMutation(api.seed.seedDatabase);
   const students = useQuery(api.classroom.list);
-
-  useEffect(() => {
-    if (students && students.length === 0 && !seeded && !seeding) {
-      setSeeding(true);
-      seedDatabase().then(() => { setSeeded(true); setSeeding(false); });
-    }
-    if (students && students.length > 0) setSeeded(true);
-  }, [students, seeded, seeding]);
 
   const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
     { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה שלך — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
@@ -127,21 +115,6 @@ export default function RolePage() {
             <div className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
               SELECT MODE · בחר כניסה
             </div>
-
-            {/* Seeding indicator */}
-            <AnimatePresence>
-              {seeding && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 overflow-hidden rounded-2xl border-2 border-primary/30 bg-primary/10 px-4 py-3"
-                >
-                  <Loader2 size={16} className="animate-spin text-primary" />
-                  <span className="text-sm font-semibold text-primary">טוען נתוני כיתה...</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Student card */}
             <div
