@@ -1,4 +1,5 @@
 import type { AgentType, ChatMetrics, PartialBrief, CompositeBrief } from "./localAI.types";
+import { remoteLog } from "./remoteLogger";
 
 export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief };
 
@@ -482,9 +483,11 @@ export async function streamMessage(
           console.warn(`[localAI] ${model} exhausted retries, trying next model...`);
           continue;
         }
+        remoteLog.error("Gemini stream: non-429 failure", { model, error: lastErr.message });
         throw e; // non-429 error, propagate immediately
       }
     }
+    remoteLog.error("Gemini stream: all models exhausted", { models: MODELS, error: lastErr?.message });
     throw lastErr!;
   }
 
@@ -564,6 +567,10 @@ export async function streamMessage(
       throw error;
     }
     console.error("[localAI] streamMessage failed:", error);
+    remoteLog.error("streamMessage failed", {
+      agentType: effectiveAgentType,
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("פנייה לשרת Gemini נכשלה. אנא בדוק את החיבור לרשת ומפתח ה-API.");
   }
 
@@ -602,7 +609,10 @@ async function geminiGenerateContent(
     body: JSON.stringify({ payload }),
     signal,
   });
-  if (!res.ok) throw new Error(`Gemini proxy error: ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    remoteLog.error("geminiGenerateContent failed", { status: res.status, statusText: res.statusText });
+    throw new Error(`Gemini proxy error: ${res.status} ${res.statusText}`);
+  }
   return await res.json();
 }
 
