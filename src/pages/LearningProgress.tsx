@@ -133,7 +133,7 @@ export default function LearningProgress() {
       </motion.header>
 
       {/* Main content */}
-      <main className="pt-8 pb-24 px-4 md:px-10 w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
+      <main className="page-shell page-shell--wide pt-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
 
         {/* ── Topic list (8 cols) ── */}
         <div className="lg:col-span-8 space-y-4">

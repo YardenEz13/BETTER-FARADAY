@@ -201,7 +201,7 @@ export default function PracticeSession() {
           transition: 'padding 0.3s ease',
         }}
       >
-        <div className="w-full max-w-6xl mx-auto px-6 flex gap-6 items-start">
+        <div className="page-shell flex gap-6 items-start">
 
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">

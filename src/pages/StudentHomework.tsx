@@ -60,7 +60,7 @@ export default function StudentHomework() {
 
       {/* Main Container */}
       <div
-        className="max-w-[1400px] w-full mx-auto pt-32 px-8 relative z-10 flex gap-12 flex-col lg:flex-row"
+        className="page-shell page-shell--wide pt-32 relative z-10 flex gap-12 flex-col lg:flex-row"
         style={{ paddingBottom: chatOpen ? '58vh' : '80px', transition: 'padding 0.3s ease' }}
       >
         

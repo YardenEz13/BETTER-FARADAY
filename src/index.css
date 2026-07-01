@@ -293,6 +293,26 @@ body {
   min-height: 100vh;
 }
 
+/* ═══════════════════ LAYOUT SHELL ════════════════════ */
+/* Single source of truth for page content width. Every top-level page should
+   wrap its content in `.page-shell` (or `.page-shell--wide`) instead of ad-hoc
+   `max-w-[1600px]` / `max-w-4xl` values, so content stays a comfortable,
+   centred column on wide desktops instead of stranding in dead space.
+   Gutters scale with the viewport and are RTL-safe (padding-inline). */
+:root {
+  --content-max: 75rem;       /* ~1200px — default reading/app column   */
+  --content-max-wide: 90rem;  /* ~1440px — dashboards / dense multi-col */
+}
+@layer components {
+  .page-shell {
+    width: 100%;
+    max-width: var(--content-max);
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 4rem);
+  }
+  .page-shell--wide { max-width: var(--content-max-wide); }
+}
+
 /* ═══════════════════ COMPONENTS ════════════════════ */
 @layer components {
 
@@ -481,26 +501,11 @@ body {
 /* Signature: current flowing through the learning circuit + charge pulse + field rings.
    All gated by prefers-reduced-motion at the bottom of this file. */
 
-/* Current flowing along the charged wire */
-.wire-current {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0, transparent 9px,
-    var(--color-inverse-primary) 9px, var(--color-inverse-primary) 13px
-  );
-  opacity: 0.65;
-  animation: current-flow 0.9s linear infinite;
+/* Current flowing along the charged wire — dashed SVG path scrolling toward the active lesson */
+.wire-current-path {
+  animation: path-current-flow 1.1s linear infinite;
 }
-@keyframes current-flow { to { background-position-y: 22px; } }
-
-/* A charge pulse traveling toward the active lesson */
-.charge-pulse { animation: charge-travel 2.1s ease-in-out infinite; }
-@keyframes charge-travel {
-  0%   { top: 0%;   opacity: 0; }
-  12%  { opacity: 1; }
-  88%  { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
-}
+@keyframes path-current-flow { to { stroke-dashoffset: -32; } }
 
 /* Lines of force radiating from a charged (active) node */
 .field-ring { animation: field-pulse 2.4s ease-out infinite; }
@@ -508,6 +513,13 @@ body {
 @keyframes field-pulse {
   0%   { transform: translate(-50%, -50%) scale(0.75); opacity: 0.55; }
   100% { transform: translate(-50%, -50%) scale(1.55); opacity: 0; }
+}
+
+/* Active learning-map node breathing in place — the "next up" station */
+.skill-node-pulse { animation: skill-node-pulse 2.4s ease-in-out infinite; }
+@keyframes skill-node-pulse {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
 }
 
 /* Ambient circuit field — faint dotted grid for hero/section backdrops */

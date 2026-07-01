@@ -163,7 +163,7 @@ export default function TeacherDashboard() {
 
       {/* ══════════ MAIN ══════════ */}
       <main className="relative z-10 flex-1 overflow-auto">
-        <div className="max-w-[1340px] mx-auto px-4 md:px-6 pb-28 lg:pb-24 pt-5">
+        <div className="page-shell page-shell--wide pb-28 lg:pb-24 pt-5">
           {onCommandView && <KpiRibbon kpis={data.kpis} />}
 
           <AnimatePresence mode="wait">

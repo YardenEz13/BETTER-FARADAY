@@ -70,7 +70,7 @@ export default function StudentHomeworkList() {
         </div>
       </header>
 
-      <div className="max-w-[1200px] w-full mx-auto px-4 md:px-8 py-8 flex flex-col lg:flex-row gap-8 flex-1">
+      <div className="page-shell py-8 flex flex-col lg:flex-row gap-8 flex-1">
 
         {/* ── Main List ── */}
         <div className={`flex-1 w-full flex flex-col gap-4 ${(!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? 'justify-center' : ''}`}>
