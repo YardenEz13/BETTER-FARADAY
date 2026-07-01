@@ -1,14 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ElectricBolt, ElectricAtom, CircuitNode, SignalWave, FieldLines } from './icons';
+import { ELECTRIC_ICONS, ElectricAtom } from './icons';
 import type { ElectricIconProps, ElectricIconName, ElectricTone } from './icons';
 
-const ICONS = {
-  bolt: ElectricBolt,
-  atom: ElectricAtom,
-  circuit: CircuitNode,
-  wave: SignalWave,
-  field: FieldLines,
-} as const;
+const ICONS = ELECTRIC_ICONS;
 
 const TONES: ElectricTone[] = ['spark', 'violet', 'amber', 'danger', 'ghost'];
 

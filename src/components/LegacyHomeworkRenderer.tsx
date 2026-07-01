@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { Check, X, Send, Bot, Smartphone } from "lucide-react";
+import { Check, X, Send, Bot, Smartphone } from "./electric";
 import MathText from "./MathText";
 
 interface LegacyQuestionData {

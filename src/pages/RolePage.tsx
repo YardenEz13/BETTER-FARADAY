@@ -1,8 +1,8 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Loader2, ArrowLeft, Zap, Users, Shield } from "lucide-react";
+import { ArrowLeft, Users, Shield } from "../components/electric";
+import { log } from "../lib/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -20,23 +20,12 @@ import type { ElectricIconProps, ElectricTone } from "../components/electric";
  */
 export default function RolePage() {
   const navigate = useNavigate();
-  const [seeded, setSeeded] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const seedDatabase = useMutation(api.seed.seedDatabase);
   const students = useQuery(api.classroom.list);
 
-  useEffect(() => {
-    if (students && students.length === 0 && !seeded && !seeding) {
-      setSeeding(true);
-      seedDatabase().then(() => { setSeeded(true); setSeeding(false); });
-    }
-    if (students && students.length > 0) setSeeded(true);
-  }, [students, seeded, seeding]);
-
   const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
-    { Icon: ElectricBolt, text: "תרגול אדפטיבי לפי רמתך", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
-    { Icon: ElectricAtom, text: "AI מורה אישי בזמן אמת", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
-    { Icon: SignalWave, text: "מעקב ביצועים כיתתי חי", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
+    { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה שלך — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
+    { Icon: ElectricAtom, text: "מורה AI אישי, זמין בכל רגע", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
+    { Icon: SignalWave, text: "מעקב חי אחרי כל הכיתה", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
   ];
 
   return (
@@ -58,7 +47,7 @@ export default function RolePage() {
               className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-primary-dark bg-primary text-white"
               style={{ boxShadow: "var(--shadow-clay-primary)" }}
             >
-              <Zap size={20} strokeWidth={2.5} />
+              <ElectricBolt size={22} tone="ghost" glow={0.6} />
             </div>
             <span className="text-xl font-extrabold tracking-tight text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
               FARADAY <span className="text-primary">Logic</span>
@@ -128,21 +117,6 @@ export default function RolePage() {
               SELECT MODE · בחר כניסה
             </div>
 
-            {/* Seeding indicator */}
-            <AnimatePresence>
-              {seeding && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 overflow-hidden rounded-2xl border-2 border-primary/30 bg-primary/10 px-4 py-3"
-                >
-                  <Loader2 size={16} className="animate-spin text-primary" />
-                  <span className="text-sm font-semibold text-primary">טוען נתוני כיתה...</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Student card */}
             <div
               className="relative overflow-hidden rounded-[22px] border-2 border-outline bg-surface p-6 transition-transform duration-150 hover:-translate-y-0.5"
@@ -166,7 +140,7 @@ export default function RolePage() {
             {/* Teacher card */}
             <button
               type="button"
-              onClick={() => navigate("/teacher")}
+              onClick={() => { log.auth("teacher login clicked"); navigate("/teacher"); }}
               className="group relative overflow-hidden rounded-[22px] border-2 border-secondary/40 bg-surface p-6 text-right transition-transform duration-150 hover:-translate-y-0.5"
               style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-secondary) 32%, var(--color-outline)), 0 2px 10px rgba(20,40,30,.05)" }}
             >
@@ -221,7 +195,7 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.05 + i * 0.04 }}
-            onClick={() => navigate(`/student/${s._id}`)}
+            onClick={() => { log.auth("student login", { studentId: s._id, name: s.name }); navigate(`/student/${s._id}`); }}
             className="group flex w-full items-center gap-3 rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-right transition-all duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
           >
             <span

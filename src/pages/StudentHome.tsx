@@ -5,20 +5,47 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, memo, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  LogOut, BookOpen, BarChart2, Bot, Play, Zap, Flame, Check,
-  MessageSquare, CheckCircle2, Map, Activity, Package, Palette, Star,
-} from "lucide-react";
+  LogOut, BookOpen, BarChart2, Bot, Play, Flame, Check,
+  MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
+} from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricLoader, ElectricBolt, ElectricAtom } from "../components/electric";
+import { ElectricLoader, ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import FaradayCanvas from "../components/FaradayCanvas";
 
-/* ── A single station on the learning circuit ──
-   Active node = a "charged" particle: pulsing field-line rings radiate from it. */
+/* ── Serpentine path geometry (per the "Learning Map" design spec) ──
+   x is a percentage (0-100) of the path container's width, y is px. The wave
+   alternates the node past center every other step (sin period of 4), so the
+   circuit zig-zags across the available width instead of running straight down.
+   Node slot height is fixed at the largest tier (active, 82px) so every node —
+   whatever size it actually renders at — stays vertically centered on the wire. */
+const PATH_AMPLITUDE_PCT = 30;
+const PATH_NODE_GAP = 160;
+const PATH_NODE_SLOT = 82;
+const PATH_NODE_CENTER = PATH_NODE_SLOT / 2;
+
+const SKILL_NODE_SIZE = { locked: 58, completed: 64, active: 82 } as const;
+const SKILL_ICON_SIZE = { locked: 22, completed: 30, active: 26 } as const;
+
+function buildWirePoints(count: number) {
+  return Array.from({ length: count }, (_, idx) => ({
+    x: 50 + PATH_AMPLITUDE_PCT * Math.sin((idx * Math.PI) / 2),
+    y: idx * PATH_NODE_GAP + PATH_NODE_CENTER,
+  }));
+}
+
+/* Straight zig-zag segments through the given points — the spec's wire is a
+   crisp lightning-bolt line, not a curve. */
+function buildWirePath(points: { x: number; y: number }[]) {
+  if (points.length === 0) return "";
+  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+}
+
+/* ── A single station on the learning circuit ── */
 const SkillNode = memo(function SkillNode({
   nameHe, idx, isCompleted, isActive, progress, reducedMotion, onClick,
 }: {
@@ -30,6 +57,10 @@ const SkillNode = memo(function SkillNode({
   reducedMotion: boolean;
   onClick: () => void;
 }) {
+  const tier = isCompleted ? "completed" : isActive ? "active" : "locked";
+  const size = SKILL_NODE_SIZE[tier];
+  const iconSize = SKILL_ICON_SIZE[tier];
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.7 }}
@@ -37,47 +68,55 @@ const SkillNode = memo(function SkillNode({
       transition={{ delay: idx * 0.07, type: 'spring', stiffness: 260, damping: 20 }}
       className="flex flex-col items-center relative"
     >
-      {/* Field lines — lines of force radiating from the charged node */}
-      {isActive && !reducedMotion && (
-        <div className="absolute left-1/2 top-[36px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" style={{ zIndex: 0 }} aria-hidden>
-          <span className="field-ring absolute left-0 top-0 w-[104px] h-[104px] rounded-full border-2 border-primary/50" />
-          <span className="field-ring field-ring--2 absolute left-0 top-0 w-[104px] h-[104px] rounded-full border-2 border-primary/40" />
+      {/* Field lines — lines of force radiating from the charged (active) node */}
+      {tier === "active" && !reducedMotion && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ top: PATH_NODE_CENTER, zIndex: 0 }}
+          aria-hidden
+        >
+          <span className="field-ring absolute left-0 top-0 w-[120px] h-[120px] rounded-full border-2 border-primary/50" />
+          <span className="field-ring field-ring--2 absolute left-0 top-0 w-[120px] h-[120px] rounded-full border-2 border-primary/40" />
         </div>
       )}
 
-      {/* Node circle */}
-      <button
-        className={`relative w-[72px] h-[72px] rounded-full flex items-center justify-center border-4 transition-all cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10
-          ${isCompleted
-            ? "bg-primary border-primary-dark text-white"
-            : isActive
-              ? "bg-surface border-primary text-primary"
-              : "bg-surface border-outline text-on-surface-variant hover:border-primary"
-          }`}
-        style={{
-          boxShadow: isCompleted
-            ? 'var(--shadow-clay-primary)'
-            : isActive
-              ? '0 4px 0 0 var(--color-primary-dark), 0 0 22px rgba(91,255,159,0.5)'
-              : 'var(--shadow-clay)',
-        }}
-        onClick={onClick}
-        aria-label={nameHe}
-      >
-        {isCompleted ? (
-          <Check size={30} strokeWidth={3} />
-        ) : (
-          <Play size={26} className="fill-current" />
-        )}
-      </button>
+      {/* Node slot — fixed height so the wire always meets the node's true center,
+          regardless of which of the three sizes actually renders inside it. */}
+      <div className="flex items-center justify-center" style={{ width: PATH_NODE_SLOT, height: PATH_NODE_SLOT }}>
+        <button
+          className={`relative rounded-full flex items-center justify-center transition-transform cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10 ${tier === "active" && !reducedMotion ? "skill-node-pulse" : ""}`}
+          style={{
+            width: size,
+            height: size,
+            background: tier === "completed" ? "var(--color-primary)" : "var(--color-surface)",
+            border: tier === "locked" ? "2px solid var(--color-outline)" : tier === "active" ? "5px solid var(--color-primary)" : "none",
+            boxShadow: tier === "completed"
+              ? "0 0 22px 4px color-mix(in srgb, var(--color-primary) 40%, transparent)"
+              : tier === "active"
+                ? "0 0 24px 4px color-mix(in srgb, var(--color-primary) 34%, transparent), inset 0 0 12px color-mix(in srgb, var(--color-primary) 20%, transparent)"
+                : "none",
+          }}
+          onClick={onClick}
+          aria-label={nameHe}
+        >
+          {tier === "completed" ? (
+            <Check size={iconSize} strokeWidth={3} className="text-primary-dark" />
+          ) : (
+            <Play size={iconSize} className={`fill-current ${tier === "active" ? "text-primary" : "text-on-surface-variant"}`} />
+          )}
+        </button>
+      </div>
 
       {/* Topic label — opaque chip so it reads as a station floating over the circuit */}
-      <div className="mt-3 text-center max-w-[150px] relative z-10">
-        <div className={`inline-block bg-surface rounded-xl px-3 py-1 font-semibold text-sm leading-tight ${isCompleted ? 'text-primary' : 'text-on-surface'}`}>
+      <div className="mt-2 text-center max-w-[168px] relative z-10">
+        <div
+          className={`inline-block rounded-xl px-2.5 py-1 text-sm font-bold leading-tight bg-surface border-[1.5px] ${tier === "locked" ? "border-outline text-on-surface-variant" : "text-on-surface"}`}
+          style={tier === "locked" ? undefined : { borderColor: "color-mix(in srgb, var(--color-primary) 33%, transparent)" }}
+        >
           {nameHe}
         </div>
         {progress > 0 && (
-          <div className={`num text-xs font-semibold mt-1.5 px-2 py-0.5 rounded-full inline-block ${isCompleted ? 'bg-primary/10 text-primary' : 'bg-surface-container text-on-surface-variant'}`}>
+          <div className={`num font-mono text-xs mt-1 ${isCompleted ? "text-primary font-bold" : "text-on-surface-variant"}`}>
             {progress}%
           </div>
         )}
@@ -182,6 +221,16 @@ export default function StudentHome() {
     return { isCompleted, isActive, progress };
   });
 
+  const wirePoints = buildWirePoints(topics.length);
+  const wireHeight = (topics.length - 1) * PATH_NODE_GAP + PATH_NODE_CENTER + 90;
+  const fullWireD = buildWirePath(wirePoints);
+  const chargedWireD = completedTopics > 0 ? buildWirePath(wirePoints.slice(0, completedTopics + 1)) : "";
+  /* One extra segment past the charged prefix reads as "reaching toward" the
+     next station — a dimmer green rather than the full bright/flowing charge. */
+  const nextWireD = completedTopics > 0 && completedTopics < topics.length - 1
+    ? buildWirePath(wirePoints.slice(completedTopics, completedTopics + 2))
+    : "";
+
   const currentThemeLabel = student.homeworkTheme
     ? HOMEWORK_THEMES.find(t => t.id === student.homeworkTheme)?.label ?? student.homeworkTheme
     : null;
@@ -278,7 +327,7 @@ export default function StudentHome() {
       </motion.header>
 
       {/* ── Main Content ── */}
-      <div className="relative z-10 pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen px-6 md:px-16 py-6 w-full max-w-[1600px] mx-auto">
+      <div className="page-shell relative z-10 pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6">
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
@@ -291,7 +340,7 @@ export default function StudentHome() {
                   מפת הלמידה שלי
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm translate-y-2">
-                  יחידה {completedTopics + 1} מתוך {topics.length} · המשך את המסע שלך
+                  יחידה {completedTopics + 1} מתוך {topics.length} · כל שאלה מקרבת אותך ליעד
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm"
@@ -345,7 +394,7 @@ export default function StudentHome() {
                         {topic.nameHe}
                       </div>
                       <div className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% הושלם` : "לחץ להתחיל ▶"}
+                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% — תמשיך מכאן` : "מוכן? בוא נתחיל ▶"}
                       </div>
                       {progress > 0 && progress < 80 && (
                         <div className="mt-2 w-full bg-surface-container rounded-full h-2 overflow-hidden border border-outline">
@@ -359,54 +408,76 @@ export default function StudentHome() {
             })}
           </div>
 
-          {/* ── DESKTOP: field-line learning path (signature) ── */}
-          <div className="hidden md:flex relative w-full max-w-[24rem] py-12 flex-col items-center">
-            <div className="w-full flex flex-col gap-[80px] relative pt-4">
-
-              {/* The circuit — a living wire carrying charge toward the next lesson */}
-              <div
-                className="absolute top-2 bottom-2 left-1/2 -translate-x-1/2 w-[5px] pointer-events-none"
-                style={{ zIndex: 0 }}
+          {/* ── DESKTOP: serpentine field-line learning path (signature) ──
+              Nodes zig-zag across the section's width instead of stacking in a
+              thin vertical column; a curved SVG wire connects their true centers. */}
+          <div className="hidden md:block relative w-full md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-12">
+            <div className="relative w-full" style={{ height: wireHeight }}>
+              <svg
+                className="absolute inset-0 h-full w-full pointer-events-none"
+                viewBox={`0 0 100 ${wireHeight}`}
+                preserveAspectRatio="none"
                 aria-hidden
               >
-                {/* base track */}
-                <div className="absolute inset-0 rounded-full bg-outline" />
-                {/* charged (completed) portion */}
-                <div
-                  className="absolute top-0 left-0 right-0 rounded-full"
-                  style={{
-                    height: `${Math.min(completedTopics / Math.max(topics.length - 1, 1), 1) * 100}%`,
-                    background: 'var(--color-primary)',
-                  }}
-                >
-                  {/* flowing current */}
-                  {!reducedMotion && <div className="wire-current absolute inset-0 rounded-full" />}
-                  {/* traveling charge pulse — arrives at the active lesson */}
-                  {!reducedMotion && completedTopics > 0 && (
-                    <div
-                      className="charge-pulse absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full"
-                      style={{
-                        background: 'var(--color-inverse-primary)',
-                        boxShadow: '0 0 12px 2px var(--color-inverse-primary)',
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
+                {/* base track — uncharged, matches the spec's dim atmospheric line */}
+                <path d={fullWireD} fill="none" stroke="var(--color-outline)" strokeWidth="6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+
+                {/* one segment past the charged prefix reads as "reaching toward" the next
+                    station — a dimmer green blend, no glow, no flow */}
+                {nextWireD && (
+                  <path
+                    d={nextWireD}
+                    fill="none"
+                    stroke="color-mix(in srgb, var(--color-primary) 35%, var(--color-outline) 65%)"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
+
+                {/* charged (completed) portion — stacked translucent strokes fake a glow.
+                    A true feGaussianBlur would smear anisotropically here since the viewBox
+                    is scaled non-uniformly (preserveAspectRatio="none") for the fluid width. */}
+                {chargedWireD && (
+                  <>
+                    <path d={chargedWireD} fill="none" stroke="var(--color-primary)" strokeWidth="18" strokeLinecap="round" opacity={0.16} vectorEffect="non-scaling-stroke" />
+                    <path d={chargedWireD} fill="none" stroke="var(--color-primary)" strokeWidth="10" strokeLinecap="round" opacity={0.3} vectorEffect="non-scaling-stroke" />
+                    <path d={chargedWireD} fill="none" stroke="var(--color-primary)" strokeWidth="7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    {!reducedMotion && (
+                      <path
+                        d={chargedWireD}
+                        fill="none"
+                        stroke="var(--color-inverse-primary)"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray="10 22"
+                        className="wire-current-path"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    )}
+                  </>
+                )}
+              </svg>
 
               {topics.map((topic, idx) => {
                 const { isCompleted, isActive, progress } = nodeStates[idx];
+                const { x, y } = wirePoints[idx];
                 return (
-                  <SkillNode
+                  <div
                     key={topic._id}
-                    nameHe={topic.nameHe}
-                    idx={idx}
-                    isCompleted={isCompleted}
-                    isActive={isActive}
-                    progress={progress}
-                    reducedMotion={reducedMotion}
-                    onClick={() => navigate(`/student/${studentId}/practice/${topic._id}`)}
-                  />
+                    className="absolute"
+                    style={{ left: `${x}%`, top: y - PATH_NODE_CENTER, transform: 'translateX(-50%)' }}
+                  >
+                    <SkillNode
+                      nameHe={topic.nameHe}
+                      idx={idx}
+                      isCompleted={isCompleted}
+                      isActive={isActive}
+                      progress={progress}
+                      reducedMotion={reducedMotion}
+                      onClick={() => navigate(`/student/${studentId}/practice/${topic._id}`)}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -453,8 +524,8 @@ export default function StudentHome() {
                 {/* XP */}
                 <div className="pt-3 flex items-center justify-between border-t-2 border-outline">
                   <span className="font-medium text-on-surface-variant text-sm">נקודות אנרגיה</span>
-                  <span className="font-bold text-primary flex items-center gap-1">
-                    <Zap size={15} />
+                  <span className="font-bold text-primary flex items-center gap-1.5">
+                    <Battery size={20} tone="spark" glow={0.5} />
                     {totalXP.toLocaleString()}
                   </span>
                 </div>
@@ -503,10 +574,10 @@ export default function StudentHome() {
                   <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>פרופסור פאראדיי</h4>
+                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>מייקל פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
-                    שלום! ראיתי שאתה מתקדם יפה.{completedTopics > 0 ? ` השלמת ${completedTopics} נושאים — ` : ' '}
-                    מוכן להמשיך? אני כאן אם תצטרך רמז!
+                    אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
+                    בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
                   </p>
                   <button
                     className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer"

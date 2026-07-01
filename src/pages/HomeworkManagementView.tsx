@@ -8,9 +8,9 @@ import QuestionImportModal from "../components/QuestionImportModal";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
-  BarChart2, Users, AlertTriangle, CheckCircle2, Circle,
-  Loader2, Zap, Sparkles, Check, Scissors, User, ChevronDown
-} from "lucide-react";
+  BarChart2, Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
+  Loader as Loader2, Zap, Sparkles, Check, Scissors, User, ChevronDown
+} from "../components/electric";
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
   const topics = useQuery(api.topics.list);
@@ -336,7 +336,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             <div className="glass bg-[var(--color-primary-muted)] border border-[var(--color-primary)] p-12 text-center rounded-xl"
               style={{ color: "var(--color-primary)", opacity: 0.6 }}>
               <FileText size={48} className="mx-auto mb-3" />
-              <div className="font-black text-xl mb-1">אין מטלות במערכת</div>
+              <div className="font-black text-xl mb-1">עוד לא יצרת מטלות</div>
+              <div className="text-sm font-semibold opacity-80">התחל מ״צור שיעורי בית חדשים״ למעלה</div>
             </div>
           ) : homeworkList.map((hw) => {
             const isExpired = Date.now() > hw.deadline;

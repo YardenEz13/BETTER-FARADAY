@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot } from "lucide-react";
+import { Bot } from "./electric";
 
 /**
  * Full-color Faraday tutor portraits, served from /public.

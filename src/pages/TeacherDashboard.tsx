@@ -6,9 +6,9 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Sparkles, Users, LayoutGrid, Activity, Bot, BookOpen,
-  Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle2,
+  Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
   Zap, GraduationCap,
-} from "lucide-react";
+} from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
@@ -163,7 +163,7 @@ export default function TeacherDashboard() {
 
       {/* ══════════ MAIN ══════════ */}
       <main className="relative z-10 flex-1 overflow-auto">
-        <div className="max-w-[1340px] mx-auto px-4 md:px-6 pb-28 lg:pb-24 pt-5">
+        <div className="page-shell page-shell--wide pb-28 lg:pb-24 pt-5">
           {onCommandView && <KpiRibbon kpis={data.kpis} />}
 
           <AnimatePresence mode="wait">
@@ -384,7 +384,7 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
         <span className="text-[11px] font-semibold text-on-surface-variant me-auto truncate">
           {s.weak ? <>חולשה: {s.weak.name} · <span className="num">{s.weak.pct}%</span></> : "אין מספיק נתונים"}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שלח רמז" className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, border: "2px solid var(--color-outline)", background: "var(--color-surface)", color: "var(--color-tertiary)" }}><Lightbulb size={15} /></button>
+        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שלח רמז" className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, border: "2px solid var(--color-outline)", background: "var(--color-surface)", color: "var(--color-tertiary)" }}><Lightbulb size={17} tone="current" animated={false} glow={0.4} /></button>
         <button onClick={(e) => { e.stopPropagation(); fire(`הודעה נשלחה אל ${s.name}`); }} title="שלח הודעה" className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, border: "2px solid var(--color-outline)", background: "var(--color-surface)", color: "var(--color-secondary)" }}><Send size={15} /></button>
       </div>
     </div>

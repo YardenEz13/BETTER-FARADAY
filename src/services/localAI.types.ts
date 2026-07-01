@@ -1,4 +1,4 @@
-export type AgentType = "practice" | "homework";
+export type AgentType = "practice" | "homework" | "proof";
 
 export interface ChatMetrics {
   // Core heuristic metrics (always present)

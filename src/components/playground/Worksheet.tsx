@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Loader2, CornerDownLeft, ArrowUp, Trash2 } from "lucide-react";
+import { Loader as Loader2, CornerDownLeft, ArrowUp, Trash2 } from "../electric";
 import MathField, { type MathFieldHandle } from "./MathField";
 import MathText from "../MathText";
 import { compute, OP_LABELS, type MathOp, type MathResult } from "../../services/mathEngine";

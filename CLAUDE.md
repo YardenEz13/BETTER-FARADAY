@@ -11,16 +11,19 @@ Faraday Project (formerly Cobalt Apollo) is a next-generation adaptive learning 
 - **Icons:** Lucide React
 - **Math Rendering:** KaTeX
 - **Backend/State:** Convex (Real-time sync and serverless functions)
-- **Local AI:** MediaPipe Web LLM (In-browser local AI execution without cloud latency)
+- **AI Tutor:** Google Gemini API (via `src/services/localAI.ts` — the "Michael Faraday" tutor is a thin Gemini client, not an in-browser model)
 - **Analytics Visualization:** Recharts
 - **Testing:** Vitest, Testing Library, Playwright
 
 ## UI/UX & Design Philosophy
-This project mandates a **premium, world-class aesthetic** with a "WOW" factor.
-1. **Aesthetic Theme:** "Advanced Physics / Logic" – Think deep space blues, cobalt, electric cyan, and sleek dark surfaces. Avoid generic colors.
-2. **Depth & Glassmorphism:** Utilize subtle background blurs, multi-layered shadows, and semi-transparent surfaces to create depth without visual clutter.
-3. **Dynamic Interactions:** The app must feel alive. Use micro-interactions, subtle hover states, and Framer Motion for smooth page and state transitions. Avoid jarring jumps.
-4. **Typography:** Modern, highly readable fonts. Font weights should be used strategically to establish clear visual hierarchy.
+This project mandates a **premium, world-class aesthetic** with a "WOW" factor. The design language is the **"Faraday Logic" clay/electric system**: a bright, tactile, gamified surface (Duolingo-adjacent) fused with an electric-physics accent motif.
+1. **Aesthetic Theme:** Bright, energetic, and playful-but-precise. The default surface is a **light theme** — near-white/soft-green backgrounds (`--color-background`, `--color-surface`) with a vivid **electric-green primary** (`--color-primary`), a **violet secondary** (`--color-secondary`), and an **amber tertiary** (`--color-tertiary`) reserved for streaks/energy. A dark mode exists via `ThemeContext` and must stay in sync. Drive everything from the CSS variables in `index.css` — never hardcode hex values.
+2. **"Clay" depth, not glass:** The signature is the **clay card** (`.clay-card`, `.clay-btn`) — solid surfaces with a 2px border and a chunky offset "3D press" shadow (`--shadow-clay*`), giving a soft, tactile, button-like feel. Prefer this stacked/tactile depth over heavy blur; use `backdrop-blur` sparingly for translucent overlay panels only.
+3. **Electric motif:** On-brand flourishes come from the in-house `electric` icon family and `FaradayCanvas` (the animated Faraday-cage / field-line backdrop). Nodes, wires, and accents should read as "charge flowing through a circuit." Keep these performant and gated on `useReducedMotion`.
+4. **Dynamic Interactions:** The app must feel alive. Use micro-interactions, the clay press effect, subtle hover lifts, and Framer Motion for smooth page and state transitions. Avoid jarring jumps.
+5. **Typography:** `Assistant` (Hebrew-first) for UI/headings, a mono face for `label-mono` eyebrow labels. Font weights (extrabold headings vs. medium body) establish hierarchy.
+
+> Note: this project was formerly styled as a dark "deep-space cobalt/cyan" concept. That direction has been **retired** — the current light clay/electric-green system is the intended design. Do not reintroduce the dark-cobalt aesthetic.
 
 ## Mandatory Development Rules & Constraints
 1. **RTL (Hebrew) Support is Mandatory:** The application is entirely in Hebrew. **All layouts must respect Right-To-Left alignment natively.** Use `dir="rtl"` standard practices and logical CSS properties (e.g., `marginStart` / `ms-`, `paddingInlineStart` / `ps-` in Tailwind). DO NOT use hardcoded left/right margins or paddings unless absolutely necessary for a non-directional visual tweak.
@@ -59,9 +62,15 @@ This project mandates a **premium, world-class aesthetic** with a "WOW" factor.
 - `npm run test`: Run unit tests with Vitest.
 
 <!-- convex-ai-start -->
+
 This project uses [Convex](https://convex.dev) as its backend.
 
-When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
 
-Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
 <!-- convex-ai-end -->

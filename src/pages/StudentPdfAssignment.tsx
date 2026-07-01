@@ -5,9 +5,9 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, FileText, CheckCircle2, XCircle, Loader2, Send,
+  ArrowLeft, FileText, CheckCircle as CheckCircle2, XCircle, Loader as Loader2, Send,
   ExternalLink, Scissors, Trophy,
-} from "lucide-react";
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricLoader } from "../components/electric";
 
@@ -100,7 +100,7 @@ export default function StudentPdfAssignment() {
             <span className="num absolute font-extrabold text-sm text-primary">{answered}/{total}</span>
           </div>
           <div className="flex-1">
-            <div className="font-bold text-on-surface">{allDone ? "סיימת את המטלה! 🎉" : "המשך לפתור"}</div>
+            <div className="font-bold text-on-surface">{allDone ? "סיימת את המטלה! 🎉" : "עוד קצת ואתה שם"}</div>
             <div className="text-sm text-on-surface-variant mt-0.5 flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-1"><CheckCircle2 size={14} className="text-primary" /> {correct} נכונות</span>
               {answered - correct > 0 && <span className="flex items-center gap-1"><XCircle size={14} className="text-error" /> {answered - correct} שגויות</span>}

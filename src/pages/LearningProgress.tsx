@@ -4,9 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ArrowRight, Target, TrendingUp, Zap, Trophy, BookOpen, CheckCircle2, Flame, ChevronLeft } from "lucide-react";
+import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
-import { ElectricBolt, SignalWave } from "../components/electric";
+import { ElectricBolt, SignalWave, Lens } from "../components/electric";
 
 export default function LearningProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -118,7 +118,7 @@ export default function LearningProgress() {
             className="flex items-center gap-2 bg-secondary/10 border-2 border-secondary/30 px-3 py-1.5 rounded-2xl"
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
-            <Target size={15} className="text-secondary" />
+            <Lens size={18} tone="violet" glow={0.5} />
             <span className="num font-bold text-secondary text-sm">{overallAcc}% דיוק</span>
           </div>
           {/* Completed chip */}
@@ -133,7 +133,7 @@ export default function LearningProgress() {
       </motion.header>
 
       {/* Main content */}
-      <main className="pt-8 pb-24 px-4 md:px-10 w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
+      <main className="page-shell page-shell--wide pt-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
 
         {/* ── Topic list (8 cols) ── */}
         <div className="lg:col-span-8 space-y-4">
@@ -216,7 +216,7 @@ export default function LearningProgress() {
                       >
                         <div className="flex gap-5 flex-wrap">
                           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
-                            <Target size={15} className="text-primary" />
+                            <Lens size={18} tone="spark" glow={0.5} />
                             <span>{correct} תשובות נכונות מתוך {total}</span>
                           </div>
                         </div>
@@ -260,7 +260,7 @@ export default function LearningProgress() {
                 <Flame size={28} className="text-yellow-300" />
                 <div className="text-right">
                   <p className="font-black text-lg leading-none" style={{ fontFamily: 'Assistant, sans-serif' }}>{student.streak} ימים ברצף</p>
-                  <p className="text-white/70 text-sm mt-0.5">אתה בדרך הנכונה!</p>
+                  <p className="text-white/70 text-sm mt-0.5">אל תשבור את הרצף 🔥</p>
                 </div>
               </div>
             </div>
@@ -336,11 +336,11 @@ export default function LearningProgress() {
               <Trophy size={20} className="text-tertiary" />
             </div>
             <div>
-              <h4 className="font-bold text-on-surface text-sm">הישג חדש מחכה!</h4>
+              <h4 className="font-bold text-on-surface text-sm">הישג חדש במרחק נגיעה!</h4>
               <p className="text-on-surface-variant text-xs mt-0.5">
                 {completedTopics < topics.length
-                  ? `סיים עוד נושא אחד לקבלת תג "המתמיד"`
-                  : `כל הכבוד! השלמת את כל הנושאים 🎉`}
+                  ? `עוד נושא אחד והתג "המתמיד" שלך`
+                  : `כל הכבוד! כבשת את כל הנושאים 🎉`}
               </p>
             </div>
           </motion.div>

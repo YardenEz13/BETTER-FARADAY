@@ -225,6 +225,19 @@ export default defineSchema({
       hints: v.array(v.string()),         // Progressive hints (gentle → almost gives it away)
       points: v.number(),                 // Bagrut-style point allocation
       skillsTested: v.array(v.string()),  // ["גזירה", "השוואה לאפס"]
+      // Proof-specific fields (only when answerType === "proof")
+      proofMeta: v.optional(v.object({
+        given: v.string(),                // נתון
+        toProve: v.string(),              // להוכיח
+        diagramDescription: v.optional(v.string()),
+        diagramSvg: v.optional(v.string()), // inline SVG string for the geometric figure
+      })),
+      proofSteps: v.optional(v.array(v.object({
+        stepIndex: v.number(),
+        expectedClaim: v.string(),
+        expectedReason: v.string(),
+        clueIfWrong: v.optional(v.string()),
+      }))),
     })),
     fullSolution: v.string(),
   }).index("by_difficulty", ["difficulty"]),
@@ -269,6 +282,15 @@ export default defineSchema({
       isCorrect: v.optional(v.boolean()),
       timeMs: v.optional(v.number()),
       hintsUsed: v.number(),
+      proofStepResults: v.optional(v.array(v.object({
+        stepIndex: v.number(),
+        studentClaim: v.string(),
+        studentReason: v.string(),
+        claimCorrect: v.optional(v.boolean()),
+        reasonCorrect: v.optional(v.boolean()),
+        stepScore: v.number(),            // 0 | 0.5 | 1
+        feedback: v.optional(v.string()),
+      }))),
     }))),
     score: v.optional(v.number()),        // 0-100
     aiInteractions: v.optional(v.number()),

@@ -3,8 +3,25 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Lightbulb, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "../components/electric";
+import { Lightbulb as ElectricBulb } from "../components/electric";
+import { log } from "../lib/logger";
 import MathText from "./MathText";
+import ProofSectionRenderer from "./ProofSectionRenderer";
+
+interface ProofStep {
+  stepIndex: number;
+  expectedClaim: string;
+  expectedReason: string;
+  clueIfWrong?: string;
+}
+
+interface ProofMeta {
+  given: string;
+  toProve: string;
+  diagramDescription?: string;
+  diagramSvg?: string;
+}
 
 interface Section {
   label: string;
@@ -16,6 +33,8 @@ interface Section {
   hints: string[];
   points: number;
   skillsTested: string[];
+  proofMeta?: ProofMeta;
+  proofSteps?: ProofStep[];
 }
 
 interface CompoundQuestionData {
@@ -77,6 +96,8 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     setSubmitted((prev) => ({ ...prev, [section.label]: true }));
     setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
 
+    log.homework("section submitted", { section: section.label, isCorrect, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
+
     await submitAnswer({
       assignedQuestionId,
       sectionLabel: section.label,
@@ -85,13 +106,16 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       timeMs,
       hintsUsed: hintsRevealed[section.label] ?? 0,
     });
+    log.homework("section persisted to Convex", { section: section.label });
 
     // We do NOT auto-expand the next section here anymore,
     // so the student has time to review the solution steps and feedback.
   };
 
   const handleFinalize = async () => {
+    log.homework("finalizing homework submission", { assignedQuestionId });
     await finalizeSubmission({ assignedQuestionId });
+    log.homework("homework finalized");
     onComplete();
   };
 
@@ -196,11 +220,24 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
                       <div className="label-mono text-tertiary mb-6 p-4 border border-tertiary/40 bg-tertiary/10 flex items-center gap-2">
-                        <Lightbulb size={16} /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
+                        <ElectricBulb size={18} tone="amber" glow={0.55} className="shrink-0" /> סעיף זה מתבסס על התוצאה מסעיף {section.dependsOn.join(", ")}׳
                       </div>
                     )}
 
-                    {!isSubmitted && (
+                    {!isSubmitted && section.answerType === "proof" && section.proofSteps && section.proofMeta ? (
+                      <ProofSectionRenderer
+                        sectionLabel={section.label}
+                        proofMeta={section.proofMeta}
+                        proofSteps={section.proofSteps}
+                        hints={section.hints}
+                        assignedQuestionId={assignedQuestionId}
+                        onSectionComplete={(isCorrect) => {
+                          setSubmitted((prev) => ({ ...prev, [section.label]: true }));
+                          setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
+                        }}
+                        aiChatTrigger={aiChatTrigger}
+                      />
+                    ) : !isSubmitted ? (
                       <div className="flex flex-col gap-4">
                         <textarea
                           className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
@@ -225,7 +262,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               onClick={() => handleRevealHint(section.label, section.hints.length)}
                               disabled={hintCount >= section.hints.length}
                             >
-                              <Lightbulb size={16} />
+                              <ElectricBulb size={18} tone="current" animated={false} glow={0.4} />
                               [ REQUEST_HINT ] ({hintCount}/{section.hints.length})
                             </button>
                           )}
@@ -243,7 +280,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           )}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {hintCount > 0 && (
                       <div className="flex flex-col gap-3 mt-6">
@@ -254,7 +291,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                           >
-                            <Lightbulb size={16} className="text-tertiary shrink-0 mt-0.5" />
+                            <ElectricBulb size={18} tone="amber" glow={0.55} className="shrink-0 mt-0.5" />
                             <span className="leading-relaxed"><MathText>{hint}</MathText></span>
                           </motion.div>
                         ))}
@@ -337,7 +374,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           <div className="flex flex-wrap gap-6 justify-center label-mono opacity-60">
             <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
             <div className="flex items-center gap-2"><Clock size={16} className="text-secondary" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
-            <div className="flex items-center gap-2"><Lightbulb size={16} className="text-tertiary" /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
+            <div className="flex items-center gap-2"><ElectricBulb size={18} tone="amber" glow={0.5} /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
           <button className="btn btn-primary mt-4" onClick={handleFinalize}>

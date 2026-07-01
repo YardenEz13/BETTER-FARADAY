@@ -4,11 +4,11 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, BookOpen, FileText, Clock, CheckCircle2,
-  Zap, AlertTriangle, Edit, Lightbulb, Scissors, ChevronLeft,
-} from "lucide-react";
+  ArrowLeft, BookOpen, FileText, Clock, CheckCircle as CheckCircle2,
+  Zap, AlertTriangle, Edit, Scissors, ChevronLeft,
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
-import { ElectricBolt, ElectricAtom } from "../components/electric";
+import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -70,7 +70,7 @@ export default function StudentHomeworkList() {
         </div>
       </header>
 
-      <div className="max-w-[1200px] w-full mx-auto px-4 md:px-8 py-8 flex flex-col lg:flex-row gap-8 flex-1">
+      <div className="page-shell py-8 flex flex-col lg:flex-row gap-8 flex-1">
 
         {/* ── Main List ── */}
         <div className={`flex-1 w-full flex flex-col gap-4 ${(!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? 'justify-center' : ''}`}>
@@ -150,9 +150,9 @@ export default function StudentHomeworkList() {
               <div className="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-6 border-2 border-outline">
                 <FileText size={36} className="text-on-surface-variant" />
               </div>
-              <div className="font-bold text-xl text-on-surface mb-2">אין משימות כרגע</div>
+              <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
-                המורה טרם הקצה שיעורי בית. חזור מאוחר יותר.
+                אין משימות פתוחות כרגע. ברגע שהמורה ישלח אחת — היא תופיע כאן.
               </div>
             </motion.div>
           ) : (
@@ -294,7 +294,7 @@ export default function StudentHomeworkList() {
             <div className="relative">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-xl bg-tertiary-container flex items-center justify-center">
-                  <Lightbulb size={15} className="text-tertiary" />
+                  <ElectricBulb size={18} tone="amber" glow={0.5} />
                 </div>
                 <span className="font-bold text-sm text-tertiary">טיפ מהמערכת</span>
               </div>

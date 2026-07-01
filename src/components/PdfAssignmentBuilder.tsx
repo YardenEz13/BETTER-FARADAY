@@ -4,9 +4,9 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import {
-  Upload, FileText, Loader2, Check, X, Scissors, Trash2,
+  Upload, FileText, Loader as Loader2, Check, X, Scissors, Trash2,
   ChevronRight, ChevronLeft, UserPlus, Send, AlertTriangle, Plus,
-} from "lucide-react";
+} from "./electric";
 import * as pdfjsLib from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 

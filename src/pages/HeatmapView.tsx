@@ -2,8 +2,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { CheckCircle2, TrendingUp, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, Radio, History } from "lucide-react";
-import { SignalWave, CircuitNode } from "../components/electric";
+import { CheckCircle as CheckCircle2, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, Radio, History } from "../components/electric";
+import { SignalWave, CircuitNode, Vector } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
 
 export function HeatmapView({
@@ -59,7 +59,7 @@ export function HeatmapView({
           <div className="relative z-10 flex items-end gap-3">
             <span className="num font-black text-5xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
             <span className="font-body-sm text-primary flex items-center mb-1 bg-primary/10 px-2 py-0.5 rounded-full">
-              <TrendingUp className="text-[16px] mr-1" />
+              <Vector size={16} tone="spark" glow={0.5} className="me-1" />
               +2% השבוע
             </span>
           </div>
@@ -246,7 +246,7 @@ export function HeatmapView({
             {pendingLevels && pendingLevels.length > 0 && (
               <div className="mt-2">
                 <h3 className="font-label-lg text-on-surface mb-3 flex items-center gap-2">
-                  <TrendingUp className="text-tertiary text-sm" />
+                  <Vector size={18} tone="amber" glow={0.5} />
                   הצעות קידום רמה
                 </h3>
                 <div className="flex flex-col gap-3">

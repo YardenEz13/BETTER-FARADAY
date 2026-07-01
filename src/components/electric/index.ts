@@ -1,12 +1,6 @@
-export {
-  ElectricBolt,
-  ElectricAtom,
-  CircuitNode,
-  SignalWave,
-  FieldLines,
-  ELECTRIC_ICONS,
-} from "./icons";
-export type { ElectricIconProps, ElectricIconName, ElectricTone } from "./icons";
+// Re-export the entire icon module: the physics family, the full functional
+// UI set, the ELECTRIC_ICONS registry, and all icon types.
+export * from "./icons";
 export { ElectricField } from "./ElectricField";
 export type { ElectricFieldProps } from "./ElectricField";
 export { ElectricLoader } from "./ElectricLoader";

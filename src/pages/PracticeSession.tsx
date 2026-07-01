@@ -6,11 +6,14 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
-  CheckCircle2, XCircle, Lightbulb, ArrowRight, Clock, Star
-} from "lucide-react";
+  CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
+} from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
+import MathText from "../components/MathText";
+import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
+import { log } from "../lib/logger";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -95,6 +98,10 @@ export default function PracticeSession() {
     const xpGained = isCorrect
       ? (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0) + comboBonus
       : 0;
+    log.practice("answer submitted", {
+      questionId: activeQuestion._id, choiceIndex: idx, isCorrect,
+      xpGained, combo: newCombo, hintsUsed, difficulty: activeQuestion.difficulty,
+    });
     if (isCorrect) {
       setSessionXP(x => x + xpGained);
       setEarnedXP(xpGained);
@@ -109,20 +116,24 @@ export default function PracticeSession() {
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
       timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: activeQuestion.difficulty,
     });
+    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id });
   };
 
   const handleHint = async () => {
     if (!activeQuestion || loadingHint) return;
+    log.practice("hint requested", { questionId: activeQuestion._id, hintsUsedSoFar: hintsUsed });
     setShowHint(true); setLoadingHint(true); setHintsUsed(h => h + 1);
     const r = await generateHint({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       studentInput: selected !== null ? activeQuestion.choices[selected] : "",
     });
     setHint(r.hint); setLoadingHint(false);
+    log.practice("hint received from AI", { questionId: activeQuestion._id, hintLength: r.hint?.length ?? 0 });
   };
 
   const handleNextQuestion = () => {
     if (countdown > 0) return; // enforce 5s minimum
+    log.practice("advancing to next question", { questionsAnswered, sessionXP });
     transitionLockRef.current = true;
     setTimeout(() => { transitionLockRef.current = false; }, 400);
     setReviewPhase(false);
@@ -190,7 +201,7 @@ export default function PracticeSession() {
           transition: 'padding 0.3s ease',
         }}
       >
-        <div className="w-full max-w-6xl mx-auto px-6 flex gap-6 items-start">
+        <div className="page-shell flex gap-6 items-start">
 
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
@@ -227,9 +238,9 @@ export default function PracticeSession() {
           ) : !activeQuestion && question === null ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={48} className="text-primary mb-4" />
-              <h2 className="font-display font-bold text-on-surface mb-3" style={{ fontSize: '1.6rem' }}>כל השאלות הושלמו!</h2>
+              <h2 className="font-display font-bold text-on-surface mb-3" style={{ fontSize: '1.6rem' }}>כיסית את כל הנושא! ⚡</h2>
               <p className="text-sm text-on-surface-variant mb-8">
-                סיימת את כל השאלות הזמינות בנושא זה.
+                אין עוד שאלות כאן — סימן שאתה שולט בחומר. קדימה לנושא הבא.
               </p>
               <button className="btn-clay-primary btn-lg" onClick={() => navigate(`/student/${studentId}`)}>
                 חזרה למפת הלמידה
@@ -268,7 +279,7 @@ export default function PracticeSession() {
 
                   {/* Stem */}
                   <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
-                    {activeQuestion.stem}
+                    <MathText>{activeQuestion.stem}</MathText>
                   </div>
 
                   {/* Celebration — electric spark discharge on a correct answer */}
@@ -353,7 +364,7 @@ export default function PracticeSession() {
                             {isWrong && <XCircle size={16} className="text-white" />}
                             {!isRight && !isWrong && String.fromCharCode(65 + idx)}
                           </div>
-                          <span className="flex-1">{choice}</span>
+                          <span className="flex-1"><MathText>{choice}</MathText></span>
                         </motion.button>
                       );
                     })}
@@ -367,7 +378,7 @@ export default function PracticeSession() {
                         onClick={handleHint}
                         disabled={loadingHint}
                       >
-                        <Lightbulb size={15} />
+                        <ElectricBulb size={17} tone="current" animated={false} glow={0.4} />
                         {loadingHint ? 'טוען רמז...' : 'רמז מ-AI'}
                       </button>
                     </div>
@@ -383,7 +394,7 @@ export default function PracticeSession() {
                         className="mt-4 overflow-hidden"
                       >
                         <div className="p-4 rounded-2xl flex items-start gap-3 bg-tertiary/10 border-2 border-tertiary/30">
-                          <Lightbulb size={16} className="text-tertiary mt-0.5 flex-shrink-0" />
+                          <ElectricBulb size={18} tone="amber" glow={0.55} className="mt-0.5 flex-shrink-0" />
                           <p className="text-sm text-on-surface-variant leading-relaxed">{hint}</p>
                         </div>
                       </motion.div>
@@ -442,7 +453,7 @@ export default function PracticeSession() {
                               <div>
                                 <div className="text-xs font-semibold mb-1 text-primary">התשובה הנכונה:</div>
                                 <div className="font-medium text-on-surface">
-                                  {activeQuestion.choices[activeQuestion.correctIndex]}
+                                  <MathText>{activeQuestion.choices[activeQuestion.correctIndex]}</MathText>
                                 </div>
                               </div>
                             </div>
@@ -451,11 +462,11 @@ export default function PracticeSession() {
                           {/* Explanation */}
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <Lightbulb size={15} className="text-tertiary" />
+                              <ElectricBulb size={17} tone="amber" glow={0.5} />
                               <span className="text-sm font-semibold text-on-surface-variant">הסבר:</span>
                             </div>
                             <p className="text-base leading-relaxed text-on-surface" style={{ lineHeight: 1.75 }}>
-                              {activeQuestion.explanation}
+                              <MathText>{activeQuestion.explanation ?? ""}</MathText>
                             </p>
                           </div>
 
@@ -472,7 +483,7 @@ export default function PracticeSession() {
                                     <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-primary/10 text-primary border border-primary/30">
                                       {i + 1}
                                     </span>
-                                    <span>{step}</span>
+                                    <MathText>{step}</MathText>
                                   </li>
                                 ))}
                               </ol>
@@ -564,7 +575,7 @@ function ChargeMeter({ combo, max }: { combo: number; max: number }) {
       style={{ boxShadow: 'var(--shadow-clay)' }}
       title="טעינת אנרגיה — רצף תשובות נכונות"
     >
-      <Zap size={13} className={full ? 'text-primary' : 'text-on-surface-variant'} />
+      <Battery size={18} tone="spark" glow={full ? 0.9 : 0.3} animated={full} />
       <div className="flex items-center gap-1">
         {Array.from({ length: max }).map((_, i) => (
           <span

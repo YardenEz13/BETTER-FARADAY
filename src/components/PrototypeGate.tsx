@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock } from "./electric";
 
 export default function PrototypeGate({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

@@ -1,23 +1,10 @@
-import {
-  ElectricBolt,
-  ElectricAtom,
-  CircuitNode,
-  SignalWave,
-  FieldLines,
-  ElectricField,
-} from "../components/electric";
+import { ELECTRIC_ICONS, ElectricField } from "../components/electric";
 
 /**
  * Dev showcase for the electric icon family + circuit-field backdrop.
  * Route: /electric-demo  (safe to delete — not linked from the app).
  */
-const ICONS = [
-  { Cmp: ElectricBolt, label: "Bolt" },
-  { Cmp: ElectricAtom, label: "Atom" },
-  { Cmp: CircuitNode, label: "Circuit" },
-  { Cmp: SignalWave, label: "Signal" },
-  { Cmp: FieldLines, label: "Field" },
-] as const;
+const ICONS = Object.entries(ELECTRIC_ICONS).map(([label, Cmp]) => ({ Cmp, label }));
 
 export default function ElectricGallery() {
   return (
