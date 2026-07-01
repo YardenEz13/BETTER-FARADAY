@@ -5,6 +5,7 @@ import { Camera, Loader as Loader2, CheckCircle as CheckCircle2, AlertTriangle }
 import { ElectricBolt } from "../components/electric";
 import { api } from "../../convex/_generated/api";
 import { prepareImageForUpload } from "../services/imageUpload";
+import { log } from "../lib/logger";
 
 export default function MobileBridgeUpload() {
   const { token } = useParams<{ token: string }>();
@@ -21,12 +22,15 @@ export default function MobileBridgeUpload() {
     if (!file || !token) return;
     setStatus("uploading");
     setErrorMsg(null);
+    log.bridge("photo capture started", { token, fileSize: file.size });
     try {
       const prepared = await prepareImageForUpload(file);
+      log.bridge("image prepared", { token, mimeType: prepared.mimeType });
       await attach({ token, imageBase64: prepared.base64, imageMimeType: prepared.mimeType });
+      log.bridge("photo uploaded to Convex", { token });
       setStatus("done");
     } catch (err) {
-      console.error("[MobileBridge] upload failed:", err);
+      log.bridge("upload failed", { token, error: String(err) });
       setErrorMsg(err instanceof Error ? err.message : "ההעלאה נכשלה. נסה שוב.");
       setStatus("error");
     }

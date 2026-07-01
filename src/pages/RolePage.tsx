@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Shield } from "../components/electric";
+import { log } from "../lib/logger";
 import { motion, AnimatePresence } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -139,7 +140,7 @@ export default function RolePage() {
             {/* Teacher card */}
             <button
               type="button"
-              onClick={() => navigate("/teacher")}
+              onClick={() => { log.auth("teacher login clicked"); navigate("/teacher"); }}
               className="group relative overflow-hidden rounded-[22px] border-2 border-secondary/40 bg-surface p-6 text-right transition-transform duration-150 hover:-translate-y-0.5"
               style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-secondary) 32%, var(--color-outline)), 0 2px 10px rgba(20,40,30,.05)" }}
             >
@@ -194,7 +195,7 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.05 + i * 0.04 }}
-            onClick={() => navigate(`/student/${s._id}`)}
+            onClick={() => { log.auth("student login", { studentId: s._id, name: s.name }); navigate(`/student/${s._id}`); }}
             className="group flex w-full items-center gap-3 rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-right transition-all duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
           >
             <span

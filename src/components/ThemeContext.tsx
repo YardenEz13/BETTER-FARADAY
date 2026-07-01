@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Moon, Sun } from './electric';
+import { log } from '../lib/logger';
 
 type Theme = 'dark' | 'light';
 
@@ -26,7 +27,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      log.theme('theme toggled', { from: prev, to: next });
+      return next;
+    });
   };
 
   return (

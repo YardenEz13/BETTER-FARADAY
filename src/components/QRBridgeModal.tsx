@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Smartphone, X, Loader as Loader2, CheckCircle as CheckCircle2 } from "./electric";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { log } from "../lib/logger";
 
 interface Props {
   studentId: string;
@@ -26,10 +27,11 @@ export default function QRBridgeModal({ studentId, label, onClose, onImageReceiv
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    log.bridge("creating bridge session", { studentId, label });
     createSession({ studentId: studentId as Id<"students">, label })
-      .then((r) => setToken(r.token))
+      .then((r) => { log.bridge("bridge session created", { token: r.token }); setToken(r.token); })
       .catch((e) => {
-        console.error("[QRBridge] createSession failed:", e);
+        log.bridge("createSession failed", { error: String(e) });
         setError("יצירת הקוד נכשלה. נסה שוב.");
       });
   }, [createSession, studentId, label]);
@@ -41,10 +43,11 @@ export default function QRBridgeModal({ studentId, label, onClose, onImageReceiv
     if (receivedRef.current) return;
     if (session?.status === "uploaded" && session.imageBase64 && session.imageMimeType) {
       receivedRef.current = true;
+      log.bridge("photo received from phone", { token });
       const mimeType = session.imageMimeType;
       const base64 = session.imageBase64;
       onImageReceived({ dataUrl: `data:${mimeType};base64,${base64}`, base64, mimeType });
-      if (token) consume({ token }).catch(console.error);
+      if (token) consume({ token }).then(() => log.bridge("session consumed", { token })).catch(console.error);
     }
   }, [session, token, onImageReceived, consume]);
 

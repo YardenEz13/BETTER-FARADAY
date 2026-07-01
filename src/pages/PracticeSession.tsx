@@ -13,6 +13,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
 import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
+import { log } from "../lib/logger";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -97,6 +98,10 @@ export default function PracticeSession() {
     const xpGained = isCorrect
       ? (activeQuestion.difficulty * 50) + (hintsUsed === 0 ? 30 : 0) + comboBonus
       : 0;
+    log.practice("answer submitted", {
+      questionId: activeQuestion._id, choiceIndex: idx, isCorrect,
+      xpGained, combo: newCombo, hintsUsed, difficulty: activeQuestion.difficulty,
+    });
     if (isCorrect) {
       setSessionXP(x => x + xpGained);
       setEarnedXP(xpGained);
@@ -111,20 +116,24 @@ export default function PracticeSession() {
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
       timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: activeQuestion.difficulty,
     });
+    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id });
   };
 
   const handleHint = async () => {
     if (!activeQuestion || loadingHint) return;
+    log.practice("hint requested", { questionId: activeQuestion._id, hintsUsedSoFar: hintsUsed });
     setShowHint(true); setLoadingHint(true); setHintsUsed(h => h + 1);
     const r = await generateHint({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       studentInput: selected !== null ? activeQuestion.choices[selected] : "",
     });
     setHint(r.hint); setLoadingHint(false);
+    log.practice("hint received from AI", { questionId: activeQuestion._id, hintLength: r.hint?.length ?? 0 });
   };
 
   const handleNextQuestion = () => {
     if (countdown > 0) return; // enforce 5s minimum
+    log.practice("advancing to next question", { questionsAnswered, sessionXP });
     transitionLockRef.current = true;
     setTimeout(() => { transitionLockRef.current = false; }, 400);
     setReviewPhase(false);

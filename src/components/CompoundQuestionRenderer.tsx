@@ -5,6 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "../components/electric";
 import { Lightbulb as ElectricBulb } from "../components/electric";
+import { log } from "../lib/logger";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
 
@@ -95,6 +96,8 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     setSubmitted((prev) => ({ ...prev, [section.label]: true }));
     setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
 
+    log.homework("section submitted", { section: section.label, isCorrect, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
+
     await submitAnswer({
       assignedQuestionId,
       sectionLabel: section.label,
@@ -103,13 +106,16 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       timeMs,
       hintsUsed: hintsRevealed[section.label] ?? 0,
     });
+    log.homework("section persisted to Convex", { section: section.label });
 
     // We do NOT auto-expand the next section here anymore,
     // so the student has time to review the solution steps and feedback.
   };
 
   const handleFinalize = async () => {
+    log.homework("finalizing homework submission", { assignedQuestionId });
     await finalizeSubmission({ assignedQuestionId });
+    log.homework("homework finalized");
     onComplete();
   };
 

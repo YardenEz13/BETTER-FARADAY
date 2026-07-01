@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "./electric";
+import { log } from "../lib/logger";
 import {
   isLocalAIAvailable,
   getAIStatus,
@@ -586,6 +587,7 @@ export default function AIChatPanel({
     try {
       const userMsg = input.trim();
       setInput("");
+      log.ai("user message sent", { agentType, chatId: chatIdRef.current, length: userMsg.length });
 
       const newUserMsg: Message = { role: "user", content: userMsg };
 
@@ -654,14 +656,14 @@ export default function AIChatPanel({
       setIsTyping(true);
 
       const available = await isLocalAIAvailable();
-      console.log("[AIChatPanel] isLocalAIAvailable returned:", available);
+      log.ai("AI availability check", { available });
       let finalResponse = "";
 
       if (available) {
         const controller = new AbortController();
         activeAbortControllerRef.current = controller;
         try {
-          console.log("[AIChatPanel] Calling streamMessage for userMsg:", JSON.stringify(userMsg));
+          log.ai("calling Gemini via streamMessage", { agentType });
           finalResponse = await streamMessage(
             userMsg,
             (partial: string) => {
@@ -682,7 +684,7 @@ export default function AIChatPanel({
             controller.signal,
             { agentType, questionContext: currentContext }  // always pass fresh context
           );
-          console.log("[AIChatPanel] streamMessage resolved. finalResponse returned:", JSON.stringify(finalResponse));
+          log.ai("Gemini response received", { length: finalResponse.length });
         } finally {
           if (activeAbortControllerRef.current === controller) {
             activeAbortControllerRef.current = null;
@@ -691,7 +693,7 @@ export default function AIChatPanel({
       }
 
       if (!finalResponse) {
-        console.log("[AIChatPanel] finalResponse is empty/falsy, falling back to mock response.");
+        log.ai("empty response — falling back to mock");
         finalResponse = getMockResponse(userMsg, messages);
         console.log("[AIChatPanel] getMockResponse returned fallback:", JSON.stringify(finalResponse));
       }
