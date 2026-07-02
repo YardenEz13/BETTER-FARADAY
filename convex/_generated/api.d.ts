@@ -29,6 +29,7 @@ import type * as precompute from "../precompute.js";
 import type * as proofGrading from "../proofGrading.js";
 import type * as questions from "../questions.js";
 import type * as seedGeometry from "../seedGeometry.js";
+import type * as seedGeometryQuestions from "../seedGeometryQuestions.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
 import type * as teacherImport from "../teacherImport.js";
 import type * as topics from "../topics.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   proofGrading: typeof proofGrading;
   questions: typeof questions;
   seedGeometry: typeof seedGeometry;
+  seedGeometryQuestions: typeof seedGeometryQuestions;
   sessionBriefs: typeof sessionBriefs;
   teacherImport: typeof teacherImport;
   topics: typeof topics;

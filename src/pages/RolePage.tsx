@@ -79,13 +79,13 @@ export default function RolePage() {
             </span>
 
             <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.4rem, 11vw, 3.6rem)" }}>
-              מרחב למידה
+             פלטפורמת הלמידה
               <br />
-              <span className="text-primary">מוגן מרעש</span>
+              <span className="text-primary">שמותאמת לך</span>
             </h1>
             <p className="mt-4 lg:mt-5 max-w-[27rem] text-base lg:text-lg font-medium leading-relaxed text-on-surface-variant">
               <span className="lg:hidden">בחר כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
-              <span className="hidden lg:inline">הפרעות חיצוניות נחסמות בגבול הכלוב — בפנים נשאר רק מה שחשוב. בחר כיצד להיכנס.</span>
+              <span className="hidden lg:inline">למידת מתמטיקה מעולם לא הייתה מהנה יותר.</span>
             </p>
 
             {/* Feature list is desktop-only — on mobile the role cards come first (matches the phone design) */}

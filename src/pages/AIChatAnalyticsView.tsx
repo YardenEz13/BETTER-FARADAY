@@ -3,13 +3,15 @@ import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, FileText, Zap } from "../components/electric";
+import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, FileText, Zap, Sparkles } from "../components/electric";
 import { ElectricAtom, ElectricBolt, Lens } from "../components/electric";
 import { analyzeConversation } from "../services/localAI";
 import CyberAvatar from "../components/CyberAvatar";
+import { ChatAnalysisView } from "./ChatAnalysisView";
 
 export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [analysisChat, setAnalysisChat] = useState<any | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const deleteChatMut = useMutation(api.aiChat.deleteChat);
   const endChatMut = useMutation(api.aiChat.endChat);
@@ -36,6 +38,10 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
         : <Meh size={size} style={{ color: 'var(--color-tertiary)' }} />;
 
   const confusionHigh = (summary?.avgConfusion ?? 0) > 60;
+
+  if (analysisChat) {
+    return <ChatAnalysisView chat={analysisChat} onBack={() => setAnalysisChat(null)} />;
+  }
 
   return (
     <div className="w-full min-h-full flex flex-col xl:flex-row gap-6 p-6 bg-background text-on-background" dir="rtl">
@@ -162,6 +168,13 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                       <div className="num text-sm text-on-surface-variant flex items-center gap-1.5">
                         <MessageSquare size={15} /> {chat.messageCount}
                       </div>
+                      <button
+                        className="btn-icon"
+                        onClick={(e) => { e.stopPropagation(); setAnalysisChat(chat); }}
+                        title="ניתוח מלא"
+                      >
+                        <Sparkles size={15} />
+                      </button>
                       <button
                         className="btn-icon hover:border-error hover:text-error"
                         onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(chat._id); }}
