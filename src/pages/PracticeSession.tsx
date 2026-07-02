@@ -14,6 +14,8 @@ import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
 import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
 import { log } from "../lib/logger";
+import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
+import { fireConfetti, fireStreak } from "../lib/celebrations";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
@@ -63,6 +65,54 @@ export default function PracticeSession() {
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
   const reducedMotion = !!useReducedMotion();
+  const questionCardRef = useRef<HTMLDivElement>(null);
+  const xpChipRef = useRef<HTMLDivElement>(null);
+
+  /* Brief green/red glow on the question card after an answer. */
+  const flashCard = (kind: "correct" | "wrong") => {
+    const card = questionCardRef.current;
+    if (!card || reducedMotion) return;
+    const cls = kind === "correct" ? "answer-glow-correct" : "answer-glow-wrong";
+    card.classList.add(cls);
+    setTimeout(() => card.classList.remove(cls), 900);
+  };
+
+  /* GSAP elastic shake on a wrong answer. */
+  const shakeCard = () => {
+    const card = questionCardRef.current;
+    if (!card || reducedMotion) return;
+    gsap.fromTo(card, { x: -13 }, { x: 0, duration: 0.75, ease: "elastic.out(1, 0.22)", clearProps: "x" });
+  };
+
+  /* The earned XP flies from the answered option to the XP counter (MotionPath). */
+  const flyXP = (fromRect: DOMRect, amount: number) => {
+    const target = xpChipRef.current;
+    if (!target || reducedMotion) return;
+    const t = target.getBoundingClientRect();
+    const startX = fromRect.left + fromRect.width / 2;
+    const startY = fromRect.top;
+    const el = document.createElement("div");
+    el.textContent = `+${amount}`;
+    el.className = "num";
+    el.setAttribute("aria-hidden", "true");
+    el.style.cssText =
+      `position:fixed;left:${startX}px;top:${startY}px;z-index:10000;pointer-events:none;` +
+      "font-weight:800;font-size:20px;color:var(--color-tertiary);text-shadow:0 0 10px rgba(255,176,46,.55);";
+    document.body.appendChild(el);
+    const dx = t.left + t.width / 2 - startX;
+    const dy = t.top + t.height / 2 - startY;
+    gsap.to(el, {
+      motionPath: { path: [{ x: 0, y: 0 }, { x: dx * 0.4, y: Math.min(dy, 0) - 90 }, { x: dx, y: dy }], curviness: 1.4 },
+      duration: 0.95,
+      ease: "power1.in",
+      scale: 0.5,
+      onComplete: () => {
+        el.remove();
+        gsap.fromTo(target, { scale: 1.28 }, { scale: 1, duration: 0.4, ease: "elastic.out(1.4, 0.4)" });
+      },
+    });
+    gsap.to(el, { opacity: 0, duration: 0.2, delay: 0.78 });
+  };
 
   useEffect(() => {
     const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
@@ -87,7 +137,7 @@ export default function PracticeSession() {
 
   if (!student || !currentTopic) return null;
 
-  const handleSelect = async (idx: number) => {
+  const handleSelect = async (idx: number, choiceEl?: HTMLElement) => {
     if (submitted || !activeQuestion || transitionLockRef.current) return;
     setSelected(idx); setSubmitted(true);
     const isCorrect = idx === activeQuestion.correctIndex;
@@ -107,6 +157,16 @@ export default function PracticeSession() {
       setEarnedXP(xpGained);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1800);
+      flashCard("correct");
+      if (choiceEl && !reducedMotion) {
+        const r = choiceEl.getBoundingClientRect();
+        fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
+        flyXP(r, xpGained);
+      }
+      if (newCombo >= 3) fireStreak(newCombo);
+    } else {
+      flashCard("wrong");
+      shakeCard();
     }
     // Enter review phase with 5-second minimum
     setReviewPhase(true);
@@ -178,7 +238,7 @@ export default function PracticeSession() {
             <span className="text-xs text-on-surface-variant">שאלות</span>
           </div>
           {/* XP chip */}
-          <div className="stat-chip">
+          <div className="stat-chip" ref={xpChipRef}>
             <Zap size={13} className="text-tertiary" />
             <span className="num font-bold text-sm text-tertiary">+{sessionXP}</span>
             <span className="text-xs text-on-surface-variant">XP</span>
@@ -257,6 +317,7 @@ export default function PracticeSession() {
               >
                 {/* Question card */}
                 <div
+                  ref={questionCardRef}
                   className="clay-card relative overflow-hidden p-8 backdrop-blur-md"
                   style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
                 >
@@ -357,7 +418,7 @@ export default function PracticeSession() {
                           whileTap={!submitted ? { scale: 0.99 } : {}}
                           className={cardClasses}
                           style={{ boxShadow: isRight || isWrong ? 'none' : 'var(--shadow-clay)', cursor: submitted ? 'default' : 'pointer' }}
-                          onClick={() => handleSelect(idx)}
+                          onClick={(e) => handleSelect(idx, e.currentTarget)}
                         >
                           <div className={badgeClasses}>
                             {isRight && <CheckCircle2 size={16} className="text-white" />}
@@ -569,13 +630,27 @@ function SparkBurst() {
 function ChargeMeter({ combo, max }: { combo: number; max: number }) {
   const level = Math.min(combo, max);
   const full = level >= max;
+  // the bolt grows a notch with every correct answer and springs back on a miss
+  const boltRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = boltRef.current;
+    if (!el || prefersReducedMotion()) return;
+    const restScale = 1 + level * 0.06;
+    if (combo === 0) {
+      gsap.to(el, { scale: 1, duration: 0.35, ease: "power2.out" });
+    } else {
+      gsap.fromTo(el, { scale: restScale + 0.3 }, { scale: restScale, duration: 0.55, ease: "elastic.out(1.3, 0.4)" });
+    }
+  }, [combo, level]);
   return (
     <div
       className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
       style={{ boxShadow: 'var(--shadow-clay)' }}
       title="טעינת אנרגיה — רצף תשובות נכונות"
     >
-      <Battery size={18} tone="spark" glow={full ? 0.9 : 0.3} animated={full} />
+      <span ref={boltRef} className={`inline-flex rounded-full ${full ? "glow-breathe" : ""}`}>
+        <Battery size={18} tone="spark" glow={full ? 0.9 : 0.3} animated={full} />
+      </span>
       <div className="flex items-center gap-1">
         {Array.from({ length: max }).map((_, i) => (
           <span
