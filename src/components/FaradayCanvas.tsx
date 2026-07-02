@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "./ThemeContext";
+import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 
 /**
  * FaradayCanvas — the shared, mouse-reactive Canvas2D background engine.
@@ -49,7 +50,8 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
 type Mouse = { x: number; y: number; active: boolean };
 type GetP = () => Palette;
-type DrawFn = () => void;
+/** Per-frame draw; `dispose` releases any GSAP tweens the variant owns. */
+type DrawFn = (() => void) & { dispose?: () => void };
 
 /**
  * Build the per-frame draw function for a variant. Particle state lives in the
@@ -511,10 +513,16 @@ function makeVariant(
 
     // ── Faraday cage — field excluded from a shielded interior ──
     case "cage": {
-      const cage = { x0: w * 0.36, y0: h * 0.3, x1: w * 0.64, y1: h * 0.72 };
+      // Phones get a wider cage pushed toward the top (the hero area — the role
+      // panel covers the lower half of the screen) and a smaller particle/bar
+      // budget; desktop keeps the original centered composition.
+      const isMobile = w < 768;
+      const cage = isMobile
+        ? { x0: w * 0.16, y0: h * 0.05, x1: w * 0.84, y1: h * 0.4 }
+        : { x0: w * 0.36, y0: h * 0.3, x1: w * 0.64, y1: h * 0.72 };
       const inside = (x: number, y: number) =>
         x > cage.x0 && x < cage.x1 && y > cage.y0 && y < cage.y1;
-      const N = 64;
+      const N = isMobile ? 36 : 64;
       const ps = Array.from({ length: N }, () => {
         let x = 0, y = 0, tries = 0;
         do {
@@ -524,11 +532,69 @@ function makeVariant(
         } while (inside(x, y) && tries < 20);
         return { x, y, vx: rnd(-0.3, 0.3), vy: rnd(-0.3, 0.3) };
       });
-      const calm = Array.from({ length: 10 }, () => ({
+      const calm = Array.from({ length: isMobile ? 6 : 10 }, () => ({
         x: rnd(cage.x0 + 20, cage.x1 - 20),
         y: rnd(cage.y0 + 20, cage.y1 - 20),
         ph: Math.random() * 6.28,
       }));
+
+      // ── 3D cage — perspective-projected wireframe box, GSAP-driven ──
+      // The 2D exclusion rect above keeps doing the physics; the box is sized
+      // so its rotating projection stays (roughly) inside that rect.
+      const ccx = (cage.x0 + cage.x1) / 2;
+      const ccy = (cage.y0 + cage.y1) / 2;
+      const hx = (cage.x1 - cage.x0) * 0.5 * 0.58;
+      const hy = (cage.y1 - cage.y0) * 0.5 * 0.72;
+      const hz = hx;
+      const diagXZ = Math.hypot(hx, hz);
+      // shorter camera distance on phones = stronger perspective on a small box
+      const PERSP = isMobile ? 620 : 950;
+      const rot = { yaw: 0.55, pitch: -0.18, mouseYaw: 0, mousePitch: 0, scale: 1 };
+      const reduced = prefersReducedMotion();
+      let yawTo: ((v: number) => void) | null = null;
+      let pitchTo: ((v: number) => void) | null = null;
+      if (!reduced) {
+        rot.scale = 0;
+        // endless slow spin, elastic scale-in, and a gentle idle pitch bob
+        gsap.to(rot, { yaw: 0.55 + Math.PI * 2, duration: isMobile ? 22 : 30, ease: "none", repeat: -1 });
+        gsap.to(rot, { scale: 1, duration: 1.4, ease: "elastic.out(1, 0.6)", delay: 0.1 });
+        gsap.to(rot, { pitch: -0.1, duration: 3.6, ease: "sine.inOut", yoyo: true, repeat: -1 });
+        // smoothed pointer chase — the cage leans toward the cursor / touch
+        yawTo = gsap.quickTo(rot, "mouseYaw", { duration: 0.9, ease: "power2.out" });
+        pitchTo = gsap.quickTo(rot, "mousePitch", { duration: 0.9, ease: "power2.out" });
+      }
+      const project = (x: number, y: number, z: number) => {
+        const yaw = rot.yaw + rot.mouseYaw;
+        const pitch = rot.pitch + rot.mousePitch;
+        const cyw = Math.cos(yaw), syw = Math.sin(yaw);
+        const X = x * cyw + z * syw;
+        const Z0 = z * cyw - x * syw;
+        const cpt = Math.cos(pitch), spt = Math.sin(pitch);
+        const Y = y * cpt - Z0 * spt;
+        const Z = y * spt + Z0 * cpt;
+        const s = (PERSP / (PERSP + Z)) * rot.scale;
+        return { x: ccx + X * s, y: ccy + Y * s, z: Z };
+      };
+      // vertical-bar anchors around the top/bottom perimeter (XZ plane)
+      const BARS = isMobile ? 4 : 5;
+      const barAnchors: { x: number; z: number }[] = [];
+      for (let i = 0; i < BARS; i++) {
+        const bt = i / (BARS - 1);
+        barAnchors.push({ x: -hx + 2 * hx * bt, z: -hz });
+        barAnchors.push({ x: -hx + 2 * hx * bt, z: hz });
+      }
+      for (let i = 1; i < BARS - 1; i++) {
+        const bt = i / (BARS - 1);
+        barAnchors.push({ x: -hx, z: -hz + 2 * hz * bt });
+        barAnchors.push({ x: hx, z: -hz + 2 * hz * bt });
+      }
+      // horizontal rings tying the bars together
+      const ringYs = isMobile ? [-hy, 0, hy] : [-hy, -hy / 2, 0, hy / 2, hy];
+      const ringCorners = [
+        { x: -hx, z: -hz }, { x: hx, z: -hz }, { x: hx, z: hz }, { x: -hx, z: hz },
+      ];
+      // 0 (back) → 1 (front) depth cue from a projected z
+      const depthCue = (z: number) => Math.max(0, Math.min(1, (1 - z / diagXZ) / 2));
       // Liang–Barsky entry-t of segment into the cage rect, or 1 if it misses.
       const clipEntry = (x1: number, y1: number, x2: number, y2: number) => {
         const dx = x2 - x1, dy = y2 - y1;
@@ -555,8 +621,8 @@ function makeVariant(
         }
         return t0 > 0 ? t0 : 1;
       };
-      const D = 120;
-      return () => {
+      const D = isMobile ? 100 : 120;
+      const draw: DrawFn = () => {
         const p = getP();
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
@@ -636,27 +702,62 @@ function makeVariant(
           ctx.fill();
         });
         ctx.restore();
-        // the cage — mesh box + glowing border
+
+        // the cage — rotating 3D wireframe box (bars + rings + corner charges)
+        if (!reduced && yawTo && pitchTo) {
+          if (mouse.active) {
+            yawTo(((mouse.x - ccx) / w) * 0.5);
+            pitchTo(((mouse.y - ccy) / h) * -0.3);
+          } else {
+            yawTo(0);
+            pitchTo(0);
+          }
+        }
         ctx.save();
-        ctx.strokeStyle = ha(p.green, p.glow ? 0.6 : 0.42);
-        ctx.lineWidth = 1;
-        const step = 18;
-        ctx.beginPath();
-        for (let x = cage.x0; x <= cage.x1 + 0.5; x += step) {
-          ctx.moveTo(x, cage.y0);
-          ctx.lineTo(x, cage.y1);
-        }
-        for (let y = cage.y0; y <= cage.y1 + 0.5; y += step) {
-          ctx.moveTo(cage.x0, y);
-          ctx.lineTo(cage.x1, y);
-        }
-        ctx.stroke();
-        ctx.strokeStyle = p.green;
-        ctx.lineWidth = 2.4;
-        ctx.shadowColor = p.green;
-        ctx.shadowBlur = p.glow ? 12 : 6;
-        ctx.strokeRect(cage.x0, cage.y0, cage.x1 - cage.x0, cage.y1 - cage.y0);
-        ctx.shadowBlur = 0;
+        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        // vertical bars — nearer bars render brighter and thicker
+        barAnchors.forEach((b) => {
+          const top = project(b.x, -hy, b.z);
+          const bot = project(b.x, hy, b.z);
+          const k = depthCue((top.z + bot.z) / 2);
+          ctx.beginPath();
+          ctx.moveTo(top.x, top.y);
+          ctx.lineTo(bot.x, bot.y);
+          ctx.strokeStyle = ha(p.green, (p.glow ? 0.3 : 0.2) + 0.42 * k);
+          ctx.lineWidth = 0.8 + 1.3 * k;
+          ctx.stroke();
+        });
+        // horizontal rings — per-segment depth cue
+        ringYs.forEach((ry) => {
+          for (let i = 0; i < 4; i++) {
+            const a = ringCorners[i], b = ringCorners[(i + 1) % 4];
+            const pa = project(a.x, ry, a.z);
+            const pb = project(b.x, ry, b.z);
+            const k = depthCue((pa.z + pb.z) / 2);
+            const isFrame = Math.abs(ry) === hy; // top/bottom frame reads heavier
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.strokeStyle = ha(p.green, ((p.glow ? 0.3 : 0.2) + 0.44 * k) * (isFrame ? 1 : 0.68));
+            ctx.lineWidth = (isFrame ? 1.4 : 0.7) + 1.2 * k;
+            ctx.stroke();
+          }
+        });
+        // corner charges — glowing nodes pinned to the 8 box corners
+        [-hy, hy].forEach((ry) => {
+          ringCorners.forEach((c) => {
+            const pc = project(c.x, ry, c.z);
+            const k = depthCue(pc.z);
+            ctx.beginPath();
+            ctx.arc(pc.x, pc.y, 1.8 + 1.8 * k, 0, Math.PI * 2);
+            ctx.fillStyle = ha(p.spark, 0.35 + 0.55 * k);
+            ctx.shadowColor = p.spark;
+            ctx.shadowBlur = (p.glow ? 12 : 6) * k;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          });
+        });
         ctx.restore();
         calm.forEach((c) => {
           const jx = Math.sin(t * 1.3 + c.ph) * 1.5, jy = Math.cos(t * 1.1 + c.ph) * 1.5;
@@ -666,6 +767,10 @@ function makeVariant(
           ctx.fill();
         });
       };
+      draw.dispose = () => {
+        gsap.killTweensOf(rot);
+      };
+      return draw;
     }
 
     // ── Faraday magneto-optic effect — twin polarization ribbons ──
@@ -824,6 +929,7 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
 
       teardown = () => {
         cancelAnimationFrame(raf);
+        draw.dispose?.();
         parent.removeEventListener("pointermove", onMove);
         parent.removeEventListener("pointerdown", onMove);
         parent.removeEventListener("pointerup", onLeave);

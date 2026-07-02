@@ -2,10 +2,11 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, memo, lazy, Suspense } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
-  LogOut, BookOpen, BarChart2, Bot, Play, Flame, Check,
+  LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
@@ -14,7 +15,8 @@ import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
-import { ElectricLoader, ElectricBolt, ElectricAtom, Battery } from "../components/electric";
+import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
+import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
 
 /* ── Serpentine path geometry (per the "Learning Map" design spec) ──
@@ -61,13 +63,12 @@ const SkillNode = memo(function SkillNode({
   const size = SKILL_NODE_SIZE[tier];
   const iconSize = SKILL_ICON_SIZE[tier];
 
+  // stagger-pop as the station scrolls into view
+  const rootRef = useRef<HTMLDivElement>(null);
+  useScrollReveal(rootRef, { y: 18, scale: 0.55, ease: "back.out(1.9)", duration: 0.6, delay: (idx % 4) * 0.08, start: "top 94%" });
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.7 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: idx * 0.07, type: 'spring', stiffness: 260, damping: 20 }}
-      className="flex flex-col items-center relative"
-    >
+    <div ref={rootRef} className="flex flex-col items-center relative">
       {/* Field lines — lines of force radiating from the charged (active) node */}
       {tier === "active" && !reducedMotion && (
         <div
@@ -121,7 +122,7 @@ const SkillNode = memo(function SkillNode({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 });
 
@@ -188,6 +189,36 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
   );
 }
 
+/* Skeleton mirroring the page layout — hero band, map stations, stats sidebar. */
+function StudentHomeSkeleton() {
+  return (
+    <div dir="rtl" className="relative min-h-screen bg-background overflow-x-hidden">
+      <div className="page-shell pt-[84px] pb-24 flex flex-col xl:flex-row gap-8">
+        <section className="flex-1 flex flex-col items-center">
+          <div className="shimmer w-full max-w-4xl rounded-3xl mb-10" style={{ height: 96 }} />
+          <div className="flex flex-col gap-12 py-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center gap-2.5"
+                style={{ transform: `translateX(${i % 2 === 0 ? -48 : 48}px)` }}
+              >
+                <div className="shimmer rounded-full" style={{ width: 64, height: 64 }} />
+                <div className="shimmer rounded-xl" style={{ width: 96, height: 18 }} />
+              </div>
+            ))}
+          </div>
+        </section>
+        <aside className="w-full xl:w-80 flex-shrink-0 flex flex-col gap-4">
+          <SkeletonCard variant="kpi" />
+          <SkeletonCard variant="student-card" />
+          <SkeletonCard variant="student-card" />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -197,10 +228,26 @@ export default function StudentHome() {
   const [chatOpen, setChatOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'map' | 'stats'>('map');
   const reducedMotion = !!useReducedMotion();
 
-  if (!student || !topics) return <ElectricLoader label="טוען נתונים אישיים..." />;
+  // The circuit wire draws itself from the first station to the last on mount
+  const wireRef = useRef<SVGPathElement>(null);
+  const topicCount = topics?.length ?? 0;
+  useEffect(() => {
+    const path = wireRef.current;
+    if (!path || reducedMotion) return;
+    const len = path.getTotalLength();
+    gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+    const tween = gsap.to(path, {
+      strokeDashoffset: 0,
+      duration: 1.8,
+      ease: "power2.inOut",
+      onComplete: () => gsap.set(path, { strokeDasharray: "none", clearProps: "strokeDashoffset" }),
+    });
+    return () => { tween.kill(); };
+  }, [topicCount, reducedMotion]);
+
+  if (!student || !topics) return <StudentHomeSkeleton />;
 
   const getProgress = (topicId: string) => {
     const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
@@ -420,7 +467,7 @@ export default function StudentHome() {
                 aria-hidden
               >
                 {/* base track — uncharged, matches the spec's dim atmospheric line */}
-                <path d={fullWireD} fill="none" stroke="var(--color-outline)" strokeWidth="6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <path ref={wireRef} d={fullWireD} fill="none" stroke="var(--color-outline)" strokeWidth="6" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
 
                 {/* one segment past the charged prefix reads as "reaching toward" the next
                     station — a dimmer green blend, no glow, no flow */}
