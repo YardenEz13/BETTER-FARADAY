@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTopicList, inventoryPrompt, solvePrompt, verifyPrompt } from "./packetPrompts";
+import { buildTopicList, inventoryPrompt, solvePrompt, structurePrompt, verifyPrompt } from "./packetPrompts";
 
 const TOPICS = [{ nameHe: "גיאומטריה" }, { nameHe: "הסתברות" }, { nameHe: "טריגונומטריה" }];
 
@@ -80,6 +80,35 @@ describe("solvePrompt", () => {
     expect(one).toContain('1. "12"');
     expect(one).toContain("EXACTLY 1 entries");
     expect(one).not.toContain('2. "');
+  });
+});
+
+describe("structurePrompt", () => {
+  const p = structurePrompt(buildTopicList(TOPICS), 12);
+
+  it("scopes to the exact pair count", () => {
+    expect(p).toContain("12 questions as cropped images");
+    expect(p).toContain("EXACTLY 12");
+  });
+  it("declares the answer crop authoritative — no re-solving", () => {
+    expect(p).toContain("AUTHORITATIVE");
+    expect(p).toContain("do NOT solve on your own");
+  });
+  it("solves only when no answer image exists", () => {
+    expect(p).toContain("Only when no");
+  });
+  it("classifies question types and splits סעיפים", () => {
+    expect(p).toContain('"multiple_choice" | "fill_blank"');
+    expect(p).toContain('"kind":"compound"');
+    expect(p).toContain("סעיף א/ב/ג");
+  });
+  it("keeps the geometry proof rule and index keying", () => {
+    expect(p).toContain("GEOMETRY PROOF RULE");
+    expect(p).toContain('"proofSteps"');
+    expect(p).toContain('"index"');
+  });
+  it("injects the topic list verbatim", () => {
+    expect(p).toContain("- גיאומטריה");
   });
 });
 

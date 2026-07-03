@@ -124,6 +124,85 @@ ${topicList}
 - Return ONLY a valid JSON array of EXACTLY ${expectedCount} entries. No markdown, no code fences, no prose.`;
 }
 
+// ── Structure: one call over teacher-cropped question/answer image pairs ──
+// Used by crop mode. The teacher already isolated each question (and usually
+// its answer-key snippet), so the model transcribes and ORGANIZES — it never
+// re-solves when an answer crop exists. One request covers the whole packet.
+export function structurePrompt(topicList: string, count: number): string {
+  return `You are an expert Israeli high-school math teacher digitizing a Hebrew homework packet.
+You receive ${count} questions as cropped images. Each question arrives as:
+- a marker line "### שאלה N"
+- the QUESTION image (the exercise as printed)
+- optionally a marker "### תשובה לשאלה N" followed by the ANSWER-KEY image for that question.
+
+For EVERY question N (1..${count}) output one JSON object. Return a JSON array of EXACTLY ${count}
+entries, ordered by N.
+
+Your job per question:
+1. TRANSCRIBE the question text from its image into Hebrew, math in $...$ (KaTeX-safe LaTeX).
+2. CLASSIFY the question and DECIDE its structure:
+   - one standalone answer → "kind":"simple" ("multiple_choice" if options are printed, else "fill_blank")
+   - labelled sub-sections (סעיף א/ב/ג...) → "kind":"compound", one section per סעיף
+   - a prove-task (הוכח / הוכיחו) → "kind":"compound" with that section's "answerType":"proof"
+3. ANSWERS: when an ANSWER-KEY image exists, its content is AUTHORITATIVE — transcribe the final
+   answer(s) and worked steps from it; do NOT solve on your own or "correct" it. Only when no
+   answer image was provided, solve the question yourself, fully and correctly.
+
+SIMPLE entry:
+{
+  "index": N,                     // the question number from the marker, 1-based
+  "kind": "simple",
+  "topicHe": string,              // verbatim from the topic list below
+  "format": "multiple_choice" | "fill_blank",
+  "stem": string,                 // full Hebrew question text; math in $...$
+  "choices": string[],            // 4 items for multiple_choice, [] for fill_blank
+  "correctIndex": number,         // 0-3 for multiple_choice; omit for fill_blank
+  "correctAnswer": string,        // fill_blank answer (from the answer image when present)
+  "difficulty": number,           // 1-5, relative to this packet
+  "solutionSteps": string[],      // worked steps in Hebrew (from the answer image when present)
+  "hints": string[],              // EXACTLY 2 progressive hints
+  "skillsTested": string[],       // 2-4 Hebrew skill names
+  "explanation": string
+}
+
+COMPOUND entry:
+{
+  "index": N,
+  "kind": "compound",
+  "topicHe": string,
+  "difficulty": number,
+  "tags": string[],               // 2-5 Hebrew topical tags
+  "preamble": string,             // the shared given; math in $...$
+  "sections": [
+    {
+      "label": string,            // "א","ב",...
+      "prompt": string,
+      "answerType": "numeric" | "expression" | "range" | "coordinates" | "graph_description" | "proof",
+      "correctAnswer": string,    // from the answer image when present
+      "solutionSteps": string[],
+      "hints": string[],          // EXACTLY 2
+      "points": number,           // sum ≈ 100 per question
+      "skillsTested": string[]
+    }
+  ],
+  "fullSolution": string
+}
+
+GEOMETRY PROOF RULE — for any section whose task is to prove (הוכח / הוכיחו): set
+"answerType":"proof", "correctAnswer" = one Hebrew sentence stating what is proven, and add
+"proofMeta": { "given": string, "toProve": string, "diagramDescription": string } plus
+"proofSteps": [{ "stepIndex": number, "expectedClaim": string, "expectedReason": string,
+"clueIfWrong": string }] — an ordered claim/reason chain using standard Hebrew theorem names
+(e.g. "צ.ז.צ", "אלכסוני מקבילית מחצים זה את זה"). Base the chain on the answer image when present.
+
+Rules:
+- If a figure appears in the question image, describe it inline as [FIGURE: תיאור קצר].
+- "topicHe" MUST be copied verbatim from:
+${topicList}
+- All content Hebrew. Math in $...$ only. NEVER wrap Hebrew in \\text{...}.
+- Return ONLY a valid JSON array of EXACTLY ${count} entries. No markdown, no code fences, no prose.`;
+}
+
 // ── Verify: independently re-solve one answer and compare ──
 // Only meaningful for numeric / expression / multiple_choice sections.
 export function verifyPrompt(stem: string, answerType: string, candidateAnswer: string): string {

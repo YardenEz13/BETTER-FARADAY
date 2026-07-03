@@ -4,9 +4,9 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { geminiJson } from "./geminiServer";
+import { geminiJson, type GeminiPart } from "./geminiServer";
 import { salvageJsonArray, stripFences, normalizeDraft } from "./packetParse";
-import { buildTopicList, inventoryPrompt, solvePrompt, verifyPrompt } from "./packetPrompts";
+import { buildTopicList, inventoryPrompt, solvePrompt, structurePrompt, verifyPrompt } from "./packetPrompts";
 
 // ── Full-PDF packet import: Gemini-calling actions (Node runtime) ──
 // Kept separate from packetImport.ts because "use node" cannot coexist with
@@ -151,6 +151,94 @@ export const runChunk = internalAction({
       requestedLabelsRaw: labels,
       results,
     });
+  },
+});
+
+// ── Crop mode: ONE Gemini call structures all teacher-cropped Q/A pairs ──
+// The teacher isolated every question (and usually its answer-key snippet), so
+// this pass transcribes + classifies + splits סעיפים — answers are copied from
+// the answer crops, never re-solved. `questionIds` narrows a retry to a subset.
+export const runStructure = internalAction({
+  args: {
+    packetId: v.id("packetImports"),
+    questionIds: v.optional(v.array(v.id("packetImportQuestions"))),
+  },
+  handler: async (ctx, { packetId, questionIds }) => {
+    const packet = await ctx.runQuery(internal.packetImport.getPacketInternal, { packetId });
+    if (!packet || packet.status === "cancelled") return;
+
+    // Ordered pending rows (or the requested subset), images pulled row-by-row
+    // to stay under query result-size limits.
+    let rowRefs = await ctx.runQuery(internal.packetImport.getCropRowIds, {
+      packetId,
+      onlyPending: true,
+    });
+    if (questionIds) {
+      const wanted = new Set<string>(questionIds);
+      rowRefs = rowRefs.filter((r) => wanted.has(r.id));
+    }
+    if (rowRefs.length === 0) {
+      await ctx.runMutation(internal.packetImport.finalizePacket, { packetId });
+      return;
+    }
+
+    const parts: GeminiPart[] = [];
+    const rowByIndex = new Map<number, (typeof rowRefs)[number]>();
+    for (let i = 0; i < rowRefs.length; i++) {
+      const ref = rowRefs[i];
+      const n = i + 1; // 1-based marker index within THIS request
+      rowByIndex.set(n, ref);
+      const images = await ctx.runQuery(internal.packetImport.getRowImagesInternal, {
+        questionId: ref.id,
+      });
+      if (!images?.questionImageBase64) continue;
+      parts.push({ text: `### שאלה ${n}` });
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: images.questionImageBase64 } });
+      if (images.answerImageBase64) {
+        parts.push({ text: `### תשובה לשאלה ${n}` });
+        parts.push({ inlineData: { mimeType: "image/jpeg", data: images.answerImageBase64 } });
+      }
+    }
+    const topics = await ctx.runQuery(internal.packetImport.getTopicsInternal, {});
+    parts.push({ text: structurePrompt(buildTopicList(topics), rowRefs.length) });
+
+    let result;
+    try {
+      result = await geminiJson({ parts, maxOutputTokens: 60000 });
+    } catch {
+      await ctx.runMutation(internal.packetImport.markRowsFailed, {
+        questionIds: rowRefs.map((r) => r.id),
+        message: "עיבוד השאלות נכשל.",
+      });
+      await ctx.runMutation(internal.packetImport.finalizePacket, { packetId });
+      return;
+    }
+
+    // Salvage what parsed; anything unmatched below falls out as "failed".
+    const matched = new Set<string>();
+    for (const raw of salvageJsonArray(result.text)) {
+      const o = asRecord(raw);
+      const idx = Number(o.index);
+      const ref = Number.isFinite(idx) ? rowByIndex.get(idx) : undefined;
+      if (!ref) continue;
+      matched.add(ref.id);
+      await ctx.runMutation(internal.packetImport.writeStructureResult, {
+        questionId: ref.id,
+        topicHe: String(o.topicHe ?? ""),
+        draft: normalizeDraft(o),
+      });
+    }
+    const unmatched = rowRefs.filter((r) => !matched.has(r.id)).map((r) => r.id);
+    if (unmatched.length > 0) {
+      await ctx.runMutation(internal.packetImport.markRowsFailed, {
+        questionIds: unmatched,
+        message:
+          result.finishReason === "MAX_TOKENS"
+            ? "התשובה נחתכה — נסה שוב שאלה זו."
+            : "המודל לא החזיר מבנה לשאלה זו.",
+      });
+    }
+    await ctx.runMutation(internal.packetImport.finalizePacket, { packetId });
   },
 });
 

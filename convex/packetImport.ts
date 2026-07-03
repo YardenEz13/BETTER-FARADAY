@@ -79,7 +79,25 @@ export const listPacketQuestions = query({
           .withIndex("by_packet", (q) => q.eq("packetId", packetId))
           .collect();
     rows.sort((a, b) => a.orderIndex - b.orderIndex);
-    return rows;
+    // Strip crop images — dozens of rows × base64 JPEGs would blow the query
+    // size limit. The editor fetches a single row's images on demand.
+    return rows.map((r) => {
+      const { questionImageBase64, answerImageBase64, ...rest } = r;
+      return { ...rest, hasImages: !!questionImageBase64 || !!answerImageBase64 };
+    });
+  },
+});
+
+// Single row's crop images, fetched on demand by the editor drawer.
+export const getQuestionImages = query({
+  args: { questionId: v.id("packetImportQuestions") },
+  handler: async (ctx, { questionId }) => {
+    const row = await ctx.db.get(questionId);
+    if (!row) return null;
+    return {
+      questionImageBase64: row.questionImageBase64 ?? null,
+      answerImageBase64: row.answerImageBase64 ?? null,
+    };
   },
 });
 
@@ -92,10 +110,137 @@ export const getPdfUrl = query({
   },
 });
 
+// ── Crop mode: teacher crops question+answer pairs, one AI call structures ──
+export const startCropPacket = mutation({
+  args: {
+    classroomId: v.id("classrooms"),
+    sourceName: v.string(),
+    pdfStorageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("packetImports", {
+      classroomId: args.classroomId,
+      sourceName: args.sourceName,
+      pdfStorageId: args.pdfStorageId,
+      mode: "crops",
+      status: "cropping",
+      verifyEnabled: false, // answers come from the teacher's answer-key crops
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const addCroppedQuestion = mutation({
+  args: {
+    packetId: v.id("packetImports"),
+    orderIndex: v.number(),
+    questionImageBase64: v.string(),
+    answerImageBase64: v.optional(v.string()),
+    pageStart: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const packet = await ctx.db.get(args.packetId);
+    if (!packet || packet.status !== "cropping") throw new Error("החבילה אינה במצב חיתוך");
+    return await ctx.db.insert("packetImportQuestions", {
+      packetId: args.packetId,
+      classroomId: packet.classroomId,
+      sourceLabel: normalizeLabel(String(args.orderIndex + 1)),
+      sourceLabelRaw: `שאלה ${args.orderIndex + 1}`,
+      orderIndex: args.orderIndex,
+      pageStart: args.pageStart ?? 1,
+      pageEnd: args.pageStart ?? 1,
+      kind: "simple", // provisional — the structuring pass reclassifies
+      status: "pending",
+      topicHe: "",
+      questionImageBase64: args.questionImageBase64,
+      answerImageBase64: args.answerImageBase64,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const submitCropPacket = mutation({
+  args: { packetId: v.id("packetImports") },
+  handler: async (ctx, { packetId }) => {
+    const packet = await ctx.db.get(packetId);
+    if (!packet || packet.status !== "cropping") throw new Error("החבילה אינה במצב חיתוך");
+    const rows = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet", (q) => q.eq("packetId", packetId))
+      .collect();
+    if (rows.length === 0) throw new Error("לא נחתכו שאלות");
+    await ctx.db.patch(packetId, { status: "solving", totalQuestions: rows.length });
+    await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, { packetId });
+  },
+});
+
 // ── Internal reads used by the pipeline actions ──
 export const getPacketInternal = internalQuery({
   args: { packetId: v.id("packetImports") },
   handler: async (ctx, { packetId }) => await ctx.db.get(packetId),
+});
+
+// Crop-row ids in order, WITHOUT images (size). The action then pulls each
+// row's images one query at a time to stay under result-size limits.
+export const getCropRowIds = internalQuery({
+  args: { packetId: v.id("packetImports"), onlyPending: v.optional(v.boolean()) },
+  handler: async (ctx, { packetId, onlyPending }) => {
+    const rows = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet", (q) => q.eq("packetId", packetId))
+      .collect();
+    return rows
+      .filter((r) => (onlyPending ? r.status === "pending" : true))
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((r) => ({ id: r._id, orderIndex: r.orderIndex }));
+  },
+});
+
+export const getRowImagesInternal = internalQuery({
+  args: { questionId: v.id("packetImportQuestions") },
+  handler: async (ctx, { questionId }) => {
+    const row = await ctx.db.get(questionId);
+    if (!row) return null;
+    return {
+      questionImageBase64: row.questionImageBase64 ?? null,
+      answerImageBase64: row.answerImageBase64 ?? null,
+    };
+  },
+});
+
+// Write one structured result onto its row (patched only while still pending —
+// same edit-race guard as writeChunkResults).
+export const writeStructureResult = internalMutation({
+  args: {
+    questionId: v.id("packetImportQuestions"),
+    topicHe: v.string(),
+    draft: packetDraft,
+  },
+  handler: async (ctx, { questionId, topicHe, draft }) => {
+    const row = await ctx.db.get(questionId);
+    if (!row || row.status !== "pending") return;
+    const topics = (await ctx.db.query("topics").collect()).map((t) => ({ _id: t._id, nameHe: t.nameHe }));
+    const topic = matchTopic(topicHe, topics);
+    const isProof = draft.kind === "compound" && draft.sections.some((s) => s.answerType === "proof");
+    await ctx.db.patch(questionId, {
+      draft,
+      topicHe: topicHe || row.topicHe,
+      topicId: topic?._id,
+      status: isProof ? "proof_unverified" : "review",
+    });
+  },
+});
+
+export const markRowsFailed = internalMutation({
+  args: { questionIds: v.array(v.id("packetImportQuestions")), message: v.string() },
+  handler: async (ctx, { questionIds, message }) => {
+    for (const id of questionIds) {
+      const row = await ctx.db.get(id);
+      if (row && row.status === "pending") {
+        await ctx.db.patch(id, { status: "failed", errorMessage: message });
+      }
+    }
+  },
 });
 
 export const getTopicsInternal = internalQuery({
@@ -335,10 +480,18 @@ export const retryQuestion = mutation({
     const packet = await ctx.db.get(row.packetId);
     if (packet && ["solving", "verifying", "review"].includes(packet.status)) {
       if (packet.status !== "solving") await ctx.db.patch(row.packetId, { status: "solving" });
-      await ctx.scheduler.runAfter(0, internal.packetPipeline.runChunk, {
-        packetId: row.packetId,
-        labels: [row.sourceLabelRaw],
-      });
+      if (packet.mode === "crops") {
+        // Crop mode: re-structure just this row from its own crops.
+        await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
+          packetId: row.packetId,
+          questionIds: [questionId],
+        });
+      } else {
+        await ctx.scheduler.runAfter(0, internal.packetPipeline.runChunk, {
+          packetId: row.packetId,
+          labels: [row.sourceLabelRaw],
+        });
+      }
     }
   },
 });

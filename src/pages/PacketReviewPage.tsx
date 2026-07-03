@@ -12,6 +12,7 @@ type PacketDraft = NonNullable<PacketQuestion["draft"]>;
 type Section = Extract<PacketDraft, { kind: "compound" }>["sections"][number];
 
 const STATUS_HE: Record<string, string> = {
+  cropping: "בחיתוך…",
   inventory: "סורק את החוברת…",
   solving: "פותר שאלות…",
   verifying: "מאמת תשובות…",
@@ -346,6 +347,7 @@ function QuestionEditor({
   onClose: () => void;
   onBanner: (s: string) => void;
 }) {
+  const images = useQuery(api.packetImport.getQuestionImages, { questionId: question._id });
   const updateDraft = useMutation(api.packetImport.updateQuestionDraft);
   const setTopic = useMutation(api.packetImport.setQuestionTopic);
   const confirmProof = useMutation(api.packetImport.confirmProofSteps);
@@ -490,14 +492,27 @@ function QuestionEditor({
                 </MathText>
               </div>
             </div>
-            {pdfUrl && (
+            {images?.questionImageBase64 ? (
+              <>
+                <div className="rounded-xl border-2 border-[var(--border-subtle)] bg-white p-2">
+                  <div className="label-mono text-xs text-[var(--color-primary)] mb-1">השאלה המקורית</div>
+                  <img src={`data:image/jpeg;base64,${images.questionImageBase64}`} alt="השאלה המקורית" className="w-full rounded" />
+                </div>
+                {images.answerImageBase64 && (
+                  <div className="rounded-xl border-2 border-[var(--border-subtle)] bg-white p-2">
+                    <div className="label-mono text-xs text-[var(--color-primary)] mb-1">התשובה מהמחוון</div>
+                    <img src={`data:image/jpeg;base64,${images.answerImageBase64}`} alt="התשובה מהמחוון" className="w-full rounded" />
+                  </div>
+                )}
+              </>
+            ) : pdfUrl ? (
               <embed
                 src={`${pdfUrl}#page=${question.pageStart}`}
                 type="application/pdf"
                 className="w-full rounded-xl border-2 border-[var(--border-subtle)]"
                 style={{ height: 460 }}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

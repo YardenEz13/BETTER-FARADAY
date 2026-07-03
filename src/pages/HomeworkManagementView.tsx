@@ -7,6 +7,7 @@ import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
 import QuestionImportModal from "../components/QuestionImportModal";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketImportButton from "../components/PacketImportButton";
+import PacketCropBuilder from "../components/PacketCropBuilder";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -61,6 +62,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   );
 
   const [showPdfBuilder, setShowPdfBuilder] = useState(false);
+  const [showCropBuilder, setShowCropBuilder] = useState(false);
   const [pdfToast, setPdfToast] = useState<string | null>(null);
   const [expandedPdfId, setExpandedPdfId] = useState<Id<"pdfAssignments"> | null>(null);
 
@@ -254,6 +256,15 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                     >
                       <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
                     </button>
+                    {classroomId && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCropBuilder(true)}
+                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
+                      >
+                        <Scissors size={16} /> ייבוא חוברת בחיתוך ידני (מומלץ)
+                      </button>
+                    )}
                     {classroomId && <PacketImportButton classroomId={classroomId} />}
                   </div>
                   {approvedImports && approvedImports.length > 0 && (
@@ -692,6 +703,10 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           onClose={() => setShowPdfBuilder(false)}
           onPublished={(name) => setPdfToast(`המטלה נשלחה אל ${name}`)}
         />
+      )}
+
+      {showCropBuilder && classroomId && (
+        <PacketCropBuilder classroomId={classroomId} onClose={() => setShowCropBuilder(false)} />
       )}
 
       <AnimatePresence>

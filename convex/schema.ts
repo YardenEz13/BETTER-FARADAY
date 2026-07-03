@@ -435,7 +435,11 @@ export default defineSchema({
     classroomId: v.id("classrooms"),
     sourceName: v.string(),                 // original PDF filename
     pdfStorageId: v.id("_storage"),         // full source PDF (file storage)
-    status: v.string(),                     // "inventory" | "solving" | "verifying" | "review" | "failed" | "cancelled"
+    // "auto" = AI reads the whole PDF itself (inventory → solve chunks).
+    // "crops" = teacher crops each question + its answer-key snippet, then ONE
+    // Gemini call structures the batch (no solving — answers come from crops).
+    mode: v.optional(v.string()),           // "auto" (default) | "crops"
+    status: v.string(),                     // "cropping" | "inventory" | "solving" | "verifying" | "review" | "failed" | "cancelled"
     pageCount: v.optional(v.number()),
     totalQuestions: v.optional(v.number()), // set at inventory time; progress is derived from row status counts
     verifyEnabled: v.boolean(),             // run the independent-solve verification pass
@@ -461,6 +465,11 @@ export default defineSchema({
     topicHe: v.string(),                    // model's topic guess (verbatim from the injected topic list)
     topicId: v.optional(v.id("topics")),    // resolved via exact/fuzzy nameHe match; unset blocks approve
     draft: v.optional(packetDraft),
+    // Crop mode: teacher-cropped JPEGs (base64, no data-URL prefix). The answer
+    // crop is the authoritative answer key — the AI transcribes, never re-solves.
+    // Kept per-row (≤1MB doc limit) and EXCLUDED from list queries (size).
+    questionImageBase64: v.optional(v.string()),
+    answerImageBase64: v.optional(v.string()),
     editedByTeacher: v.optional(v.boolean()), // guards against late pipeline writes clobbering manual edits
     proofReviewedAt: v.optional(v.number()),  // set when the teacher confirms the proof steps (approve gate)
     verification: v.optional(v.object({
