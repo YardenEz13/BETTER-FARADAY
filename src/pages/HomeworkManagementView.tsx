@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
 import QuestionImportModal from "../components/QuestionImportModal";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
+import PacketImportButton from "../components/PacketImportButton";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -245,13 +246,16 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
                 <div className="mb-5">
                   <label className="label-mono text-[var(--color-primary)] block mb-2 text-sm">שאלות מהספר (ייבוא AI)</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowImportModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 mb-3 border-2 border-dashed border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
-                  >
-                    <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
-                  </button>
+                  <div className="flex flex-wrap items-start gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowImportModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
+                    >
+                      <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
+                    </button>
+                    {classroomId && <PacketImportButton classroomId={classroomId} />}
+                  </div>
                   {approvedImports && approvedImports.length > 0 && (
                     <div className="flex flex-col gap-2">
                       {approvedImports.map((imp) => {
