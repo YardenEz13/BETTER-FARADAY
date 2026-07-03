@@ -416,7 +416,44 @@ export const finalizePacket = internalMutation({
   handler: async (ctx, { packetId }) => {
     const p = await ctx.db.get(packetId);
     if (!p || p.status === "cancelled") return;
+    // Split retries run in parallel — don't declare "review" while a sibling
+    // batch still has pending rows.
+    const pending = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet_status", (q) => q.eq("packetId", packetId).eq("status", "pending"))
+      .first();
+    if (pending) return;
     await ctx.db.patch(packetId, { status: "review" });
+  },
+});
+
+// Reset every failed row in a packet and re-run the structuring pass over all
+// of them at once (crop mode) — one click instead of per-question retries.
+export const retryAllFailed = mutation({
+  args: { packetId: v.id("packetImports") },
+  handler: async (ctx, { packetId }) => {
+    const packet = await ctx.db.get(packetId);
+    if (!packet) throw new Error("החבילה לא נמצאה");
+    const failed = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet_status", (q) => q.eq("packetId", packetId).eq("status", "failed"))
+      .collect();
+    if (failed.length === 0) return { retried: 0 };
+    for (const row of failed) {
+      await ctx.db.patch(row._id, { status: "pending", errorMessage: undefined });
+    }
+    await ctx.db.patch(packetId, { status: "solving" });
+    if (packet.mode === "crops") {
+      await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
+        packetId,
+        questionIds: failed.map((r) => r._id),
+      });
+    } else {
+      failed.sort((a, b) => a.orderIndex - b.orderIndex);
+      const labels = pickBatch(failed.map((r) => ({ sourceLabelRaw: r.sourceLabelRaw, kind: r.kind })));
+      await ctx.scheduler.runAfter(0, internal.packetPipeline.runChunk, { packetId, labels });
+    }
+    return { retried: failed.length };
   },
 });
 

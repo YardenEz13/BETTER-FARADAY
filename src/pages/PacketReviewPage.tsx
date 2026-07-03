@@ -58,6 +58,7 @@ export default function PacketReviewPage() {
   const topics = useQuery(api.topics.list);
 
   const cancel = useMutation(api.packetImport.cancel);
+  const retryAllFailed = useMutation(api.packetImport.retryAllFailed);
   const bulkApprove = useMutation(api.packetImport.bulkApprove);
   const discardQuestion = useMutation(api.packetImport.discardQuestion);
   const createHomework = useMutation(api.packetImport.createHomeworkFromPacket);
@@ -187,9 +188,23 @@ export default function PacketReviewPage() {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="text-xs text-[var(--text-muted)] mt-2">
-            חולצו {resolved} מתוך {total} שאלות
-            {packet.status === "failed" && packet.error ? ` — ${packet.error}` : ""}
+          <div className="flex items-center justify-between mt-2">
+            <div className="text-xs text-[var(--text-muted)]">
+              חולצו {resolved} מתוך {total} שאלות
+              {packet.status === "failed" && packet.error ? ` — ${packet.error}` : ""}
+            </div>
+            {!running && (packet.counts?.failed ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const r = await retryAllFailed({ packetId: id });
+                  setBanner(`נשלחו ${r.retried} שאלות לעיבוד חוזר.`);
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-bold hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] flex items-center gap-1.5"
+              >
+                <RefreshCw size={13} /> נסה שוב את כל הנכשלות ({packet.counts?.failed})
+              </button>
+            )}
           </div>
         </div>
 

@@ -15,6 +15,11 @@ export interface GeminiJsonOptions {
   systemInstruction?: string;
   temperature?: number;        // default 0.2
   maxOutputTokens?: number;    // default 16000 (solve calls pass ~32000)
+  // Gemini 2.5 thinks by default and its thinking tokens COUNT AGAINST
+  // maxOutputTokens — a hard (e.g. geometry-proof) batch can burn the whole
+  // budget on thought and return an empty/truncated JSON with MAX_TOKENS.
+  // Default 0 = thinking off; raise deliberately if a pass needs it.
+  thinkingBudget?: number;
   models?: string[];           // default fallback chain
   maxRetriesPerModel?: number; // default 3 (429 backoff attempts per model)
   baseDelayMs?: number;        // default 500 (exponential backoff base)
@@ -56,6 +61,7 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
       responseMimeType: "application/json",
       temperature: opts.temperature ?? 0.2,
       maxOutputTokens: opts.maxOutputTokens ?? 16000,
+      thinkingConfig: { thinkingBudget: opts.thinkingBudget ?? 0 },
     },
   };
 

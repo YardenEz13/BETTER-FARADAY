@@ -35,10 +35,13 @@ describe("geminiJson", () => {
     const res = await geminiJson({ parts: [{ text: "solve" }], baseDelayMs: 0 });
     expect(res).toEqual({ text: "[]", finishReason: "STOP", model: "gemini-2.5-flash" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    // JSON output + key are wired into the request.
+    // JSON output + key are wired into the request; thinking off by default
+    // (thinking tokens count against maxOutputTokens and can starve the JSON).
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("gemini-2.5-flash:generateContent?key=test-key");
-    expect(JSON.parse(init.body).generationConfig.responseMimeType).toBe("application/json");
+    const cfg = JSON.parse(init.body).generationConfig;
+    expect(cfg.responseMimeType).toBe("application/json");
+    expect(cfg.thinkingConfig).toEqual({ thinkingBudget: 0 });
   });
 
   it("surfaces a partial MAX_TOKENS response instead of throwing", async () => {

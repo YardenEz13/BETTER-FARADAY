@@ -204,13 +204,33 @@ export const runStructure = internalAction({
 
     let result;
     try {
-      result = await geminiJson({ parts, maxOutputTokens: 60000 });
-    } catch {
+      result = await geminiJson({ parts, maxOutputTokens: 64000 });
+    } catch (err) {
+      console.error("[runStructure] Gemini call failed:", err);
       await ctx.runMutation(internal.packetImport.markRowsFailed, {
         questionIds: rowRefs.map((r) => r.id),
         message: "עיבוד השאלות נכשל.",
       });
       await ctx.runMutation(internal.packetImport.finalizePacket, { packetId });
+      return;
+    }
+    console.log(
+      `[runStructure] ${rowRefs.length} rows, finishReason=${result.finishReason}, len=${result.text.length}`,
+    );
+
+    // Truncated with several rows in flight → split in half and retry both
+    // sides instead of failing the whole batch. Terminates at a single row.
+    if (result.finishReason === "MAX_TOKENS" && rowRefs.length > 1) {
+      const mid = Math.ceil(rowRefs.length / 2);
+      const ids = rowRefs.map((r) => r.id);
+      await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
+        packetId,
+        questionIds: ids.slice(0, mid),
+      });
+      await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
+        packetId,
+        questionIds: ids.slice(mid),
+      });
       return;
     }
 
