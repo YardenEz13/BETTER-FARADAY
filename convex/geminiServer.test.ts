@@ -77,16 +77,28 @@ describe("geminiJson", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it("skips straight to the next model on a non-429 error", async () => {
+  it("skips straight to the next model on a non-transient 4xx error", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(err(500, "Server Error"))
+      .mockResolvedValueOnce(err(400, "Bad Request"))
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 3, baseDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash-lite");
-    // Only one attempt on model 0 (no retry for non-429), then success on model 1.
+    // Only one attempt on model 0 (no retry for hard 4xx), then success on model 1.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries the same model on 5xx overload before falling back", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(err(503, "Service Unavailable"))
+      .mockResolvedValueOnce(ok("[]"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0 });
+    expect(res.model).toBe("gemini-2.5-flash");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

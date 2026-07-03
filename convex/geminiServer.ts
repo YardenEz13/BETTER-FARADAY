@@ -49,8 +49,8 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
   if (!apiKey) throw new Error("GEMINI_API_KEY not set");
 
   const models = opts.models ?? DEFAULT_MODELS;
-  const maxRetries = opts.maxRetriesPerModel ?? 3;
-  const baseDelay = opts.baseDelayMs ?? 500;
+  const maxRetries = opts.maxRetriesPerModel ?? 4;
+  const baseDelay = opts.baseDelayMs ?? 1500; // 1.5s → 3s → 6s per model on 429/5xx
 
   const body = {
     contents: [{ role: "user", parts: opts.parts }],
@@ -87,12 +87,22 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
         continue; // network error → retry the same model
       }
 
-      if (res.status === 429) {
-        lastError = new Error(`${model} rate limited (429)`);
-        continue; // back off and retry the same model
+      // 429 (rate limit) and 5xx (Google overload — 503 is routine for heavy
+      // multimodal requests) are transient: back off and retry the same model.
+      if (res.status === 429 || res.status >= 500) {
+        lastError = new Error(`${model} transient ${res.status}`);
+        continue;
       }
       if (!res.ok) {
-        lastError = new Error(`${model} error ${res.status} ${res.statusText}`);
+        // Pull Google's error payload — status text alone hides the real cause
+        // (INVALID_ARGUMENT details, size limits, blocked key, ...).
+        let body = "";
+        try {
+          body = (await res.text()).slice(0, 400);
+        } catch {
+          /* body unavailable */
+        }
+        lastError = new Error(`${model} error ${res.status} ${res.statusText} ${body}`);
         break; // non-429 failure → move to the next model
       }
 

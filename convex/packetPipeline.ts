@@ -207,9 +207,26 @@ export const runStructure = internalAction({
       result = await geminiJson({ parts, maxOutputTokens: 64000 });
     } catch (err) {
       console.error("[runStructure] Gemini call failed:", err);
+      // Transient overload (503) often clears when the request shrinks — split
+      // the batch in half and retry both sides before giving up. A single row
+      // that still fails is marked failed with the real upstream error.
+      if (rowRefs.length > 1) {
+        const mid = Math.ceil(rowRefs.length / 2);
+        const ids = rowRefs.map((r) => r.id);
+        await ctx.scheduler.runAfter(2000, internal.packetPipeline.runStructure, {
+          packetId,
+          questionIds: ids.slice(0, mid),
+        });
+        await ctx.scheduler.runAfter(4000, internal.packetPipeline.runStructure, {
+          packetId,
+          questionIds: ids.slice(mid),
+        });
+        return;
+      }
+      const detail = err instanceof Error ? err.message : String(err);
       await ctx.runMutation(internal.packetImport.markRowsFailed, {
         questionIds: rowRefs.map((r) => r.id),
-        message: "עיבוד השאלות נכשל.",
+        message: `עיבוד השאלות נכשל: ${detail}`.slice(0, 300),
       });
       await ctx.runMutation(internal.packetImport.finalizePacket, { packetId });
       return;
