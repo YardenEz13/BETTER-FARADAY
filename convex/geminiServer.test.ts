@@ -32,7 +32,7 @@ describe("geminiJson", () => {
     const fetchMock = vi.fn().mockResolvedValue(ok("[]", "STOP"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "solve" }], baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "solve" }], baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res).toEqual({ text: "[]", finishReason: "STOP", model: "gemini-2.5-flash" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // JSON output + key are wired into the request; thinking off by default
@@ -46,7 +46,7 @@ describe("geminiJson", () => {
 
   it("surfaces a partial MAX_TOKENS response instead of throwing", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ok('[{"a":1', "MAX_TOKENS")));
-    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.finishReason).toBe("MAX_TOKENS");
     expect(res.text).toBe('[{"a":1');
   });
@@ -58,7 +58,7 @@ describe("geminiJson", () => {
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.every(([u]) => String(u).includes("gemini-2.5-flash:"))).toBe(true);
@@ -72,7 +72,7 @@ describe("geminiJson", () => {
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 2, baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 2, baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash-lite");
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
@@ -84,7 +84,7 @@ describe("geminiJson", () => {
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 3, baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 3, baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash-lite");
     // Only one attempt on model 0 (no retry for hard 4xx), then success on model 1.
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -97,7 +97,7 @@ describe("geminiJson", () => {
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -105,7 +105,7 @@ describe("geminiJson", () => {
   it("throws after every model and attempt fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(err(503, "Unavailable")));
     await expect(
-      geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 1, baseDelayMs: 0 }),
+      geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 1, baseDelayMs: 0, rateLimitDelayMs: 0 }),
     ).rejects.toThrow(/503/);
   });
 
@@ -116,7 +116,7 @@ describe("geminiJson", () => {
       .mockResolvedValueOnce(ok("[]"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0 });
+    const res = await geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0, rateLimitDelayMs: 0 });
     expect(res.model).toBe("gemini-2.5-flash");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

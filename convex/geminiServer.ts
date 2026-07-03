@@ -21,8 +21,9 @@ export interface GeminiJsonOptions {
   // Default 0 = thinking off; raise deliberately if a pass needs it.
   thinkingBudget?: number;
   models?: string[];           // default fallback chain
-  maxRetriesPerModel?: number; // default 3 (429 backoff attempts per model)
-  baseDelayMs?: number;        // default 500 (exponential backoff base)
+  maxRetriesPerModel?: number; // default 4 (backoff attempts per model)
+  baseDelayMs?: number;        // default 1500 (5xx exponential backoff base)
+  rateLimitDelayMs?: number;   // default 20000 (429 wait unit; ×attempt)
   signal?: AbortSignal;
 }
 
@@ -68,8 +69,11 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
   let lastError: Error | null = null;
 
   for (const model of models) {
+    // Set per-attempt below: rate limits need tens of seconds, not the base
+    // exponential (free-tier Gemini is ~10 req/min).
+    let nextDelay = 0;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (attempt > 0) await sleep(baseDelay * 2 ** (attempt - 1));
+      if (attempt > 0) await sleep(nextDelay || baseDelay * 2 ** (attempt - 1));
 
       let res: Response;
       try {
@@ -89,8 +93,19 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
 
       // 429 (rate limit) and 5xx (Google overload — 503 is routine for heavy
       // multimodal requests) are transient: back off and retry the same model.
+      // Rate limits reset per minute on the free tier, so 429 waits are long
+      // (Retry-After when Google sends it, else 20s/40s/60s); 5xx keeps the
+      // short exponential.
       if (res.status === 429 || res.status >= 500) {
         lastError = new Error(`${model} transient ${res.status}`);
+        if (res.status === 429) {
+          const retryAfter = Number(res.headers?.get?.("retry-after"));
+          nextDelay = Number.isFinite(retryAfter) && retryAfter > 0
+            ? Math.min(retryAfter * 1000, 90000)
+            : (opts.rateLimitDelayMs ?? 20000) * (attempt + 1);
+        } else {
+          nextDelay = 0; // fall back to the exponential baseDelay schedule
+        }
         continue;
       }
       if (!res.ok) {

@@ -206,23 +206,11 @@ export const runStructure = internalAction({
     try {
       result = await geminiJson({ parts, maxOutputTokens: 64000 });
     } catch (err) {
+      // No splitting here — splitting a rate-limited batch into parallel
+      // requests multiplies the request rate and makes the 429 worse. The
+      // helper already waits out 429/5xx internally; if it still failed,
+      // surface the real upstream error and let the teacher retry.
       console.error("[runStructure] Gemini call failed:", err);
-      // Transient overload (503) often clears when the request shrinks — split
-      // the batch in half and retry both sides before giving up. A single row
-      // that still fails is marked failed with the real upstream error.
-      if (rowRefs.length > 1) {
-        const mid = Math.ceil(rowRefs.length / 2);
-        const ids = rowRefs.map((r) => r.id);
-        await ctx.scheduler.runAfter(2000, internal.packetPipeline.runStructure, {
-          packetId,
-          questionIds: ids.slice(0, mid),
-        });
-        await ctx.scheduler.runAfter(4000, internal.packetPipeline.runStructure, {
-          packetId,
-          questionIds: ids.slice(mid),
-        });
-        return;
-      }
       const detail = err instanceof Error ? err.message : String(err);
       await ctx.runMutation(internal.packetImport.markRowsFailed, {
         questionIds: rowRefs.map((r) => r.id),
@@ -238,13 +226,14 @@ export const runStructure = internalAction({
     // Truncated with several rows in flight → split in half and retry both
     // sides instead of failing the whole batch. Terminates at a single row.
     if (result.finishReason === "MAX_TOKENS" && rowRefs.length > 1) {
+      // Staggered, not parallel — free-tier rate limits are per-minute.
       const mid = Math.ceil(rowRefs.length / 2);
       const ids = rowRefs.map((r) => r.id);
       await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
         packetId,
         questionIds: ids.slice(0, mid),
       });
-      await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
+      await ctx.scheduler.runAfter(45000, internal.packetPipeline.runStructure, {
         packetId,
         questionIds: ids.slice(mid),
       });
