@@ -2,6 +2,7 @@ import { internalAction, internalMutation, internalQuery, mutation } from "./_ge
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
 const THEMES = [
   "כדורגל", "חברים", "מינקראפט", "מוזיקה פופ", "כדורסל",
@@ -129,40 +130,33 @@ ${JSON.stringify(inputs, null, 2)}
 החזר את אותו ה-JSON עם השאלות משוכתבות בהקשר של "${theme}". חובה להחזיר מערך JSON של אובייקטים המכילים 'id' ו-'rewritten' לכל שאלה.`;
 
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 4096,
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      id: { type: "STRING" },
-                      rewritten: { type: "STRING" }
-                    },
-                    required: ["id", "rewritten"]
-                  }
-                }
-              },
-            }),
-          }
-        );
+        const result = await generateWithFallback(apiKey, GEMINI_MODELS.rewrite, {
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  id: { type: "STRING" },
+                  rewritten: { type: "STRING" }
+                },
+                required: ["id", "rewritten"]
+              }
+            }
+          },
+        });
 
-        if (!response.ok) {
-          console.error(`[precomputeThemeBatch] Gemini error ${response.status} for theme ${theme}`);
+        if (!result.ok) {
+          console.error(`[precomputeThemeBatch] Gemini error ${result.status} for theme ${theme}: ${result.error}`);
           continue;
         }
 
-        const data = await response.json();
+        const data = result.data;
         const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!responseText) continue;
 
