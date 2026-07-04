@@ -218,12 +218,14 @@ export const getStudentHomework = query({
     studentId: v.id("students"),
   },
   handler: async (ctx, { homeworkId, studentId }) => {
+    // No cap — a teacher can pin more than 10 questions (e.g. a full packet
+    // import), and every assigned question must reach the student.
     const assigned = await ctx.db
       .query("assignedQuestions")
       .withIndex("by_homework_student", (q) =>
         q.eq("homeworkId", homeworkId).eq("studentId", studentId)
       )
-      .take(10);
+      .collect();
 
     // Enrich with actual question data
     const enriched = [];
