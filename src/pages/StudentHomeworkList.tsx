@@ -9,6 +9,7 @@ import {
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
+import { useCountUp } from "../lib/gsapUtils";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -24,10 +25,14 @@ export default function StudentHomeworkList() {
     studentId ? { studentId: studentId as Id<"students"> } : "skip"
   );
 
-  if (!student) return null;
-
   const activeCount = homeworkList?.filter((h) => h.status === "active").length ?? 0;
   const gradedCount = homeworkList?.filter((h) => h.status === "graded").length ?? 0;
+
+  // GSAP count-up on the status tallies (hooks run before the early return to keep order stable)
+  const activeCountRef = useCountUp<HTMLSpanElement>(activeCount, { grouped: false });
+  const gradedCountRef = useCountUp<HTMLSpanElement>(gradedCount, { grouped: false });
+
+  if (!student) return null;
 
   return (
     <div
@@ -269,12 +274,12 @@ export default function StudentHomeworkList() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-on-surface-variant">פתוחות</span>
-                <span className="num font-bold text-2xl text-tertiary">{activeCount}</span>
+                <span ref={activeCountRef} className="num font-bold text-2xl text-tertiary">{activeCount}</span>
               </div>
               <div className="h-px bg-outline" />
               <div className="flex items-center justify-between">
                 <span className="text-sm text-on-surface-variant">הושלמו</span>
-                <span className="num font-bold text-2xl text-primary">{gradedCount}</span>
+                <span ref={gradedCountRef} className="num font-bold text-2xl text-primary">{gradedCount}</span>
               </div>
             </div>
           </motion.div>

@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { CheckCircle as CheckCircle2, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, Radio, History } from "../components/electric";
 import { SignalWave, CircuitNode, Vector } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
+import { useRef } from "react";
+import { useCountUp, useStaggerReveal } from "../lib/gsapUtils";
 
 export function HeatmapView({
   heatmap,
@@ -27,11 +29,17 @@ export function HeatmapView({
   const total = heatmap.length || 1;
   const masteryPercentage = Math.round((counts.green / total) * 100) || 0;
 
+  // GSAP: count up the headline metrics and stagger the bento cards into view
+  const metricsRef = useRef<HTMLElement>(null);
+  useStaggerReveal(metricsRef, { y: 22, stagger: 0.08 });
+  const activeStudentsRef = useCountUp<HTMLSpanElement>(total, { grouped: false });
+  const masteryRef = useCountUp<HTMLSpanElement>(masteryPercentage, { grouped: false, suffix: "%" });
+
   return (
     <div className="flex flex-col gap-6 min-h-full font-body-md p-6" dir="rtl">
-      
+
       {/* Top Metrics Bento (From Stitch Design) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section ref={metricsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
         <div className="glass rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
           <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/15 transition-colors" />
@@ -42,7 +50,7 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 flex items-baseline gap-2">
-            <span className="num font-black text-5xl text-primary leading-none -translate-x-2">{total}</span>
+            <span ref={activeStudentsRef} className="num font-black text-5xl text-primary leading-none -translate-x-2">{total}</span>
             <span className="font-body-sm text-on-surface-variant mr-6 -translate-x-2">/ {total} רשומים</span>
           </div>
         </div>
@@ -57,7 +65,7 @@ export function HeatmapView({
             </div>
           </div>
           <div className="relative z-10 flex items-end gap-3">
-            <span className="num font-black text-5xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
+            <span ref={masteryRef} className="num font-black text-5xl text-primary leading-none -translate-x-2 -translate-y-1">{masteryPercentage}%</span>
             <span className="font-body-sm text-primary flex items-center mb-1 bg-primary/10 px-2 py-0.5 rounded-full">
               <Vector size={16} tone="spark" glow={0.5} className="me-1" />
               +2% השבוע
