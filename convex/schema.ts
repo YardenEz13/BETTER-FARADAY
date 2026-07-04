@@ -209,6 +209,10 @@ export default defineSchema({
     tags: v.array(v.string()),            // ["פרמטר", "נקודות קיצון", "אסימפטוטה"]
     bagrutYear: v.optional(v.string()),   // e.g., "תשפ״ה קיץ מועד א"
     sourceBook: v.optional(v.string()),   // e.g., "יואל גבע עמ׳ 342"
+    // The original scanned/cropped figure (packet import, crop mode). Stored as
+    // a file, not inline base64 — this doc is loaded on every homework fetch,
+    // so an inline image would bloat every read of the question.
+    figureImageStorageId: v.optional(v.id("_storage")),
     preamble: v.string(),                 // Shared context / function definition
     preambleParams: v.array(v.object({
       symbol: v.string(),                // "a", "b", "m"

@@ -13,6 +13,20 @@ import { buildTopicList, inventoryPrompt, solvePrompt, structurePrompt, verifyPr
 // Kept separate from packetImport.ts because "use node" cannot coexist with
 // queries/mutations. Every DB write is delegated back to internal mutations.
 
+// Moves a packet row's scanned crop image (base64, still on the
+// packetImportQuestions row) into file storage and attaches it to the
+// published compoundQuestions doc. ctx.storage.store needs an action —
+// mutations can't write blobs — so publishRow schedules this instead of
+// blocking publish on the upload.
+export const uploadFigureImage = internalAction({
+  args: { compoundId: v.id("compoundQuestions"), base64: v.string() },
+  handler: async (ctx, { compoundId, base64 }) => {
+    const bytes = Buffer.from(base64, "base64");
+    const storageId = await ctx.storage.store(new Blob([bytes], { type: "image/jpeg" }));
+    await ctx.runMutation(internal.packetImport.patchFigureImage, { compoundId, storageId });
+  },
+});
+
 const KIND_VALUES = ["simple", "compound", "proof"];
 
 // Crop-mode structure batches start small: proof-heavy packets truncate at

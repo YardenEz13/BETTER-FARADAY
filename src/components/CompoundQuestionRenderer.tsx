@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,6 +69,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
   const submitAnswer = useMutation(api.homework.submitAnswer);
   const finalizeSubmission = useMutation(api.homework.finalizeSubmission);
+  const figureUrl = useQuery(api.compoundQuestions.getFigureUrl, { id: question._id });
 
   const isSectionUnlocked = (section: Section) => {
     if (!section.dependsOn || section.dependsOn.length === 0) return true;
@@ -151,6 +152,12 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
             ))}
           </div>
         </div>
+
+        {figureUrl && (
+          <div className="flex justify-center mb-6 p-4 bg-white border border-outline rounded-xl">
+            <img src={figureUrl} alt="שרטוט השאלה" className="max-w-full rounded" style={{ maxHeight: 420 }} />
+          </div>
+        )}
 
         <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText animateLetters>{overridePreamble ?? question.preamble}</MathText></div>
 

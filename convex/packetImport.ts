@@ -544,6 +544,17 @@ export const finalizePacket = internalMutation({
   },
 });
 
+// Attaches a figure image (uploaded by packetPipeline.uploadFigureImage) to
+// its published compoundQuestions doc, once the storage write completes.
+export const patchFigureImage = internalMutation({
+  args: { compoundId: v.id("compoundQuestions"), storageId: v.id("_storage") },
+  handler: async (ctx, { compoundId, storageId }) => {
+    const q = await ctx.db.get(compoundId);
+    if (!q) return;
+    await ctx.db.patch(compoundId, { figureImageStorageId: storageId });
+  },
+});
+
 // Reset every failed row in a packet and re-run the structuring pass over all
 // of them at once (crop mode) — one click instead of per-question retries.
 export const retryAllFailed = mutation({
@@ -739,6 +750,17 @@ export async function publishRow(
     fullSolution,
   });
   await ctx.db.patch(row._id, { status: "approved", publishedCompoundId: compoundId });
+
+  // Crop mode's scanned question image is the only surviving copy of the
+  // figure. ctx.storage.store needs an action (mutations can't write blobs),
+  // so hand the base64 off to a scheduled action rather than blocking publish.
+  if (row.questionImageBase64) {
+    await ctx.scheduler.runAfter(0, internal.packetPipeline.uploadFigureImage, {
+      compoundId,
+      base64: row.questionImageBase64,
+    });
+  }
+
   return { questionId: null, compoundId };
 }
 
