@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
+import { ALL_GEMINI_MODELS } from "./geminiModels";
 
 // ── Gemini proxy ──────────────────────────────────────────────────────────
 // The browser must never hold the Gemini API key (a `VITE_`-prefixed key is
@@ -11,11 +12,7 @@ import { httpAction } from "./_generated/server";
 
 // Models the proxy is allowed to forward to. Guards against a tampered client
 // asking us to bill arbitrary models on the project's key.
-const ALLOWED_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite",
-];
+const ALLOWED_MODELS = ALL_GEMINI_MODELS;
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",

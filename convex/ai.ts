@@ -2,6 +2,7 @@ import { internalAction, internalMutation, internalQuery, mutation } from "./_ge
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
 // Mocking some prompts so the server knows what to expect
 const GEMINI_INSTRUCTIONS = `אתה מערכת אנליזה פדגוגית. נתח את שיחת התלמיד והמורה והחזר אך ורק JSON תקין.
@@ -44,25 +45,21 @@ export const processAbandonedChats = internalAction({
         let conversationText = `הקשר לשאלה/נושא: ${chatInfo.context}\n\n`;
         conversationText += messages.map((m: any) => `${m.role === 'user' ? 'תלמיד' : 'מורה'}: ${m.content}`).join("\n");
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: conversationText }] }],
-            systemInstruction: { parts: [{ text: GEMINI_INSTRUCTIONS }] },
-            generationConfig: {
-              responseMimeType: "application/json",
-              temperature: 0.2,
-            }
-          })
+        const result = await generateWithFallback(apiKey, GEMINI_MODELS.analysis, {
+          contents: [{ role: "user", parts: [{ text: conversationText }] }],
+          systemInstruction: { parts: [{ text: GEMINI_INSTRUCTIONS }] },
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.2,
+          }
         });
 
-        if (!response.ok) {
-          console.error(`Gemini API error for chat ${chatInfo.chatId}: ${response.status}`);
+        if (!result.ok) {
+          console.error(`Gemini API error for chat ${chatInfo.chatId}: ${result.status} ${result.error}`);
           continue;
         }
 
-        const data = await response.json();
+        const data = result.data;
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) continue;
 
@@ -239,40 +236,33 @@ ${JSON.stringify(inputs, null, 2)}
 החזר את אותו ה-JSON עם השאלות משוכתבות בהקשר של "${theme}". חובה להחזיר מערך JSON של אובייקטים המכילים 'id' ו-'rewritten' לכל שאלה.`;
 
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 4096,
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      id: { type: "STRING" },
-                      rewritten: { type: "STRING" }
-                    },
-                    required: ["id", "rewritten"]
-                  }
-                }
-              },
-            }),
-          }
-        );
+        const result = await generateWithFallback(apiKey, GEMINI_MODELS.rewrite, {
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  id: { type: "STRING" },
+                  rewritten: { type: "STRING" }
+                },
+                required: ["id", "rewritten"]
+              }
+            }
+          },
+        });
 
-        if (!response.ok) {
-          console.error(`[personalizeHomework] Gemini error ${response.status} for theme ${theme}`);
+        if (!result.ok) {
+          console.error(`[personalizeHomework] Gemini error ${result.status} for theme ${theme}: ${result.error}`);
           continue;
         }
 
-        const data = await response.json();
+        const data = result.data;
         const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!responseText) continue;
 

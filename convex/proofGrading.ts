@@ -1,6 +1,7 @@
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { GEMINI_MODELS } from "./geminiModels";
 
 // ── Public query: saved proof progress for a section (for UI hydration) ──
 export const getSavedSteps = query({
@@ -160,7 +161,7 @@ export const gradeProofStep = action({
     // Try each model; on transient errors (429 rate-limit, 5xx overload) retry
     // with backoff and fall through to the next model. 503 = Gemini overloaded,
     // very common and transient — must not fail the student's step.
-    const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"];
+    const models = GEMINI_MODELS.grading;
     const TRANSIENT = new Set([429, 500, 502, 503, 504]);
     const MAX_ATTEMPTS_PER_MODEL = 3;
     let lastError = "";
