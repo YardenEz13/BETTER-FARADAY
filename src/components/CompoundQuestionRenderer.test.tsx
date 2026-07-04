@@ -14,6 +14,7 @@ vi.mock("convex/react", () => ({
     if (apiPath.includes("finalizeSubmission")) return mockFinalizeSubmission;
     return vi.fn();
   },
+  useQuery: () => null,
 }));
 
 // Mock api
@@ -22,6 +23,9 @@ vi.mock("../../convex/_generated/api", () => ({
     homework: {
       submitAnswer: "submitAnswer",
       finalizeSubmission: "finalizeSubmission",
+    },
+    compoundQuestions: {
+      getFigureUrl: "getFigureUrl",
     },
   },
 }));

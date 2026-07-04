@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -70,6 +70,17 @@ export default function ProofSectionRenderer({
   const gradeStep = useAction(api.proofGrading.gradeProofStep);
   const savedSteps = useQuery(api.proofGrading.getSavedSteps, { assignedQuestionId, sectionLabel });
 
+  // The model is asked for 0-based stepIndex values but doesn't always comply
+  // (a packet-imported proof numbered 1..3 instead of 0..2). currentStep/results/
+  // inputs are keyed by POSITION in this sorted array, never by the raw
+  // stepIndex field, so progress tracking works regardless of what the model
+  // numbered them. The raw stepIndex is only used at the wire boundary (sent to
+  // gradeStep, matched against savedSteps) since that's what the backend keys on.
+  const orderedSteps = useMemo(
+    () => [...proofSteps].sort((a, b) => a.stepIndex - b.stepIndex),
+    [proofSteps],
+  );
+
   // Hydrate from previously saved progress so reload / navigation doesn't lose work.
   useEffect(() => {
     if (hydrated || savedSteps === undefined) return;
@@ -77,35 +88,38 @@ export default function ProofSectionRenderer({
       const results: Record<number, StepResult> = {};
       const inputs: Record<number, { claim: string; reason: string }> = {};
       for (const s of savedSteps) {
-        results[s.stepIndex] = {
+        const pos = orderedSteps.findIndex((st) => st.stepIndex === s.stepIndex);
+        if (pos === -1) continue;
+        results[pos] = {
           claimCorrect: !!s.claimCorrect,
           reasonCorrect: !!s.reasonCorrect,
           stepScore: s.stepScore,
           feedback: s.feedback ?? "",
         };
-        inputs[s.stepIndex] = { claim: s.studentClaim, reason: s.studentReason };
+        inputs[pos] = { claim: s.studentClaim, reason: s.studentReason };
       }
       setStepResults(results);
       setStepInputs(inputs);
-      // current step = first index that isn't passed yet
+      // current step = first position that isn't passed yet
       let cur = 0;
-      while (cur < proofSteps.length && results[cur] && results[cur].stepScore >= 0.5) cur++;
+      while (cur < orderedSteps.length && results[cur] && results[cur].stepScore >= 0.5) cur++;
       setCurrentStep(cur);
-      if (cur >= proofSteps.length) {
+      if (cur >= orderedSteps.length) {
         setCompleted(true);
         // Tell parent so it marks the section submitted (lets the student finalize).
-        const allCorrect = proofSteps.every((s) => results[s.stepIndex]?.stepScore >= 0.5);
+        const allCorrect = orderedSteps.every((_, pos) => results[pos]?.stepScore >= 0.5);
         onSectionComplete(allCorrect);
       }
     }
     setHydrated(true);
     // onSectionComplete intentionally omitted from deps (stable callback, run-once hydration)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedSteps, hydrated, proofSteps.length]);
+  }, [savedSteps, hydrated, orderedSteps]);
 
-  const handleSubmitStep = async (stepIdx: number) => {
-    const input = stepInputs[stepIdx];
+  const handleSubmitStep = async (pos: number) => {
+    const input = stepInputs[pos];
     if (!input?.claim?.trim() || !input?.reason?.trim()) return;
+    const step = orderedSteps[pos];
 
     setIsGrading(true);
     setGradeError(null);
@@ -113,18 +127,18 @@ export default function ProofSectionRenderer({
       const result = await gradeStep({
         assignedQuestionId,
         sectionLabel,
-        stepIndex: stepIdx,
+        stepIndex: step.stepIndex,
         studentClaim: input.claim.trim(),
         studentReason: input.reason.trim(),
       });
 
-      setStepResults((prev) => ({ ...prev, [stepIdx]: result }));
+      setStepResults((prev) => ({ ...prev, [pos]: result }));
 
       if (result.stepScore >= 0.5) {
-        const nextStep = stepIdx + 1;
-        if (nextStep >= proofSteps.length) {
+        const nextStep = pos + 1;
+        if (nextStep >= orderedSteps.length) {
           // All steps done
-          const allCorrect = Object.values({ ...stepResults, [stepIdx]: result }).every(
+          const allCorrect = Object.values({ ...stepResults, [pos]: result }).every(
             (r) => r.stepScore >= 0.5
           );
           setCompleted(true);
@@ -142,10 +156,10 @@ export default function ProofSectionRenderer({
     }
   };
 
-  const setInput = (stepIdx: number, field: "claim" | "reason", value: string) => {
+  const setInput = (pos: number, field: "claim" | "reason", value: string) => {
     setStepInputs((prev) => ({
       ...prev,
-      [stepIdx]: { ...prev[stepIdx], [field]: value },
+      [pos]: { ...prev[pos], [field]: value },
     }));
   };
 
@@ -180,10 +194,10 @@ export default function ProofSectionRenderer({
 
       {/* ── Step progress dots ── */}
       <div className="flex items-center gap-3 justify-center">
-        {proofSteps.map((_, idx) => {
-          const status = getStepStatus(idx, currentStep, stepResults);
+        {orderedSteps.map((_, pos) => {
+          const status = getStepStatus(pos, currentStep, stepResults);
           return (
-            <div key={idx} className="flex items-center gap-3">
+            <div key={pos} className="flex items-center gap-3">
               <motion.div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${
                   status === "correct"
@@ -206,11 +220,11 @@ export default function ProofSectionRenderer({
                 ) : status === "locked" ? (
                   <Lock size={12} />
                 ) : (
-                  idx + 1
+                  pos + 1
                 )}
               </motion.div>
-              {idx < proofSteps.length - 1 && (
-                <div className={`h-0.5 w-8 ${idx < currentStep ? "bg-primary" : "bg-outline"}`} />
+              {pos < orderedSteps.length - 1 && (
+                <div className={`h-0.5 w-8 ${pos < currentStep ? "bg-primary" : "bg-outline"}`} />
               )}
             </div>
           );
@@ -226,10 +240,10 @@ export default function ProofSectionRenderer({
           <div className="w-8" />
         </div>
 
-        {proofSteps.map((step) => {
-          const status = getStepStatus(step.stepIndex, currentStep, stepResults);
-          const result = stepResults[step.stepIndex];
-          const input = stepInputs[step.stepIndex] ?? { claim: "", reason: "" };
+        {orderedSteps.map((step, pos) => {
+          const status = getStepStatus(pos, currentStep, stepResults);
+          const result = stepResults[pos];
+          const input = stepInputs[pos] ?? { claim: "", reason: "" };
 
           if (status === "locked") {
             return (
@@ -296,7 +310,7 @@ export default function ProofSectionRenderer({
                     rows={2}
                     dir="rtl"
                     value={input.claim}
-                    onChange={(e) => setInput(step.stepIndex, "claim", e.target.value)}
+                    onChange={(e) => setInput(pos, "claim", e.target.value)}
                     disabled={isGrading}
                   />
                 </div>
@@ -308,7 +322,7 @@ export default function ProofSectionRenderer({
                     rows={2}
                     dir="rtl"
                     value={input.reason}
-                    onChange={(e) => setInput(step.stepIndex, "reason", e.target.value)}
+                    onChange={(e) => setInput(pos, "reason", e.target.value)}
                     disabled={isGrading}
                   />
                 </div>
@@ -317,7 +331,7 @@ export default function ProofSectionRenderer({
               <div className="flex flex-wrap gap-3 items-center">
                 <button
                   className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
-                  onClick={() => handleSubmitStep(step.stepIndex)}
+                  onClick={() => handleSubmitStep(pos)}
                   disabled={isGrading || !input.claim?.trim() || !input.reason?.trim()}
                 >
                   {isGrading ? (
