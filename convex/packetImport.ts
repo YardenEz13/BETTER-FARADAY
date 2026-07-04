@@ -50,6 +50,40 @@ export const cancel = mutation({
 });
 
 // ── Client-facing reads ──
+// All packet imports for a classroom, newest first, with per-status row counts —
+// powers the "packets in review / in progress" resume list so a teacher who
+// navigated away can find a packet again (there's no other way back to one).
+export const listPackets = query({
+  args: { classroomId: v.id("classrooms") },
+  handler: async (ctx, { classroomId }) => {
+    const packets = await ctx.db
+      .query("packetImports")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
+      .collect();
+    packets.sort((a, b) => b.createdAt - a.createdAt);
+    return Promise.all(
+      packets.map(async (p) => {
+        const rows = await ctx.db
+          .query("packetImportQuestions")
+          .withIndex("by_packet", (q) => q.eq("packetId", p._id))
+          .collect();
+        const counts: Record<string, number> = {};
+        for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
+        return {
+          _id: p._id,
+          sourceName: p.sourceName,
+          status: p.status,
+          mode: p.mode ?? "auto",
+          createdAt: p.createdAt,
+          total: rows.length,
+          approved: counts.approved ?? 0,
+          counts,
+        };
+      }),
+    );
+  },
+});
+
 export const getPacket = query({
   args: { packetId: v.id("packetImports") },
   handler: async (ctx, { packetId }) => {
@@ -731,17 +765,32 @@ export const createHomeworkFromPacket = mutation({
       }
     }
 
+    const questionCount = qIds.length + cIds.length;
     const homeworkId = await ctx.db.insert("homework", {
       classroomId: packet.classroomId,
       title,
       topicIds,
-      questionCount: qIds.length + cIds.length,
+      questionCount,
       createdAt: Date.now(),
       deadline,
       status: "active",
       pinnedQuestionIds: qIds,
       pinnedCompoundIds: cIds,
     });
+
+    // Fan the pinned questions out to each student as assignedQuestions —
+    // without this the homework row exists but renders empty (no assignments).
+    // questionCount == pinned count, so assignToStudents adds no extra
+    // personalized questions (remaining = 0); students get exactly the packet.
+    await ctx.scheduler.runAfter(0, internal.homework.assignToStudents, {
+      homeworkId,
+      classroomId: packet.classroomId,
+      topicIds,
+      questionCount,
+      pinnedQuestionIds: qIds,
+      pinnedCompoundIds: cIds,
+    });
+
     return { homeworkId, pinnedQuestions: qIds.length, pinnedCompounds: cIds.length, errors };
   },
 });
