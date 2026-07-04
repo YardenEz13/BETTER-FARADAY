@@ -18,6 +18,7 @@ import type * as clear from "../clear.js";
 import type * as commandCenter from "../commandCenter.js";
 import type * as compoundQuestions from "../compoundQuestions.js";
 import type * as crons from "../crons.js";
+import type * as geminiModels from "../geminiModels.js";
 import type * as geminiServer from "../geminiServer.js";
 import type * as homework from "../homework.js";
 import type * as homeworkRundown from "../homeworkRundown.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   commandCenter: typeof commandCenter;
   compoundQuestions: typeof compoundQuestions;
   crons: typeof crons;
+  geminiModels: typeof geminiModels;
   geminiServer: typeof geminiServer;
   homework: typeof homework;
   homeworkRundown: typeof homeworkRundown;
