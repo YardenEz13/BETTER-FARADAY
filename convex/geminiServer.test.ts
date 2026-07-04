@@ -10,8 +10,8 @@ function ok(text: string, finishReason = "STOP") {
     json: async () => ({ candidates: [{ content: { parts: [{ text }] }, finishReason }] }),
   };
 }
-function err(status: number, statusText = "Error") {
-  return { ok: false, status, statusText, json: async () => ({}) };
+function err(status: number, statusText = "Error", body = "") {
+  return { ok: false, status, statusText, json: async () => ({}), text: async () => body };
 }
 
 describe("geminiJson", () => {
@@ -107,6 +107,19 @@ describe("geminiJson", () => {
     await expect(
       geminiJson({ parts: [{ text: "x" }], maxRetriesPerModel: 1, baseDelayMs: 0, rateLimitDelayMs: 0 }),
     ).rejects.toThrow(/503/);
+  });
+
+  it("aborts immediately when the daily quota is exhausted", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      err(429, "Too Many Requests", '{"error":{"details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}'),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      geminiJson({ parts: [{ text: "x" }], baseDelayMs: 0, rateLimitDelayMs: 0 }),
+    ).rejects.toThrow(/daily quota exhausted/);
+    // No retries, no model fallback — the day quota gates every model call.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("retries the same model on a network error", async () => {

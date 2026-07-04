@@ -97,13 +97,29 @@ export async function geminiJson(opts: GeminiJsonOptions): Promise<GeminiJsonRes
       // (Retry-After when Google sends it, else 20s/40s/60s); 5xx keeps the
       // short exponential.
       if (res.status === 429 || res.status >= 500) {
-        lastError = new Error(`${model} transient ${res.status}`);
         if (res.status === 429) {
+          // Google's 429 body says WHICH quota tripped. Per-minute quotas
+          // reset in seconds — worth waiting. Per-day quotas reset at
+          // midnight PT — retrying just burns more requests, so give up
+          // with a message the teacher can act on.
+          let quotaBody = "";
+          try {
+            quotaBody = (await res.text()).slice(0, 600);
+          } catch {
+            /* body unavailable */
+          }
+          if (/PerDay/i.test(quotaBody)) {
+            throw new Error(
+              `${model} daily quota exhausted (resets midnight PT): ${quotaBody.slice(0, 300)}`,
+            );
+          }
+          lastError = new Error(`${model} transient 429 ${quotaBody.slice(0, 300)}`);
           const retryAfter = Number(res.headers?.get?.("retry-after"));
           nextDelay = Number.isFinite(retryAfter) && retryAfter > 0
             ? Math.min(retryAfter * 1000, 90000)
             : (opts.rateLimitDelayMs ?? 20000) * (attempt + 1);
         } else {
+          lastError = new Error(`${model} transient ${res.status}`);
           nextDelay = 0; // fall back to the exponential baseDelay schedule
         }
         continue;
