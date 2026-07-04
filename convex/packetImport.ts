@@ -230,6 +230,26 @@ export const getCropRowIds = internalQuery({
   },
 });
 
+// Record the Gemini Files API handle for a packet's PDF so later solve calls
+// reference it by URI instead of re-uploading the base64 PDF each time.
+export const setPacketPdfFile = internalMutation({
+  args: {
+    packetId: v.id("packetImports"),
+    uri: v.string(),
+    name: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, { packetId, uri, name, expiresAt }) => {
+    const p = await ctx.db.get(packetId);
+    if (!p || p.status === "cancelled") return;
+    await ctx.db.patch(packetId, {
+      pdfFileUri: uri,
+      pdfFileName: name,
+      pdfFileExpiresAt: expiresAt,
+    });
+  },
+});
+
 export const getRowImagesInternal = internalQuery({
   args: { questionId: v.id("packetImportQuestions") },
   handler: async (ctx, { questionId }) => {
@@ -262,6 +282,69 @@ export const writeStructureResult = internalMutation({
       topicId: topic?._id,
       status: isProof ? "proof_unverified" : "review",
     });
+  },
+});
+
+// Heartbeat: a pipeline action stamps every pending row of its packet when it
+// starts, proving something is still in flight. See sweepStalePackets.
+export const touchPendingRows = internalMutation({
+  args: { packetId: v.id("packetImports") },
+  handler: async (ctx, { packetId }) => {
+    const now = Date.now();
+    const pending = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet_status", (q) => q.eq("packetId", packetId).eq("status", "pending"))
+      .collect();
+    for (const row of pending) {
+      await ctx.db.patch(row._id, { pendingSince: now });
+    }
+  },
+});
+
+// Convex actions die silently at the 10-minute ceiling — their rows would sit
+// "pending" forever with no errorMessage. A pending row whose heartbeat is
+// older than this (heartbeats land at action start, and split retries are
+// staggered ≤45s apart) has no live action behind it → failed + retriable.
+export const STALE_PENDING_MS = 12 * 60 * 1000;
+
+// Pure so the cutoff logic is unit-testable without a Convex harness.
+export function isStalePending(
+  row: { status: string; pendingSince?: number; createdAt: number },
+  now: number,
+): boolean {
+  return row.status === "pending" && now - (row.pendingSince ?? row.createdAt) > STALE_PENDING_MS;
+}
+
+// Cron watchdog: fail orphaned pending rows so the teacher sees a retry button
+// instead of a progress bar frozen forever.
+export const sweepStalePackets = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const packets = await ctx.db.query("packetImports").collect();
+    for (const packet of packets) {
+      if (packet.status !== "solving") continue;
+      const pending = await ctx.db
+        .query("packetImportQuestions")
+        .withIndex("by_packet_status", (q) => q.eq("packetId", packet._id).eq("status", "pending"))
+        .collect();
+      if (pending.length === 0) continue;
+      let failedSome = false;
+      for (const row of pending) {
+        if (!isStalePending(row, now)) continue;
+        await ctx.db.patch(row._id, {
+          status: "failed",
+          errorMessage: "העיבוד נתקע ולא הסתיים — נסה שוב שאלה זו.",
+        });
+        failedSome = true;
+      }
+      if (!failedSome) continue;
+      const stillPending = await ctx.db
+        .query("packetImportQuestions")
+        .withIndex("by_packet_status", (q) => q.eq("packetId", packet._id).eq("status", "pending"))
+        .first();
+      if (!stillPending) await ctx.db.patch(packet._id, { status: "review" });
+    }
   },
 });
 

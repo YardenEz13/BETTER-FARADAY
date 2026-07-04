@@ -4,7 +4,8 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { geminiJson, type GeminiPart } from "./geminiServer";
+import { geminiJson, uploadFileToGemini, type GeminiPart } from "./geminiServer";
+import type { Doc } from "./_generated/dataModel";
 import { salvageJsonArray, stripFences, normalizeDraft } from "./packetParse";
 import { buildTopicList, inventoryPrompt, solvePrompt, structurePrompt, verifyPrompt } from "./packetPrompts";
 
@@ -14,16 +15,54 @@ import { buildTopicList, inventoryPrompt, solvePrompt, structurePrompt, verifyPr
 
 const KIND_VALUES = ["simple", "compound", "proof"];
 
-// Read the source PDF from storage and base64-encode it for Gemini inlineData.
-// Re-read per call (never passed as an action arg) to stay under payload limits.
-async function loadPdfBase64(
-  ctx: { storage: { get: (id: Id<"_storage">) => Promise<Blob | null> } },
-  storageId: Id<"_storage">,
-): Promise<string> {
-  const blob = await ctx.storage.get(storageId);
+// Crop-mode structure batches start small: proof-heavy packets truncate at
+// MAX_TOKENS when the whole packet goes in one call, forcing recursive halving
+// (12→6→3→1). 3–4 questions per call fits proof answers and skips most splits.
+const STRUCTURE_BATCH_SIZE = 4;
+// Stagger chained/split batches — free-tier rate limits are per-minute.
+const BATCH_STAGGER_MS = 45000;
+
+// Minimal shape of the action ctx bits ensurePdfFile needs.
+type PdfFileCtx = {
+  storage: { get: (id: Id<"_storage">) => Promise<Blob | null> };
+  runMutation: (ref: typeof internal.packetImport.setPacketPdfFile, args: {
+    packetId: Id<"packetImports">;
+    uri: string;
+    name: string;
+    expiresAt: number;
+  }) => Promise<unknown>;
+};
+
+// Re-upload if within this window of the Files API expiry, so a call never
+// references a file that lapses mid-request.
+const PDF_FILE_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+// Ensure the packet's PDF is available as a Gemini Files API URI, uploading it
+// once (and persisting the handle) if absent or near expiry. Inventory runs
+// first and populates this, so every later solve chunk reuses the same URI
+// instead of re-inlining the whole base64 PDF in its request body.
+async function ensurePdfFile(
+  ctx: PdfFileCtx,
+  packet: Doc<"packetImports">,
+): Promise<{ fileUri: string; mimeType: string }> {
+  if (
+    packet.pdfFileUri &&
+    packet.pdfFileExpiresAt &&
+    packet.pdfFileExpiresAt - PDF_FILE_EXPIRY_BUFFER_MS > Date.now()
+  ) {
+    return { fileUri: packet.pdfFileUri, mimeType: "application/pdf" };
+  }
+  const blob = await ctx.storage.get(packet.pdfStorageId);
   if (!blob) throw new Error("PDF missing from storage");
-  const buf = await blob.arrayBuffer();
-  return Buffer.from(buf).toString("base64");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const file = await uploadFileToGemini(bytes, "application/pdf", packet.sourceName || "packet.pdf");
+  await ctx.runMutation(internal.packetImport.setPacketPdfFile, {
+    packetId: packet._id,
+    uri: file.uri,
+    name: file.name,
+    expiresAt: file.expiresAt,
+  });
+  return { fileUri: file.uri, mimeType: file.mimeType };
 }
 
 function asRecord(x: unknown): Record<string, unknown> {
@@ -38,9 +77,9 @@ export const runInventory = internalAction({
     if (!packet || packet.status === "cancelled") return;
 
     const topics = await ctx.runQuery(internal.packetImport.getTopicsInternal, {});
-    let pdf: string;
+    let pdfFile: { fileUri: string; mimeType: string };
     try {
-      pdf = await loadPdfBase64(ctx, packet.pdfStorageId);
+      pdfFile = await ensurePdfFile(ctx, packet);
     } catch {
       await ctx.runMutation(internal.packetImport.failPacket, { packetId, error: "טעינת ה-PDF נכשלה." });
       return;
@@ -50,7 +89,7 @@ export const runInventory = internalAction({
     try {
       const r = await geminiJson({
         parts: [
-          { inlineData: { mimeType: "application/pdf", data: pdf } },
+          { fileData: { mimeType: pdfFile.mimeType, fileUri: pdfFile.fileUri } },
           { text: inventoryPrompt(buildTopicList(topics)) },
         ],
         maxOutputTokens: 8000,
@@ -86,6 +125,9 @@ export const runChunk = internalAction({
     const packet = await ctx.runQuery(internal.packetImport.getPacketInternal, { packetId });
     if (!packet || packet.status === "cancelled") return;
 
+    // Heartbeat for the stale-packet watchdog: proves an action is in flight.
+    await ctx.runMutation(internal.packetImport.touchPendingRows, { packetId });
+
     // Empty batch (shouldn't happen) → let the mutation advance state.
     if (labels.length === 0) {
       await ctx.runMutation(internal.packetImport.writeChunkResults, {
@@ -97,9 +139,9 @@ export const runChunk = internalAction({
     }
 
     const topics = await ctx.runQuery(internal.packetImport.getTopicsInternal, {});
-    let pdf: string;
+    let pdfFile: { fileUri: string; mimeType: string };
     try {
-      pdf = await loadPdfBase64(ctx, packet.pdfStorageId);
+      pdfFile = await ensurePdfFile(ctx, packet);
     } catch {
       await ctx.runMutation(internal.packetImport.failPacket, { packetId, error: "טעינת ה-PDF נכשלה." });
       return;
@@ -109,7 +151,7 @@ export const runChunk = internalAction({
     try {
       result = await geminiJson({
         parts: [
-          { inlineData: { mimeType: "application/pdf", data: pdf } },
+          { fileData: { mimeType: pdfFile.mimeType, fileUri: pdfFile.fileUri } },
           { text: solvePrompt(buildTopicList(topics), labels, labels.length) },
         ],
         maxOutputTokens: 32000,
@@ -182,6 +224,19 @@ export const runStructure = internalAction({
       return;
     }
 
+    // Heartbeat for the stale-packet watchdog: proves an action is in flight.
+    await ctx.runMutation(internal.packetImport.touchPendingRows, { packetId });
+
+    // Cap the batch: structure the first few rows now, chain the remainder on
+    // a stagger. Small batches keep proof-heavy answers under MAX_TOKENS.
+    if (rowRefs.length > STRUCTURE_BATCH_SIZE) {
+      await ctx.scheduler.runAfter(BATCH_STAGGER_MS, internal.packetPipeline.runStructure, {
+        packetId,
+        questionIds: rowRefs.slice(STRUCTURE_BATCH_SIZE).map((r) => r.id),
+      });
+      rowRefs = rowRefs.slice(0, STRUCTURE_BATCH_SIZE);
+    }
+
     const parts: GeminiPart[] = [];
     const rowByIndex = new Map<number, (typeof rowRefs)[number]>();
     for (let i = 0; i < rowRefs.length; i++) {
@@ -233,7 +288,7 @@ export const runStructure = internalAction({
         packetId,
         questionIds: ids.slice(0, mid),
       });
-      await ctx.scheduler.runAfter(45000, internal.packetPipeline.runStructure, {
+      await ctx.scheduler.runAfter(BATCH_STAGGER_MS, internal.packetPipeline.runStructure, {
         packetId,
         questionIds: ids.slice(mid),
       });

@@ -444,6 +444,12 @@ export default defineSchema({
     totalQuestions: v.optional(v.number()), // set at inventory time; progress is derived from row status counts
     verifyEnabled: v.boolean(),             // run the independent-solve verification pass
     error: v.optional(v.string()),
+    // Auto mode: the source PDF uploaded once to the Gemini Files API, then
+    // referenced by URI in every inventory/solve call instead of re-inlining the
+    // base64 PDF per request (major egress cut). Re-uploaded when past expiry.
+    pdfFileUri: v.optional(v.string()),
+    pdfFileName: v.optional(v.string()),      // "files/…" handle for files.get/delete
+    pdfFileExpiresAt: v.optional(v.number()), // ms epoch; Files API stores ~48h
     createdAt: v.number(),
   }).index("by_classroom", ["classroomId"]),
 
@@ -479,6 +485,10 @@ export default defineSchema({
     publishedQuestionId: v.optional(v.id("questions")),
     publishedCompoundId: v.optional(v.id("compoundQuestions")),
     errorMessage: v.optional(v.string()),
+    // Heartbeat: refreshed by every pipeline action that picks the row up while
+    // "pending". The stale-packet cron treats a pending row whose heartbeat is
+    // older than STALE_PENDING_MS as orphaned (action hit the 10-min ceiling).
+    pendingSince: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_packet", ["packetId"])

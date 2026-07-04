@@ -31,4 +31,11 @@ crons.interval(
   internal.bridge.sweepExpired,
 );
 
+// Fail packet-import rows stuck "pending" past the action ceiling (watchdog)
+crons.interval(
+  "sweep-stale-packet-imports",
+  { minutes: 5 },
+  internal.packetImport.sweepStalePackets,
+);
+
 export default crons;

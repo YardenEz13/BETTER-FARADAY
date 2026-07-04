@@ -8,7 +8,104 @@
 
 export type GeminiPart =
   | { text: string }
-  | { inlineData: { mimeType: string; data: string } };
+  | { inlineData: { mimeType: string; data: string } }
+  // A file already uploaded via the Files API (see uploadFileToGemini). Sending
+  // the URI instead of inline base64 keeps large, reused media (the packet PDF)
+  // out of every request body — the file's bytes leave Convex only once.
+  | { fileData: { mimeType: string; fileUri: string } };
+
+export interface GeminiFile {
+  uri: string;          // "https://…/files/abc" — reference in a fileData part
+  name: string;         // "files/abc" — for files.get / files.delete
+  mimeType: string;
+  expiresAt: number;    // ms epoch; Files API stores uploads for ~48h
+}
+
+const GEMINI_BASE = "https://generativelanguage.googleapis.com";
+
+/**
+ * Upload bytes to the Gemini Files API and wait until the file is ACTIVE.
+ * Uses the documented resumable-upload protocol via raw fetch (matching the
+ * key/fetch pattern of geminiJson). Returns a handle to reference by URI in
+ * later generateContent calls. Throws on any failure — the caller decides
+ * whether to fall back to inline data or fail the job.
+ */
+export async function uploadFileToGemini(
+  bytes: Uint8Array,
+  mimeType: string,
+  displayName: string,
+): Promise<GeminiFile> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
+  const numBytes = bytes.byteLength;
+
+  // 1. Start a resumable upload — Google returns the one-time upload URL in a
+  //    response header, not the body.
+  const startRes = await fetch(`${GEMINI_BASE}/upload/v1beta/files?key=${apiKey}`, {
+    method: "POST",
+    headers: {
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(numBytes),
+      "X-Goog-Upload-Header-Content-Type": mimeType,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ file: { display_name: displayName } }),
+  });
+  if (!startRes.ok) {
+    throw new Error(
+      `Gemini file upload start failed: ${startRes.status} ${(await startRes.text()).slice(0, 300)}`,
+    );
+  }
+  const uploadUrl = startRes.headers.get("x-goog-upload-url");
+  if (!uploadUrl) throw new Error("Gemini file upload: missing upload URL header");
+
+  // 2. Upload the bytes and finalize in a single request.
+  const upRes = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize",
+    },
+    body: bytes,
+  });
+  if (!upRes.ok) {
+    throw new Error(
+      `Gemini file upload failed: ${upRes.status} ${(await upRes.text()).slice(0, 300)}`,
+    );
+  }
+  const info = await upRes.json();
+  const file = info?.file;
+  if (!file?.uri || !file?.name) throw new Error("Gemini file upload: malformed response");
+
+  // 3. A freshly uploaded file may be PROCESSING; it can't be referenced until
+  //    ACTIVE. PDFs flip almost immediately, but poll defensively.
+  const active = await waitForFileActive(file.name, apiKey);
+  const expMs = Date.parse(active?.expirationTime ?? file.expirationTime ?? "");
+  return {
+    uri: file.uri,
+    name: file.name,
+    mimeType: file.mimeType ?? mimeType,
+    // Fall back to a conservative 47h if the API omitted expirationTime.
+    expiresAt: Number.isFinite(expMs) ? expMs : Date.now() + 47 * 60 * 60 * 1000,
+  };
+}
+
+async function waitForFileActive(
+  name: string,
+  apiKey: string,
+): Promise<{ state?: string; expirationTime?: string }> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(`${GEMINI_BASE}/v1beta/${name}?key=${apiKey}`);
+    if (res.ok) {
+      const f = await res.json();
+      if (f?.state === "ACTIVE") return f;
+      if (f?.state === "FAILED") throw new Error("Gemini file processing failed");
+    }
+    await sleep(1000 * (attempt + 1));
+  }
+  throw new Error("Gemini file did not become ACTIVE in time");
+}
 
 export interface GeminiJsonOptions {
   parts: GeminiPart[];
