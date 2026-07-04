@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, RotateCcw, Zap, Bot, Activity,
@@ -67,6 +67,28 @@ export default function PracticeSession() {
   const reducedMotion = !!useReducedMotion();
   const questionCardRef = useRef<HTMLDivElement>(null);
   const xpChipRef = useRef<HTMLDivElement>(null);
+  const choicesRef = useRef<HTMLDivElement>(null);
+
+  /* Choices pop in one after another, right behind the stem letters
+     (the stem itself letter-jumps via MathText's animateLetters). */
+  useLayoutEffect(() => {
+    const el = choicesRef.current;
+    if (!el || !activeQuestion || reducedMotion) return;
+    const items = el.children;
+    if (items.length === 0) return;
+    const tween = gsap.fromTo(
+      items,
+      { autoAlpha: 0, y: 26, scale: 0.94 },
+      {
+        autoAlpha: 1, y: 0, scale: 1,
+        duration: 0.5, delay: 0.35, stagger: 0.09, ease: "back.out(1.9)",
+        // hand transforms back to Framer Motion's hover/tap scaling
+        onComplete: () => gsap.set(items, { clearProps: "transform,opacity,visibility" }),
+      },
+    );
+    return () => { tween.kill(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeQuestion?._id]);
 
   /* Brief green/red glow on the question card after an answer. */
   const flashCard = (kind: "correct" | "wrong") => {
@@ -338,9 +360,9 @@ export default function PracticeSession() {
                     </div>
                   </div>
 
-                  {/* Stem */}
+                  {/* Stem — letters jump in one by one via animateLetters */}
                   <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
-                    <MathText>{activeQuestion.stem}</MathText>
+                    <MathText animateLetters>{activeQuestion.stem}</MathText>
                   </div>
 
                   {/* Celebration — electric spark discharge on a correct answer */}
@@ -381,7 +403,7 @@ export default function PracticeSession() {
                   </AnimatePresence>
 
                   {/* Choices */}
-                  <div className="flex flex-col gap-3 mb-6">
+                  <div ref={choicesRef} className="flex flex-col gap-3 mb-6">
                     {activeQuestion.choices.map((choice: string, idx: number) => {
                       const isThisCorrect = idx === activeQuestion.correctIndex;
                       const isSelected    = selected === idx;

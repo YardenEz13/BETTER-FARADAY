@@ -559,6 +559,11 @@ body {
   to   { clip-path: inset(0 0 0 0);    transform: none;               opacity: 1; }
 }
 
+/* Letter-by-letter GSAP jump reveal (see useLetterJump) — words stay atomic
+   so line-wrapping and Hebrew/LTR bidi ordering survive the per-char spans */
+.jump-word { display: inline-block; white-space: nowrap; }
+.jump-char { display: inline-block; will-change: transform; }
+
 /* Answer feedback — brief glow flash on the practice question card */
 .answer-glow-correct {
   box-shadow: 0 4px 0 0 var(--color-outline),

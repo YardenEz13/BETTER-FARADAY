@@ -102,6 +102,62 @@ export function useStaggerReveal<T extends HTMLElement>(
   }, [ref]);
 }
 
+export interface LetterJumpOptions {
+  /** set false to skip entirely (avoids the DOM query on non-animated renders) */
+  enabled?: boolean;
+  /** seconds between each character (default 0.024) */
+  stagger?: number;
+  /** cap on the total stagger span in seconds so long texts don't drag (default 1.6) */
+  maxStaggerSpan?: number;
+  /** jump height in px (default 22) */
+  y?: number;
+  duration?: number;
+  delay?: number;
+  ease?: string;
+  /** CSS selector for the characters (default ".jump-char") */
+  selector?: string;
+}
+
+/**
+ * Staggers `.jump-char` spans (see MathText's `animateLetters`) into view with
+ * a bouncy per-letter jump. Re-runs whenever `deps` change (e.g. question id).
+ */
+export function useLetterJump<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  deps: readonly unknown[],
+  options: LetterJumpOptions = {},
+) {
+  const opts = useRef(options);
+  opts.current = options;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const o = opts.current;
+    if (!el || o.enabled === false || prefersReducedMotion()) return;
+    const chars = el.querySelectorAll(o.selector ?? ".jump-char");
+    if (chars.length === 0) return;
+    // long texts keep the same total reveal time instead of dragging on
+    const stagger = Math.min(o.stagger ?? 0.024, (o.maxStaggerSpan ?? 1.6) / chars.length);
+    const tween = gsap.fromTo(
+      chars,
+      { autoAlpha: 0, y: o.y ?? 22, scale: 0.7 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: o.duration ?? 0.55,
+        delay: o.delay ?? 0,
+        ease: o.ease ?? "back.out(2.6)",
+        stagger,
+        onComplete: () => gsap.set(chars, { clearProps: "transform,opacity,visibility" }),
+      },
+    );
+    return () => {
+      tween.kill();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
 export interface CountUpOptions {
   duration?: number;
   /** appended after the number, e.g. "%" */

@@ -152,7 +152,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           </div>
         </div>
 
-        <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText>{overridePreamble ?? question.preamble}</MathText></div>
+        <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText animateLetters>{overridePreamble ?? question.preamble}</MathText></div>
 
         {question.preambleParams.length > 0 && (
           <div className="flex flex-wrap gap-3 p-4 bg-surface border border-outline">
@@ -216,7 +216,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     transition={{ duration: 0.3 }}
                     className="px-6 pb-6 overflow-hidden border-t border-outline pt-6"
                   >
-                    <div className="text-lg mb-6 leading-relaxed text-on-surface"><MathText>{section.prompt}</MathText></div>
+                    <div className="text-lg mb-6 leading-relaxed text-on-surface"><MathText animateLetters>{section.prompt}</MathText></div>
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
                       <div className="label-mono text-tertiary mb-6 p-4 border border-tertiary/40 bg-tertiary/10 flex items-center gap-2">

@@ -76,7 +76,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
         </div>
 
         <div className="text-xl leading-relaxed text-on-surface font-medium" style={{ fontFamily: "'Assistant', sans-serif" }}>
-          <MathText>{overrideStem ?? question.stem}</MathText>
+          <MathText animateLetters>{overrideStem ?? question.stem}</MathText>
         </div>
       </motion.div>
 
