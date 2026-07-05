@@ -145,6 +145,7 @@ export default function AIChatPanel({
   // Adaptive help: how stuck the student is on the CURRENT question (0-3). Reset on
   // every new question; drives Faraday's escalation hint → concept → example → solution.
   const struggleRef = useRef(0);
+  const stuckStreakRef = useRef(0); // consecutive stuck-signal messages since the last escalation
   const [helpLevel, setHelpLevel] = useState(0); // mirror of struggleRef for the UI meter
   const isSendingRef = useRef(false);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
@@ -270,7 +271,7 @@ export default function AIChatPanel({
       setMessages([]);
       setIsResumed(false);
       initGuard.current = false; // allow re-init
-      struggleRef.current = 0; setHelpLevel(0); // fresh question → back to gentle hints
+      struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0); // fresh question → back to gentle hints
       prevQuestionIdRef.current = questionId;
     }
   }, [questionId]);
@@ -395,7 +396,7 @@ export default function AIChatPanel({
             setAwaitingSelfAssess(false);
             setPendingNextQuestion(false);
             userMsgCount.current = 0;
-            struggleRef.current = 0; setHelpLevel(0);
+            struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
             initGuard.current = false;
 
             // We defer calling startChat() here just like in createFreshChat,
@@ -495,7 +496,7 @@ export default function AIChatPanel({
     };
     setMessages([carryOver]);
     userMsgCount.current = 0;
-    struggleRef.current = 0; setHelpLevel(0);
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     sessionStartedAt.current = Date.now();
     setSessionIndex(prev => prev + 1);
 
@@ -681,20 +682,32 @@ export default function AIChatPanel({
       userMsgCount.current++;
 
       // ── Adaptive help escalation ──
-      // Raise the help level when the student signals being stuck or explicitly asks
-      // for the answer, with a gentle turn-based floor so repeated back-and-forth on
-      // the same question climbs hint → concept → example → full solution on its own.
+      // Raise the help level only when the student is STILL stuck after already
+      // getting help on this question — a first message that happens to contain
+      // "לא הבנתי" (e.g. a starter prompt) should not skip straight past the hint
+      // level. Escalate on a repeated stuck signal (not a single one), with a slow
+      // turn-based floor as a backstop for long, unproductive back-and-forth.
       {
         const explicitAsk = /פשוט תגיד|תגיד לי את התשובה|תן לי את התשובה|מה התשובה|תפתור לי|פתור לי|just tell|show me the answer/i.test(userMsg);
         const stuckSignal = /לא הבנתי|לא מבין|לא יודע|תעזור|עזור לי|לא מצליח|עדיין לא|תקוע|לא ברור|קשה לי|מבולבל/.test(userMsg);
+        const turns = userMsgCount.current; // already incremented above; 1 = first message
+
         if (explicitAsk) {
           struggleRef.current = 3;
+        } else if (turns === 1) {
+          // First message never escalates on its own — Faraday always starts at a hint.
+          stuckStreakRef.current = stuckSignal ? 1 : 0;
         } else {
-          if (stuckSignal) struggleRef.current += 1;
-          const turns = userMsgCount.current;
-          if (turns >= 6) struggleRef.current = Math.max(struggleRef.current, 3);
-          else if (turns >= 4) struggleRef.current = Math.max(struggleRef.current, 2);
-          else if (turns >= 2) struggleRef.current = Math.max(struggleRef.current, 1);
+          stuckStreakRef.current = stuckSignal ? stuckStreakRef.current + 1 : 0;
+          // Two stuck messages in a row (after already receiving help) → bump one level.
+          if (stuckStreakRef.current >= 2) {
+            struggleRef.current += 1;
+            stuckStreakRef.current = 0;
+          }
+          // Slow backstop for long threads that never explicitly say "stuck".
+          if (turns >= 10) struggleRef.current = Math.max(struggleRef.current, 3);
+          else if (turns >= 7) struggleRef.current = Math.max(struggleRef.current, 2);
+          else if (turns >= 4) struggleRef.current = Math.max(struggleRef.current, 1);
         }
         struggleRef.current = Math.min(3, struggleRef.current);
         setHelpLevel(struggleRef.current);
@@ -976,7 +989,7 @@ export default function AIChatPanel({
     setPartialBriefs([]);
     setSessionIndex(0);
     userMsgCount.current = 0;
-    struggleRef.current = 0; setHelpLevel(0);
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     setSelfAssessment(null);
     setPendingNextQuestion(false);
     setCycleState("active");
@@ -1001,7 +1014,7 @@ export default function AIChatPanel({
     setAwaitingSelfAssess(false);
     setPendingNextQuestion(false);
     userMsgCount.current = 0;
-    struggleRef.current = 0; setHelpLevel(0);
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     initGuard.current = false;
     onClose();
   };

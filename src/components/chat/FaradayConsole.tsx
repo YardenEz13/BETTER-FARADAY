@@ -28,7 +28,7 @@ export default function FaradayConsole({
   onOpenQRBridge, onOpenPlayground,
 }: FaradayConsoleProps) {
   return (
-    <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
+    <div dir="rtl" className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
       <div className="max-w-4xl mx-auto">
         {/* Console panel */}
         <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
@@ -97,7 +97,8 @@ export default function FaradayConsole({
             <div className="flex-1 relative">
               <input
                 type="text"
-                className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
+                dir="rtl"
+                className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md text-right"
                 placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
                 value={input}
                 onChange={e => onInputChange(e.target.value)}
