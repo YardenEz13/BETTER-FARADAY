@@ -42,6 +42,44 @@ import FaradayCanvas from "./FaradayCanvas";
 import ThinkingWave from "./chat/ThinkingWave";
 import FaradayConsole from "./chat/FaradayConsole";
 
+// Adaptive-help stages, mirrored from the tutor's escalation levels (localAI.ts).
+const HELP_STAGES = [
+  { label: "רמז", color: "var(--color-primary)" },
+  { label: "הסבר", color: "var(--color-secondary)" },
+  { label: "דוגמה", color: "var(--color-tertiary)" },
+  { label: "פתרון", color: "var(--color-error)" },
+] as const;
+
+/** Compact meter in the chat header showing how much help Faraday is giving right now. */
+function HelpLevelMeter({ level }: { level: number }) {
+  const lvl = Math.max(0, Math.min(3, level));
+  return (
+    <div className="hidden md:flex items-center gap-2" title="רמת העזרה עולה ככל שנתקעים באותה שאלה">
+      <span className="font-label-md text-on-surface-variant" style={{ fontSize: 11 }}>עזרה</span>
+      <div className="flex items-center gap-1">
+        {HELP_STAGES.map((s, i) => {
+          const on = i <= lvl;
+          return (
+            <span
+              key={s.label}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: i === lvl ? 18 : 8,
+                height: 8,
+                background: on ? s.color : "var(--color-outline)",
+                boxShadow: i === lvl ? `0 0 8px ${s.color}` : "none",
+              }}
+            />
+          );
+        })}
+      </div>
+      <span className="font-label-md font-bold" style={{ fontSize: 11, color: HELP_STAGES[lvl].color }}>
+        {HELP_STAGES[lvl].label}
+      </span>
+    </div>
+  );
+}
+
 interface AIChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -72,6 +110,11 @@ export default function AIChatPanel({
   const [chatId, setChatId] = useState<Id<"aiChats"> | null>(null);
   const [online, setOnline] = useState(isOnline());
   const [, setIsResumed] = useState(false);
+  // lg+ → the panel docks as a side column beside the question; below that it stays
+  // a bottom sheet. Drives both the entrance animation axis and the layout classes.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches
+  );
 
   // Session Cycling state
   const [cycleState, setCycleState] = useState<"active" | "cycling" | "self_assess">("active");
@@ -99,6 +142,10 @@ export default function AIChatPanel({
   const sessionStartedAt = useRef(Date.now());
   const lastValidQuestionIdRef = useRef(questionId);
   const userMsgCount = useRef(0);
+  // Adaptive help: how stuck the student is on the CURRENT question (0-3). Reset on
+  // every new question; drives Faraday's escalation hint → concept → example → solution.
+  const struggleRef = useRef(0);
+  const [helpLevel, setHelpLevel] = useState(0); // mirror of struggleRef for the UI meter
   const isSendingRef = useRef(false);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -144,6 +191,14 @@ export default function AIChatPanel({
       onBridgeRequestHandled?.();
     }
   }, [requestBridge, isOpen, onBridgeRequestHandled]);
+
+  // Track viewport → dock (desktop) vs bottom sheet (mobile)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // Track online status
   useEffect(() => {
@@ -215,6 +270,7 @@ export default function AIChatPanel({
       setMessages([]);
       setIsResumed(false);
       initGuard.current = false; // allow re-init
+      struggleRef.current = 0; setHelpLevel(0); // fresh question → back to gentle hints
       prevQuestionIdRef.current = questionId;
     }
   }, [questionId]);
@@ -339,6 +395,7 @@ export default function AIChatPanel({
             setAwaitingSelfAssess(false);
             setPendingNextQuestion(false);
             userMsgCount.current = 0;
+            struggleRef.current = 0; setHelpLevel(0);
             initGuard.current = false;
 
             // We defer calling startChat() here just like in createFreshChat,
@@ -438,6 +495,7 @@ export default function AIChatPanel({
     };
     setMessages([carryOver]);
     userMsgCount.current = 0;
+    struggleRef.current = 0; setHelpLevel(0);
     sessionStartedAt.current = Date.now();
     setSessionIndex(prev => prev + 1);
 
@@ -622,6 +680,26 @@ export default function AIChatPanel({
 
       userMsgCount.current++;
 
+      // ── Adaptive help escalation ──
+      // Raise the help level when the student signals being stuck or explicitly asks
+      // for the answer, with a gentle turn-based floor so repeated back-and-forth on
+      // the same question climbs hint → concept → example → full solution on its own.
+      {
+        const explicitAsk = /פשוט תגיד|תגיד לי את התשובה|תן לי את התשובה|מה התשובה|תפתור לי|פתור לי|just tell|show me the answer/i.test(userMsg);
+        const stuckSignal = /לא הבנתי|לא מבין|לא יודע|תעזור|עזור לי|לא מצליח|עדיין לא|תקוע|לא ברור|קשה לי|מבולבל/.test(userMsg);
+        if (explicitAsk) {
+          struggleRef.current = 3;
+        } else {
+          if (stuckSignal) struggleRef.current += 1;
+          const turns = userMsgCount.current;
+          if (turns >= 6) struggleRef.current = Math.max(struggleRef.current, 3);
+          else if (turns >= 4) struggleRef.current = Math.max(struggleRef.current, 2);
+          else if (turns >= 2) struggleRef.current = Math.max(struggleRef.current, 1);
+        }
+        struggleRef.current = Math.min(3, struggleRef.current);
+        setHelpLevel(struggleRef.current);
+      }
+
       // ── Ensure chat is created before sending first message ──
       let currentChatId = chatIdRef.current;
       if (!currentChatId && online) {
@@ -691,7 +769,7 @@ export default function AIChatPanel({
             },
             messages,
             controller.signal,
-            { agentType, questionContext: currentContext }  // always pass fresh context
+            { agentType, questionContext: currentContext, struggleLevel: struggleRef.current as 0 | 1 | 2 | 3 }  // fresh context + adaptive help level
           );
           log.ai("Gemini response received", { length: finalResponse.length });
         } finally {
@@ -898,6 +976,7 @@ export default function AIChatPanel({
     setPartialBriefs([]);
     setSessionIndex(0);
     userMsgCount.current = 0;
+    struggleRef.current = 0; setHelpLevel(0);
     setSelfAssessment(null);
     setPendingNextQuestion(false);
     setCycleState("active");
@@ -922,6 +1001,7 @@ export default function AIChatPanel({
     setAwaitingSelfAssess(false);
     setPendingNextQuestion(false);
     userMsgCount.current = 0;
+    struggleRef.current = 0; setHelpLevel(0);
     initGuard.current = false;
     onClose();
   };
@@ -939,16 +1019,18 @@ export default function AIChatPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", damping: 28, stiffness: 220 }}
-            className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-2xl overflow-hidden h-[58vh] md:h-[50vh]"
+            initial={isDesktop ? { x: "-100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            animate={{ x: 0, y: 0, opacity: 1 }}
+            exit={isDesktop ? { x: "-100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 260 }}
+            className="fixed z-[100] flex flex-col font-body-md overflow-hidden border-outline
+              bottom-0 left-0 w-full h-[62vh] rounded-t-[24px] border-t-2
+              lg:top-[68px] lg:bottom-0 lg:h-auto lg:w-[min(440px,42vw)] lg:rounded-none lg:border-t-0 lg:border-s-2"
             style={{
               background: 'var(--color-surface)',
-              borderTop: '2px solid var(--color-outline-variant)',
-              borderTopLeftRadius: '24px',
-              borderTopRightRadius: '24px',
+              boxShadow: isDesktop
+                ? '6px 0 28px rgba(20,40,30,0.10)'
+                : '0 -10px 34px rgba(20,40,30,0.14)',
             }}
             dir="rtl"
           >
@@ -1001,6 +1083,9 @@ export default function AIChatPanel({
                 </div>
               </div>
 
+              {/* Adaptive help meter (practice/homework only) */}
+              {agentType !== "proof" && <HelpLevelMeter level={helpLevel} />}
+
               {/* Actions */}
               <div className="flex items-center gap-2">
 
@@ -1029,7 +1114,7 @@ export default function AIChatPanel({
               <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col gap-6 scroll-smooth z-10">
+              <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-5 py-6 flex flex-col gap-5 scroll-smooth z-10">
 
                 {/* Context Header */}
                 {topicName && (
