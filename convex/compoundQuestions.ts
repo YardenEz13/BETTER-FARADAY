@@ -28,6 +28,16 @@ export const list = query({
   },
 });
 
+// ── Signed URL for a compound question's scanned figure (packet import) ──
+export const getFigureUrl = query({
+  args: { id: v.id("compoundQuestions") },
+  handler: async (ctx, { id }) => {
+    const q = await ctx.db.get(id);
+    if (!q?.figureImageStorageId) return null;
+    return await ctx.storage.getUrl(q.figureImageStorageId);
+  },
+});
+
 // ── Get compound questions that match any of the given topic IDs ──
 export const getByTopics = query({
   args: { topicIds: v.array(v.id("topics")) },

@@ -14,6 +14,7 @@ vi.mock("convex/react", () => ({
     if (apiPath.includes("finalizeSubmission")) return mockFinalizeSubmission;
     return vi.fn();
   },
+  useQuery: () => null,
 }));
 
 // Mock api
@@ -23,8 +24,21 @@ vi.mock("../../convex/_generated/api", () => ({
       submitAnswer: "submitAnswer",
       finalizeSubmission: "finalizeSubmission",
     },
+    compoundQuestions: {
+      getFigureUrl: "getFigureUrl",
+    },
   },
 }));
+
+const matchText = (text: string) => (content: string, element: Element | null) => {
+  if (!element) return false;
+  const hasText = (node: Element) => node.textContent ? node.textContent.includes(text) : false;
+  const nodeHasText = hasText(element);
+  const childrenDontHaveText = Array.from(element.children).every(
+    child => !hasText(child)
+  );
+  return nodeHasText && childrenDontHaveText;
+};
 
 const mockQuestion = {
   _id: "cq-1" as Id<"compoundQuestions">,
@@ -79,11 +93,11 @@ describe("CompoundQuestionRenderer Component", () => {
     );
 
     // Preamble should render
-    expect(screen.getByText(/נתונה פונקציה/)).toBeInTheDocument();
+    expect(screen.getByText(matchText("נתונה פונקציה"))).toBeInTheDocument();
     expect(screen.getByText("חקירת פונקציה")).toBeInTheDocument();
     
     // First section prompt is visible
-    expect(screen.getByText(/מצא את נקודות החיתוך/)).toBeInTheDocument();
+    expect(screen.getByText(matchText("מצא את נקודות החיתוך"))).toBeInTheDocument();
 
     // Second section (dependent) should show as locked / label is locked
     const secondHeader = screen.getByText("סעיף ב׳");
@@ -142,7 +156,7 @@ describe("CompoundQuestionRenderer Component", () => {
 
     // Section ב prompt should now be visible
     await waitFor(() => {
-      expect(screen.getByText(/מצא את קודקוד הפרבולה/)).toBeInTheDocument();
+      expect(screen.getByText(matchText("מצא את קודקוד הפרבולה"))).toBeInTheDocument();
     });
   });
 });

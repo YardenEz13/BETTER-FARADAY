@@ -3,11 +3,63 @@ import { api } from "../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users, Shield } from "../components/electric";
 import { log } from "../lib/logger";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, SignalWave } from "../components/electric";
 import type { ElectricIconProps, ElectricTone } from "../components/electric";
+import { useEffect, useRef } from "react";
+import { gsap, prefersReducedMotion, useMagneticHover, useStaggerReveal } from "../lib/gsapUtils";
+
+/* Hero headline words slide up into place one after another (manual split). */
+function SplitWords({ text, className, delay = 0 }: { text: string; className?: string; delay?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prefersReducedMotion()) return;
+    const tween = gsap.fromTo(
+      el.querySelectorAll(".sw-word"),
+      { autoAlpha: 0, y: "0.9em" },
+      { autoAlpha: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.08, delay },
+    );
+    return () => { tween.kill(); };
+  }, [text, delay]);
+  return (
+    <span ref={ref} className={className}>
+      {text.split(" ").map((word, i, arr) => (
+        <span key={i}>
+          <span className="sw-word inline-block will-change-transform">{word}</span>
+          {i < arr.length - 1 && " "}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/* Feature row: icon springs in from the inline side, text fades in 100ms later. */
+function FeatureItem({ Icon, text, tone, bg, index }: {
+  Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string; index: number;
+}) {
+  const iconRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const icon = iconRef.current, label = textRef.current;
+    if (!icon || !label || prefersReducedMotion()) return;
+    const delay = 0.45 + index * 0.14;
+    const tl = gsap.timeline({ delay });
+    tl.fromTo(icon, { autoAlpha: 0, x: 42, scale: 0.6 }, { autoAlpha: 1, x: 0, scale: 1, duration: 0.7, ease: "back.out(2)" })
+      .fromTo(label, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 0.1);
+    return () => { tl.kill(); };
+  }, [index]);
+  return (
+    <div className="flex items-center gap-3 font-semibold text-on-surface-variant">
+      <div ref={iconRef} className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 ${bg}`}>
+        <Icon size={22} tone={tone} glow={0.7} />
+      </div>
+      <span ref={textRef}>{text}</span>
+    </div>
+  );
+}
 
 /**
  * RolePage — role-select entry point.
@@ -21,6 +73,12 @@ import type { ElectricIconProps, ElectricTone } from "../components/electric";
 export default function RolePage() {
   const navigate = useNavigate();
   const students = useQuery(api.classroom.list);
+
+  // 3D tilt on the two role cards
+  const studentCardRef = useRef<HTMLDivElement>(null);
+  const teacherCardRef = useRef<HTMLButtonElement>(null);
+  useMagneticHover(studentCardRef, { strength: 0.03, tilt: 4 });
+  useMagneticHover(teacherCardRef, { strength: 0.05, tilt: 5 });
 
   const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
     { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה שלך — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
@@ -79,24 +137,19 @@ export default function RolePage() {
             </span>
 
             <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.4rem, 11vw, 3.6rem)" }}>
-             פלטפורמת הלמידה
+              <SplitWords text="פלטפורמת הלמידה" delay={0.25} />
               <br />
-              <span className="text-primary">שמותאמת לך</span>
+              <SplitWords text="שמותאמת עבורך" className="text-primary" delay={0.45} />
             </h1>
             <p className="mt-4 lg:mt-5 max-w-[27rem] text-base lg:text-lg font-medium leading-relaxed text-on-surface-variant">
               <span className="lg:hidden">בחר כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
-              <span className="hidden lg:inline">למידת מתמטיקה מעולם לא הייתה מהנה יותר.</span>
+              <span className="hidden lg:inline">למידת מתמטיקה מעולם לא הייתה נגישה ופשוטה יותר.</span>
             </p>
 
             {/* Feature list is desktop-only — on mobile the role cards come first (matches the phone design) */}
             <div className="mt-9 hidden lg:flex flex-col gap-4">
-              {features.map(({ Icon, text, tone, bg }) => (
-                <div key={text} className="flex items-center gap-3 font-semibold text-on-surface-variant">
-                  <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 ${bg}`}>
-                    <Icon size={22} tone={tone} glow={0.7} />
-                  </div>
-                  {text}
-                </div>
+              {features.map((f, i) => (
+                <FeatureItem key={f.text} {...f} index={i} />
               ))}
             </div>
           </motion.div>
@@ -119,7 +172,8 @@ export default function RolePage() {
 
             {/* Student card */}
             <div
-              className="relative overflow-hidden rounded-[22px] border-2 border-outline bg-surface p-6 transition-transform duration-150 hover:-translate-y-0.5"
+              ref={studentCardRef}
+              className="relative overflow-hidden rounded-[22px] border-2 border-outline bg-surface p-6"
               style={{ boxShadow: "var(--shadow-clay)" }}
             >
               <div className="absolute inset-x-0 top-0 h-1.5 bg-primary" />
@@ -139,9 +193,10 @@ export default function RolePage() {
 
             {/* Teacher card */}
             <button
+              ref={teacherCardRef}
               type="button"
               onClick={() => { log.auth("teacher login clicked"); navigate("/teacher"); }}
-              className="group relative overflow-hidden rounded-[22px] border-2 border-secondary/40 bg-surface p-6 text-right transition-transform duration-150 hover:-translate-y-0.5"
+              className="group relative overflow-hidden rounded-[22px] border-2 border-secondary/40 bg-surface p-6 text-right"
               style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-secondary) 32%, var(--color-outline)), 0 2px 10px rgba(20,40,30,.05)" }}
             >
               <div className="absolute inset-x-0 top-0 h-1.5 bg-secondary" />
@@ -150,7 +205,7 @@ export default function RolePage() {
                   <Shield size={18} />
                 </span>
                 <span className="text-xl font-extrabold text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
-                  מרכז פיקוד מורה
+                  כניסת מורה
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -171,7 +226,7 @@ export default function RolePage() {
   );
 }
 
-function StudentSelector({ students }: { students: any[] | undefined }) {
+function StudentSelector({ students }: { students: StudentEntry[] | undefined }) {
   const navigate = useNavigate();
 
   if (!students) {
@@ -185,30 +240,43 @@ function StudentSelector({ students }: { students: any[] | undefined }) {
   }
 
   return (
-    <div className="flex max-h-[232px] flex-col gap-2 overflow-y-auto pe-1" style={{ scrollbarWidth: "thin" }}>
-      {students.map((s, i) => {
-        const hue = [...s.name].reduce((acc: number, c: string) => c.charCodeAt(0) * 31 + ((acc << 5) - acc), 0);
-        const h = Math.abs(hue) % 360;
-        return (
-          <motion.button
-            key={s._id}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.05 + i * 0.04 }}
-            onClick={() => { log.auth("student login", { studentId: s._id, name: s.name }); navigate(`/student/${s._id}`); }}
-            className="group flex w-full items-center gap-3 rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-right transition-all duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
-          >
-            <span
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold"
-              style={{ background: `hsl(${h}, 50%, 88%)`, color: `hsl(${h}, 60%, 30%)`, borderColor: `hsl(${h}, 50%, 72%)` }}
-            >
-              {s.name.slice(0, 1)}
-            </span>
-            <span className="flex-1 font-semibold text-on-surface transition-colors group-hover:text-primary">{s.name}</span>
-            <ArrowLeft size={15} className="-translate-x-2 text-primary opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
-          </motion.button>
-        );
-      })}
+    <StudentButtonList students={students} onPick={(s) => { log.auth("student login", { studentId: s._id, name: s.name }); navigate(`/student/${s._id}`); }} />
+  );
+}
+
+interface StudentEntry { _id: string; name: string }
+
+function StudentButtonList({ students, onPick }: { students: StudentEntry[]; onPick: (s: StudentEntry) => void }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useStaggerReveal(listRef, { stagger: 0.04, y: 14, duration: 0.4 });
+  return (
+    <div ref={listRef} className="flex max-h-[232px] flex-col gap-2 overflow-y-auto pe-1" style={{ scrollbarWidth: "thin" }}>
+      {students.map((s) => (
+        <StudentButton key={s._id} student={s} onPick={() => onPick(s)} />
+      ))}
     </div>
+  );
+}
+
+function StudentButton({ student, onPick }: { student: StudentEntry; onPick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useMagneticHover(ref, { strength: 0.14 });
+  const hue = [...student.name].reduce((acc: number, c: string) => c.charCodeAt(0) * 31 + ((acc << 5) - acc), 0);
+  const h = Math.abs(hue) % 360;
+  return (
+    <button
+      ref={ref}
+      onClick={onPick}
+      className="group flex w-full items-center gap-3 rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-right transition-colors duration-200 hover:border-primary hover:bg-primary/5"
+    >
+      <span
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold"
+        style={{ background: `hsl(${h}, 50%, 88%)`, color: `hsl(${h}, 60%, 30%)`, borderColor: `hsl(${h}, 50%, 72%)` }}
+      >
+        {student.name.slice(0, 1)}
+      </span>
+      <span className="flex-1 font-semibold text-on-surface transition-colors group-hover:text-primary">{student.name}</span>
+      <ArrowLeft size={15} className="-translate-x-2 text-primary opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+    </button>
   );
 }

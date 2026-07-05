@@ -1,5 +1,9 @@
 # Faraday Project (Cobalt Apollo) Instructions for Claude
 
+## Claude Behavior Preferences
+- Always use graphify for visualizations/diagrams in this project.
+- Default to `/caveman` communication mode unless the user asks otherwise.
+
 ## Project Overview
 Faraday Project (formerly Cobalt Apollo) is a next-generation adaptive learning platform for students, featuring dynamic math practice, an AI-driven math tutor (Michael Faraday), and real-time conceptual heatmap tracking for educators. The project is specifically tailored for the Israeli educational system (high school curriculum math).
 

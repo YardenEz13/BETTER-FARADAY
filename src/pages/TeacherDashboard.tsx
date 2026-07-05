@@ -2,18 +2,20 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useCountUp, useStaggerReveal, useAnimatedValue, type StaggerRevealOptions } from "../lib/gsapUtils";
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bell, LogOut, Sparkles, Users, LayoutGrid, Activity, Bot, BookOpen,
+  Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap,
+  Zap, GraduationCap, ElectricBolt
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import { StudentPowerMapView } from "./StudentPowerMapView";
-import { ElectricLoader } from "../components/electric";
+import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { useTheme } from "../components/ThemeContext";
 import {
@@ -26,11 +28,11 @@ type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework" | "profile";
 type Sort = "risk" | "acc" | "name";
 
 const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
-  { id: "triage",   label: "לוח מיון",   short: "מיון",   Icon: Users },
-  { id: "mastery",  label: "מפת שליטה",  short: "שליטה",  Icon: LayoutGrid },
-  { id: "pulse",    label: "דופק הכיתה", short: "דופק",   Icon: Activity },
-  { id: "aiChats",  label: "שיחות AI",   short: "שיחות",  Icon: Bot },
-  { id: "homework", label: "שיעורי בית", short: "ש״ב",   Icon: BookOpen },
+  { id: "triage", label: "לוח מיון", short: "מיון", Icon: Users },
+  { id: "mastery", label: "מפת שליטה", short: "שליטה", Icon: LayoutGrid },
+  { id: "pulse", label: "דופק הכיתה", short: "דופק", Icon: Activity },
+  { id: "aiChats", label: "שיחות AI", short: "שיחות", Icon: Bot },
+  { id: "homework", label: "שיעורי בית", short: "ש״ב", Icon: BookOpen },
 ];
 
 const RISK_ORDER: Record<CCStatus, number> = { risk: 0, watch: 1, thriving: 2 };
@@ -81,7 +83,7 @@ export default function TeacherDashboard() {
 
   function fire(msg: string) { setToast(msg); }
 
-  if (!data) return <ElectricLoader label="טוען מרכז פיקוד..." />;
+  if (!data) return <TeacherDashboardSkeleton />;
 
   const onCommandView = view === "triage" || view === "mastery" || view === "pulse";
 
@@ -100,11 +102,11 @@ export default function TeacherDashboard() {
         {/* brand + health ring */}
         <div className="flex items-center gap-3 flex-1 min-w-[220px]">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-primary glow-primary flex-shrink-0">
-              <Sparkles size={18} className="text-white" />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-primary/10 border-2 border-primary/25 text-primary glow-primary flex-shrink-0">
+              <ElectricBolt size={22} tone="spark" glow={1} />
             </div>
             <div>
-              <div className="font-display font-extrabold text-[17px] leading-none text-on-surface">מרכז פיקוד מורה</div>
+              <div className="font-display font-extrabold text-[17px] leading-none text-on-surface">מה מצבנו?</div>
               <div className="text-[11px] font-semibold text-on-surface-variant mt-0.5">
                 {data.classroom?.name ?? "כיתה"} · <span className="num">{data.students.length}</span> תלמידים
               </div>
@@ -243,6 +245,45 @@ export default function TeacherDashboard() {
   );
 }
 
+/* ───────────────────────── LOADING SKELETON ───────────────────────── */
+function TeacherDashboardSkeleton() {
+  return (
+    <div dir="rtl" className="relative min-h-screen bg-background">
+      <div className="page-shell page-shell--wide pt-6 pb-24">
+        {/* KPI ribbon */}
+        <div className="grid gap-3.5 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(168px, 1fr))" }}>
+          {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} variant="kpi" />)}
+        </div>
+        {/* triage lanes */}
+        <div className="flex flex-wrap gap-3.5">
+          {Array.from({ length: 3 }).map((_, lane) => (
+            <div key={lane} className="flex flex-col gap-2.5" style={{ flex: "1 1 230px", minWidth: 220 }}>
+              <div className="shimmer rounded-xl" style={{ height: 42 }} />
+              {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} variant="student-card" />)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── GSAP HELPERS ───────────────────────── */
+/* Container whose children stagger-reveal as they scroll into view. */
+function StaggerList({ className, style, children, options }: {
+  className?: string; style?: React.CSSProperties; children: React.ReactNode; options?: StaggerRevealOptions;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useStaggerReveal(ref, options);
+  return <div ref={ref} className={className} style={style}>{children}</div>;
+}
+
+/* KPI number that counts up from 0 when scrolled into view. */
+function KpiValue({ value, suffix }: { value: number; suffix?: string }) {
+  const ref = useCountUp<HTMLDivElement>(value, { suffix });
+  return <div ref={ref} className="num font-extrabold leading-none mt-3" style={{ fontSize: 28 }} />;
+}
+
 /* ───────────────────────── KPI RIBBON ───────────────────────── */
 function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
   const ICON: Record<string, typeof Users> = { students: Users, mastery: Zap, active: Activity, ai: Bot, risk: AlertTriangle };
@@ -267,9 +308,7 @@ function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
                 </span>
               )}
             </div>
-            <div className="num font-extrabold leading-none mt-3" style={{ fontSize: 28 }}>
-              {k.value}{(k as { suffix?: string }).suffix ?? ""}
-            </div>
+            <KpiValue value={k.value} suffix={(k as { suffix?: string }).suffix ?? ""} />
             <div className="flex items-end justify-between gap-2 mt-1">
               <span className="text-[12px] font-semibold text-on-surface-variant">{k.label}</span>
               <Sparkline values={k.spark} color={color} />
@@ -310,10 +349,10 @@ function TriageView({ data, onSelect, fire, onReview }: { data: CommandCenterDat
                   <span className="font-display font-extrabold text-[15px]">{lane.he}</span>
                   <span className="num font-extrabold text-[13px] ms-auto" style={{ color: "#fff", background: color, padding: "2px 10px", borderRadius: 99 }}>{list.length}</span>
                 </div>
-                <div className="flex flex-col gap-2.5">
+                <StaggerList className="flex flex-col gap-2.5" options={{ stagger: 0.04, y: 34 }}>
                   {list.length === 0 && <div className="text-[12px] text-on-surface-variant px-2 py-3">אין תלמידים</div>}
                   {list.map((s) => <StudentCard key={s.id} s={s} topics={data.topics} onSelect={onSelect} fire={fire} />)}
-                </div>
+                </StaggerList>
               </div>
             );
           })}
@@ -473,8 +512,11 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
 function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; students: CCStudent[]; onSelect: (s: CCStudent) => void }) {
   const cols = data.topics.length;
   const template = `minmax(150px, 200px) repeat(${cols}, minmax(46px, 1fr))`;
+  // heat cells fill in a start-to-end cascade as the grid scrolls into view
+  const gridRef = useRef<HTMLDivElement>(null);
+  useStaggerReveal(gridRef, { selector: ".mg-cell", stagger: 0.006, y: 0, scale: 0.55, duration: 0.35, ease: "power2.out" });
   return (
-    <div className="clay-card" style={{ padding: 16, overflowX: "auto" }}>
+    <div ref={gridRef} className="clay-card" style={{ padding: 16, overflowX: "auto" }}>
       <div style={{ minWidth: 120 + cols * 60 }}>
         <div className="grid gap-1.5 mb-1.5" style={{ gridTemplateColumns: template }}>
           <div className="text-[11px] font-bold text-on-surface-variant flex items-end ps-1 pb-1.5">תלמיד · שליטה כוללת</div>
@@ -498,7 +540,7 @@ function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; st
               {s.mastery.map((m, i) => {
                 const cc = cellColor(m.pct, m.attempts > 0);
                 return (
-                  <div key={i} onClick={() => onSelect(s)} className="num flex items-center justify-center cursor-pointer rounded-lg font-bold text-[12px]" style={{ background: cc.bg, color: cc.fg, boxShadow: cc.glow, minHeight: 38 }}>
+                  <div key={i} onClick={() => onSelect(s)} className="mg-cell num flex items-center justify-center cursor-pointer rounded-lg font-bold text-[12px]" style={{ background: cc.bg, color: cc.fg, boxShadow: cc.glow, minHeight: 38 }}>
                     {m.attempts > 0 ? m.pct : "—"}
                   </div>
                 );
@@ -519,6 +561,9 @@ function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; st
 /* ───────────────────────── PULSE ───────────────────────── */
 function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: CCStudent) => void }) {
   const ticker = data.ticker.length > 0 ? data.ticker : [{ tone: "primary" as CCTone, who: "המערכת", text: "ממתינה לפעילות" }];
+  // one shared 0→target charge-up drives the gauge, its readout, and the reactor dials
+  const animAvg = useAnimatedValue(data.classAvg);
+  const chargeRatio = data.classAvg > 0 ? animAvg / data.classAvg : 1;
   return (
     <div>
       {/* energy hero */}
@@ -526,9 +571,9 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
         <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 220, height: 220 }}>
           <div className="field-ring" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <div className="field-ring field-ring--2" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
-          <Gauge pct={data.classAvg} />
+          <Gauge pct={animAvg} />
           <div className="absolute z-[2] text-center">
-            <div className="num font-extrabold text-primary leading-none" style={{ fontSize: 52 }}>{data.classAvg}<span style={{ fontSize: 24 }}>%</span></div>
+            <div className="num font-extrabold text-primary leading-none" style={{ fontSize: 52 }}>{Math.round(animAvg)}<span style={{ fontSize: 24 }}>%</span></div>
             <div className="text-[12px] font-bold text-on-surface-variant mt-1">אנרגיית הכיתה</div>
           </div>
         </div>
@@ -552,7 +597,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
               const has = t.attempts > 0;
               return (
                 <div key={t.topicId} className="flex flex-col items-center gap-2">
-                  <div className="relative" style={{ width: 72, height: 72, borderRadius: "50%", background: has ? `conic-gradient(${col} ${t.pct * 3.6}deg, var(--color-surface-container-high) 0)` : "var(--color-surface-container-high)" }}>
+                  <div className="relative" style={{ width: 72, height: 72, borderRadius: "50%", background: has ? `conic-gradient(${col} ${t.pct * 3.6 * chargeRatio}deg, var(--color-surface-container-high) 0)` : "var(--color-surface-container-high)" }}>
                     <div className="absolute inset-[9px] rounded-full flex items-center justify-center" style={{ background: "var(--color-surface)" }}>
                       <span className="num font-extrabold text-[15px]" style={{ color: has ? col : "var(--color-on-surface-variant)" }}>{has ? t.pct : "—"}</span>
                     </div>
@@ -569,7 +614,8 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
         <div className="clay-card" style={{ flex: "1 1 380px", padding: 22 }}>
           <div className="font-display font-extrabold text-[16px] mb-1">קונסטלציית תלמידים</div>
           <p className="text-[12px] text-on-surface-variant mb-4">גודל וזוהר = רמת שליטה · הקש לפרטים</p>
-          <div className="flex flex-wrap gap-3 justify-center items-center" style={{ minHeight: 150 }}>
+          <StaggerList className="flex flex-wrap gap-3 justify-center items-center" style={{ minHeight: 150 }}
+            options={{ random: true, scale: 0, y: 14, ease: "back.out(2.4)", stagger: 0.05, duration: 0.6 }}>
             {data.students.map((s) => {
               const col = STATUS[s.status].color;
               const size = 32 + Math.round((s.acc / 100) * 34);
@@ -580,7 +626,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
                 </div>
               );
             })}
-          </div>
+          </StaggerList>
         </div>
       </div>
 

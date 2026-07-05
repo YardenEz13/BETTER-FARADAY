@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,6 +69,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
   const submitAnswer = useMutation(api.homework.submitAnswer);
   const finalizeSubmission = useMutation(api.homework.finalizeSubmission);
+  const figureUrl = useQuery(api.compoundQuestions.getFigureUrl, { id: question._id });
 
   const isSectionUnlocked = (section: Section) => {
     if (!section.dependsOn || section.dependsOn.length === 0) return true;
@@ -152,7 +153,13 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           </div>
         </div>
 
-        <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText>{overridePreamble ?? question.preamble}</MathText></div>
+        {figureUrl && (
+          <div className="flex justify-center mb-6 p-4 bg-white border border-outline rounded-xl">
+            <img src={figureUrl} alt="שרטוט השאלה" className="max-w-full rounded" style={{ maxHeight: 420 }} />
+          </div>
+        )}
+
+        <div className="text-xl leading-relaxed text-on-surface mb-6"><MathText animateLetters>{overridePreamble ?? question.preamble}</MathText></div>
 
         {question.preambleParams.length > 0 && (
           <div className="flex flex-wrap gap-3 p-4 bg-surface border border-outline">
@@ -216,7 +223,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     transition={{ duration: 0.3 }}
                     className="px-6 pb-6 overflow-hidden border-t border-outline pt-6"
                   >
-                    <div className="text-lg mb-6 leading-relaxed text-on-surface"><MathText>{section.prompt}</MathText></div>
+                    <div className="text-lg mb-6 leading-relaxed text-on-surface"><MathText animateLetters>{section.prompt}</MathText></div>
 
                     {section.dependsOn && section.dependsOn.length > 0 && (
                       <div className="label-mono text-tertiary mb-6 p-4 border border-tertiary/40 bg-tertiary/10 flex items-center gap-2">

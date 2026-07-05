@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, SignalWave, Lens } from "../components/electric";
+import { useCountUp } from "../lib/gsapUtils";
 
 export default function LearningProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -16,6 +17,29 @@ export default function LearningProgress() {
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
+  const getTopicStats = (topicId: string) => {
+    const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
+    if (!d || d.total === 0) return { correct: 0, total: 0, percent: 0 };
+    const percent = Math.round((d.correct / d.total) * 100);
+    return { ...d, percent };
+  };
+
+  // Derived stats — computed before the loading return so the count-up hooks
+  // below always run in the same order (Rules of Hooks). Guarded for the
+  // pre-load render when student/topics/stats are still undefined.
+  const safeTopics = topics ?? [];
+  const totalAttempts = stats?.totalAttempts ?? 0;
+  const allCorrect = safeTopics.reduce((s, t) => s + (stats?.byTopic[t._id]?.correct || 0), 0);
+  const overallAcc = totalAttempts > 0 ? Math.round((allCorrect / totalAttempts) * 100) : 0;
+  const completedTopics = safeTopics.filter((t) => getTopicStats(t._id).percent >= 80).length;
+  const totalXP = ((student?.streak ?? 0) * 100) + (totalAttempts * 25) + (allCorrect * 50);
+
+  // GSAP count-up on the headline stat numbers (tweens in on reveal, re-tweens on live data)
+  const xpChipRef = useCountUp<HTMLSpanElement>(totalXP, { suffix: " XP" });
+  const accChipRef = useCountUp<HTMLSpanElement>(overallAcc, { suffix: "% דיוק" });
+  const heroXpRef = useCountUp<HTMLHeadingElement>(totalXP);
+  const attemptsRef = useCountUp<HTMLSpanElement>(totalAttempts, { grouped: false });
+
   if (!student || !topics) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
@@ -24,19 +48,6 @@ export default function LearningProgress() {
       </div>
     </div>
   );
-
-  const getTopicStats = (topicId: string) => {
-    const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
-    if (!d || d.total === 0) return { correct: 0, total: 0, percent: 0 };
-    const percent = Math.round((d.correct / d.total) * 100);
-    return { ...d, percent };
-  };
-
-  const totalAttempts = stats?.totalAttempts ?? 0;
-  const allCorrect = topics.reduce((s, t) => s + (stats?.byTopic[t._id]?.correct || 0), 0);
-  const overallAcc = totalAttempts > 0 ? Math.round((allCorrect / totalAttempts) * 100) : 0;
-  const completedTopics = topics.filter(t => getTopicStats(t._id).percent >= 80).length;
-  const totalXP = (student.streak * 100) + (totalAttempts * 25) + (allCorrect * 50);
 
   const getStatusLabel = (percent: number) => {
     if (percent >= 80) return { label: "הושלם", badge: "bg-primary/15 border-primary/40 text-primary" };
@@ -103,7 +114,7 @@ export default function LearningProgress() {
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
             <ElectricBolt size={18} tone="spark" glow={0.5} animated={false} />
-            <span className="num font-bold text-primary text-sm">{totalXP.toLocaleString()} XP</span>
+            <span ref={xpChipRef} className="num font-bold text-primary text-sm">{totalXP.toLocaleString()} XP</span>
           </div>
           {/* Streak chip */}
           <div
@@ -119,7 +130,7 @@ export default function LearningProgress() {
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
             <Lens size={18} tone="violet" glow={0.5} />
-            <span className="num font-bold text-secondary text-sm">{overallAcc}% דיוק</span>
+            <span ref={accChipRef} className="num font-bold text-secondary text-sm">{overallAcc}% דיוק</span>
           </div>
           {/* Completed chip */}
           <div
@@ -253,7 +264,7 @@ export default function LearningProgress() {
 
             <div className="relative z-10 text-center w-full">
               <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">נקודות ניסיון</p>
-              <h2 className="num text-5xl font-black mb-1">{totalXP.toLocaleString()}</h2>
+              <h2 ref={heroXpRef} className="num text-5xl font-black mb-1">{totalXP.toLocaleString()}</h2>
               <p className="text-white/70 text-sm mb-7">XP סה"כ</p>
 
               <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex items-center justify-center gap-3 border border-white/20">
@@ -315,7 +326,7 @@ export default function LearningProgress() {
               {/* Divider + answered questions */}
               <div className="pt-4 border-t-2 border-outline-variant/40 flex justify-between items-center">
                 <span className="text-on-surface-variant text-sm">שאלות שנענו</span>
-                <span className="num font-black text-xl text-tertiary">{totalAttempts}</span>
+                <span ref={attemptsRef} className="num font-black text-xl text-tertiary">{totalAttempts}</span>
               </div>
             </div>
           </motion.div>

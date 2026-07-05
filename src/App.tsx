@@ -18,6 +18,7 @@ const StudentPdfAssignment = lazy(() => import("./pages/StudentPdfAssignment"));
 const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
+const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
 
 function RouteFallback() {
   return <ElectricLoader label="טוען…" />;
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/student/:studentId/pdf/:assignmentId" element={<StudentPdfAssignment />} />
             <Route path="/student/:studentId/progress" element={<LearningProgress />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
             <Route path="*" element={<Navigate to="/" replace />} />

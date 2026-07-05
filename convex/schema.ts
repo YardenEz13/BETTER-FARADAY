@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { packetDraft } from "./packetValidators";
 
 export default defineSchema({
   classrooms: defineTable({
@@ -208,6 +209,10 @@ export default defineSchema({
     tags: v.array(v.string()),            // ["פרמטר", "נקודות קיצון", "אסימפטוטה"]
     bagrutYear: v.optional(v.string()),   // e.g., "תשפ״ה קיץ מועד א"
     sourceBook: v.optional(v.string()),   // e.g., "יואל גבע עמ׳ 342"
+    // The original scanned/cropped figure (packet import, crop mode). Stored as
+    // a file, not inline base64 — this doc is loaded on every homework fetch,
+    // so an inline image would bloat every read of the question.
+    figureImageStorageId: v.optional(v.id("_storage")),
     preamble: v.string(),                 // Shared context / function definition
     preambleParams: v.array(v.object({
       symbol: v.string(),                // "a", "b", "m"
@@ -421,6 +426,77 @@ export default defineSchema({
       answeredAt: v.optional(v.number()),
     })),
   }).index("by_assignment", ["assignmentId"]),
+
+  // ── Full-PDF packet import (מטלת קיץ): one uploaded multi-page PDF → AI
+  // extracts EVERY question, solves each into the app's existing formats, and
+  // stages them for teacher review before publishing to `questions` /
+  // `compoundQuestions`. Unlike `pdfAssignments` (teacher manually crops each
+  // question), this is an AI-driven bulk extractor. The pipeline runs as
+  // scheduler-chained internalActions (inventory → solve chunks → optional
+  // verify), keyed off the per-question rows below — the packet row itself
+  // holds NO inventory/chunk blob (see the no-unbounded-array guideline).
+  packetImports: defineTable({
+    classroomId: v.id("classrooms"),
+    sourceName: v.string(),                 // original PDF filename
+    pdfStorageId: v.id("_storage"),         // full source PDF (file storage)
+    // "auto" = AI reads the whole PDF itself (inventory → solve chunks).
+    // "crops" = teacher crops each question + its answer-key snippet, then ONE
+    // Gemini call structures the batch (no solving — answers come from crops).
+    mode: v.optional(v.string()),           // "auto" (default) | "crops"
+    status: v.string(),                     // "cropping" | "inventory" | "solving" | "verifying" | "review" | "failed" | "cancelled"
+    pageCount: v.optional(v.number()),
+    totalQuestions: v.optional(v.number()), // set at inventory time; progress is derived from row status counts
+    verifyEnabled: v.boolean(),             // run the independent-solve verification pass
+    error: v.optional(v.string()),
+    // Auto mode: the source PDF uploaded once to the Gemini Files API, then
+    // referenced by URI in every inventory/solve call instead of re-inlining the
+    // base64 PDF per request (major egress cut). Re-uploaded when past expiry.
+    pdfFileUri: v.optional(v.string()),
+    pdfFileName: v.optional(v.string()),      // "files/…" handle for files.get/delete
+    pdfFileExpiresAt: v.optional(v.number()), // ms epoch; Files API stores ~48h
+    createdAt: v.number(),
+  }).index("by_classroom", ["classroomId"]),
+
+  // ── One extracted question from a packet (also the inventory record) ──
+  // Inserted at inventory time (status "pending", draft absent), then patched
+  // with the solved `draft` once its chunk lands. Proof questions land as
+  // "proof_unverified" and require an explicit teacher confirmation before
+  // approve. The `draft` union mirrors the publish targets exactly.
+  packetImportQuestions: defineTable({
+    packetId: v.id("packetImports"),
+    classroomId: v.id("classrooms"),
+    sourceLabel: v.string(),                // normalized key (see normalizeLabel) — used to match solve results
+    sourceLabelRaw: v.string(),             // as printed in the packet, for display
+    orderIndex: v.number(),                 // packet reading order
+    pageStart: v.number(),
+    pageEnd: v.number(),
+    kind: v.string(),                       // "simple" | "compound" | "proof"
+    status: v.string(),                     // "pending" | "review" | "flagged" | "proof_unverified" | "approved" | "discarded" | "failed"
+    topicHe: v.string(),                    // model's topic guess (verbatim from the injected topic list)
+    topicId: v.optional(v.id("topics")),    // resolved via exact/fuzzy nameHe match; unset blocks approve
+    draft: v.optional(packetDraft),
+    // Crop mode: teacher-cropped JPEGs (base64, no data-URL prefix). The answer
+    // crop is the authoritative answer key — the AI transcribes, never re-solves.
+    // Kept per-row (≤1MB doc limit) and EXCLUDED from list queries (size).
+    questionImageBase64: v.optional(v.string()),
+    answerImageBase64: v.optional(v.string()),
+    editedByTeacher: v.optional(v.boolean()), // guards against late pipeline writes clobbering manual edits
+    proofReviewedAt: v.optional(v.number()),  // set when the teacher confirms the proof steps (approve gate)
+    verification: v.optional(v.object({
+      verdict: v.string(),                  // "match" | "mismatch" | "skipped" | "proof_checked" | "proof_mismatch"
+      detail: v.optional(v.string()),       // Hebrew note surfaced to the teacher
+    })),
+    publishedQuestionId: v.optional(v.id("questions")),
+    publishedCompoundId: v.optional(v.id("compoundQuestions")),
+    errorMessage: v.optional(v.string()),
+    // Heartbeat: refreshed by every pipeline action that picks the row up while
+    // "pending". The stale-packet cron treats a pending row whose heartbeat is
+    // older than STALE_PENDING_MS as orphaned (action hit the 10-min ceiling).
+    pendingSince: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_packet", ["packetId"])
+    .index("by_packet_status", ["packetId", "status"]),
 
   // ── QR bridge: hand a handwritten-work photo from phone → desktop chat ──
   // Short-lived, single-use capability sessions. The desktop creates one and

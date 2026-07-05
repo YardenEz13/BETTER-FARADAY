@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState } from "react";
@@ -6,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SignalWave, FieldLines, ElectricBolt } from "../components/electric";
 import QuestionImportModal from "../components/QuestionImportModal";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
+import PacketImportButton from "../components/PacketImportButton";
+import PacketCropBuilder from "../components/PacketCropBuilder";
 import {
   FileText, Plus, Send, Calendar, Clock, XCircle,
   BarChart2, Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -13,7 +16,12 @@ import {
 } from "../components/electric";
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
+  const navigate = useNavigate();
   const topics = useQuery(api.topics.list);
+  const packets = useQuery(
+    api.packetImport.listPackets,
+    classroomId ? { classroomId } : "skip"
+  );
   const homeworkList = useQuery(
     api.homework.getHomeworkForClassroom,
     classroomId ? { classroomId } : "skip"
@@ -60,6 +68,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   );
 
   const [showPdfBuilder, setShowPdfBuilder] = useState(false);
+  const [showCropBuilder, setShowCropBuilder] = useState(false);
   const [pdfToast, setPdfToast] = useState<string | null>(null);
   const [expandedPdfId, setExpandedPdfId] = useState<Id<"pdfAssignments"> | null>(null);
 
@@ -159,6 +168,57 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           </button>
         </div>
 
+        {/* Packet imports — resume list. Without this there's no way back to a
+            packet mid-review once you leave the review page. */}
+        {packets && packets.filter((p) => p.status !== "cancelled").length > 0 && (
+          <div className="mb-8">
+            <div className="label-mono text-[var(--color-primary)] mb-3 text-lg border-b border-[color-mix(in_srgb,var(--color-primary)_20%,transparent)] pb-2 inline-block">
+              ייבוא חוברות
+            </div>
+            <div className="flex flex-col gap-2">
+              {packets
+                .filter((p) => p.status !== "cancelled")
+                .map((p) => {
+                  const running = ["cropping", "inventory", "solving", "verifying"].includes(p.status);
+                  const label =
+                    p.status === "review" ? "מוכן לבדיקה" :
+                    p.status === "failed" ? "נכשל" :
+                    running ? "בעיבוד…" : p.status;
+                  return (
+                    <button
+                      type="button"
+                      key={p._id}
+                      onClick={() => navigate(`/teacher/packet/${p._id}`)}
+                      className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border-2 border-outline bg-surface text-right transition-all hover:border-[color-mix(in_srgb,var(--color-primary)_55%,transparent)]"
+                      style={{ boxShadow: "var(--shadow-clay)" }}
+                    >
+                      <span className="w-10 h-10 rounded-xl bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)] flex items-center justify-center flex-shrink-0">
+                        {running
+                          ? <Loader2 size={18} className="animate-spin text-[var(--color-primary)]" />
+                          : <Scissors size={18} className="text-[var(--color-primary)]" />}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold text-[var(--color-accent)] truncate">{p.sourceName}</span>
+                        <span className="block text-xs text-[var(--text-muted)]">
+                          {p.approved}/{p.total} אושרו · {formatDate(p.createdAt)}
+                        </span>
+                      </span>
+                      <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold flex-shrink-0 ${
+                        p.status === "failed"
+                          ? "bg-[color-mix(in_srgb,var(--color-danger)_15%,transparent)] text-[var(--danger)]"
+                          : p.status === "review"
+                            ? "bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)] text-[var(--color-primary)]"
+                            : "bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+                      }`}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
         {/* Personal PDF assignments */}
         {pdfAssignments && pdfAssignments.length > 0 && (
           <div className="mb-8">
@@ -245,13 +305,25 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
                 <div className="mb-5">
                   <label className="label-mono text-[var(--color-primary)] block mb-2 text-sm">שאלות מהספר (ייבוא AI)</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowImportModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 mb-3 border-2 border-dashed border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
-                  >
-                    <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
-                  </button>
+                  <div className="flex flex-wrap items-start gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowImportModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
+                    >
+                      <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
+                    </button>
+                    {classroomId && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCropBuilder(true)}
+                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] transition-all font-bold text-sm rounded-lg"
+                      >
+                        <Scissors size={16} /> ייבוא חוברת בחיתוך ידני (מומלץ)
+                      </button>
+                    )}
+                    {classroomId && <PacketImportButton classroomId={classroomId} />}
+                  </div>
                   {approvedImports && approvedImports.length > 0 && (
                     <div className="flex flex-col gap-2">
                       {approvedImports.map((imp) => {
@@ -688,6 +760,10 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           onClose={() => setShowPdfBuilder(false)}
           onPublished={(name) => setPdfToast(`המטלה נשלחה אל ${name}`)}
         />
+      )}
+
+      {showCropBuilder && classroomId && (
+        <PacketCropBuilder classroomId={classroomId} onClose={() => setShowCropBuilder(false)} />
       )}
 
       <AnimatePresence>

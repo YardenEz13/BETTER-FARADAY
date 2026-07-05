@@ -86,7 +86,7 @@ export default function AIChatPanel({
   const [imageError, setImageError] = useState<string | null>(null);
   const [showQRBridge, setShowQRBridge] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const currentContext = questionStem
     ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
     : "";
@@ -196,7 +196,7 @@ export default function AIChatPanel({
         ? `🤖 מורה AI מוכן לעזור עם ${topicName || "הנושא הנוכחי"}`
         : "🤖 מורה AI מוכן לעזור עם שיעורי הבית",
     };
-    
+
     // We defer calling startChat() until the first message is sent
     // so we don't pollute the DB with empty chats.
     setMessages([welcome]);
@@ -338,7 +338,7 @@ export default function AIChatPanel({
             setPendingNextQuestion(false);
             userMsgCount.current = 0;
             initGuard.current = false;
-            
+
             // We defer calling startChat() here just like in createFreshChat,
             // so we don't open an empty chat in the DB until the student sends a message.
 
@@ -583,7 +583,7 @@ export default function AIChatPanel({
   const handleSend = async () => {
     if (!input.trim() || isTyping || isSendingRef.current) return;
     isSendingRef.current = true;
-    
+
     try {
       const userMsg = input.trim();
       setInput("");
@@ -892,7 +892,7 @@ export default function AIChatPanel({
     setSelfAssessment(null);
     setPendingNextQuestion(false);
     setCycleState("active");
-    
+
     await createFreshChat();
   };
 
@@ -927,342 +927,336 @@ export default function AIChatPanel({
 
   return (
     <>
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ y: "100%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "100%", opacity: 0 }}
-          transition={{ type: "spring", damping: 28, stiffness: 220 }}
-          className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-2xl overflow-hidden h-[58vh] md:h-[50vh]"
-          style={{
-            background: 'var(--color-surface)',
-            borderTop: '2px solid var(--color-outline-variant)',
-            borderTopLeftRadius: '24px',
-            borderTopRightRadius: '24px',
-          }}
-          dir="rtl"
-        >
-          {/* Mobile Drag Handle Indicator */}
-          <div className="md:hidden w-full flex justify-center pt-3 pb-1 bg-surface-container-lowest relative z-[3]">
-            <div className="w-10 h-1.5 rounded-full bg-outline-variant/60" />
-          </div>
-
-          {/* Scanline effect — dark mode only */}
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] opacity-0"
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 28, stiffness: 220 }}
+            className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-2xl overflow-hidden h-[58vh] md:h-[50vh]"
             style={{
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(91,255,159,0.015) 2px, rgba(91,255,159,0.015) 4px)',
+              background: 'var(--color-surface)',
+              borderTop: '2px solid var(--color-outline-variant)',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
             }}
-            aria-hidden
-          />
-          {/* ── Header ── */}
-          <div className="flex items-center justify-between px-6 py-2 md:py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
-            {/* AI identity */}
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
-                  <FaradayAvatar px={48} fill />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
-              </div>
-              <div>
-                <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
-                  פרופסור פאראדיי
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  <span className="font-label-md text-primary" style={{ fontSize: '11px' }}>מחובר · עוזר AI למתמטיקה</span>
-                  {aiStatus === "downloading" && loadProgress && (
-                    <span className="font-label-md text-tertiary-container animate-pulse" style={{ fontSize: '11px' }}>
-                      · טוען מודל... {loadProgress.percent}%
-                    </span>
-                  )}
-                  {isAnalyzing && (
-                    <span className="font-label-md text-secondary animate-pulse" style={{ fontSize: '11px' }}>
-                      · מנתח שיחה...
-                    </span>
-                  )}
-                  {cycleState === "cycling" && (
-                    <span className="font-label-md text-tertiary animate-pulse" style={{ fontSize: '11px' }}>
-                      · מחדש הקשר...
-                    </span>
-                  )}
-                </div>
-              </div>
+            dir="rtl"
+          >
+            {/* Mobile Drag Handle Indicator */}
+            <div className="md:hidden w-full flex justify-center pt-3 pb-1 bg-surface-container-lowest relative z-[3]">
+              <div className="w-10 h-1.5 rounded-full bg-outline-variant/60" />
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowDebug(v => !v)}
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors border border-transparent hover:border-outline-variant/50"
-                title="AI Diagnostics"
-              >
-                <Terminal className="" />
-              </button>
-              <button
-                onClick={handleEndChat}
-                disabled={isAnalyzing || messages.length <= 1}
-                className="flex items-center gap-2 px-3 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>סיום שיחה</span>
-                <X className="" />
-              </button>
-              <button
-                onClick={handleMinimize}
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
-                title="מזעור"
-              >
-                <ChevronDown className="" />
-              </button>
-            </div>
-          </div>
-
-          {/* ── Body: messages + optional debug ── */}
-          <div className="flex flex-1 overflow-hidden relative">
-
-            {/* Knowledge constellation field — particle network with named concept nodes */}
-            <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col gap-6 scroll-smooth z-10">
-              
-              {/* Context Header */}
-              {topicName && (
-                <div className="text-center mb-2">
-                  <span className="inline-block bg-surface-container-highest text-on-surface-variant font-label-sm px-4 py-1.5 rounded-full border border-outline-variant shadow-sm">
-                    {topicName}
-                  </span>
+            {/* Scanline effect — dark mode only */}
+            <div
+              className="pointer-events-none absolute inset-0 z-[1] opacity-0"
+              style={{
+                background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(91,255,159,0.015) 2px, rgba(91,255,159,0.015) 4px)',
+              }}
+              aria-hidden
+            />
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between px-6 py-2 md:py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
+              {/* AI identity */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
+                    <FaradayAvatar px={48} fill />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
                 </div>
-              )}
+                <div>
+                  <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
+                    פרופסור פאראדיי
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="font-label-md text-primary" style={{ fontSize: '11px' }}>מחובר · עוזר AI למתמטיקה</span>
+                    {aiStatus === "downloading" && loadProgress && (
+                      <span className="font-label-md text-tertiary-container animate-pulse" style={{ fontSize: '11px' }}>
+                        · טוען מודל... {loadProgress.percent}%
+                      </span>
+                    )}
+                    {isAnalyzing && (
+                      <span className="font-label-md text-secondary animate-pulse" style={{ fontSize: '11px' }}>
+                        · מנתח שיחה...
+                      </span>
+                    )}
+                    {cycleState === "cycling" && (
+                      <span className="font-label-md text-tertiary animate-pulse" style={{ fontSize: '11px' }}>
+                        · מחדש הקשר...
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-              {/* Intro / starter state — shown until the first real message */}
-              {!hasConversation && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-1 flex-col items-center justify-center text-center gap-5 py-8"
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+
+                <button
+                  onClick={handleEndChat}
+                  disabled={isAnalyzing || messages.length <= 1}
+                  className="flex items-center gap-2 px-3 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_rgba(91,255,159,0.3)]">
-                      <FaradayAvatar px={64} fill />
-                    </div>
-                    <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
-                  </div>
-                  <div>
-                    <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
-                    <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
-                      {agentType === "practice"
-                        ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — לא נותן תשובות, בונה איתך את הדרך.`
-                        : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
-                    {starterPrompts.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setInput(s)}
-                        className="px-4 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface text-sm font-medium hover:border-primary hover:text-primary transition-all"
-                        style={{ boxShadow: 'var(--shadow-clay)' }}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+                  <span>סיום שיחה</span>
+                  <X className="" />
+                </button>
+                <button
+                  onClick={handleMinimize}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
+                  title="מזעור"
+                >
+                  <ChevronDown className="" />
+                </button>
+              </div>
+            </div>
 
-              {hasConversation && messages.map((msg, i) => {
-                if (msg.role === "system") return (
-                  <div key={i} className="flex justify-center">
-                    <div className="px-4 py-2 rounded-full text-xs font-label-md bg-surface-container-highest text-on-surface-variant border border-outline-variant">
-                      <MathText>{msg.content}</MathText>
-                    </div>
+            {/* ── Body: messages + optional debug ── */}
+            <div className="flex flex-1 overflow-hidden relative">
+
+              {/* Knowledge constellation field — particle network with named concept nodes */}
+              <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col gap-6 scroll-smooth z-10">
+
+                {/* Context Header */}
+                {topicName && (
+                  <div className="text-center mb-2">
+                    <span className="inline-block bg-surface-container-highest text-on-surface-variant font-label-sm px-4 py-1.5 rounded-full border border-outline-variant shadow-sm">
+                      {topicName}
+                    </span>
                   </div>
-                );
+                )}
 
-                const isAI = msg.role === "model";
-
-                return (
+                {/* Intro / starter state — shown until the first real message */}
+                {!hasConversation && (
                   <motion.div
-                    key={i}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-                    className={`flex gap-4 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
+                    className="flex flex-1 flex-col items-center justify-center text-center gap-5 py-8"
                   >
-                    {/* Avatar */}
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(91,255,159,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
-                      {isAI ? (
-                        <FaradayAvatar px={40} fill />
-                      ) : (
-                        <User size={20} className="text-on-secondary-container" />
-                      )}
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_rgba(91,255,159,0.3)]">
+                        <FaradayAvatar px={64} fill />
+                      </div>
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
                     </div>
+                    <div>
+                      <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
+                      <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
+                        {agentType === "practice"
+                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — לא נותן תשובות, בונה איתך את הדרך.`
+                          : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
+                      {starterPrompts.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setInput(s)}
+                          className="px-4 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface text-sm font-medium hover:border-primary hover:text-primary transition-all"
+                          style={{ boxShadow: 'var(--shadow-clay)' }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
 
-                    {/* Bubble */}
-                    <div
-                      className={`p-5 shadow-md relative group ${isAI ? 'bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm' : 'bg-surface-variant border border-outline/30 rounded-2xl rounded-tl-sm'}`}
-                      style={{ maxWidth: '85%' }}
-                    >
-                      {isAI && (
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-surface p-1 rounded-md border border-outline-variant z-10">
-                          <button className="text-on-surface-variant hover:text-primary"><Copy className="text-[18px]" /></button>
-                          <button className="text-on-surface-variant hover:text-primary"><ThumbsUp className="text-[18px]" /></button>
-                        </div>
-                      )}
-                      {msg.imageUrl && (
-                        <img
-                          src={msg.imageUrl}
-                          alt="המחברת שצולמה"
-                          className="rounded-xl mb-3 max-h-72 w-auto border border-outline/40 shadow-md"
-                        />
-                      )}
-                      <div className="text-on-background leading-relaxed">
+                {hasConversation && messages.map((msg, i) => {
+                  if (msg.role === "system") return (
+                    <div key={i} className="flex justify-center">
+                      <div className="px-4 py-2 rounded-full text-xs font-label-md bg-surface-container-highest text-on-surface-variant border border-outline-variant">
                         <MathText>{msg.content}</MathText>
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
+                  );
 
-              {/* Typing indicator */}
-              {isTyping && (
-                <div className="flex gap-4 w-full max-w-4xl mr-auto">
-                  <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.15)]">
-                    <FaradayAvatar px={40} fill />
+                  const isAI = msg.role === "model";
+
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
+                      className={`flex gap-4 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
+                    >
+                      {/* Avatar */}
+                      <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(91,255,159,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
+                        {isAI ? (
+                          <FaradayAvatar px={40} fill />
+                        ) : (
+                          <User size={20} className="text-on-secondary-container" />
+                        )}
+                      </div>
+
+                      {/* Bubble */}
+                      <div
+                        className={`p-5 shadow-md relative group ${isAI ? 'bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm' : 'bg-surface-variant border border-outline/30 rounded-2xl rounded-tl-sm'}`}
+                        style={{ maxWidth: '85%' }}
+                      >
+                        {isAI && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-surface p-1 rounded-md border border-outline-variant z-10">
+                            <button className="text-on-surface-variant hover:text-primary"><Copy className="text-[18px]" /></button>
+                            <button className="text-on-surface-variant hover:text-primary"><ThumbsUp className="text-[18px]" /></button>
+                          </div>
+                        )}
+                        {msg.imageUrl && (
+                          <img
+                            src={msg.imageUrl}
+                            alt="המחברת שצולמה"
+                            className="rounded-xl mb-3 max-h-72 w-auto border border-outline/40 shadow-md"
+                          />
+                        )}
+                        <div className="text-on-background leading-relaxed">
+                          <MathText>{msg.content}</MathText>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+                {/* Typing indicator */}
+                {isTyping && (
+                  <div className="flex gap-4 w-full max-w-4xl mr-auto">
+                    <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.15)]">
+                      <FaradayAvatar px={40} fill />
+                    </div>
+                    <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-5 py-4 shadow-lg flex items-center gap-3">
+                      <ThinkingWave />
+                      <span className="font-label-md text-on-surface-variant" style={{ fontSize: '12px' }}>
+                        פאראדיי חושב…
+                      </span>
+                    </div>
                   </div>
-                  <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-5 py-4 shadow-lg flex items-center gap-3">
-                    <ThinkingWave />
-                    <span className="font-label-md text-on-surface-variant" style={{ fontSize: '12px' }}>
-                      פאראדיי חושב…
-                    </span>
+                )}
+
+                <div ref={messagesEndRef} className="h-4" />
+              </div>
+
+              {/* Debug sidebar */}
+              {showDebug && (
+                <div className="w-[360px] overflow-y-auto p-5 flex-shrink-0 bg-surface-container-lowest border-r border-outline-variant z-20 shadow-xl">
+                  <div className="font-label-lg text-primary mb-4 flex items-center gap-2">
+                    <Terminal className="" /> AI Diagnostics
                   </div>
+                  {debugInfo ? (
+                    <pre className="text-[10px] whitespace-pre-wrap text-on-surface-variant font-mono bg-surface p-3 rounded-lg border border-outline/30">
+                      {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                  ) : (
+                    <span className="font-label-sm text-on-surface-variant/50">אין נתונים</span>
+                  )}
                 </div>
               )}
-
-              <div ref={messagesEndRef} className="h-4" />
             </div>
 
-            {/* Debug sidebar */}
-            {showDebug && (
-              <div className="w-[360px] overflow-y-auto p-5 flex-shrink-0 bg-surface-container-lowest border-r border-outline-variant z-20 shadow-xl">
-                <div className="font-label-lg text-primary mb-4 flex items-center gap-2">
-                  <Terminal className="" /> AI Diagnostics
-                </div>
-                {debugInfo ? (
-                  <pre className="text-[10px] whitespace-pre-wrap text-on-surface-variant font-mono bg-surface p-3 rounded-lg border border-outline/30">
-                    {JSON.stringify(debugInfo, null, 2)}
-                  </pre>
-                ) : (
-                  <span className="font-label-sm text-on-surface-variant/50">אין נתונים</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── Input bar (Faraday Console) ── */}
-          <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
-            <div className="max-w-4xl mx-auto">
-              {/* Console panel */}
-              <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-                {/* Console title bar */}
-                <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
-                  <Calculator className="" />
-                  <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
-                  <div className="flex-1" />
-                  <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
-                </div>
-                {/* Attached image preview */}
-                {attachedImage && (
-                  <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
-                    <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
-                      <ImagePlus size={14} className="flex-shrink-0" />
-                      <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
-                    </div>
-                    <button
-                      onClick={() => setAttachedImage(null)}
-                      className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-variant/50 transition-colors flex-shrink-0"
-                      title="הסר תמונה"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
-                {imageError && (
-                  <div className="px-4 py-2 border-b border-outline-variant/40 bg-error/10 text-error font-label-md" style={{ fontSize: '12px' }}>
-                    {imageError}
-                  </div>
-                )}
-                {/* Input row */}
-                <div className="flex items-center p-2 gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isTyping || isAnalyzing}
-                    className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
-                    title="צלם או צרף תמונת מחברת לבדיקה"
-                  >
-                    <ImagePlus className="" />
-                  </button>
-                  <button
-                    onClick={() => setShowQRBridge(true)}
-                    disabled={isTyping || isAnalyzing}
-                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="צלם מהטלפון (QR)"
-                  >
-                    <QrCode className="" />
-                  </button>
-                  <button
-                    onClick={onOpenPlayground}
-                    disabled={!onOpenPlayground}
-                    className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="מגרש המתמטיקה — פתרון בלי דף ועיפרון"
-                  >
+            {/* ── Input bar (Faraday Console) ── */}
+            <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
+              <div className="max-w-4xl mx-auto">
+                {/* Console panel */}
+                <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+                  {/* Console title bar */}
+                  <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
                     <Calculator className="" />
-                  </button>
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
-                      placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSubmit()}
-                      disabled={isTyping || isAnalyzing}
-                    />
+                    <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
+                    <div className="flex-1" />
+                    <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  {/* Attached image preview */}
+                  {attachedImage && (
+                    <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
+                      <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
+                        <ImagePlus size={14} className="flex-shrink-0" />
+                        <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
+                      </div>
+                      <button
+                        onClick={() => setAttachedImage(null)}
+                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-variant/50 transition-colors flex-shrink-0"
+                        title="הסר תמונה"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                  {imageError && (
+                    <div className="px-4 py-2 border-b border-outline-variant/40 bg-error/10 text-error font-label-md" style={{ fontSize: '12px' }}>
+                      {imageError}
+                    </div>
+                  )}
+                  {/* Input row */}
+                  <div className="flex items-center p-2 gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
                     <button
-                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
-                      title="הגדרות"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isTyping || isAnalyzing}
+                      className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                      title="צלם או צרף תמונת מחברת לבדיקה"
                     >
-                      <Settings className="" />
+                      <ImagePlus className="" />
                     </button>
                     <button
-                      className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-                      onClick={handleSubmit}
-                      disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                      title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
+                      onClick={() => setShowQRBridge(true)}
+                      disabled={isTyping || isAnalyzing}
+                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="צלם מהטלפון (QR)"
                     >
-                      <Send className="" />
+                      <QrCode className="" />
                     </button>
+                    <button
+                      onClick={onOpenPlayground}
+                      disabled={!onOpenPlayground}
+                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="מגרש המתמטיקה — פתרון בלי דף ועיפרון"
+                    >
+                      <Calculator className="" />
+                    </button>
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
+                        placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSubmit()}
+                        disabled={isTyping || isAnalyzing}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
+                        title="הגדרות"
+                      >
+                        <Settings className="" />
+                      </button>
+                      <button
+                        className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
+                        onClick={handleSubmit}
+                        disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
+                        title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
+                      >
+                        <Send className="" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showQRBridge && (
         <QRBridgeModal
