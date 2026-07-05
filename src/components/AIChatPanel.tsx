@@ -54,7 +54,7 @@ const HELP_STAGES = [
 function HelpLevelMeter({ level }: { level: number }) {
   const lvl = Math.max(0, Math.min(3, level));
   return (
-    <div className="hidden md:flex items-center gap-2" title="רמת העזרה עולה ככל שנתקעים באותה שאלה">
+    <div className="flex items-center gap-2" title="רמת העזרה עולה ככל שנתקעים באותה שאלה">
       <span className="font-label-md text-on-surface-variant" style={{ fontSize: 11 }}>עזרה</span>
       <div className="flex items-center gap-1">
         {HELP_STAGES.map((s, i) => {
@@ -1048,63 +1048,63 @@ export default function AIChatPanel({
               aria-hidden
             />
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-6 py-2 md:py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
-              {/* AI identity */}
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
-                    <FaradayAvatar px={48} fill />
+            <div className="flex flex-col flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
+              <div className="flex items-center justify-between gap-2 px-4 md:px-6 py-2 md:py-3">
+                {/* AI identity */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
+                      <FaradayAvatar px={48} fill />
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
+                  <div className="min-w-0">
+                    <div className="font-headline-md text-on-surface truncate" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
+                      פרופסור פאראדיי
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                      <span className="font-label-md text-primary truncate" style={{ fontSize: '11px' }}>
+                        {aiStatus === "downloading" && loadProgress
+                          ? `טוען מודל... ${loadProgress.percent}%`
+                          : isAnalyzing
+                          ? "מנתח שיחה..."
+                          : cycleState === "cycling"
+                          ? "מחדש הקשר..."
+                          : "מחובר · עוזר AI למתמטיקה"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
-                    פרופסור פאראדיי
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="font-label-md text-primary" style={{ fontSize: '11px' }}>מחובר · עוזר AI למתמטיקה</span>
-                    {aiStatus === "downloading" && loadProgress && (
-                      <span className="font-label-md text-tertiary-container animate-pulse" style={{ fontSize: '11px' }}>
-                        · טוען מודל... {loadProgress.percent}%
-                      </span>
-                    )}
-                    {isAnalyzing && (
-                      <span className="font-label-md text-secondary animate-pulse" style={{ fontSize: '11px' }}>
-                        · מנתח שיחה...
-                      </span>
-                    )}
-                    {cycleState === "cycling" && (
-                      <span className="font-label-md text-tertiary animate-pulse" style={{ fontSize: '11px' }}>
-                        · מחדש הקשר...
-                      </span>
-                    )}
-                  </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={handleEndChat}
+                    disabled={isAnalyzing || messages.length <= 1}
+                    title="סיום שיחה"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="hidden lg:inline">סיום שיחה</span>
+                    <X className="" />
+                  </button>
+                  <button
+                    onClick={handleMinimize}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
+                    title="מזעור"
+                  >
+                    <ChevronDown className="" />
+                  </button>
                 </div>
               </div>
 
-              {/* Adaptive help meter (practice/homework only) */}
-              {agentType !== "proof" && <HelpLevelMeter level={helpLevel} />}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-
-                <button
-                  onClick={handleEndChat}
-                  disabled={isAnalyzing || messages.length <= 1}
-                  className="flex items-center gap-2 px-3 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>סיום שיחה</span>
-                  <X className="" />
-                </button>
-                <button
-                  onClick={handleMinimize}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
-                  title="מזעור"
-                >
-                  <ChevronDown className="" />
-                </button>
-              </div>
+              {/* Adaptive help meter — own row so it never fights the identity/actions for space
+                  in the narrow desktop dock or on small phones. */}
+              {agentType !== "proof" && (
+                <div className="flex items-center px-4 md:px-6 pb-2 -mt-1">
+                  <HelpLevelMeter level={helpLevel} />
+                </div>
+              )}
             </div>
 
             {/* ── Body: messages + optional debug ── */}
@@ -1142,7 +1142,7 @@ export default function AIChatPanel({
                       <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
                       <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
                         {agentType === "practice"
-                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — לא נותן תשובות, בונה איתך את הדרך.`
+                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — מתחילים ברמז, ואם עדיין תקוע נעמיק יחד עד שיהיה ברור.`
                           : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
                       </div>
                     </div>
