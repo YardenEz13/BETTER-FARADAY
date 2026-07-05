@@ -16,7 +16,8 @@ const SENTIMENT_META: Record<string, { label: string; color: string; Icon: any }
 };
 
 const CONFUSION_RE = /לא מבינ|מבולבל|למה זה|איך זה|לא הבנתי|מה זה אומר|לא הצלחתי|לא בטוח/;
-const BREAKTHROUGH_RE = /עכשיו הבנתי|הבנתי!|אה,? עכשיו|קיבלתי!|אההה|כן! הבנתי|עכשיו זה ברור|הבנתי!/;
+// "(?<!לא )" so "הצלחתי"/"הבנתי" register as breakthroughs but "לא הצלחתי"/"לא הבנתי" don't.
+const BREAKTHROUGH_RE = /עכשיו הבנתי|(?<!לא )הבנתי|אה,? עכשיו|קיבלתי!|אההה|כן,? הבנתי|עכשיו זה ברור|(?<!לא )הצלחתי|פיצחתי|סוף סוף|עכשיו ברור/;
 
 function detectFlag(role: string, content: string): "confusion" | "breakthrough" | null {
   if (role !== "user") return null;
@@ -77,6 +78,12 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
   const conclusion: string | undefined = brief?.keyInsight ?? metrics?.gemmaAnalysisSummary;
 
   const moodTrace = buildMoodTrace(userFlagged);
+  const arcStart = moodTrace[0] ?? 50;
+  const arcEnd = moodTrace[moodTrace.length - 1] ?? 50;
+  const arcLabel =
+    arcEnd - arcStart > 8 ? "תסכול ← הבנה"
+    : arcStart - arcEnd > 8 ? "ביטחון ← בלבול"
+    : "יציב לאורך השיחה";
   const arcId = `arc-${chat._id}`;
   const W = 400, H = 90, PAD = 12;
   const step = moodTrace.length > 1 ? (W - PAD * 2) / (moodTrace.length - 1) : 0;
@@ -211,7 +218,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
           <div className="clay-card p-5">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-bold text-sm text-on-surface">קשת רגשית</h3>
-              <span className="text-xs font-bold text-primary">תסכול ← הבנה</span>
+              <span className="text-xs font-bold text-primary">{arcLabel}</span>
             </div>
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="80" preserveAspectRatio="none">
               <defs>

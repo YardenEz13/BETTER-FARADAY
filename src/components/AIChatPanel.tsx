@@ -39,6 +39,8 @@ import MathText from "./MathText";
 import FaradayAvatar from "./FaradayAvatar";
 import QRBridgeModal from "./QRBridgeModal";
 import FaradayCanvas from "./FaradayCanvas";
+import ThinkingWave from "./chat/ThinkingWave";
+import FaradayConsole from "./chat/FaradayConsole";
 
 interface AIChatPanelProps {
   isOpen: boolean;
@@ -594,12 +596,19 @@ export default function AIChatPanel({
       // ── Self-assessment capture ──
       if (awaitingSelfAssess) {
         setAwaitingSelfAssess(false);
-        setMessages(prev => [...prev, newUserMsg]);
-        // Now finalize the brief
+        const updatedMessages = [...messages, newUserMsg];
+        setMessages(updatedMessages);
+        // Persist the answer so it lands in the transcript AND the analysis —
+        // otherwise the student's closing reply to "איך היה?" is dropped.
+        if (chatIdRef.current) {
+          await saveMessages(chatIdRef.current, updatedMessages).catch(console.error);
+        }
+        await persistMessage("user", userMsg);
+        // Now finalize the brief, feeding it the transcript that includes this answer
         if (pendingNextQuestion) {
-          await finalizeWithBriefAndContinue(userMsg);
+          await finalizeWithBriefAndContinue(userMsg, updatedMessages);
         } else {
-          await finalizeWithBrief(userMsg);
+          await finalizeWithBrief(userMsg, updatedMessages);
         }
         return;
       }
@@ -864,9 +873,9 @@ export default function AIChatPanel({
   };
 
   // ── Finalize: generate composite brief + save + cleanup ──
-  const finalizeWithBrief = async (selfAssessText: string) => {
+  const finalizeWithBrief = async (selfAssessText: string, msgs?: Message[]) => {
     const currentChatId = chatIdRef.current;
-    const currentMessages = [...messages];
+    const currentMessages = msgs ?? [...messages];
     const currentPartialBriefs = [...partialBriefs];
 
     // Trigger background generation and saving without blocking the user
@@ -876,9 +885,9 @@ export default function AIChatPanel({
     await cleanup();
   };
 
-  const finalizeWithBriefAndContinue = async (selfAssessText: string) => {
+  const finalizeWithBriefAndContinue = async (selfAssessText: string, msgs?: Message[]) => {
     const currentChatId = chatIdRef.current;
-    const currentMessages = [...messages];
+    const currentMessages = msgs ?? [...messages];
     const currentPartialBriefs = [...partialBriefs];
 
     // Trigger background generation and saving without blocking the user
@@ -1157,103 +1166,20 @@ export default function AIChatPanel({
             </div>
 
             {/* ── Input bar (Faraday Console) ── */}
-            <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
-              <div className="max-w-4xl mx-auto">
-                {/* Console panel */}
-                <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-                  {/* Console title bar */}
-                  <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
-                    <Calculator className="" />
-                    <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
-                    <div className="flex-1" />
-                    <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
-                  </div>
-                  {/* Attached image preview */}
-                  {attachedImage && (
-                    <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
-                      <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
-                        <ImagePlus size={14} className="flex-shrink-0" />
-                        <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
-                      </div>
-                      <button
-                        onClick={() => setAttachedImage(null)}
-                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-variant/50 transition-colors flex-shrink-0"
-                        title="הסר תמונה"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )}
-                  {imageError && (
-                    <div className="px-4 py-2 border-b border-outline-variant/40 bg-error/10 text-error font-label-md" style={{ fontSize: '12px' }}>
-                      {imageError}
-                    </div>
-                  )}
-                  {/* Input row */}
-                  <div className="flex items-center p-2 gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isTyping || isAnalyzing}
-                      className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
-                      title="צלם או צרף תמונת מחברת לבדיקה"
-                    >
-                      <ImagePlus className="" />
-                    </button>
-                    <button
-                      onClick={() => setShowQRBridge(true)}
-                      disabled={isTyping || isAnalyzing}
-                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="צלם מהטלפון (QR)"
-                    >
-                      <QrCode className="" />
-                    </button>
-                    <button
-                      onClick={onOpenPlayground}
-                      disabled={!onOpenPlayground}
-                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="מגרש המתמטיקה — פתרון בלי דף ועיפרון"
-                    >
-                      <Calculator className="" />
-                    </button>
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
-                        placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSubmit()}
-                        disabled={isTyping || isAnalyzing}
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
-                        title="הגדרות"
-                      >
-                        <Settings className="" />
-                      </button>
-                      <button
-                        className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-                        onClick={handleSubmit}
-                        disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                        title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
-                      >
-                        <Send className="" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FaradayConsole
+              input={input}
+              onInputChange={setInput}
+              attachedImage={attachedImage}
+              onRemoveImage={() => setAttachedImage(null)}
+              imageError={imageError}
+              isTyping={isTyping}
+              isAnalyzing={isAnalyzing}
+              fileInputRef={fileInputRef}
+              onFileSelect={handleFileSelect}
+              onSubmit={handleSubmit}
+              onOpenQRBridge={() => setShowQRBridge(true)}
+              onOpenPlayground={onOpenPlayground}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1267,38 +1193,6 @@ export default function AIChatPanel({
         />
       )}
     </>
-  );
-}
-
-/* ── "Faraday is thinking" — a live voltage signal reading on an oscilloscope ── */
-function ThinkingWave() {
-  const reducedMotion = useReducedMotion();
-  const bars = [0, 1, 2, 3, 4];
-  if (reducedMotion) {
-    return (
-      <div className="flex items-end gap-1 h-5" aria-hidden>
-        {bars.map(i => (
-          <span
-            key={i}
-            className="w-1 rounded-full bg-primary"
-            style={{ height: i % 2 ? '100%' : '55%' }}
-          />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-end gap-1 h-5" aria-hidden>
-      {bars.map(i => (
-        <motion.span
-          key={i}
-          className="w-1 h-5 rounded-full bg-primary origin-bottom"
-          style={{ boxShadow: '0 0 6px var(--color-inverse-primary)' }}
-          animate={{ scaleY: [0.3, 1, 0.3] }}
-          transition={{ duration: 0.7, delay: i * 0.1, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      ))}
-    </div>
   );
 }
 
