@@ -144,7 +144,6 @@ export default function RolePage() {
             <p className="mt-4 lg:mt-5 max-w-[27rem] text-base lg:text-lg font-medium leading-relaxed text-on-surface-variant">
               <span className="lg:hidden">בחר כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
               <span className="hidden lg:inline">למידת מתמטיקה מעולם לא הייתה נגישה ופשוטה יותר.</span>
-            </p> (feat: analytics views, geometry seeding, and config updates)
             </p>
 
             {/* Feature list is desktop-only — on mobile the role cards come first (matches the phone design) */}
