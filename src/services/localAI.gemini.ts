@@ -14,18 +14,23 @@ export interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
 }
 
+// Task tag so the server picks the right per-task model order (see
+// convex/geminiModels.ts) instead of a flat chat-shaped fallback list.
+export type GeminiTask = "chat" | "grading" | "rewrite" | "analysis" | "vision";
+
 // Shared non-streaming Gemini helper. The Convex proxy does the model-fallback
 // loop server-side and returns the raw Gemini JSON. The key never reaches the
 // browser.
 export async function geminiGenerateContent(
   payload: object,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  task?: GeminiTask
 ): Promise<GeminiResponse> {
   if (!CONVEX_SITE_URL) throw new Error("Missing VITE_CONVEX_URL");
   const res = await fetch(GEMINI_GENERATE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ payload }),
+    body: JSON.stringify({ payload, task }),
     signal,
   });
   if (!res.ok) throw new Error(`Gemini proxy error: ${res.status} ${res.statusText}`);

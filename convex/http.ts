@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { ALL_GEMINI_MODELS } from "./geminiModels";
+import { ALL_GEMINI_MODELS, GEMINI_MODELS, type GeminiTask } from "./geminiModels";
 
 // ── Gemini proxy ──────────────────────────────────────────────────────────
 // The browser must never hold the Gemini API key (a `VITE_`-prefixed key is
@@ -86,15 +86,21 @@ http.route({
       });
     }
 
-    let body: { payload?: unknown };
+    let body: { payload?: unknown; task?: string };
     try {
       body = await request.json();
     } catch {
       return new Response("bad request body", { status: 400, headers: CORS_HEADERS });
     }
 
+    // Route by task so each caller gets its intended cost/quality tradeoff
+    // (e.g. vision needs a real model to read handwriting; analysis is
+    // background and cheap-first) instead of always trying chat's order first.
+    const task = body.task as GeminiTask | undefined;
+    const modelsForTask = (task && GEMINI_MODELS[task]) || ALL_GEMINI_MODELS;
+
     let lastStatus = 0;
-    for (const model of ALLOWED_MODELS) {
+    for (const model of modelsForTask) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(url, {
         method: "POST",

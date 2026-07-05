@@ -62,7 +62,7 @@ export async function checkNotebookImage(
     },
   };
 
-  const data = await geminiGenerateContent(payload, signal);
+  const data = await geminiGenerateContent(payload, signal, "vision");
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   return text.trim();
 }
@@ -126,7 +126,7 @@ export async function extractQuestionFromMedia(
     },
   };
 
-  const data = await geminiGenerateContent(payload, signal);
+  const data = await geminiGenerateContent(payload, signal, "vision");
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const clean = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   const parsed = JSON.parse(clean);

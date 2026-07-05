@@ -459,13 +459,14 @@ export async function streamMessage(
   let rawText = "";
   let lastVisible = "";
 
-  // Chat task tier: quality model first, fall back on rate-limit (429) through
-  // cheaper/older models — each is a separate free-tier quota bucket, so keeping
-  // all of them maximizes total free throughput. Must match convex/geminiModels.ts
+  // Chat task tier: lite model first for throughput (this is the highest-volume
+  // task — every student message), fall back on rate-limit (429) through the
+  // rest — each is a separate free-tier quota bucket, so keeping all of them
+  // maximizes total free throughput. Must match convex/geminiModels.ts
   // GEMINI_MODELS.chat.
   const MODELS = [
-    "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash",
-    "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+    "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
+    "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
   ];
   const MAX_RETRIES = 2; // per model
 

@@ -14,10 +14,14 @@
 //   gemini-2.0-flash       — older-gen fallback, separate quota
 
 export const GEMINI_MODELS = {
-  // User-facing tutor chat: quality first, then cheaper/older models.
+  // User-facing tutor chat: highest request volume of any task (every student
+  // message), so lead with the lite model for throughput/quota headroom, not
+  // raw quality — the escalation-level prompt already keeps replies short and
+  // simple enough that lite handles them well. Heavier models are fallback
+  // only, for when lite itself is rate-limited.
   chat: [
-    "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash",
-    "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+    "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
+    "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
   ],
   // Proof-step grading: correctness matters most, lite/older models last.
   grading: [
@@ -33,6 +37,13 @@ export const GEMINI_MODELS = {
   analysis: [
     "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
     "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
+  ],
+  // Notebook-photo / question-image reading: needs real multimodal reasoning to
+  // read messy handwriting reliably, so quality first like grading. Lite models
+  // are fallback only if the good ones are rate-limited.
+  vision: [
+    "gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash",
+    "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash",
   ],
 } as const;
 

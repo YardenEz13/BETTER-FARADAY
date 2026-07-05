@@ -248,7 +248,7 @@ ${conversationText}`
       }
     };
 
-    const data = await geminiGenerateContent(payload, controller.signal);
+    const data = await geminiGenerateContent(payload, controller.signal, "analysis");
     clearTimeout(timeoutId);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const parsed = parseGeminiJson(text);
@@ -385,7 +385,7 @@ ${analysisText}`
       }
     };
 
-    const data = await geminiGenerateContent(payload, controller.signal);
+    const data = await geminiGenerateContent(payload, controller.signal, "analysis");
     clearTimeout(timeoutId);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const parsed = parseGeminiJson(text);
