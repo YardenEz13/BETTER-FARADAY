@@ -277,7 +277,7 @@ export default function PracticeSession() {
       <div
         className={`relative z-10 min-h-screen flex flex-col transition-[padding] duration-300 ${
           chatOpen
-            ? 'justify-start pt-[112px] pb-[64vh] lg:pb-16 lg:pt-24 lg:pe-[min(464px,44vw)]'
+            ? 'justify-start pt-[112px] pb-[64vh] lg:pb-16 lg:pt-24 lg:ps-[min(464px,44vw)]'
             : 'justify-center pt-24 pb-16'
         }`}
       >

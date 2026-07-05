@@ -1032,17 +1032,17 @@ export default function AIChatPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={isDesktop ? { x: "-100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            initial={isDesktop ? { x: "100%", opacity: 0 } : { y: "100%", opacity: 0 }}
             animate={{ x: 0, y: 0, opacity: 1 }}
-            exit={isDesktop ? { x: "-100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            exit={isDesktop ? { x: "100%", opacity: 0 } : { y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 260 }}
             className="fixed z-[100] flex flex-col font-body-md overflow-hidden border-outline
               bottom-0 left-0 w-full h-[62vh] rounded-t-[24px] border-t-2
-              lg:top-[68px] lg:bottom-0 lg:h-auto lg:w-[min(440px,42vw)] lg:rounded-none lg:border-t-0 lg:border-s-2"
+              lg:top-[68px] lg:bottom-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[min(440px,42vw)] lg:rounded-none lg:border-t-0 lg:border-e-2"
             style={{
               background: 'var(--color-surface)',
               boxShadow: isDesktop
-                ? '6px 0 28px rgba(20,40,30,0.10)'
+                ? '-6px 0 28px rgba(20,40,30,0.10)'
                 : '0 -10px 34px rgba(20,40,30,0.14)',
             }}
             dir="rtl"
