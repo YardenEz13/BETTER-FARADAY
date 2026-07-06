@@ -11,6 +11,7 @@ import PageTransition from "./components/PageTransition";
 // never downloads the teacher dashboard (and vice versa).
 const RolePage           = lazy(() => import("./pages/RolePage"));
 const StudentHome        = lazy(() => import("./pages/StudentHome"));
+const Onboarding         = lazy(() => import("./pages/Onboarding"));
 const PracticeSession    = lazy(() => import("./pages/PracticeSession"));
 const TeacherDashboard   = lazy(() => import("./pages/TeacherDashboard"));
 const StudentHomework    = lazy(() => import("./pages/StudentHomework"));
@@ -57,6 +58,7 @@ function AnimatedRoutes() {
         <Routes location={location}>
             <Route path="/" element={<RolePage />} />
             <Route path="/student/:studentId" element={<StudentHome />} />
+            <Route path="/student/:studentId/welcome" element={<Onboarding />} />
             <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
             <Route path="/student/:studentId/homework" element={<StudentHomeworkList />} />
             <Route path="/student/:studentId/homework/:homeworkId" element={<StudentHomework />} />

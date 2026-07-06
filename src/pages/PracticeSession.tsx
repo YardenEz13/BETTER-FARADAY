@@ -5,7 +5,7 @@ import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, RotateCcw, Zap, Bot, Activity,
+  ChevronLeft, Zap, Bot, Activity,
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
@@ -13,6 +13,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
 import { Lightbulb as ElectricBulb, Battery, SparkBurst } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
@@ -317,8 +318,7 @@ export default function PracticeSession() {
 
           {!activeQuestion && question === undefined ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
-              <RotateCcw size={36} className="animate-spin mb-4 text-primary opacity-50" />
-              <p className="text-sm text-on-surface-variant">טוען שאלה...</p>
+              <ElectricLoader fullscreen={false} size={48} label="טוען שאלה..." />
             </div>
           ) : !activeQuestion && question === null ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
@@ -343,7 +343,7 @@ export default function PracticeSession() {
                 {/* Question card */}
                 <div
                   ref={questionCardRef}
-                  className="clay-card relative overflow-hidden p-8 backdrop-blur-md"
+                  className="clay-card relative overflow-hidden p-5 md:p-8 backdrop-blur-md"
                   style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
                 >
                   {/* Top accent bar */}
@@ -364,7 +364,7 @@ export default function PracticeSession() {
                   </div>
 
                   {/* Stem — letters jump in one by one via animateLetters */}
-                  <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
+                  <div className="text-lg md:text-xl leading-relaxed font-semibold text-on-surface mb-8">
                     <MathText animateLetters>{activeQuestion.stem}</MathText>
                   </div>
 
@@ -498,8 +498,8 @@ export default function PracticeSession() {
                         className={`mt-6 rounded-2xl overflow-hidden border-2 ${isCorrect ? 'border-primary/40 bg-primary/5' : 'border-error/40 bg-error/5'}`}
                       >
                         {/* Review header */}
-                        <div className={`flex items-center justify-between px-6 py-4 border-b-2 ${isCorrect ? 'bg-primary/10 border-primary/20' : 'bg-error/10 border-error/20'}`}>
-                          <div className="flex items-center gap-3">
+                        <div className={`flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-4 border-b-2 ${isCorrect ? 'bg-primary/10 border-primary/20' : 'bg-error/10 border-error/20'}`}>
+                          <div className="flex items-center gap-3 flex-wrap">
                             {isCorrect
                               ? <CheckCircle2 size={22} className="text-primary" />
                               : <XCircle size={22} className="text-error" />}

@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -225,6 +225,7 @@ export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const student = useQuery(api.classroom.get, { id: studentId as Id<"students"> });
+  const onboarding = useQuery(api.onboarding.getOnboardingState, { studentId: studentId as Id<"students"> });
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
   const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
@@ -252,7 +253,10 @@ export default function StudentHome() {
     return () => { tween.kill(); };
   }, [topicCount, reducedMotion]);
 
-  if (!student || !topics) return <StudentHomeSkeleton />;
+  // Don't flash the map while onboarding state loads; redirect new students to
+  // the welcome wizard before rendering anything.
+  if (!student || !topics || onboarding === undefined) return <StudentHomeSkeleton />;
+  if (onboarding?.needed) return <Navigate to={`/student/${studentId}/welcome`} replace />;
 
   const getProgress = (topicId: string) => {
     const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
@@ -308,7 +312,7 @@ export default function StudentHome() {
         {/* Left: back + student info */}
         <div className="flex items-center gap-3">
           <button
-            className="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
+            className="w-9 h-9 md:w-9 md:h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
             onClick={() => navigate("/")}
             aria-label="יציאה"
           >
@@ -373,7 +377,7 @@ export default function StudentHome() {
             <span>שיעורי בית</span>
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
             style={{ boxShadow: 'var(--shadow-clay-primary)' }}
             onClick={() => setChatOpen(true)}
           >
@@ -415,7 +419,7 @@ export default function StudentHome() {
           <div className="w-full max-w-4xl mb-4 flex flex-wrap gap-3">
             <button
               onClick={() => navigate(`/student/${studentId}/shop`)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer"
               style={{ boxShadow: 'var(--shadow-clay)' }}
             >
               <ElectricBolt tone="spark" size={17} glow={0.5} animated={false} />
@@ -425,7 +429,7 @@ export default function StudentHome() {
             {reviewCount > 0 && (
               <button
                 onClick={() => navigate(`/student/${studentId}/review`)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer"
                 style={{ boxShadow: 'var(--shadow-clay)' }}
               >
                 <RotateCcw size={16} />

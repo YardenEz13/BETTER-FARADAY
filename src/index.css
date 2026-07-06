@@ -530,6 +530,18 @@ body {
 }
 @keyframes shimmer-sweep { to { background-position: -200% 0; } }
 
+/* Wide display equations scroll horizontally inside their container instead of
+   overflowing the page (critical on narrow phones). The thin scrollbar hints
+   there's more to the right; inline math still wraps with the surrounding text. */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding-block: 2px;         /* room so the scrollbar doesn't clip the glyphs */
+  -webkit-overflow-scrolling: touch;
+}
+.katex-display > .katex { white-space: nowrap; }
+
 /* Traveling gradient highlight around a card's border on hover */
 @property --gh-angle {
   syntax: "<angle>";

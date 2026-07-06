@@ -10,6 +10,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 import { useCountUp } from "../lib/gsapUtils";
+import { SkeletonBlock, SkeletonCircle } from "../components/ClaySkeleton";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -144,8 +145,25 @@ export default function StudentHomeworkList() {
             );
           })}
 
-          {/* Empty state */}
-          {(!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? (
+          {/* Loading skeleton — mirrors the homework-card list shape */}
+          {homeworkList === undefined && pdfAssignments === undefined ? (
+            <div className="flex flex-col gap-4" aria-hidden>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-surface rounded-3xl p-5 border-2 border-outline flex items-center gap-4"
+                  style={{ boxShadow: 'var(--shadow-clay)' }}
+                >
+                  <SkeletonCircle size={48} />
+                  <div className="flex-1 flex flex-col gap-2.5">
+                    <SkeletonBlock width="55%" height={16} rounded={99} />
+                    <SkeletonBlock width="35%" height={11} rounded={99} />
+                  </div>
+                  <SkeletonBlock width={72} height={30} rounded={99} />
+                </div>
+              ))}
+            </div>
+          ) : (!homeworkList || homeworkList.length === 0) && (!pdfAssignments || pdfAssignments.length === 0) ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

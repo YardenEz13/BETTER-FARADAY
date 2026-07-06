@@ -47,4 +47,13 @@ crons.cron(
   {},
 );
 
+// Weekly: generate the teacher weekly digest for all classrooms.
+// Sundays 04:00 UTC.
+crons.cron(
+  "generate-weekly-digests",
+  "0 4 * * 0",
+  internal.digest.generateAllDigests,
+  {},
+);
+
 export default crons;

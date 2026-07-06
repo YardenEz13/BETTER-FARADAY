@@ -1,6 +1,7 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import type { FunctionReturnType } from "convex/server";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useCountUp, useStaggerReveal, useAnimatedValue, type StaggerRevealOptions } from "../lib/gsapUtils";
@@ -49,6 +50,7 @@ export default function TeacherDashboard() {
   const classroom = useQuery(api.classroom.getFirstClassroom);
   const data = useQuery(api.commandCenter.getCommandCenter, classroom ? { classroomId: classroom._id } : "skip");
   const aiAnalytics = useQuery(api.aiChat.getTeacherChatAnalytics, classroom ? { classroomId: classroom._id } : "skip");
+  const digest = useQuery(api.digest.getLatestDigest, classroom ? { classroomId: classroom._id } : "skip");
 
   const [view, setView] = useState<View>("triage");
   const [masteryView, setMasteryView] = useState<"grid" | "radar">("grid");
@@ -170,7 +172,7 @@ export default function TeacherDashboard() {
 
           <AnimatePresence mode="wait">
             <motion.div key={view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
-              {view === "triage" && <TriageView data={data} onSelect={setSel} fire={fire} onReview={() => setSort("risk")} />}
+              {view === "triage" && <TriageView data={data} digest={digest ?? undefined} classroomId={classroom?._id ?? null} onSelect={setSel} onSelectId={(id) => { const s = data.students.find((st) => st.id === id); if (s) setSel(s); }} fire={fire} onReview={() => setSort("risk")} />}
               {view === "mastery" && (
                 <MasteryView
                   data={data}
@@ -320,11 +322,207 @@ function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
   );
 }
 
+/* ───────────────────────── WEEKLY DIGEST ───────────────────────── */
+type DigestDoc = NonNullable<FunctionReturnType<typeof api.digest.getLatestDigest>>;
+
+function relDayHe(ms: number): string {
+  const days = Math.floor((Date.now() - ms) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "היום";
+  if (days === 1) return "אתמול";
+  return `לפני ${days} ימים`;
+}
+
+const ACTION_TONE: Record<string, string> = {
+  high: "var(--color-error)",
+  medium: "var(--color-tertiary)",
+  low: "var(--color-primary)",
+};
+
+// Small delta bar chart for per-topic accuracy (this week %, colored by trend).
+function TopicDeltaBars({ topics }: { topics: DigestDoc["payload"]["topicDeltas"] }) {
+  const withData = topics.filter((t) => t.attempts > 0);
+  if (withData.length === 0) return null;
+  return (
+    <div className="flex items-end gap-2.5 mt-1" style={{ height: 96 }}>
+      {withData.map((t) => {
+        const up = t.delta > 0, down = t.delta < 0;
+        const col = up ? "var(--color-primary)" : down ? "var(--color-error)" : "var(--color-tertiary)";
+        return (
+          <div key={t.topicId} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0" title={`${t.name} · ${t.pct}%`}>
+            {t.delta !== 0 && (
+              <span className="num text-[10px] font-bold" style={{ color: col }}>{up ? "+" : ""}{t.delta}</span>
+            )}
+            <div className="w-full rounded-t-md rounded-b-sm" style={{ height: `${Math.max(6, t.pct * 0.6)}px`, background: col, boxShadow: `0 0 8px color-mix(in srgb, ${col} 40%, transparent)` }} />
+            <span className="num text-[11px] font-extrabold" style={{ color: col }}>{t.pct}%</span>
+            <span className="text-[10px] font-semibold text-on-surface-variant text-center leading-tight w-full truncate">{t.name}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DigestStudentChip({ c, tone, onClick }: {
+  c: DigestDoc["payload"]["struggling"][number]; tone: string; onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className="fdr-lift flex items-center gap-2.5 w-full text-start rounded-xl bg-surface p-2.5" style={{ border: "2px solid var(--color-outline)", borderInlineStartWidth: 5, borderInlineStartColor: tone }}>
+      <span style={avatarStyle(c.avatarColor, 32, 9, 12)}>{(c.name?.trim()?.[0] ?? "?")}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-[13px] truncate">{c.name}</div>
+        <div className="text-[11px] text-on-surface-variant truncate">{c.reason}</div>
+      </div>
+      {c.trend !== 0 && (
+        <span className="num text-[12px] font-bold flex-shrink-0" style={{ color: c.trend > 0 ? "var(--color-primary)" : "var(--color-error)" }}>{c.trend > 0 ? "+" : ""}{c.trend}</span>
+      )}
+    </button>
+  );
+}
+
+function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
+  digest?: DigestDoc; classroomId: Id<"classrooms"> | null;
+  onSelectStudent: (id: string) => void; fire: (m: string) => void;
+}) {
+  const regenerate = useMutation(api.digest.regenerateDigest);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    if (!classroomId || busy) return;
+    setBusy(true);
+    try {
+      await regenerate({ classroomId });
+      fire("התקציר השבועי עודכן");
+    } catch {
+      fire("עדכון התקציר נכשל");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Empty state — no digest generated yet.
+  if (!digest) {
+    return (
+      <div className="clay-card circuit-grid relative overflow-hidden mb-4.5 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-start" style={{ padding: 22, marginBottom: 18 }}>
+        <span className="inline-flex items-center justify-center rounded-2xl flex-shrink-0" style={{ width: 52, height: 52, background: "color-mix(in srgb, var(--color-secondary) 14%, transparent)", color: "var(--color-secondary)" }}>
+          <GraduationCap size={26} />
+        </span>
+        <div className="flex-1">
+          <div className="font-display font-extrabold text-[17px]">תקציר שבועי</div>
+          <p className="text-[13px] text-on-surface-variant mt-0.5">התקציר הראשון ייווצר ביום ראשון. אפשר גם ליצור אותו עכשיו.</p>
+        </div>
+        <button className="btn-clay-primary flex-shrink-0" style={{ padding: "0.6rem 1.1rem", fontSize: 13.5 }} onClick={run} disabled={busy || !classroomId}>
+          {busy ? "יוצר…" : "צור תקציר עכשיו"}
+        </button>
+      </div>
+    );
+  }
+
+  const p = digest.payload;
+  const t = p.totals;
+  return (
+    <div className="clay-card circuit-grid relative overflow-hidden mb-4.5" style={{ padding: 22, marginBottom: 18 }}>
+      {/* header */}
+      <div className="flex items-center gap-3 flex-wrap mb-4">
+        <span className="inline-flex items-center justify-center rounded-2xl flex-shrink-0" style={{ width: 44, height: 44, background: "color-mix(in srgb, var(--color-secondary) 14%, transparent)", color: "var(--color-secondary)" }}>
+          <GraduationCap size={23} />
+        </span>
+        <div className="flex-1 min-w-[160px]">
+          <div className="font-display font-extrabold text-[18px] leading-none">תקציר שבועי</div>
+          <div className="text-[11.5px] font-semibold text-on-surface-variant mt-1">7 הימים האחרונים · עודכן {relDayHe(digest.generatedAt)}</div>
+        </div>
+        <button className="btn-clay-ghost flex items-center gap-1.5 flex-shrink-0" style={{ padding: "0.5rem 0.9rem", fontSize: 12.5 }} onClick={run} disabled={busy}>
+          <Zap size={14} className={busy ? "animate-pulse" : ""} /> {busy ? "מרענן…" : "רענן תקציר"}
+        </button>
+      </div>
+
+      {/* headline numbers */}
+      <div className="grid gap-2.5 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+        {[
+          { l: "פעילים השבוע", v: `${t.activeStudents}/${t.totalStudents}`, col: "var(--color-secondary)", delta: null as number | null },
+          { l: "דיוק כיתתי", v: `${t.accuracy}%`, col: accColor(t.accuracy), delta: t.accuracyDelta },
+          { l: "תרגולים", v: `${t.attempts}`, col: "var(--color-on-surface)", delta: null },
+          { l: "השלמת ש״ב", v: `${t.homeworkCompletion}%`, col: t.homeworkCompletion >= 70 ? "var(--color-primary)" : "var(--color-tertiary)", delta: null },
+        ].map((k) => (
+          <div key={k.l} className="rounded-xl bg-surface-container-low border-2 border-outline" style={{ padding: "11px 13px" }}>
+            <div className="text-[11px] font-bold text-on-surface-variant">{k.l}</div>
+            <div className="flex items-end gap-1.5">
+              <div className="num font-extrabold text-[22px]" style={{ color: k.col }}>{k.v}</div>
+              {k.delta !== null && k.delta !== 0 && (
+                <span className="num text-[11px] font-bold mb-1" style={{ color: k.delta > 0 ? "var(--color-primary)" : "var(--color-error)" }}>{k.delta > 0 ? "▲" : "▼"}{Math.abs(k.delta)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-4.5" style={{ gap: 18 }}>
+        {/* students */}
+        <div className="flex-1 flex flex-col gap-3" style={{ flexBasis: 300, minWidth: 260 }}>
+          {p.struggling.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-2 text-[12.5px] font-extrabold text-on-surface-variant"><AlertTriangle size={14} className="text-error" /> דורשים תשומת לב</div>
+              <div className="flex flex-col gap-2">
+                {p.struggling.map((c) => <DigestStudentChip key={c.studentId} c={c} tone="var(--color-error)" onClick={() => onSelectStudent(c.studentId)} />)}
+              </div>
+            </div>
+          )}
+          {p.improving.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-2 text-[12.5px] font-extrabold text-on-surface-variant"><Flame size={14} className="text-primary" /> בשיפור</div>
+              <div className="flex flex-col gap-2">
+                {p.improving.map((c) => <DigestStudentChip key={c.studentId} c={c} tone="var(--color-primary)" onClick={() => onSelectStudent(c.studentId)} />)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* actions + topic bars */}
+        <div className="flex-1 flex flex-col gap-4" style={{ flexBasis: 320, minWidth: 260 }}>
+          <div>
+            <div className="flex items-center gap-1.5 mb-2 text-[12.5px] font-extrabold text-on-surface-variant"><Lightbulb size={14} tone="current" animated={false} glow={0.4} /> פעולות מומלצות</div>
+            <div className="flex flex-col gap-2">
+              {p.recommendedActions.map((a, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-xl bg-surface-container-low border-2 border-outline p-2.5">
+                  <span className="mt-1 flex-shrink-0" style={{ width: 8, height: 8, borderRadius: "50%", background: ACTION_TONE[a.priority] ?? "var(--color-primary)", boxShadow: `0 0 8px ${ACTION_TONE[a.priority] ?? "var(--color-primary)"}` }} />
+                  <span className="text-[12.5px] font-semibold text-on-surface leading-snug">{a.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {p.topicDeltas.some((t) => t.attempts > 0) && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 text-[12.5px] font-extrabold text-on-surface-variant"><Zap size={14} className="text-primary" /> דיוק לפי נושא · שינוי שבועי</div>
+              <TopicDeltaBars topics={p.topicDeltas} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {p.notableEvents.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-4 pt-3.5" style={{ borderTop: "2px solid var(--color-outline)" }}>
+          {p.notableEvents.map((e, i) => (
+            <span key={i} className="stat-chip" style={{ cursor: "default", fontSize: 11.5 }}>
+              {e.kind === "streak" ? <Flame size={13} className="text-tertiary" /> : e.kind === "level" ? <GraduationCap size={13} className="text-secondary" /> : <CheckCircle2 size={13} className="text-primary" />}
+              <strong>{e.who}</strong> {e.text}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ───────────────────────── TRIAGE ───────────────────────── */
-function TriageView({ data, onSelect, fire, onReview }: { data: CommandCenterData; onSelect: (s: CCStudent) => void; fire: (m: string) => void; onReview: () => void }) {
+
+function TriageView({ data, digest, classroomId, onSelect, onSelectId, fire, onReview }: {
+  data: CommandCenterData; digest?: DigestDoc; classroomId: Id<"classrooms"> | null;
+  onSelect: (s: CCStudent) => void; onSelectId: (id: string) => void; fire: (m: string) => void; onReview: () => void;
+}) {
   const urgentNames = data.students.filter((s) => s.status === "risk").slice(0, 3).map((s) => s.name).join(" · ");
   return (
     <div>
+      <WeeklyDigest digest={digest} classroomId={classroomId} onSelectStudent={onSelectId} fire={fire} />
+
       {data.atRisk > 0 && (
         <div className="fdr-urgent flex items-center gap-3.5 flex-wrap mb-4.5 px-4 py-3.5 rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-error) 10%, var(--color-surface))", border: "2px solid color-mix(in srgb, var(--color-error) 55%, var(--color-outline))", marginBottom: 18 }}>
           <span className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: "var(--color-error)", color: "#fff", boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-error) 45%, transparent)" }}><AlertTriangle size={20} /></span>

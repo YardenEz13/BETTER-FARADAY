@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, SignalWave, Lens } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { useCountUp } from "../lib/gsapUtils";
 
 export default function LearningProgress() {
@@ -40,14 +41,7 @@ export default function LearningProgress() {
   const heroXpRef = useCountUp<HTMLHeadingElement>(totalXP);
   const attemptsRef = useCountUp<HTMLSpanElement>(totalAttempts, { grouped: false });
 
-  if (!student || !topics) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        <span className="text-on-surface-variant text-sm" style={{ fontFamily: 'Assistant, sans-serif' }}>טוען נתוני התקדמות...</span>
-      </div>
-    </div>
-  );
+  if (!student || !topics) return <ElectricLoader label="טוען נתוני התקדמות..." />;
 
   const getStatusLabel = (percent: number) => {
     if (percent >= 80) return { label: "הושלם", badge: "bg-primary/15 border-primary/40 text-primary" };

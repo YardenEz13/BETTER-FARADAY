@@ -21,6 +21,7 @@ export default defineSchema({
     xpSpent: v.optional(v.number()),       // total XP spent in the shop
     lastActiveDate: v.optional(v.string()),// YYYY-MM-DD in Israel time — streak bookkeeping
     streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
+    onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({
@@ -334,6 +335,64 @@ export default defineSchema({
       reason: v.string(),
     })),
   }).index("by_homework", ["homeworkId"]),
+
+  // ── Teacher Weekly Digest (per-class, last-7-days summary) ──
+  // One row per classroom per generation. The whole rendered summary lives in
+  // the typed `payload` object (bounded: fixed-size totals + at most a handful
+  // of per-topic / top-3 student entries), so a single index-based read gives
+  // the dashboard everything the digest card needs.
+  weeklyDigests: defineTable({
+    classroomId: v.id("classrooms"),
+    weekStart: v.number(),        // ms — start of the 7-day window
+    generatedAt: v.number(),
+    payload: v.object({
+      // Headline totals for the week
+      totals: v.object({
+        activeStudents: v.number(),
+        totalStudents: v.number(),
+        attempts: v.number(),
+        accuracy: v.number(),          // 0-100, class accuracy this week
+        accuracyDelta: v.number(),     // vs previous week (points)
+        homeworkCompletion: v.number(),// 0-100, submitted / assigned
+      }),
+      // Per-topic accuracy this week vs previous week
+      topicDeltas: v.array(v.object({
+        topicId: v.id("topics"),
+        name: v.string(),
+        pct: v.number(),               // 0-100 this week
+        delta: v.number(),             // points vs previous week
+        attempts: v.number(),
+      })),
+      // Top 3 struggling / improving students (one-line Hebrew reasons)
+      struggling: v.array(v.object({
+        studentId: v.id("students"),
+        name: v.string(),
+        avatarColor: v.string(),
+        acc: v.number(),               // 0-100 this week
+        trend: v.number(),             // points vs previous week
+        reason: v.string(),
+      })),
+      improving: v.array(v.object({
+        studentId: v.id("students"),
+        name: v.string(),
+        avatarColor: v.string(),
+        acc: v.number(),
+        trend: v.number(),
+        reason: v.string(),
+      })),
+      // Notable events (streak milestones, pending level suggestions, …)
+      notableEvents: v.array(v.object({
+        kind: v.string(),              // "streak" | "level" | "homework"
+        who: v.string(),
+        text: v.string(),
+      })),
+      // 2-4 rule-based recommended teacher actions
+      recommendedActions: v.array(v.object({
+        priority: v.string(),          // "high" | "medium" | "low"
+        text: v.string(),
+      })),
+    }),
+  }).index("by_classroom", ["classroomId"]),
 
   // ── Level progression suggestions ──
   levelSuggestions: defineTable({
