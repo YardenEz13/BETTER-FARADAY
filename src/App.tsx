@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
-import { AnimatePresence } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { preloadModel } from "./services/localAI";
@@ -46,19 +45,16 @@ export default function App() {
 }
 
 /**
- * Routes wrapped in a per-location AnimatedPresence so route changes get a
- * smooth clay slide+fade. The location is snapshotted so <Routes> keeps
- * rendering the *outgoing* page during its exit animation. Suspense lives
- * inside the animated wrapper so each lazy page chunk resolves without
- * collapsing the whole tree (and without double-mounting the incoming page).
+ * Routes keyed by location so each route change remounts through
+ * PageTransition's enter animation (clay slide+fade). Enter-only — exit
+ * animations deadlock with lazy routes + Suspense (see PageTransition).
  */
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <PageTransition key={location.pathname}>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes location={location}>
+    <PageTransition key={location.pathname}>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes location={location}>
             <Route path="/" element={<RolePage />} />
             <Route path="/student/:studentId" element={<StudentHome />} />
             <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
@@ -73,9 +69,8 @@ function AnimatedRoutes() {
             <Route path="/electric-demo" element={<ElectricGallery />} />
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </PageTransition>
-    </AnimatePresence>
+        </Routes>
+      </Suspense>
+    </PageTransition>
   );
 }

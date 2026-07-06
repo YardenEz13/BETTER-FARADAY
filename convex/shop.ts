@@ -1,6 +1,5 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { awardXpHelper } from "./xp";
 
 // ── Shop catalogue + ownership + balance for one student ──
 export const getShop = query({
@@ -79,9 +78,17 @@ export const purchaseItem = mutation({
       consumed: isConsumable ? false : undefined,
     });
 
-    // Increment the spent rollup and log a negative-amount xpEvent.
+    // Increment the spent rollup and log a negative-amount xpEvent. The event
+    // is inserted directly (NOT via awardXpHelper) — the helper also decrements
+    // students.xp, which would double-charge since balance = xp - xpSpent.
     await ctx.db.patch(studentId, { xpSpent: spent + item.price });
-    await awardXpHelper(ctx, studentId, -item.price, "purchase", itemId);
+    await ctx.db.insert("xpEvents", {
+      studentId,
+      amount: -item.price,
+      reason: "purchase",
+      refId: itemId,
+      createdAt: Date.now(),
+    });
 
     // Buying a streak freeze grants an available charge.
     if (isConsumable) {
