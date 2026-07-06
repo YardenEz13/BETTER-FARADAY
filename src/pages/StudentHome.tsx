@@ -8,6 +8,7 @@ import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
+  RotateCcw,
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
@@ -85,10 +86,11 @@ const SkillNode = memo(function SkillNode({
           regardless of which of the three sizes actually renders inside it. */}
       <div className="flex items-center justify-center" style={{ width: PATH_NODE_SLOT, height: PATH_NODE_SLOT }}>
         <button
-          className={`relative rounded-full flex items-center justify-center transition-transform cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10 ${tier === "active" && !reducedMotion ? "skill-node-pulse" : ""}`}
+          className={`relative rounded-full flex items-center justify-center transition-transform cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10 ${tier === "active" && !reducedMotion ? "skill-node-pulse" : ""} ${tier === "completed" && !reducedMotion ? "skill-node-charged" : ""}`}
           style={{
             width: size,
             height: size,
+            filter: tier === "locked" ? "grayscale(0.7)" : undefined,
             background: tier === "completed" ? "var(--color-primary)" : "var(--color-surface)",
             border: tier === "locked" ? "2px solid var(--color-outline)" : tier === "active" ? "5px solid var(--color-primary)" : "none",
             boxShadow: tier === "completed"
@@ -225,6 +227,9 @@ export default function StudentHome() {
   const student = useQuery(api.classroom.get, { id: studentId as Id<"students"> });
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
+  const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
+  const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
+  const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
   const [chatOpen, setChatOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
@@ -260,6 +265,11 @@ export default function StudentHome() {
   const overallAcc = totalAttempts > 0 ? Math.round((correctTotal / totalAttempts) * 100) : 0;
   const totalXP = (student.streak * 100) + (totalAttempts * 25) + (correctTotal * 50);
   const completedTopics = topics.filter(t => getProgress(t._id) >= 80).length;
+
+  const xpBalance = xpSummary?.balance ?? totalXP;
+  const reviewCount = reviewDeck?.length ?? 0;
+  const streakInDanger = !!streakStatus?.inDanger;
+  const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
 
   const nodeStates = topics.map((topic) => {
     const progress = getProgress(topic._id);
@@ -378,6 +388,53 @@ export default function StudentHome() {
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
+          {/* Streak-in-danger banner (amber / tertiary) */}
+          {streakInDanger && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-tertiary/40 bg-tertiary/12 px-5 py-3.5 flex items-center gap-3"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              role="alert"
+            >
+              <Flame className="text-tertiary flex-shrink-0" size={22} />
+              <div className="flex-1 text-right">
+                <div className="font-bold text-on-surface text-sm">
+                  🔥 הרצף שלך בסכנה! פתרו שאלה אחת היום כדי לשמור עליו
+                </div>
+                {freezesAvailable > 0 && (
+                  <div className="font-medium text-on-surface-variant text-xs mt-0.5">
+                    יש לך {freezesAvailable} {freezesAvailable === 1 ? "הקפאה" : "הקפאות"}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Quick actions — shop + review entry points */}
+          <div className="w-full max-w-4xl mb-4 flex flex-wrap gap-3">
+            <button
+              onClick={() => navigate(`/student/${studentId}/shop`)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+            >
+              <ElectricBolt tone="spark" size={17} glow={0.5} animated={false} />
+              <span>החנות</span>
+              <span className="num font-bold text-primary">{xpBalance.toLocaleString()}</span>
+            </button>
+            {reviewCount > 0 && (
+              <button
+                onClick={() => navigate(`/student/${studentId}/review`)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer"
+                style={{ boxShadow: 'var(--shadow-clay)' }}
+              >
+                <RotateCcw size={16} />
+                <span>חזרה על טעויות</span>
+                <span className="num font-bold px-2 py-0.5 rounded-full bg-secondary text-white text-xs">{reviewCount}</span>
+              </button>
+            )}
+          </div>
+
           {/* Section header — circuit-field hero band */}
           <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline backdrop-blur-md"
             style={{ background: 'color-mix(in srgb, var(--color-surface) 82%, transparent)', boxShadow: 'var(--shadow-clay)' }}>

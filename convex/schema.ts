@@ -16,6 +16,11 @@ export default defineSchema({
     streak: v.number(),
     level: v.optional(v.number()), // 1-5: מתחיל, חוקר, מתקדם, מומחה, מאסטר
     homeworkTheme: v.optional(v.string()), // e.g. "כדורגל", "חברים" — used to personalize homework questions
+    // ── Gamification (denormalized; optional so existing rows stay valid) ──
+    xp: v.optional(v.number()),            // total XP earned (sum of positive xpEvents)
+    xpSpent: v.optional(v.number()),       // total XP spent in the shop
+    lastActiveDate: v.optional(v.string()),// YYYY-MM-DD in Israel time — streak bookkeeping
+    streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({
@@ -46,6 +51,7 @@ export default defineSchema({
     timeMs: v.number(),
     hintsUsed: v.number(),
     difficulty: v.number(),
+    source: v.optional(v.string()), // e.g. "review" — distinguishes review-deck answers
   })
     .index("by_student", ["studentId"])
     .index("by_student_topic", ["studentId", "topicId"])
@@ -513,4 +519,35 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
+
+  // ── XP ledger: append-only log of every XP change (earn or spend) ──
+  // students.xp / students.xpSpent are denormalized rollups of these rows.
+  xpEvents: defineTable({
+    studentId: v.id("students"),
+    amount: v.number(),   // positive = earned, negative = spent (e.g. "purchase")
+    reason: v.string(),   // "attempt_correct" | "attempt_wrong" | "streak_day" | "homework_submitted" | "level_up_bonus" | "purchase" | "review_correct"
+    refId: v.optional(v.string()), // loose ref to the source doc (questionId, itemId, …)
+    createdAt: v.number(),
+  }).index("by_student", ["studentId"]),
+
+  // ── XP shop catalogue ──
+  shopItems: defineTable({
+    name: v.string(),        // Hebrew display name
+    description: v.string(),
+    icon: v.string(),        // lucide icon name or emoji
+    category: v.string(),    // "avatar_color" | "theme" | "streak_freeze" | "badge"
+    price: v.number(),
+    sortOrder: v.number(),
+    active: v.boolean(),
+  }).index("by_active", ["active"]),
+
+  // ── Purchases (one row per acquisition) ──
+  purchases: defineTable({
+    studentId: v.id("students"),
+    itemId: v.id("shopItems"),
+    price: v.number(),
+    createdAt: v.number(),
+    consumed: v.optional(v.boolean()), // for consumables (streak_freeze)
+  }).index("by_student", ["studentId"])
+    .index("by_student_item", ["studentId", "itemId"]),
 });

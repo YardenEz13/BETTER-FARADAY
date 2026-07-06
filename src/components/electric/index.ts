@@ -5,3 +5,5 @@ export { ElectricField } from "./ElectricField";
 export type { ElectricFieldProps } from "./ElectricField";
 export { ElectricLoader } from "./ElectricLoader";
 export type { ElectricLoaderProps } from "./ElectricLoader";
+export { default as SparkBurst } from "./SparkBurst";
+export type { SparkBurstProps } from "./SparkBurst";

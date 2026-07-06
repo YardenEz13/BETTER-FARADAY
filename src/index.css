@@ -318,8 +318,9 @@ body {
 
   /* ── Clay Card — the signature Duolingo floating card ── */
   .clay-card {
-    @apply bg-surface rounded-2xl border-2 border-outline transition-all duration-200;
+    @apply bg-surface rounded-2xl border-2 border-outline;
     box-shadow: var(--shadow-clay);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
   }
   .clay-card:hover {
     transform: perspective(700px) translateY(-2px) rotateX(1.4deg);
@@ -415,9 +416,12 @@ body {
   .btn-lg      { @apply px-8 py-4 text-base; }
 
   .btn-icon {
-    @apply inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-container border-2 border-outline text-on-surface cursor-pointer transition-all duration-150;
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-container border-2 border-outline text-on-surface cursor-pointer;
+    box-shadow: var(--shadow-clay);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms, color 120ms, background-color 120ms;
   }
-  .btn-icon:hover { @apply border-primary text-primary bg-primary/5; }
+  .btn-icon:hover { @apply border-primary text-primary bg-primary/5; transform: translateY(-2px); box-shadow: 0 6px 0 0 var(--color-outline); }
+  .btn-icon:active { transform: translateY(2px); box-shadow: 0 0 0 0 var(--color-outline); }
 
   .badge {
     @apply inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-primary-container text-on-primary-container;
@@ -455,11 +459,25 @@ body {
 
   /* ── Stat Chip ── */
   .stat-chip {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border-2 border-outline font-semibold text-sm text-on-surface whitespace-nowrap transition-all duration-200 cursor-pointer;
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border-2 border-outline font-semibold text-sm text-on-surface whitespace-nowrap cursor-pointer;
     font-family: 'Assistant', sans-serif;
     box-shadow: var(--shadow-clay);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms, color 120ms;
   }
-  .stat-chip:hover { @apply border-primary text-primary -translate-y-0.5; }
+  .stat-chip:hover { @apply border-primary text-primary; transform: translateY(-2px); box-shadow: 0 6px 0 0 var(--color-outline); }
+  .stat-chip:active { transform: translateY(2px); box-shadow: 0 0 0 0 var(--color-outline); }
+
+  /* ── Pop utility — a quick scale bump (1 → 1.04 → 1) for value changes:
+     XP counters, streak ticks, score increments. Add/re-trigger the class on
+     the element whose number just changed. Auto-disabled under reduced-motion
+     (global transition/animation kill at the bottom of this file). ── */
+  .pop { animation: pop-bump 0.34s ease-out; }
+}
+
+@keyframes pop-bump {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
 }
 
 /* ═══════════════════ TYPOGRAPHY UTILITIES ════════════════════ */
@@ -570,8 +588,8 @@ body {
     0 0 38px color-mix(in srgb, var(--color-primary) 55%, transparent) !important;
 }
 .answer-glow-wrong {
-  box-shadow: 0 4px 0 0 var(--color-outline),
-    0 0 34px color-mix(in srgb, var(--color-error) 50%, transparent) !important;
+  box-shadow: var(--shadow-clay-error),
+    0 0 34px color-mix(in srgb, var(--color-error) 45%, transparent) !important;
 }
 
 /* ═══════════════════ ELECTRIC / FIELD-LINE MOTION ════════════════════ */
@@ -607,6 +625,14 @@ body {
     transform: scale(1.05);
     filter: drop-shadow(0 0 13px color-mix(in srgb, var(--color-primary) 70%, transparent));
   }
+}
+
+/* Completed learning-map node — a settled electric-green glow that breathes
+   gently (subtler than the active node's stronger pulse). */
+.skill-node-charged { animation: skill-node-charged 3.2s ease-in-out infinite; }
+@keyframes skill-node-charged {
+  0%, 100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 45%, transparent)); }
+  50%      { filter: drop-shadow(0 0 11px color-mix(in srgb, var(--color-primary) 68%, transparent)); }
 }
 
 /* Ambient circuit field — faint dotted grid for hero/section backdrops */

@@ -12,7 +12,7 @@ import AIChatPanel from "../components/AIChatPanel";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
-import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
+import { Lightbulb as ElectricBulb, Battery, SparkBurst } from "../components/electric";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
@@ -99,11 +99,16 @@ export default function PracticeSession() {
     setTimeout(() => card.classList.remove(cls), 900);
   };
 
-  /* GSAP elastic shake on a wrong answer. */
+  /* Gentle clay wiggle on a wrong answer — x ±6px over ~0.35s, no harsh flood.
+     The error shadow flash is handled separately by flashCard("wrong"). */
   const shakeCard = () => {
     const card = questionCardRef.current;
     if (!card || reducedMotion) return;
-    gsap.fromTo(card, { x: -13 }, { x: 0, duration: 0.75, ease: "elastic.out(1, 0.22)", clearProps: "x" });
+    gsap.fromTo(
+      card,
+      { x: 0 },
+      { keyframes: { x: [-6, 6, -4, 4, 0] }, duration: 0.35, ease: "power1.inOut", clearProps: "x" },
+    );
   };
 
   /* The earned XP flies from the answered option to the XP counter (MotionPath). */
@@ -256,13 +261,13 @@ export default function PracticeSession() {
           {/* Questions chip */}
           <div className="stat-chip">
             <Activity size={13} className="text-primary" />
-            <span className="num font-bold text-sm text-on-surface">{questionsAnswered}</span>
+            <span key={questionsAnswered} className="num font-bold text-sm text-on-surface pop">{questionsAnswered}</span>
             <span className="text-xs text-on-surface-variant">שאלות</span>
           </div>
-          {/* XP chip */}
+          {/* XP chip — the number pops on every increment (keyed re-mount) */}
           <div className="stat-chip" ref={xpChipRef}>
             <Zap size={13} className="text-tertiary" />
-            <span className="num font-bold text-sm text-tertiary">+{sessionXP}</span>
+            <span key={sessionXP} className="num font-bold text-sm text-tertiary pop">+{sessionXP}</span>
             <span className="text-xs text-on-surface-variant">XP</span>
           </div>
           <ThemeToggle />
@@ -602,46 +607,6 @@ export default function PracticeSession() {
       <Suspense fallback={null}>
         <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
       </Suspense>
-    </div>
-  );
-}
-
-/* ── Electric spark discharge — radiating rays + a flash ring on a correct answer ── */
-function SparkBurst() {
-  const rays = Array.from({ length: 12 });
-  return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
-      <div className="relative">
-        {/* flash ring */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0.7 }}
-          animate={{ scale: 2.4, opacity: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="absolute left-1/2 top-1/2 w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary"
-        />
-        {/* rays */}
-        {rays.map((_, i) => (
-          <div
-            key={i}
-            className="absolute left-1/2 top-1/2"
-            style={{ transform: `rotate(${(i / rays.length) * 360}deg)` }}
-          >
-            <motion.div
-              initial={{ scaleY: 0, opacity: 0, y: 0 }}
-              animate={{ scaleY: 1, opacity: [0, 1, 0], y: -52 }}
-              transition={{ duration: 0.55, delay: i * 0.012, ease: 'easeOut' }}
-              style={{
-                width: 3,
-                height: 30,
-                borderRadius: 9999,
-                transformOrigin: 'center',
-                background: 'var(--color-inverse-primary)',
-                boxShadow: '0 0 8px var(--color-inverse-primary)',
-              }}
-            />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

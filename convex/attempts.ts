@@ -1,5 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { awardXpHelper, xpForAttempt } from "./xp";
+import { touchStreakHelper } from "./streaks";
 
 export const submitAttempt = mutation({
   args: {
@@ -58,6 +60,16 @@ export const submitAttempt = mutation({
 
     // Update student's current topic
     await ctx.db.patch(args.studentId, { currentTopicId: args.topicId });
+
+    // Gamification: award XP for the attempt and keep the streak alive.
+    await awardXpHelper(
+      ctx,
+      args.studentId,
+      xpForAttempt(args.isCorrect, args.difficulty),
+      args.isCorrect ? "attempt_correct" : "attempt_wrong",
+      args.questionId,
+    );
+    await touchStreakHelper(ctx, args.studentId);
 
     return { newDifficulty };
   },

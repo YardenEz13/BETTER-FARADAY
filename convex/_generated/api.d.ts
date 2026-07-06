@@ -37,11 +37,15 @@ import type * as powerMap from "../powerMap.js";
 import type * as precompute from "../precompute.js";
 import type * as proofGrading from "../proofGrading.js";
 import type * as questions from "../questions.js";
+import type * as review from "../review.js";
 import type * as seedGeometry from "../seedGeometry.js";
 import type * as seedGeometryQuestions from "../seedGeometryQuestions.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
+import type * as shop from "../shop.js";
+import type * as streaks from "../streaks.js";
 import type * as teacherImport from "../teacherImport.js";
 import type * as topics from "../topics.js";
+import type * as xp from "../xp.js";
 
 import type {
   ApiFromModules,
@@ -79,11 +83,15 @@ declare const fullApi: ApiFromModules<{
   precompute: typeof precompute;
   proofGrading: typeof proofGrading;
   questions: typeof questions;
+  review: typeof review;
   seedGeometry: typeof seedGeometry;
   seedGeometryQuestions: typeof seedGeometryQuestions;
   sessionBriefs: typeof sessionBriefs;
+  shop: typeof shop;
+  streaks: typeof streaks;
   teacherImport: typeof teacherImport;
   topics: typeof topics;
+  xp: typeof xp;
 }>;
 
 /**

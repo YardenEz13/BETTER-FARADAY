@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
+import { AnimatePresence } from "framer-motion";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { preloadModel } from "./services/localAI";
 import { ThemeProvider } from "./components/ThemeContext";
 import { ElectricLoader } from "./components/electric";
+import PageTransition from "./components/PageTransition";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
@@ -16,6 +18,8 @@ const StudentHomework    = lazy(() => import("./pages/StudentHomework"));
 const StudentHomeworkList = lazy(() => import("./pages/StudentHomeworkList"));
 const StudentPdfAssignment = lazy(() => import("./pages/StudentPdfAssignment"));
 const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
+const XpShop             = lazy(() => import("./pages/XpShop"));
+const ReviewDeck         = lazy(() => import("./pages/ReviewDeck"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
@@ -33,8 +37,28 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <AnimatedRoutes />
+      </BrowserRouter>
+      <Analytics />
+      <SpeedInsights />
+    </ThemeProvider>
+  );
+}
+
+/**
+ * Routes wrapped in a per-location AnimatedPresence so route changes get a
+ * smooth clay slide+fade. The location is snapshotted so <Routes> keeps
+ * rendering the *outgoing* page during its exit animation. Suspense lives
+ * inside the animated wrapper so each lazy page chunk resolves without
+ * collapsing the whole tree (and without double-mounting the incoming page).
+ */
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <PageTransition key={location.pathname}>
         <Suspense fallback={<RouteFallback />}>
-          <Routes>
+          <Routes location={location}>
             <Route path="/" element={<RolePage />} />
             <Route path="/student/:studentId" element={<StudentHome />} />
             <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />
@@ -42,6 +66,8 @@ export default function App() {
             <Route path="/student/:studentId/homework/:homeworkId" element={<StudentHomework />} />
             <Route path="/student/:studentId/pdf/:assignmentId" element={<StudentPdfAssignment />} />
             <Route path="/student/:studentId/progress" element={<LearningProgress />} />
+            <Route path="/student/:studentId/shop" element={<XpShop />} />
+            <Route path="/student/:studentId/review" element={<ReviewDeck />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
@@ -49,9 +75,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
-      <Analytics />
-      <SpeedInsights />
-    </ThemeProvider>
+      </PageTransition>
+    </AnimatePresence>
   );
 }
