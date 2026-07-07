@@ -10,7 +10,7 @@ Faraday Project (formerly Cobalt Apollo) is a next-generation adaptive learning 
 ## Technology Stack
 - **Frontend Framework:** React 18 with TypeScript
 - **Build Tool:** Vite
-- **Styling:** Tailwind CSS v4 + Vanilla CSS variables (`index.css` and `stitch-theme.css`)
+- **Styling:** Tailwind CSS v4 + Vanilla CSS variables (`index.css` — single source of truth for all design tokens)
 - **Animations:** Framer Motion
 - **Icons:** Lucide React
 - **Math Rendering:** KaTeX
