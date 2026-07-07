@@ -21,6 +21,7 @@ const LearningProgress   = lazy(() => import("./pages/LearningProgress"));
 const XpShop             = lazy(() => import("./pages/XpShop"));
 const ReviewDeck         = lazy(() => import("./pages/ReviewDeck"));
 const Leaderboard        = lazy(() => import("./pages/Leaderboard"));
+const ExamMode           = lazy(() => import("./pages/ExamMode"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
@@ -68,6 +69,8 @@ function AnimatedRoutes() {
             <Route path="/student/:studentId/shop" element={<XpShop />} />
             <Route path="/student/:studentId/review" element={<ReviewDeck />} />
             <Route path="/student/:studentId/leaderboard" element={<Leaderboard />} />
+            <Route path="/student/:studentId/exam" element={<ExamMode />} />
+            <Route path="/student/:studentId/exam/:examId" element={<ExamMode />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />

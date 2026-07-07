@@ -258,6 +258,35 @@ export default defineSchema({
     fullSolution: v.string(),
   }).index("by_difficulty", ["difficulty"]),
 
+  // ── Bagrut exam simulation (מתכונת) attempts ──
+  // One row per exam sitting. compoundQuestionIds are frozen at start time; the
+  // per-question / per-section student work + grading lives inline in perQuestion
+  // (bounded: 2-3 questions, a handful of sections each). Solutions are NEVER
+  // returned to the client while status is "in_progress" — see convex/exams.ts.
+  examAttempts: defineTable({
+    studentId: v.id("students"),
+    compoundQuestionIds: v.array(v.id("compoundQuestions")),
+    startedAt: v.number(),
+    durationMinutes: v.number(),          // allotted time (30 * question count)
+    submittedAt: v.optional(v.number()),
+    status: v.string(),                   // "in_progress" | "submitted" | "expired"
+    perQuestion: v.array(v.object({
+      compoundQuestionId: v.id("compoundQuestions"),
+      sectionResults: v.array(v.object({
+        sectionLabel: v.string(),
+        studentAnswer: v.string(),
+        isCorrect: v.optional(v.boolean()),    // absent = self-check (proof/expression)
+        pointsEarned: v.optional(v.number()),
+        pointsPossible: v.number(),
+        selfGraded: v.optional(v.boolean()),   // student self-assessed this section
+        needsSelfCheck: v.optional(v.boolean()),// shown as "בדיקה עצמית"
+      })),
+      totalEarned: v.number(),
+      totalPossible: v.number(),
+    })),
+    finalScore: v.optional(v.number()),   // 0-100, weighted by points
+  }).index("by_student", ["studentId"]),
+
   // ── Homework assignments ──
   homework: defineTable({
     classroomId: v.id("classrooms"),

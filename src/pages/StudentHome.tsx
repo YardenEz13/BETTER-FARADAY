@@ -8,7 +8,7 @@ import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
-  RotateCcw, Trophy, Target, PencilLine, X,
+  RotateCcw, Trophy, Target, PencilLine, X, FileText,
 } from "../components/electric";
 import { SparkBurst } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
@@ -640,6 +640,14 @@ export default function StudentHome() {
                 )}
               </button>
             )}
+            <button
+              onClick={() => navigate(`/student/${studentId}/exam`)}
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-secondary hover:text-secondary transition-all font-semibold text-sm cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+            >
+              <FileText size={16} />
+              <span>מצב מתכונת 📝</span>
+            </button>
           </div>
 
           {/* Section header — circuit-field hero band */}
