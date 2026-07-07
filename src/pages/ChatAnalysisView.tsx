@@ -223,17 +223,17 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
             <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="80" preserveAspectRatio="none">
               <defs>
                 <linearGradient id={arcId} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#FF4B4B" />
-                  <stop offset="0.5" stopColor="#FFB02E" />
-                  <stop offset="1" stopColor="#17C964" />
+                  <stop offset="0" stopColor="var(--color-error)" />
+                  <stop offset="0.5" stopColor="var(--color-tertiary)" />
+                  <stop offset="1" stopColor="var(--color-primary)" />
                 </linearGradient>
               </defs>
               <line x1={PAD} y1={H * 0.33} x2={W - PAD} y2={H * 0.33} style={{ stroke: "var(--color-outline-variant)" }} strokeWidth={1.5} />
               <line x1={PAD} y1={H * 0.66} x2={W - PAD} y2={H * 0.66} style={{ stroke: "var(--color-outline-variant)" }} strokeWidth={1.5} />
               <path d={pathD} fill="none" stroke={`url(#${arcId})`} strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" />
-              {points.length > 0 && <circle cx={points[0].x} cy={points[0].y} r={5} fill="#FF4B4B" />}
+              {points.length > 0 && <circle cx={points[0].x} cy={points[0].y} r={5} fill="var(--color-error)" />}
               {points.length > 1 && (
-                <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r={6} style={{ fill: "var(--color-surface)" }} stroke="#17C964" strokeWidth={3.5} />
+                <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r={6} style={{ fill: "var(--color-surface)" }} stroke="var(--color-primary)" strokeWidth={3.5} />
               )}
             </svg>
             <div className="flex justify-between mt-1 font-mono text-[10px] text-on-surface-variant">

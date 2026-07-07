@@ -1069,7 +1069,7 @@ export default function AIChatPanel({
             <div
               className="pointer-events-none absolute inset-0 z-[1] opacity-0"
               style={{
-                background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(91,255,159,0.015) 2px, rgba(91,255,159,0.015) 4px)',
+                background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, color-mix(in srgb, var(--color-inverse-primary) 1.5%, transparent) 2px, color-mix(in srgb, var(--color-inverse-primary) 1.5%, transparent) 4px)',
               }}
               aria-hidden
             />
@@ -1079,13 +1079,13 @@ export default function AIChatPanel({
                 {/* AI identity */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_25%,transparent)]">
                       <FaradayAvatar px={48} fill />
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_color-mix(in_srgb,var(--color-inverse-primary)_60%,transparent)]" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-headline-md text-on-surface truncate" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
+                    <div className="font-headline-md text-on-surface truncate" style={{ textShadow: '0 0 10px color-mix(in srgb, var(--color-inverse-primary) 8%, transparent)' }}>
                       פרופסור פאראדיי
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -1159,7 +1159,7 @@ export default function AIChatPanel({
                     className="flex flex-1 flex-col items-center justify-center text-center gap-5 py-8"
                   >
                     <div className="relative">
-                      <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_rgba(91,255,159,0.3)]">
+                      <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_color-mix(in_srgb,var(--color-inverse-primary)_30%,transparent)]">
                         <FaradayAvatar px={64} fill />
                       </div>
                       <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
@@ -1256,7 +1256,7 @@ export default function AIChatPanel({
                 {/* Typing indicator */}
                 {isTyping && (
                   <div className="flex gap-4 w-full max-w-4xl mr-auto">
-                    <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.15)]">
+                    <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_15%,transparent)]">
                       <FaradayAvatar px={40} fill />
                     </div>
                     <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-5 py-4 shadow-lg flex items-center gap-3">

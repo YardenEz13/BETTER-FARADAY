@@ -580,7 +580,7 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
 
       {data.atRisk > 0 && (
         <div className="fdr-urgent flex items-center gap-3.5 flex-wrap mb-4.5 px-4 py-3.5 rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-error) 10%, var(--color-surface))", border: "2px solid color-mix(in srgb, var(--color-error) 55%, var(--color-outline))", marginBottom: 18 }}>
-          <span className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: "var(--color-error)", color: "#fff", boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-error) 45%, transparent)" }}><AlertTriangle size={20} /></span>
+          <span className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: "var(--color-error)", color: "var(--color-on-error)", boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-error) 45%, transparent)" }}><AlertTriangle size={20} /></span>
           <div className="flex-1 min-w-[180px]">
             <div className="font-extrabold text-[15px] text-on-surface">דרושה התערבות מיידית</div>
             <div className="text-[12.5px] text-on-surface-variant mt-0.5"><span className="num">{data.atRisk}</span> תלמידים מתחת לסף · {urgentNames}</div>
@@ -695,7 +695,7 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
   const segBtn = (active: boolean): React.CSSProperties => ({
     display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 10, border: "none", cursor: "pointer",
     fontWeight: 700, fontSize: 13, fontFamily: "var(--font-body)",
-    background: active ? "var(--color-primary)" : "transparent", color: active ? "#fff" : "var(--color-on-surface-variant)",
+    background: active ? "var(--color-primary)" : "transparent", color: active ? "var(--color-on-primary)" : "var(--color-on-surface-variant)",
     boxShadow: active ? "var(--shadow-clay-primary)" : "none",
   });
 
