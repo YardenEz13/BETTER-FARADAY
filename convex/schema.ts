@@ -21,6 +21,7 @@ export default defineSchema({
     xpSpent: v.optional(v.number()),       // total XP spent in the shop
     lastActiveDate: v.optional(v.string()),// YYYY-MM-DD in Israel time — streak bookkeeping
     streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
+    equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map ("electric" | "night"); absent = default backdrop
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
   }).index("by_classroom", ["classroomId"]),
 
@@ -595,6 +596,10 @@ export default defineSchema({
     description: v.string(),
     icon: v.string(),        // lucide icon name or emoji
     category: v.string(),    // "avatar_color" | "theme" | "streak_freeze" | "badge"
+    // Machine-usable payload for equippable items. avatar_color → the CSS color
+    // string written to students.avatarColor (hex, matching AVATAR_COLORS).
+    // theme → the equippedTheme key ("electric" | "night"). Absent for others.
+    value: v.optional(v.string()),
     price: v.number(),
     sortOrder: v.number(),
     active: v.boolean(),

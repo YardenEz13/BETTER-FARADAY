@@ -8,7 +8,7 @@ import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
-  RotateCcw,
+  RotateCcw, Trophy,
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
@@ -19,6 +19,7 @@ import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
+import NightSkyCanvas from "../components/NightSkyCanvas";
 
 /* ── Serpentine path geometry (per the "Learning Map" design spec) ──
    x is a percentage (0-100) of the path container's width, y is px. The wave
@@ -221,6 +222,32 @@ function StudentHomeSkeleton() {
   );
 }
 
+/* ── Owned-badge showcase — small clay medal chips (max 4) ── */
+function badgeIcon(icon: string) {
+  const key = icon?.toLowerCase?.() ?? "";
+  if (key === "flame") return <Flame size={13} className="text-tertiary" />;
+  if (key === "award" || key === "trophy") return <Trophy size={13} className="text-tertiary" />;
+  return <Star size={13} className="text-tertiary" />;
+}
+
+function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; icon: string }> }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1 mt-1" aria-label="תגים">
+      {badges.slice(0, 4).map((b) => (
+        <span
+          key={b._id}
+          title={b.name}
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-tertiary/12 border-2 border-tertiary/30"
+          style={{ boxShadow: "var(--shadow-clay)" }}
+        >
+          {badgeIcon(b.icon)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -231,6 +258,7 @@ export default function StudentHome() {
   const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
   const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
   const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
+  const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
   const [chatOpen, setChatOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
@@ -299,8 +327,21 @@ export default function StudentHome() {
   return (
     <div className="relative min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
 
-      {/* ── Magnetic lines-of-force field (full-bleed backdrop) ── */}
-      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
+      {/* ── Full-bleed backdrop — swaps with the equipped shop theme ──
+          "electric" → an intensified circuit field; "night" → the default
+          field plus a low-opacity starfield; default → lines-of-force. All
+          layers sit at zIndex 0 behind the z-10 content, low-opacity for
+          readability in both light and dark mode. */}
+      {student.equippedTheme === "electric" ? (
+        <FaradayCanvas variant="circuit" style={{ zIndex: 0 }} />
+      ) : student.equippedTheme === "night" ? (
+        <>
+          <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0, opacity: 0.5 }} />
+          <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />
+        </>
+      ) : (
+        <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
+      )}
 
       {/* ── Top Navigation ── */}
       <motion.header
@@ -326,7 +367,7 @@ export default function StudentHome() {
             onClick={() => setThemePickerOpen(true)}
           >
             <div className="relative">
-              <CyberAvatar name={student.name} size={32} />
+              <CyberAvatar name={student.name} size={32} color={student.avatarColor} />
               {student.homeworkTheme && (
                 <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center border-2 border-surface">
                   <Star size={7} className="text-white fill-white" />
@@ -335,6 +376,7 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
+              {ownedBadges && ownedBadges.length > 0 && <BadgeChips badges={ownedBadges} />}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
               <div className="num font-bold text-primary text-[10px] md:hidden">{totalXP.toLocaleString()} XP</div>
               <div className="hidden md:block">

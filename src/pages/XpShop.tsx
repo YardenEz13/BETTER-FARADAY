@@ -67,7 +67,9 @@ type ShopItem = {
   icon: string;
   category: string;
   price: number;
+  value: string | null;
   owned: boolean;
+  equipped: boolean;
 };
 
 function ItemIcon({ icon }: { icon: string }) {
@@ -97,10 +99,12 @@ function ShopCard({
 }) {
   const { studentId } = useParams<{ studentId: string }>();
   const purchase = useMutation(api.shop.purchaseItem);
+  const equip = useMutation(api.shop.equipItem);
   const [busy, setBusy] = useState(false);
   const [burst, setBurst] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const equippable = item.category === "avatar_color" || item.category === "theme";
   const alwaysBuyable = item.category === "streak_freeze";
   const affordable = balance >= item.price;
   const missing = item.price - balance;
@@ -114,6 +118,21 @@ function ShopCard({
        { transform: "translateX(-4px)" }, { transform: "translateX(0)" }],
       { duration: 360, easing: "ease-in-out" },
     );
+  };
+
+  const handleEquip = async () => {
+    if (busy || item.equipped) return;
+    setBusy(true);
+    try {
+      await equip({ studentId: studentId as Id<"students">, itemId: item._id as Id<"shopItems"> });
+      if (!reducedMotion) { setBurst(true); setTimeout(() => setBurst(false), 700); }
+    } catch (e) {
+      shake();
+      const msg = e instanceof Error ? e.message : "משהו השתבש. נסו שוב.";
+      onError(msg.replace(/^\[.*?\]\s*/, "").replace(/Uncaught Error:\s*/i, "").trim());
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleBuy = async () => {
@@ -137,7 +156,7 @@ function ShopCard({
     <div
       ref={cardRef}
       className={`relative overflow-hidden rounded-3xl border-2 p-5 flex flex-col gap-4 transition-all
-        ${item.owned && !alwaysBuyable ? "border-primary/40 bg-primary/5" : "border-outline bg-surface"}`}
+        ${item.equipped ? "border-primary bg-primary/10" : item.owned && !alwaysBuyable ? "border-primary/40 bg-primary/5" : "border-outline bg-surface"}`}
       style={{ boxShadow: item.owned && !alwaysBuyable ? "var(--shadow-clay-primary)" : "var(--shadow-clay)" }}
     >
       {burst && !reducedMotion && <SparkBurst />}
@@ -160,7 +179,23 @@ function ShopCard({
           {item.price.toLocaleString()}
         </span>
 
-        {item.owned && !alwaysBuyable ? (
+        {item.owned && equippable ? (
+          item.equipped ? (
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm"
+              style={{ boxShadow: "var(--shadow-clay-primary)" }}>
+              <Check size={15} strokeWidth={3} /> בשימוש
+            </span>
+          ) : (
+            <button
+              onClick={handleEquip}
+              disabled={busy}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-surface text-primary border-2 border-primary font-semibold text-sm transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer"
+              style={{ boxShadow: "var(--shadow-clay)" }}
+            >
+              {busy ? "מחיל…" : "החל"}
+            </button>
+          )
+        ) : item.owned && !alwaysBuyable ? (
           <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary/10 border-2 border-primary/30 text-primary font-semibold text-sm">
             <Check size={15} strokeWidth={3} /> ברשותך
           </span>
