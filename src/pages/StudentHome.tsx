@@ -1,15 +1,16 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
-  RotateCcw, Trophy,
+  RotateCcw, Trophy, Target, PencilLine, X,
 } from "../components/electric";
+import { SparkBurst } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -128,6 +129,145 @@ const SkillNode = memo(function SkillNode({
     </div>
   );
 });
+
+/* ── Daily-goal ring — answeredToday / goal, with a pencil → preset dialog ──
+   Turns full-primary and fires a spark when the goal is reached. */
+const GOAL_PRESETS = [5, 10, 15, 20, 30];
+
+function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">; reducedMotion: boolean }) {
+  const progress = useQuery(api.goals.getDailyProgress, { studentId });
+  const setGoal = useMutation(api.goals.setDailyGoal);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const goal = progress?.goal ?? 10;
+  const answered = progress?.answeredToday ?? 0;
+  const reached = progress?.goalReached ?? false;
+  const ratio = Math.min(answered / Math.max(goal, 1), 1);
+
+  const R = 30;
+  const CIRC = 2 * Math.PI * R;
+
+  const handlePick = async (g: number) => {
+    setSaving(true);
+    await setGoal({ studentId, goal: g });
+    setSaving(false);
+    setEditOpen(false);
+  };
+
+  return (
+    <div
+      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md"
+      style={{ background: "color-mix(in srgb, var(--color-surface) 85%, transparent)", boxShadow: "var(--shadow-clay)" }}
+    >
+      <div className="flex items-center gap-4">
+        {/* Ring */}
+        <div className="relative w-[72px] h-[72px] flex-shrink-0">
+          <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="36" cy="36" r={R} fill="none" stroke="var(--color-outline)" strokeWidth="8" />
+            <circle
+              cx="36" cy="36" r={R} fill="none"
+              stroke={reached ? "var(--color-primary)" : "var(--color-primary)"}
+              strokeWidth="8" strokeLinecap="round"
+              strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - ratio)}
+              style={{ transition: "stroke-dashoffset 0.7s ease", filter: reached ? "drop-shadow(0 0 5px var(--color-primary))" : "none" }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
+            {reached ? (
+              <Check size={22} strokeWidth={3} className="text-primary" />
+            ) : (
+              <>
+                <span className="num font-extrabold text-[16px] leading-none text-primary">{answered}</span>
+                <span className="num text-[10px] text-on-surface-variant leading-none mt-0.5">/{goal}</span>
+              </>
+            )}
+          </div>
+          {reached && !reducedMotion && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <SparkBurst />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Target size={15} className="text-primary flex-shrink-0" />
+            <h4 className="font-bold text-[15px] text-on-surface truncate" style={{ fontFamily: "'Assistant', sans-serif" }}>יעד יומי</h4>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="ms-auto w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+              aria-label="עריכת יעד יומי"
+            >
+              <PencilLine size={14} />
+            </button>
+          </div>
+          <p className="font-medium text-xs text-on-surface-variant leading-snug mt-1">
+            {reached
+              ? "היעד הושלם — כל הכבוד! ✨"
+              : `${answered}/${goal} שאלות היום · עוד ${Math.max(0, goal - answered)} להשלמה`}
+          </p>
+        </div>
+      </div>
+
+      {/* Edit dialog */}
+      <AnimatePresence>
+        {editOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ background: "color-mix(in srgb, var(--color-scrim, #000) 45%, transparent)" }}
+            onClick={() => setEditOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 12, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 12, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 24 }}
+              dir="rtl"
+              className="w-full max-w-[22rem] rounded-[24px] p-6 border-2 border-outline bg-surface"
+              style={{ boxShadow: "var(--shadow-clay)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Target size={18} className="text-primary" />
+                  <h3 className="font-bold text-lg text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>בחירת יעד יומי</h3>
+                </div>
+                <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer" aria-label="סגור">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-sm text-on-surface-variant mb-5">כמה שאלות תרצה לפתור בכל יום?</p>
+              <div className="grid grid-cols-3 gap-2.5">
+                {GOAL_PRESETS.map((g) => {
+                  const active = g === goal;
+                  return (
+                    <button
+                      key={g}
+                      disabled={saving}
+                      onClick={() => handlePick(g)}
+                      className={`py-3.5 rounded-2xl border-2 font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-60 ${
+                        active
+                          ? "bg-primary border-primary-dark text-on-primary"
+                          : "bg-surface border-outline text-on-surface hover:border-primary hover:text-primary"
+                      }`}
+                      style={{ boxShadow: active ? "var(--shadow-clay-primary)" : "var(--shadow-clay)" }}
+                    >
+                      <span className="num text-lg">{g}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 /* ── Daily-goal ring + weekday streak strip ──
    Both derive from the real streak: the ring shows days active this week
@@ -682,7 +822,16 @@ export default function StudentHome() {
               </div>
             </motion.div>
 
-            {/* Daily goal + weekday streak */}
+            {/* Daily goal ring */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <DailyGoalCard studentId={studentId as Id<"students">} reducedMotion={reducedMotion} />
+            </motion.div>
+
+            {/* Weekly consistency + weekday streak */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}

@@ -23,6 +23,7 @@ export default defineSchema({
     streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
     equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map ("electric" | "night"); absent = default backdrop
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
+    dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({

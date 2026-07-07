@@ -9,6 +9,7 @@ import {
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
+import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
@@ -45,7 +46,12 @@ export default function PracticeSession() {
   useEffect(() => { setActiveQuestion(null); }, [topicId]);
 
   const submitAttempt = useMutation(api.attempts.submitAttempt);
+  const endSession    = useMutation(api.goals.endSession);
   const generateHint  = useMutation(api.ai.generateHint);
+
+  const [sessionId, setSessionId]     = useState<Id<"sessions"> | null>(null);
+  const [recapId, setRecapId]         = useState<Id<"sessions"> | null>(null);
+  const [showRecap, setShowRecap]     = useState(false);
 
   const [selected, setSelected]             = useState<number | null>(null);
   const [submitted, setSubmitted]           = useState(false);
@@ -199,12 +205,13 @@ export default function PracticeSession() {
     // Enter review phase with 5-second minimum
     setReviewPhase(true);
     setCountdown(5);
-    await submitAttempt({
+    const res = await submitAttempt({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
       timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: activeQuestion.difficulty,
     });
-    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id });
+    if (res?.sessionId) setSessionId(res.sessionId);
+    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id, dailyGoalReached: res?.dailyGoalReached });
   };
 
   const handleHint = async () => {
@@ -229,6 +236,31 @@ export default function PracticeSession() {
     setQuestionKey(k => k + 1);
   };
 
+  // End the session → freeze the window and show the recap. If the student
+  // never answered anything, skip straight back to the map.
+  const handleEndSession = async () => {
+    if (questionsAnswered === 0) {
+      navigate(`/student/${studentId}`);
+      return;
+    }
+    const id = await endSession({ studentId: studentId as Id<"students"> });
+    setRecapId((id as Id<"sessions"> | null) ?? sessionId);
+    setShowRecap(true);
+  };
+
+  // "עוד סיבוב" — dismiss the recap and start a fresh session/question.
+  const handleNewSession = () => {
+    setShowRecap(false);
+    setRecapId(null);
+    setSessionId(null);
+    setCombo(0);
+    setSessionXP(0);
+    setQuestionsAnswered(0);
+    setReviewPhase(false);
+    setActiveQuestion(null);
+    setQuestionKey(k => k + 1);
+  };
+
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
   const timerStr  = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
 
@@ -246,7 +278,7 @@ export default function PracticeSession() {
         style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         <div className="flex items-center gap-4">
-          <button className="btn-icon" onClick={() => navigate(`/student/${studentId}`)}>
+          <button className="btn-icon" onClick={handleEndSession} aria-label="סיום הסבב">
             <ChevronLeft size={18} />
           </button>
           <div>
@@ -272,6 +304,16 @@ export default function PracticeSession() {
             <span className="text-xs text-on-surface-variant">XP</span>
           </div>
           <ThemeToggle />
+          {questionsAnswered > 0 && (
+            <button
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary font-semibold text-sm transition-all cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              onClick={handleEndSession}
+            >
+              <CheckCircle2 size={14} className="text-primary" />
+              סיים סבב
+            </button>
+          )}
           <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
             <Bot size={14} />
             עזרת AI
@@ -607,6 +649,17 @@ export default function PracticeSession() {
       <Suspense fallback={null}>
         <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
       </Suspense>
+
+      <AnimatePresence>
+        {showRecap && (
+          <SessionRecap
+            studentId={studentId as Id<"students">}
+            sessionId={recapId}
+            onNewSession={handleNewSession}
+            onBackToMap={() => navigate(`/student/${studentId}`)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import type * as crons from "../crons.js";
 import type * as digest from "../digest.js";
 import type * as geminiModels from "../geminiModels.js";
 import type * as geminiServer from "../geminiServer.js";
+import type * as goals from "../goals.js";
 import type * as homework from "../homework.js";
 import type * as homeworkRundown from "../homeworkRundown.js";
 import type * as http from "../http.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   digest: typeof digest;
   geminiModels: typeof geminiModels;
   geminiServer: typeof geminiServer;
+  goals: typeof goals;
   homework: typeof homework;
   homeworkRundown: typeof homeworkRundown;
   http: typeof http;
