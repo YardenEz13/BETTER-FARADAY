@@ -1,7 +1,7 @@
 // ── Gemini vision passes ──
 // Two image/PDF entry points: a Socratic notebook-check hint for students, and a
 // question-extraction pass for teachers importing from textbook photos/PDFs.
-import { geminiGenerateContent } from "./localAI.gemini";
+import { geminiGenerateContent, getActiveStudentId } from "./localAI.gemini";
 
 // ── Notebook Vision Hint ──
 // The student photographs their handwritten work so Faraday can see where they
@@ -62,7 +62,7 @@ export async function checkNotebookImage(
     },
   };
 
-  const data = await geminiGenerateContent(payload, signal, "vision");
+  const data = await geminiGenerateContent(payload, signal, "vision", getActiveStudentId());
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   return text.trim();
 }
@@ -126,7 +126,10 @@ export async function extractQuestionFromMedia(
     },
   };
 
-  const data = await geminiGenerateContent(payload, signal, "vision");
+  // Teacher-side import flow has no student session — tag the bucket "teacher"
+  // rather than falling back to "anonymous" so it doesn't share a rate-limit
+  // bucket with unauthenticated/unknown student traffic.
+  const data = await geminiGenerateContent(payload, signal, "vision", "teacher");
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const clean = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   const parsed = JSON.parse(clean);

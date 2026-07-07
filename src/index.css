@@ -467,6 +467,45 @@ body {
   .stat-chip:hover { @apply border-primary text-primary; transform: translateY(-2px); box-shadow: 0 6px 0 0 var(--color-outline); }
   .stat-chip:active { transform: translateY(2px); box-shadow: 0 0 0 0 var(--color-outline); }
 
+  /* ── Chip Button — small tactile action chip (playground ops, quick inserts,
+     chat starters). A pocket-size clay button: 2px border, 3px press shadow,
+     comfortable ≥40px touch target. Add `.chip-btn--active` for selected. ── */
+  .chip-btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 rounded-xl bg-surface border-2 border-outline text-on-surface font-semibold cursor-pointer select-none whitespace-nowrap;
+    font-family: 'Assistant', sans-serif;
+    font-size: 0.875rem;
+    min-height: 2.5rem;
+    box-shadow: 0 3px 0 0 var(--color-outline);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms, color 120ms, background-color 120ms;
+  }
+  .chip-btn:hover:not(:disabled)  { @apply border-primary text-primary; transform: translateY(-1px); }
+  .chip-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 0 var(--color-outline); }
+  .chip-btn:disabled { @apply opacity-45 cursor-not-allowed; }
+  .chip-btn--active {
+    @apply bg-primary-container border-primary text-on-primary-container;
+    box-shadow: 0 3px 0 0 var(--color-primary-dark);
+  }
+  .chip-btn--primary {
+    @apply bg-primary border-primary text-on-primary;
+    box-shadow: 0 3px 0 0 var(--color-primary-dark);
+  }
+  .chip-btn--primary:hover:not(:disabled) { @apply text-on-primary; }
+
+  /* ── Segmented tabs — the mobile work/formulas switch and friends ── */
+  .seg-track {
+    @apply flex gap-1 p-1 rounded-2xl bg-surface-container border-2 border-outline;
+  }
+  .seg-tab {
+    @apply flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl font-semibold text-on-surface-variant cursor-pointer select-none;
+    font-family: 'Assistant', sans-serif;
+    font-size: 0.875rem;
+    transition: color 150ms, background-color 150ms, box-shadow 150ms;
+  }
+  .seg-tab--active {
+    @apply bg-surface text-primary;
+    box-shadow: 0 2px 0 0 var(--color-outline), 0 1px 3px rgba(0,0,0,0.06);
+  }
+
   /* ── Pop utility — a quick scale bump (1 → 1.04 → 1) for value changes:
      XP counters, streak ticks, score increments. Add/re-trigger the class on
      the element whose number just changed. Auto-disabled under reduced-motion
@@ -530,17 +569,51 @@ body {
 }
 @keyframes shimmer-sweep { to { background-position: -200% 0; } }
 
+/* ═══════════════════ MATH TYPOGRAPHY (KaTeX ↔ Hebrew) ════════════════════ */
+/* KaTeX defaults to 1.21em, which towers over Assistant's Hebrew x-height and
+   makes every inline formula jump out of the line. Scale it down to sit on the
+   Hebrew baseline, and hard-isolate the bidi direction so formulas embedded in
+   RTL sentences never get their tokens visually shuffled. */
+:root { --math-scale: 1.06; }
+
+.katex {
+  /* !important: katex.min.css is imported later in the bundle (by MathText) and
+     its `.katex { font: normal 1.21em ... }` would win the cascade tie. */
+  font-size: calc(1em * var(--math-scale)) !important;
+  direction: ltr;
+  unicode-bidi: isolate;      /* formula is one atomic LTR run inside RTL text */
+}
+/* Inline math: breathing room so glyphs don't kiss the Hebrew letters around
+   them (KaTeX has no side bearings; Hebrew ascenders sit tight). */
+.katex:not(.katex-display .katex) {
+  padding-inline: 0.12em;
+}
+
 /* Wide display equations scroll horizontally inside their container instead of
    overflowing the page (critical on narrow phones). The thin scrollbar hints
    there's more to the right; inline math still wraps with the surrounding text. */
 .katex-display {
+  direction: ltr;             /* KaTeX display markup assumes LTR flow */
+  unicode-bidi: isolate;
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
+  margin-block: 0.65em;       /* tighter than KaTeX's 1em default — Hebrew line
+                                 rhythm is denser */
   padding-block: 2px;         /* room so the scrollbar doesn't clip the glyphs */
   -webkit-overflow-scrolling: touch;
 }
 .katex-display > .katex { white-space: nowrap; }
+
+/* "Equation card" — opt-in wrapper that gives a display equation the clay
+   treatment: a soft inset panel so key formulas read as tactile objects. */
+.math-card {
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface-container-low));
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.75rem;
+}
+.math-card .katex-display { margin-block: 0.35em; }
 
 /* Traveling gradient highlight around a card's border on hover */
 @property --gh-angle {

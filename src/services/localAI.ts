@@ -1,5 +1,5 @@
 import type { AgentType, ChatMetrics, PartialBrief, CompositeBrief, Message } from "./localAI.types";
-import { CONVEX_SITE_URL, GEMINI_STREAM_URL } from "./localAI.gemini";
+import { CONVEX_SITE_URL, GEMINI_STREAM_URL, setActiveStudentId as _setActiveStudentId, getActiveStudentId as _getActiveStudentId } from "./localAI.gemini";
 
 export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief, Message };
 
@@ -66,6 +66,12 @@ const PROOF_AGENT_PROMPT = `אתה פאראדיי — מנחה להוכחות ג
 // ── State ──
 let currentAgentType: AgentType | null = null;
 let currentContext: string = "";
+
+// Re-exported so callers (AIChatPanel) can set it via the localAI barrel.
+// Forwarded to the Convex Gemini proxy so it can rate-limit per student — not
+// an auth mechanism, this app has no auth yet, just an abuse/cost throttle.
+export const setActiveStudentId = _setActiveStudentId;
+export const getActiveStudentId = _getActiveStudentId;
 
 type ProgressCallback = (percent: number, stage: string) => void;
 let onInitProgress: ProgressCallback | null = null;
@@ -484,7 +490,7 @@ export async function streamMessage(
       const res = await fetch(GEMINI_STREAM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: modelName, payload }),
+        body: JSON.stringify({ model: modelName, payload, studentId: _getActiveStudentId() }),
         signal,
       });
       if (res.ok) return res;

@@ -3,13 +3,14 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "./electric";
+import { X, Terminal, ChevronDown, Copy, Check, User } from "./electric";
 import { log } from "../lib/logger";
 import {
   isLocalAIAvailable,
   getAIStatus,
   createSession,
   destroySession,
+  setActiveStudentId,
   streamMessage,
   checkNotebookImage,
   analyzeConversation,
@@ -130,7 +131,15 @@ export default function AIChatPanel({
   const [attachedImage, setAttachedImage] = useState<PreparedImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [showQRBridge, setShowQRBridge] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const copyMessage = useCallback((text: string, idx: number) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1600);
+    }).catch(() => {});
+  }, []);
 
   const currentContext = questionStem
     ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
@@ -152,6 +161,9 @@ export default function AIChatPanel({
 
   // Keep ref in sync so callbacks always have current value
   useEffect(() => { chatIdRef.current = chatId; }, [chatId]);
+
+  // Forward studentId to localAI so the Gemini proxy can rate-limit per student.
+  useEffect(() => { setActiveStudentId(studentId); }, [studentId]);
 
   useEffect(() => {
     return () => {
@@ -641,12 +653,13 @@ export default function AIChatPanel({
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isTyping || isSendingRef.current) return;
+  const handleSend = async (overrideText?: string) => {
+    const raw = (overrideText ?? input).trim();
+    if (!raw || isTyping || isSendingRef.current) return;
     isSendingRef.current = true;
 
     try {
-      const userMsg = input.trim();
+      const userMsg = raw;
       setInput("");
       log.ai("user message sent", { agentType, chatId: chatIdRef.current, length: userMsg.length });
 
@@ -1161,12 +1174,7 @@ export default function AIChatPanel({
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
                       {starterPrompts.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setInput(s)}
-                          className="px-4 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface text-sm font-medium hover:border-primary hover:text-primary transition-all"
-                          style={{ boxShadow: 'var(--shadow-clay)' }}
-                        >
+                        <button key={s} onClick={() => handleSend(s)} className="chip-btn rounded-full">
                           {s}
                         </button>
                       ))}
@@ -1184,6 +1192,10 @@ export default function AIChatPanel({
                   );
 
                   const isAI = msg.role === "model";
+                  // Group consecutive same-role bubbles: avatar + full radius only
+                  // on the first of the run, tighter gap inside the run.
+                  const prev = messages[i - 1];
+                  const firstOfGroup = !prev || prev.role !== msg.role;
 
                   return (
                     <motion.div
@@ -1191,27 +1203,40 @@ export default function AIChatPanel({
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-                      className={`flex gap-4 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
+                      className={`flex gap-3 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'} ${firstOfGroup ? '' : '-mt-3'}`}
                     >
-                      {/* Avatar */}
-                      <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(91,255,159,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
-                        {isAI ? (
-                          <FaradayAvatar px={40} fill />
-                        ) : (
-                          <User size={20} className="text-on-secondary-container" />
+                      {/* Avatar — only on the first bubble of a run */}
+                      <div className="w-9 flex-shrink-0">
+                        {firstOfGroup && (
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ${isAI ? 'bg-surface-bright border-2 border-primary/40' : 'bg-secondary-container border-2 border-secondary/50'}`}>
+                            {isAI ? (
+                              <FaradayAvatar px={36} fill />
+                            ) : (
+                              <User size={18} className="text-on-secondary-container" />
+                            )}
+                          </div>
                         )}
                       </div>
 
                       {/* Bubble */}
                       <div
-                        className={`p-5 shadow-md relative group ${isAI ? 'bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm' : 'bg-surface-variant border border-outline/30 rounded-2xl rounded-tl-sm'}`}
-                        style={{ maxWidth: '85%' }}
+                        className={`px-4 py-3 relative group rounded-2xl border-2 ${
+                          isAI
+                            ? `bg-surface border-outline ${firstOfGroup ? 'rounded-tr-md' : ''}`
+                            : `bg-secondary-container/60 border-secondary/30 ${firstOfGroup ? 'rounded-tl-md' : ''}`
+                        }`}
+                        style={{ maxWidth: '85%', boxShadow: isAI ? 'var(--shadow-clay)' : 'var(--shadow-sm)' }}
                       >
                         {isAI && (
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-surface p-1 rounded-md border border-outline-variant z-10">
-                            <button className="text-on-surface-variant hover:text-primary"><Copy className="text-[18px]" /></button>
-                            <button className="text-on-surface-variant hover:text-primary"><ThumbsUp className="text-[18px]" /></button>
-                          </div>
+                          <button
+                            onClick={() => copyMessage(msg.content, i)}
+                            title={copiedIdx === i ? "הועתק!" : "העתק"}
+                            className={`absolute top-1.5 left-1.5 p-1.5 rounded-lg border border-outline-variant bg-surface transition-all z-10 ${
+                              copiedIdx === i ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-primary'
+                            }`}
+                          >
+                            {copiedIdx === i ? <Check size={15} /> : <Copy size={15} />}
+                          </button>
                         )}
                         {msg.imageUrl && (
                           <img

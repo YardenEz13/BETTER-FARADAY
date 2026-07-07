@@ -672,4 +672,13 @@ export default defineSchema({
     consumed: v.optional(v.boolean()), // for consumables (streak_freeze)
   }).index("by_student", ["studentId"])
     .index("by_student_item", ["studentId", "itemId"]),
+
+  // ── System flags (kill-switches / feature toggles) ──
+  // Single-row-per-key table so ops can flip Faraday off without a deploy.
+  // Checked by convex/http.ts on every Gemini proxy request.
+  systemFlags: defineTable({
+    key: v.string(),
+    enabled: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

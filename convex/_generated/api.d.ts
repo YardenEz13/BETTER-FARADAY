@@ -11,6 +11,7 @@
 import type * as addMore from "../addMore.js";
 import type * as ai from "../ai.js";
 import type * as aiChat from "../aiChat.js";
+import type * as aiGate from "../aiGate.js";
 import type * as attempts from "../attempts.js";
 import type * as bridge from "../bridge.js";
 import type * as classroom from "../classroom.js";
@@ -45,6 +46,10 @@ import type * as precompute from "../precompute.js";
 import type * as proofGrading from "../proofGrading.js";
 import type * as questions from "../questions.js";
 import type * as review from "../review.js";
+import type * as seedBagrut from "../seedBagrut.js";
+import type * as seedBagrutData1 from "../seedBagrutData1.js";
+import type * as seedBagrutData2 from "../seedBagrutData2.js";
+import type * as seedBagrutData3 from "../seedBagrutData3.js";
 import type * as seedGeometry from "../seedGeometry.js";
 import type * as seedGeometryQuestions from "../seedGeometryQuestions.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
@@ -64,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   addMore: typeof addMore;
   ai: typeof ai;
   aiChat: typeof aiChat;
+  aiGate: typeof aiGate;
   attempts: typeof attempts;
   bridge: typeof bridge;
   classroom: typeof classroom;
@@ -98,6 +104,10 @@ declare const fullApi: ApiFromModules<{
   proofGrading: typeof proofGrading;
   questions: typeof questions;
   review: typeof review;
+  seedBagrut: typeof seedBagrut;
+  seedBagrutData1: typeof seedBagrutData1;
+  seedBagrutData2: typeof seedBagrutData2;
+  seedBagrutData3: typeof seedBagrutData3;
   seedGeometry: typeof seedGeometry;
   seedGeometryQuestions: typeof seedGeometryQuestions;
   sessionBriefs: typeof sessionBriefs;
@@ -134,4 +144,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+};

@@ -36,7 +36,7 @@ export default function MathPlayground({ isOpen, onClose }: Props) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 220 }}
-          className="fixed bottom-0 left-0 w-full z-[110] flex flex-col font-body-md shadow-2xl overflow-hidden h-[74vh] md:h-[64vh]"
+          className="fixed bottom-0 left-0 w-full z-[110] flex flex-col font-body-md shadow-2xl overflow-hidden h-[86vh] md:h-[64vh]"
           style={{
             background: "var(--color-surface)",
             borderTop: "2px solid var(--color-outline-variant)",
@@ -78,23 +78,21 @@ export default function MathPlayground({ isOpen, onClose }: Props) {
           </div>
 
           {/* Mobile tab switch */}
-          <div className="md:hidden flex gap-1 px-4 pt-2 relative z-[2]">
-            {([
-              { id: "work", he: "דף עבודה", Icon: PencilLine },
-              { id: "formulas", he: "נוסחאות", Icon: BookOpen },
-            ] as const).map(({ id, he, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg font-label-md transition-colors ${
-                  tab === id
-                    ? "bg-primary-container/30 text-primary border border-primary/40"
-                    : "text-on-surface-variant hover:bg-surface-variant/40"
-                }`}
-              >
-                <Icon size={15} /> {he}
-              </button>
-            ))}
+          <div className="md:hidden px-4 pt-2 relative z-[2]">
+            <div className="seg-track">
+              {([
+                { id: "work", he: "דף עבודה", Icon: PencilLine },
+                { id: "formulas", he: "נוסחאות", Icon: BookOpen },
+              ] as const).map(({ id, he, Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={`seg-tab ${tab === id ? "seg-tab--active" : ""}`}
+                >
+                  <Icon size={15} /> {he}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Body */}

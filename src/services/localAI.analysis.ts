@@ -3,7 +3,7 @@
 // deterministic fallback locally, then tries to enrich it via a single Gemini
 // pass (JSON mode). If Gemini fails or times out, the heuristic result stands.
 import type { Message, ChatMetrics, PartialBrief, CompositeBrief } from "./localAI.types";
-import { geminiGenerateContent } from "./localAI.gemini";
+import { geminiGenerateContent, getActiveStudentId } from "./localAI.gemini";
 
 // Gemini's JSON mode still occasionally emits invalid JSON: literal newlines
 // inside string values (→ "Unterminated string"), trailing commas, code fences,
@@ -248,7 +248,7 @@ ${conversationText}`
       }
     };
 
-    const data = await geminiGenerateContent(payload, controller.signal, "analysis");
+    const data = await geminiGenerateContent(payload, controller.signal, "analysis", getActiveStudentId());
     clearTimeout(timeoutId);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const parsed = parseGeminiJson(text);
@@ -385,7 +385,7 @@ ${analysisText}`
       }
     };
 
-    const data = await geminiGenerateContent(payload, controller.signal, "analysis");
+    const data = await geminiGenerateContent(payload, controller.signal, "analysis", getActiveStudentId());
     clearTimeout(timeoutId);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const parsed = parseGeminiJson(text);
