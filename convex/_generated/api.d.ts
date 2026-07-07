@@ -27,6 +27,7 @@ import type * as homeworkRundown from "../homeworkRundown.js";
 import type * as http from "../http.js";
 import type * as levels from "../levels.js";
 import type * as mockInteractions from "../mockInteractions.js";
+import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
 import type * as packetImport from "../packetImport.js";
 import type * as packetParse from "../packetParse.js";
@@ -76,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   levels: typeof levels;
   mockInteractions: typeof mockInteractions;
+  notifications: typeof notifications;
   onboarding: typeof onboarding;
   packetImport: typeof packetImport;
   packetParse: typeof packetParse;

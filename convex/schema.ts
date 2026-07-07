@@ -606,6 +606,18 @@ export default defineSchema({
     active: v.boolean(),
   }).index("by_active", ["active"]),
 
+  // ── Notification read-state (per student, per derived notification key) ──
+  // Notifications themselves are DERIVED at read time (no stored notification
+  // rows). This table only records which stable keys a student has dismissed /
+  // read, keyed by the same stable string the query emits (e.g. "hw_<id>",
+  // "streak_<israelDate>"). Read is a bounded index scan by student.
+  notificationReads: defineTable({
+    studentId: v.id("students"),
+    notificationKey: v.string(),
+    readAt: v.number(),
+  }).index("by_student", ["studentId"])
+    .index("by_student_key", ["studentId", "notificationKey"]),
+
   // ── Purchases (one row per acquisition) ──
   purchases: defineTable({
     studentId: v.id("students"),

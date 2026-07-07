@@ -625,6 +625,14 @@ body {
 /* Active learning-map node breathing in place — the "next up" station.
    Glow intensity oscillates with the breath (drop-shadow so it stacks with
    the node's inline box-shadow). */
+/* Notification bell: subtle ring pulse when an urgent unread exists.
+   Gated on !reducedMotion in the component (class is only applied then). */
+.notif-bell-pulse { animation: notif-bell-pulse 2s ease-in-out infinite; }
+@keyframes notif-bell-pulse {
+  0%, 100% { box-shadow: var(--shadow-clay), 0 0 0 0 color-mix(in srgb, var(--color-tertiary) 55%, transparent); }
+  50% { box-shadow: var(--shadow-clay), 0 0 0 5px color-mix(in srgb, var(--color-tertiary) 0%, transparent); }
+}
+
 .skill-node-pulse { animation: skill-node-pulse 2.4s ease-in-out infinite; }
 @keyframes skill-node-pulse {
   0%, 100% {

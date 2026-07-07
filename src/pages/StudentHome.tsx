@@ -13,6 +13,7 @@ import {
 import { SparkBurst } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
+import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
@@ -549,6 +550,7 @@ export default function StudentHome() {
             <Flame className="text-tertiary" size={14} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
+          <NotificationCenter studentId={studentId!} />
           <ThemeToggle />
           <button
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer"
