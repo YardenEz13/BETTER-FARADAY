@@ -10,8 +10,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, ElectricBolt, Trophy
+  Zap, GraduationCap, ElectricBolt, Trophy, Copy, QrCode, Trash2
 } from "../components/electric";
+import { QRCodeSVG } from "qrcode.react";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
@@ -957,7 +958,114 @@ function StudentDrawer({ s, topics, isMobile, onClose, onProfile, fire }: { s: C
           <button className="btn-clay-ghost flex-1" style={{ padding: "0.6rem 0.5rem", fontSize: 13 }} onClick={() => fire(`הודעה נשלחה אל ${s.name}`)}>הודעה</button>
           <button className="btn-clay-primary flex-1" style={{ padding: "0.6rem 0.5rem", fontSize: 13 }} onClick={onProfile}>פרופיל מלא</button>
         </div>
+
+        <ParentLinkSection studentId={s.id as Id<"students">} studentName={s.name} fire={fire} />
       </motion.div>
+    </div>
+  );
+}
+
+/* ─────────── PARENT LINK (capability URL for the weekly parent report) ─────────── */
+function ParentLinkSection({ studentId, studentName, fire }: { studentId: Id<"students">; studentName: string; fire: (m: string) => void }) {
+  const create = useMutation(api.parentReports.createParentLink);
+  const revoke = useMutation(api.parentReports.revokeParentLink);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = async () => {
+    setBusy(true);
+    try {
+      const r = await create({ studentId });
+      setUrl(`${window.location.origin}${r.path}`);
+    } catch {
+      fire("יצירת הקישור נכשלה");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Fallback for insecure contexts / older browsers.
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    fire("הקישור הועתק");
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const handleRevoke = async () => {
+    if (!window.confirm(`לבטל את קישור ההורים של ${studentName}? הקישור הקיים יפסיק לעבוד.`)) return;
+    setBusy(true);
+    try {
+      await revoke({ studentId });
+      setUrl(null);
+      setShowQr(false);
+      fire("הקישור בוטל");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: "2px solid var(--color-outline)" }}>
+      <div className="flex items-center gap-1.5 mb-2.5 text-on-surface-variant">
+        <Users size={14} />
+        <span className="text-[12px] font-bold">קישור להורים</span>
+      </div>
+
+      {!url ? (
+        <button
+          className="btn-clay-secondary w-full"
+          style={{ padding: "0.6rem 0.5rem", fontSize: 13 }}
+          disabled={busy}
+          onClick={handleGenerate}
+        >
+          {busy ? "יוצר…" : "צור קישור לדוח שבועי"}
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          <div
+            className="text-[11px] px-3 py-2 rounded-lg break-all font-mono"
+            style={{ background: "var(--color-surface-container-low)", border: "2px solid var(--color-outline)", direction: "ltr", textAlign: "left" }}
+          >
+            {url}
+          </div>
+          <div className="flex gap-2">
+            <button className="btn-clay-primary flex-1 flex items-center justify-center gap-1.5" style={{ padding: "0.5rem", fontSize: 12 }} onClick={handleCopy}>
+              <Copy size={14} /> {copied ? "הועתק!" : "העתק"}
+            </button>
+            <button className="btn-clay-ghost flex items-center justify-center gap-1.5" style={{ padding: "0.5rem 0.7rem", fontSize: 12 }} onClick={() => setShowQr((v) => !v)}>
+              <QrCode size={14} /> QR
+            </button>
+            <button className="btn-clay-ghost flex items-center justify-center gap-1.5" style={{ padding: "0.5rem 0.7rem", fontSize: 12, color: "var(--color-error)" }} disabled={busy} onClick={handleRevoke}>
+              <Trash2 size={14} /> בטל קישור
+            </button>
+          </div>
+          {showQr && (
+            <div className="flex justify-center py-2">
+              <div className="rounded-xl bg-white p-3 shadow-inner">
+                <QRCodeSVG value={url} size={160} level="M" includeMargin={false} />
+              </div>
+            </div>
+          )}
+          <p className="text-[11px] text-on-surface-variant leading-snug">
+            שתפו את הקישור עם ההורים בלבד — הוא אישי לתלמיד/ה וניתן לביטול בכל עת.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

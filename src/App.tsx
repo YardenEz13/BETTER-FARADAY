@@ -24,6 +24,7 @@ const Leaderboard        = lazy(() => import("./pages/Leaderboard"));
 const ExamMode           = lazy(() => import("./pages/ExamMode"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
+const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
 
 function RouteFallback() {
@@ -75,6 +76,7 @@ function AnimatedRoutes() {
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
+            <Route path="/parent/:token" element={<ParentReport />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

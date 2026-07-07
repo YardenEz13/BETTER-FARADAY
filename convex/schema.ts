@@ -612,6 +612,20 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
 
+  // ── Parent report capability links (long-lived, revocable) ──
+  // Same capability-URL philosophy as bridgeSessions, but LONG-lived: a parent
+  // opens /parent/<token> to see a warm weekly snapshot of their child. The
+  // token is the ONLY key — the report query never exposes studentId. Revoke by
+  // stamping revokedAt (row kept for audit). One active link per student.
+  parentLinks: defineTable({
+    studentId: v.id("students"),
+    token: v.string(),                 // random, unguessable — in the /parent URL
+    createdAt: v.number(),
+    revokedAt: v.optional(v.number()), // set on revoke; absent = active
+    lastViewedAt: v.optional(v.number()),
+  }).index("by_token", ["token"])
+    .index("by_student", ["studentId"]),
+
   // ── XP ledger: append-only log of every XP change (earn or spend) ──
   // students.xp / students.xpSpent are denormalized rollups of these rows.
   xpEvents: defineTable({

@@ -38,6 +38,7 @@ import type * as packetPrompts from "../packetPrompts.js";
 import type * as packetPublish from "../packetPublish.js";
 import type * as packetValidators from "../packetValidators.js";
 import type * as packetWatchdog from "../packetWatchdog.js";
+import type * as parentReports from "../parentReports.js";
 import type * as pdfAssignments from "../pdfAssignments.js";
 import type * as powerMap from "../powerMap.js";
 import type * as precompute from "../precompute.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   packetPublish: typeof packetPublish;
   packetValidators: typeof packetValidators;
   packetWatchdog: typeof packetWatchdog;
+  parentReports: typeof parentReports;
   pdfAssignments: typeof pdfAssignments;
   powerMap: typeof powerMap;
   precompute: typeof precompute;
