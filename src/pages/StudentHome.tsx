@@ -337,7 +337,7 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
 function StudentHomeSkeleton() {
   return (
     <div dir="rtl" className="relative min-h-screen bg-background overflow-x-hidden">
-      <div className="page-shell pt-[84px] pb-24 flex flex-col xl:flex-row gap-8">
+      <div className="page-shell pt-[140px] md:pt-[100px] pb-24 flex flex-col xl:flex-row gap-8">
         <section className="flex-1 flex flex-col items-center">
           <div className="shimmer w-full max-w-4xl rounded-3xl mb-10" style={{ height: 96 }} />
           <div className="flex flex-col gap-12 py-4">
@@ -409,6 +409,27 @@ export default function StudentHome() {
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
+  // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
+  // so content padding is measured live instead of a guessed pt-[Npx] — a fixed
+  // guess drifted out of sync with the actual mobile header and clipped the
+  // first map station under it. Callback ref (not useRef+empty-deps effect):
+  // the header doesn't exist yet on the first render (skeleton returns before
+  // it), so a mount-only effect would observe nothing and never re-attach.
+  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(68);
+  useEffect(() => {
+    if (!headerEl) return;
+    // contentRect excludes padding/border — the header's py-3 + border-b-2
+    // (~26px) would otherwise be silently dropped from the measurement.
+    // offsetHeight is the full border-box, matching what actually overlaps
+    // the content below it.
+    const observer = new ResizeObserver(() => {
+      setHeaderHeight(headerEl.offsetHeight);
+    });
+    observer.observe(headerEl);
+    return () => observer.disconnect();
+  }, [headerEl]);
+
   // The circuit wire draws itself from the first station to the last on mount
   const wireRef = useRef<SVGPathElement>(null);
   const topicCount = topics?.length ?? 0;
@@ -432,13 +453,13 @@ export default function StudentHome() {
   if (onboarding?.needed) return <Navigate to={`/student/${studentId}/welcome`} replace />;
 
   const getProgress = (topicId: string) => {
-    const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
+    const d = stats?.byTopic?.[topicId] as { correct: number; total: number } | undefined;
     if (!d || d.total === 0) return 0;
     return Math.round((d.correct / d.total) * 100);
   };
 
   const totalAttempts = stats?.totalAttempts ?? 0;
-  const correctTotal = topics.reduce((s, t) => s + (stats?.byTopic[t._id]?.correct || 0), 0);
+  const correctTotal = topics.reduce((s, t) => s + (stats?.byTopic?.[t._id]?.correct || 0), 0);
   const overallAcc = totalAttempts > 0 ? Math.round((correctTotal / totalAttempts) * 100) : 0;
   const totalXP = (student.streak * 100) + (totalAttempts * 25) + (correctTotal * 50);
   const completedTopics = topics.filter(t => getProgress(t._id) >= 80).length;
@@ -492,9 +513,10 @@ export default function StudentHome() {
 
       {/* ── Top Navigation ── */}
       <motion.header
+        ref={setHeaderEl}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2"
         style={{ boxShadow: 'var(--shadow-clay)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         {/* Left: back + student info */}
@@ -578,7 +600,10 @@ export default function StudentHome() {
       </motion.header>
 
       {/* ── Main Content ── */}
-      <div className="page-shell relative z-10 pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6">
+      <div
+        className="page-shell relative z-10 pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6"
+        style={{ paddingTop: headerHeight + 16 }}
+      >
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
