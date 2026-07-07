@@ -400,6 +400,10 @@ export default function StudentHome() {
   const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
   const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
   const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
+  const leaderboard = useQuery(
+    api.leaderboard.getWeeklyLeaderboard,
+    student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
+  );
   const [chatOpen, setChatOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
@@ -443,6 +447,8 @@ export default function StudentHome() {
   const reviewCount = reviewDeck?.length ?? 0;
   const streakInDanger = !!streakStatus?.inDanger;
   const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
+  const leaderboardEnabled = leaderboard?.enabled ?? false;
+  const myLeagueRank = leaderboard?.myRank ?? null;
 
   const nodeStates = topics.map((topic) => {
     const progress = getProgress(topic._id);
@@ -619,6 +625,19 @@ export default function StudentHome() {
                 <RotateCcw size={16} />
                 <span>חזרה על טעויות</span>
                 <span className="num font-bold px-2 py-0.5 rounded-full bg-secondary text-white text-xs">{reviewCount}</span>
+              </button>
+            )}
+            {leaderboardEnabled && (
+              <button
+                onClick={() => navigate(`/student/${studentId}/leaderboard`)}
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-tertiary/12 border-2 border-tertiary/30 hover:border-tertiary text-tertiary transition-all font-semibold text-sm cursor-pointer"
+                style={{ boxShadow: 'var(--shadow-clay)' }}
+              >
+                <Trophy size={16} />
+                <span>ליגת השבוע</span>
+                {myLeagueRank !== null && (
+                  <span className="num font-bold px-2 py-0.5 rounded-full bg-tertiary text-white text-xs">#{myLeagueRank}</span>
+                )}
               </button>
             )}
           </div>

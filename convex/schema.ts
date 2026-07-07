@@ -6,6 +6,7 @@ export default defineSchema({
   classrooms: defineTable({
     name: v.string(),
     teacherName: v.string(),
+    leaderboardEnabled: v.optional(v.boolean()), // teacher master switch; default ON when unset
   }),
 
   students: defineTable({
@@ -24,6 +25,7 @@ export default defineSchema({
     equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map ("electric" | "night"); absent = default backdrop
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
     dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
+    hideFromLeaderboard: v.optional(v.boolean()), // per-student opt-out of the weekly class leaderboard
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({

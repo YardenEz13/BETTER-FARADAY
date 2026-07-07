@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, ElectricBolt
+  Zap, GraduationCap, ElectricBolt, Trophy
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
@@ -172,7 +172,7 @@ export default function TeacherDashboard() {
 
           <AnimatePresence mode="wait">
             <motion.div key={view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
-              {view === "triage" && <TriageView data={data} digest={digest ?? undefined} classroomId={classroom?._id ?? null} onSelect={setSel} onSelectId={(id) => { const s = data.students.find((st) => st.id === id); if (s) setSel(s); }} fire={fire} onReview={() => setSort("risk")} />}
+              {view === "triage" && <TriageView data={data} digest={digest ?? undefined} classroomId={classroom?._id ?? null} leaderboardEnabled={classroom ? classroom.leaderboardEnabled !== false : true} onSelect={setSel} onSelectId={(id) => { const s = data.students.find((st) => st.id === id); if (s) setSel(s); }} fire={fire} onReview={() => setSort("risk")} />}
               {view === "mastery" && (
                 <MasteryView
                   data={data}
@@ -512,16 +512,70 @@ function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
   );
 }
 
+/* Small clay toggle row — teacher master switch for the weekly class leaderboard */
+function LeaderboardToggleRow({ classroomId, enabled, fire }: {
+  classroomId: Id<"classrooms"> | null; enabled: boolean; fire: (m: string) => void;
+}) {
+  const setEnabled = useMutation(api.leaderboard.setClassroomLeaderboard);
+  const [busy, setBusy] = useState(false);
+
+  async function toggle() {
+    if (!classroomId || busy) return;
+    setBusy(true);
+    try {
+      await setEnabled({ classroomId, enabled: !enabled });
+      fire(!enabled ? "טבלת המובילים הופעלה" : "טבלת המובילים כובתה");
+    } catch {
+      fire("עדכון טבלת המובילים נכשל");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="clay-card flex items-center gap-3.5 mb-4.5" style={{ padding: "14px 18px", marginBottom: 18 }}>
+      <span className="inline-flex items-center justify-center rounded-2xl flex-shrink-0" style={{ width: 40, height: 40, background: "color-mix(in srgb, var(--color-tertiary) 15%, transparent)", color: "var(--color-tertiary)" }}>
+        <Trophy size={20} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="font-display font-extrabold text-[15px]">טבלת מובילים שבועית</div>
+        <div className="text-[12px] text-on-surface-variant font-semibold mt-0.5">
+          {enabled ? "פעיל — התלמידים רואים את ליגת השבוע" : "כבוי — הטבלה מוסתרת מהתלמידים"}
+        </div>
+      </div>
+      <button
+        onClick={toggle}
+        disabled={busy || !classroomId}
+        role="switch"
+        aria-checked={enabled}
+        aria-label="טבלת מובילים שבועית"
+        className="relative w-12 h-7 rounded-full border-2 flex-shrink-0 transition-colors cursor-pointer disabled:opacity-60"
+        style={{
+          background: enabled ? "var(--color-primary)" : "var(--color-surface-container)",
+          borderColor: enabled ? "var(--color-primary-dark)" : "var(--color-outline)",
+        }}
+      >
+        <span
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white transition-all"
+          style={{ insetInlineStart: enabled ? "calc(100% - 22px)" : "2px" }}
+        />
+      </button>
+    </div>
+  );
+}
+
 /* ───────────────────────── TRIAGE ───────────────────────── */
 
-function TriageView({ data, digest, classroomId, onSelect, onSelectId, fire, onReview }: {
-  data: CommandCenterData; digest?: DigestDoc; classroomId: Id<"classrooms"> | null;
+function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, onSelectId, fire, onReview }: {
+  data: CommandCenterData; digest?: DigestDoc; classroomId: Id<"classrooms"> | null; leaderboardEnabled: boolean;
   onSelect: (s: CCStudent) => void; onSelectId: (id: string) => void; fire: (m: string) => void; onReview: () => void;
 }) {
   const urgentNames = data.students.filter((s) => s.status === "risk").slice(0, 3).map((s) => s.name).join(" · ");
   return (
     <div>
       <WeeklyDigest digest={digest} classroomId={classroomId} onSelectStudent={onSelectId} fire={fire} />
+
+      <LeaderboardToggleRow classroomId={classroomId} enabled={leaderboardEnabled} fire={fire} />
 
       {data.atRisk > 0 && (
         <div className="fdr-urgent flex items-center gap-3.5 flex-wrap mb-4.5 px-4 py-3.5 rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-error) 10%, var(--color-surface))", border: "2px solid color-mix(in srgb, var(--color-error) 55%, var(--color-outline))", marginBottom: 18 }}>

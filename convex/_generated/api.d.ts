@@ -25,6 +25,7 @@ import type * as goals from "../goals.js";
 import type * as homework from "../homework.js";
 import type * as homeworkRundown from "../homeworkRundown.js";
 import type * as http from "../http.js";
+import type * as leaderboard from "../leaderboard.js";
 import type * as levels from "../levels.js";
 import type * as mockInteractions from "../mockInteractions.js";
 import type * as notifications from "../notifications.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   homework: typeof homework;
   homeworkRundown: typeof homeworkRundown;
   http: typeof http;
+  leaderboard: typeof leaderboard;
   levels: typeof levels;
   mockInteractions: typeof mockInteractions;
   notifications: typeof notifications;
