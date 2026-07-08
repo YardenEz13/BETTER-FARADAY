@@ -47,6 +47,9 @@ const EMPTY_ERROR = "אין מה לחשב — הקלידו ביטוי קודם."
 // LaTeX spacing macros, which it mis-reads as variables. Normalise those first.
 function sanitizeLatex(tex: string): string {
   return tex
+    // MathLive placeholder holes (from the lego blocks) — unwrap filled ones,
+    // drop empty ones so a half-built block doesn't read as a variable.
+    .replace(/\\placeholder\{([^{}]*)\}/g, "$1")
     .replace(/\\cdot/g, "*")
     .replace(/\\times/g, "*")
     .replace(/\\div/g, "/")

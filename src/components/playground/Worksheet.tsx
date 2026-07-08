@@ -7,6 +7,7 @@ import {
 import { Loader as Loader2, CornerDownLeft, ArrowUp, Trash2 } from "../electric";
 import MathField, { type MathFieldHandle } from "./MathField";
 import MathText from "../MathText";
+import BlocksBar from "./BlocksBar";
 import { compute, OP_LABELS, type MathOp, type MathResult } from "../../services/mathEngine";
 
 interface HistItem {
@@ -57,14 +58,17 @@ const Worksheet = forwardRef<MathFieldHandle, {}>(function Worksheet(_props, ref
 
   return (
     <div className="flex flex-col h-full" dir="rtl">
+      {/* Lego blocks — tap to build the expression */}
+      <BlocksBar onInsert={(l) => fieldRef.current?.insertLatex(l)} />
+
       {/* Active field */}
-      <div className="rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-2 focus-within:border-primary transition-colors">
+      <div className="mt-1.5 rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-2 focus-within:border-primary transition-colors">
         <MathField
           ref={fieldRef}
           value={latex}
           onChange={setLatex}
           onEnter={() => run("evaluate")}
-          placeholder="הקלידו ביטוי או משוואה…"
+          placeholder="הקלידו ביטוי או הרכיבו מהבלוקים…"
         />
       </div>
 
@@ -75,7 +79,7 @@ const Worksheet = forwardRef<MathFieldHandle, {}>(function Worksheet(_props, ref
             key={op}
             onClick={() => run(op)}
             disabled={!!busyOp}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-container/30 border border-primary/40 text-primary font-label-md hover:bg-primary hover:text-on-primary active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            className={`chip-btn ${op === "evaluate" ? "chip-btn--primary" : ""}`}
           >
             {busyOp === op && <Loader2 size={14} className="animate-spin" />}
             {he}
@@ -124,18 +128,18 @@ const Worksheet = forwardRef<MathFieldHandle, {}>(function Worksheet(_props, ref
             {h.result.error ? (
               <div className="mt-1.5 text-error font-body-md">{h.result.error}</div>
             ) : (
-              <div className="mt-1 flex items-start justify-between gap-2">
-                <div dir="ltr" className="text-on-surface overflow-x-auto flex-1">
+              <button
+                onClick={() => loadIntoField(h.result.latex)}
+                title="המשך מהתוצאה — נטען חזרה לשדה"
+                className="mt-1 w-full flex items-center justify-between gap-2 rounded-xl px-2 py-1 -mx-1 text-start hover:bg-primary/8 active:scale-[0.99] transition-all"
+              >
+                <div dir="ltr" className="text-on-surface overflow-x-auto flex-1 math-card">
                   <MathText>{`$$${h.result.latex}$$`}</MathText>
                 </div>
-                <button
-                  onClick={() => loadIntoField(h.result.latex)}
-                  title="המשך מהתוצאה"
-                  className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors"
-                >
+                <span className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant">
                   <ArrowUp size={15} />
-                </button>
-              </div>
+                </span>
+              </button>
             )}
           </div>
         ))}

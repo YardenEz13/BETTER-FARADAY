@@ -7,6 +7,7 @@ import { ChevronRight, ArrowRight, ChevronDown, MessageSquare, Bot, GraduationCa
 import CyberAvatar from "../components/CyberAvatar";
 import { ElectricBolt } from "../components/electric";
 import MathText from "../components/MathText";
+import { useCountUp } from "../lib/gsapUtils";
 
 export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> | null; onBack: () => void }) {
   const powerMap = useQuery(
@@ -26,6 +27,11 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
     studentId ? { studentId, limit: 5 } : "skip"
   );
   const [openChatId, setOpenChatId] = useState<string | null>(null);
+
+  // GSAP count-up on the engagement tallies. Hooks run before the early return
+  // so their order stays stable; guarded for the pre-load render.
+  const totalSessionsRef = useCountUp<HTMLSpanElement>(powerMap?.engagement?.totalSessions ?? 0, { grouped: false });
+  const totalMessagesRef = useCountUp<HTMLSpanElement>(powerMap?.engagement?.totalMessages ?? 0, { grouped: false });
 
   if (!studentId) {
     return (
@@ -402,11 +408,11 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
               <div className="flex-col gap-4 text-on-surface">
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">סה"כ שיחות</span>
-                  <span className="num font-bold text-lg text-primary">{powerMap.engagement.totalSessions}</span>
+                  <span ref={totalSessionsRef} className="num font-bold text-lg text-primary">{powerMap.engagement.totalSessions}</span>
                 </div>
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">סה"כ הודעות</span>
-                  <span className="num font-bold text-lg text-primary">{powerMap.engagement.totalMessages}</span>
+                  <span ref={totalMessagesRef} className="num font-bold text-lg text-primary">{powerMap.engagement.totalMessages}</span>
                 </div>
                 <div className="flex justify-between items-center bg-surface-container-low p-3 rounded-lg border border-outline-variant">
                   <span className="font-body-md text-on-surface-variant">משך ממוצע</span>

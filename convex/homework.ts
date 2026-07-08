@@ -2,6 +2,8 @@ import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { awardXpHelper } from "./xp";
+import { touchStreakHelper } from "./streaks";
 
 // ── Teacher creates a homework assignment ──
 export const createHomework = mutation({
@@ -291,11 +293,18 @@ export const finalizeSubmission = mutation({
       ? Math.round((correctCount / answers.length) * 100)
       : 0;
 
+    const wasSubmitted = aq.status === "submitted";
     await ctx.db.patch(assignedQuestionId, {
       status: "submitted",
       submittedAt: Date.now(),
       score,
     });
+
+    // Gamification: award the homework-submitted bonus once, on first submit.
+    if (!wasSubmitted) {
+      await awardXpHelper(ctx, aq.studentId, 50, "homework_submitted", assignedQuestionId);
+      await touchStreakHelper(ctx, aq.studentId);
+    }
   },
 });
 

@@ -1,5 +1,15 @@
 export type AgentType = "practice" | "homework" | "proof";
 
+export interface Message {
+  role: "user" | "model" | "system";
+  content: string;
+  // Ephemeral, local-only preview for notebook-check messages. This is a
+  // compressed data URL kept in React state + IndexedDB for rendering. It is
+  // NEVER sent to Convex (would blow past the ~1MB document limit) and is not
+  // part of the text history handed to the tutor.
+  imageUrl?: string;
+}
+
 export interface ChatMetrics {
   // Core heuristic metrics (always present)
   confusionScore: number;

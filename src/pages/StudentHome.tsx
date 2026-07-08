@@ -1,16 +1,19 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
+  RotateCcw, Trophy, Target, PencilLine, X, FileText,
 } from "../components/electric";
+import { SparkBurst } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
 import CyberAvatar from "../components/CyberAvatar";
+import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
@@ -18,6 +21,7 @@ import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
+import NightSkyCanvas from "../components/NightSkyCanvas";
 
 /* ── Serpentine path geometry (per the "Learning Map" design spec) ──
    x is a percentage (0-100) of the path container's width, y is px. The wave
@@ -85,10 +89,11 @@ const SkillNode = memo(function SkillNode({
           regardless of which of the three sizes actually renders inside it. */}
       <div className="flex items-center justify-center" style={{ width: PATH_NODE_SLOT, height: PATH_NODE_SLOT }}>
         <button
-          className={`relative rounded-full flex items-center justify-center transition-transform cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10 ${tier === "active" && !reducedMotion ? "skill-node-pulse" : ""}`}
+          className={`relative rounded-full flex items-center justify-center transition-transform cursor-pointer hover:-translate-y-1 active:translate-y-1 z-10 ${tier === "active" && !reducedMotion ? "skill-node-pulse" : ""} ${tier === "completed" && !reducedMotion ? "skill-node-charged" : ""}`}
           style={{
             width: size,
             height: size,
+            filter: tier === "locked" ? "grayscale(0.7)" : undefined,
             background: tier === "completed" ? "var(--color-primary)" : "var(--color-surface)",
             border: tier === "locked" ? "2px solid var(--color-outline)" : tier === "active" ? "5px solid var(--color-primary)" : "none",
             boxShadow: tier === "completed"
@@ -125,6 +130,145 @@ const SkillNode = memo(function SkillNode({
     </div>
   );
 });
+
+/* ── Daily-goal ring — answeredToday / goal, with a pencil → preset dialog ──
+   Turns full-primary and fires a spark when the goal is reached. */
+const GOAL_PRESETS = [5, 10, 15, 20, 30];
+
+function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">; reducedMotion: boolean }) {
+  const progress = useQuery(api.goals.getDailyProgress, { studentId });
+  const setGoal = useMutation(api.goals.setDailyGoal);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const goal = progress?.goal ?? 10;
+  const answered = progress?.answeredToday ?? 0;
+  const reached = progress?.goalReached ?? false;
+  const ratio = Math.min(answered / Math.max(goal, 1), 1);
+
+  const R = 30;
+  const CIRC = 2 * Math.PI * R;
+
+  const handlePick = async (g: number) => {
+    setSaving(true);
+    await setGoal({ studentId, goal: g });
+    setSaving(false);
+    setEditOpen(false);
+  };
+
+  return (
+    <div
+      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md"
+      style={{ background: "color-mix(in srgb, var(--color-surface) 85%, transparent)", boxShadow: "var(--shadow-clay)" }}
+    >
+      <div className="flex items-center gap-4">
+        {/* Ring */}
+        <div className="relative w-[72px] h-[72px] flex-shrink-0">
+          <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="36" cy="36" r={R} fill="none" stroke="var(--color-outline)" strokeWidth="8" />
+            <circle
+              cx="36" cy="36" r={R} fill="none"
+              stroke={reached ? "var(--color-primary)" : "var(--color-primary)"}
+              strokeWidth="8" strokeLinecap="round"
+              strokeDasharray={CIRC} strokeDashoffset={CIRC * (1 - ratio)}
+              style={{ transition: "stroke-dashoffset 0.7s ease", filter: reached ? "drop-shadow(0 0 5px var(--color-primary))" : "none" }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
+            {reached ? (
+              <Check size={22} strokeWidth={3} className="text-primary" />
+            ) : (
+              <>
+                <span className="num font-extrabold text-[16px] leading-none text-primary">{answered}</span>
+                <span className="num text-[10px] text-on-surface-variant leading-none mt-0.5">/{goal}</span>
+              </>
+            )}
+          </div>
+          {reached && !reducedMotion && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <SparkBurst />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Target size={15} className="text-primary flex-shrink-0" />
+            <h4 className="font-bold text-[15px] text-on-surface truncate" style={{ fontFamily: "'Assistant', sans-serif" }}>יעד יומי</h4>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="ms-auto w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+              aria-label="עריכת יעד יומי"
+            >
+              <PencilLine size={14} />
+            </button>
+          </div>
+          <p className="font-medium text-xs text-on-surface-variant leading-snug mt-1">
+            {reached
+              ? "היעד הושלם — כל הכבוד! ✨"
+              : `${answered}/${goal} שאלות היום · עוד ${Math.max(0, goal - answered)} להשלמה`}
+          </p>
+        </div>
+      </div>
+
+      {/* Edit dialog */}
+      <AnimatePresence>
+        {editOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ background: "color-mix(in srgb, var(--color-scrim, #000) 45%, transparent)" }}
+            onClick={() => setEditOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 12, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 12, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 24 }}
+              dir="rtl"
+              className="w-full max-w-[22rem] rounded-[24px] p-6 border-2 border-outline bg-surface"
+              style={{ boxShadow: "var(--shadow-clay)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Target size={18} className="text-primary" />
+                  <h3 className="font-bold text-lg text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>בחירת יעד יומי</h3>
+                </div>
+                <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer" aria-label="סגור">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-sm text-on-surface-variant mb-5">כמה שאלות תרצה לפתור בכל יום?</p>
+              <div className="grid grid-cols-3 gap-2.5">
+                {GOAL_PRESETS.map((g) => {
+                  const active = g === goal;
+                  return (
+                    <button
+                      key={g}
+                      disabled={saving}
+                      onClick={() => handlePick(g)}
+                      className={`py-3.5 rounded-2xl border-2 font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-60 ${
+                        active
+                          ? "bg-primary border-primary-dark text-on-primary"
+                          : "bg-surface border-outline text-on-surface hover:border-primary hover:text-primary"
+                      }`}
+                      style={{ boxShadow: active ? "var(--shadow-clay-primary)" : "var(--shadow-clay)" }}
+                    >
+                      <span className="num text-lg">{g}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 /* ── Daily-goal ring + weekday streak strip ──
    Both derive from the real streak: the ring shows days active this week
@@ -193,7 +337,7 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
 function StudentHomeSkeleton() {
   return (
     <div dir="rtl" className="relative min-h-screen bg-background overflow-x-hidden">
-      <div className="page-shell pt-[84px] pb-24 flex flex-col xl:flex-row gap-8">
+      <div className="page-shell pt-[140px] md:pt-[100px] pb-24 flex flex-col xl:flex-row gap-8">
         <section className="flex-1 flex flex-col items-center">
           <div className="shimmer w-full max-w-4xl rounded-3xl mb-10" style={{ height: 96 }} />
           <div className="flex flex-col gap-12 py-4">
@@ -219,16 +363,72 @@ function StudentHomeSkeleton() {
   );
 }
 
+/* ── Owned-badge showcase — small clay medal chips (max 4) ── */
+function badgeIcon(icon: string) {
+  const key = icon?.toLowerCase?.() ?? "";
+  if (key === "flame") return <Flame size={13} className="text-tertiary" />;
+  if (key === "award" || key === "trophy") return <Trophy size={13} className="text-tertiary" />;
+  return <Star size={13} className="text-tertiary" />;
+}
+
+function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; icon: string }> }) {
+  if (badges.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1 mt-1" aria-label="תגים">
+      {badges.slice(0, 4).map((b) => (
+        <span
+          key={b._id}
+          title={b.name}
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-tertiary/12 border-2 border-tertiary/30"
+          style={{ boxShadow: "var(--shadow-clay)" }}
+        >
+          {badgeIcon(b.icon)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const student = useQuery(api.classroom.get, { id: studentId as Id<"students"> });
+  const onboarding = useQuery(api.onboarding.getOnboardingState, { studentId: studentId as Id<"students"> });
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
+  const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
+  const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
+  const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
+  const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
+  const leaderboard = useQuery(
+    api.leaderboard.getWeeklyLeaderboard,
+    student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
+  );
   const [chatOpen, setChatOpen] = useState(false);
   const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
+
+  // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
+  // so content padding is measured live instead of a guessed pt-[Npx] — a fixed
+  // guess drifted out of sync with the actual mobile header and clipped the
+  // first map station under it. Callback ref (not useRef+empty-deps effect):
+  // the header doesn't exist yet on the first render (skeleton returns before
+  // it), so a mount-only effect would observe nothing and never re-attach.
+  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(68);
+  useEffect(() => {
+    if (!headerEl) return;
+    // contentRect excludes padding/border — the header's py-3 + border-b-2
+    // (~26px) would otherwise be silently dropped from the measurement.
+    // offsetHeight is the full border-box, matching what actually overlaps
+    // the content below it.
+    const observer = new ResizeObserver(() => {
+      setHeaderHeight(headerEl.offsetHeight);
+    });
+    observer.observe(headerEl);
+    return () => observer.disconnect();
+  }, [headerEl]);
 
   // The circuit wire draws itself from the first station to the last on mount
   const wireRef = useRef<SVGPathElement>(null);
@@ -247,19 +447,29 @@ export default function StudentHome() {
     return () => { tween.kill(); };
   }, [topicCount, reducedMotion]);
 
-  if (!student || !topics) return <StudentHomeSkeleton />;
+  // Don't flash the map while onboarding state loads; redirect new students to
+  // the welcome wizard before rendering anything.
+  if (!student || !topics || onboarding === undefined) return <StudentHomeSkeleton />;
+  if (onboarding?.needed) return <Navigate to={`/student/${studentId}/welcome`} replace />;
 
   const getProgress = (topicId: string) => {
-    const d = stats?.byTopic[topicId] as { correct: number; total: number } | undefined;
+    const d = stats?.byTopic?.[topicId] as { correct: number; total: number } | undefined;
     if (!d || d.total === 0) return 0;
     return Math.round((d.correct / d.total) * 100);
   };
 
   const totalAttempts = stats?.totalAttempts ?? 0;
-  const correctTotal = topics.reduce((s, t) => s + (stats?.byTopic[t._id]?.correct || 0), 0);
+  const correctTotal = topics.reduce((s, t) => s + (stats?.byTopic?.[t._id]?.correct || 0), 0);
   const overallAcc = totalAttempts > 0 ? Math.round((correctTotal / totalAttempts) * 100) : 0;
   const totalXP = (student.streak * 100) + (totalAttempts * 25) + (correctTotal * 50);
   const completedTopics = topics.filter(t => getProgress(t._id) >= 80).length;
+
+  const xpBalance = xpSummary?.balance ?? totalXP;
+  const reviewCount = reviewDeck?.length ?? 0;
+  const streakInDanger = !!streakStatus?.inDanger;
+  const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
+  const leaderboardEnabled = leaderboard?.enabled ?? false;
+  const myLeagueRank = leaderboard?.myRank ?? null;
 
   const nodeStates = topics.map((topic) => {
     const progress = getProgress(topic._id);
@@ -285,20 +495,34 @@ export default function StudentHome() {
   return (
     <div className="relative min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
 
-      {/* ── Magnetic lines-of-force field (full-bleed backdrop) ── */}
-      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
+      {/* ── Full-bleed backdrop — swaps with the equipped shop theme ──
+          "electric" → an intensified circuit field; "night" → the default
+          field plus a low-opacity starfield; default → lines-of-force. All
+          layers sit at zIndex 0 behind the z-10 content, low-opacity for
+          readability in both light and dark mode. */}
+      {student.equippedTheme === "electric" ? (
+        <FaradayCanvas variant="circuit" style={{ zIndex: 0 }} />
+      ) : student.equippedTheme === "night" ? (
+        <>
+          <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0, opacity: 0.5 }} />
+          <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />
+        </>
+      ) : (
+        <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
+      )}
 
       {/* ── Top Navigation ── */}
       <motion.header
+        ref={setHeaderEl}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2"
         style={{ boxShadow: 'var(--shadow-clay)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         {/* Left: back + student info */}
         <div className="flex items-center gap-3">
           <button
-            className="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
+            className="w-9 h-9 md:w-9 md:h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
             onClick={() => navigate("/")}
             aria-label="יציאה"
           >
@@ -312,7 +536,7 @@ export default function StudentHome() {
             onClick={() => setThemePickerOpen(true)}
           >
             <div className="relative">
-              <CyberAvatar name={student.name} size={32} />
+              <CyberAvatar name={student.name} size={32} color={student.avatarColor} />
               {student.homeworkTheme && (
                 <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center border-2 border-surface">
                   <Star size={7} className="text-white fill-white" />
@@ -321,6 +545,7 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
+              {ownedBadges && ownedBadges.length > 0 && <BadgeChips badges={ownedBadges} />}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
               <div className="num font-bold text-primary text-[10px] md:hidden">{totalXP.toLocaleString()} XP</div>
               <div className="hidden md:block">
@@ -353,6 +578,7 @@ export default function StudentHome() {
             <Flame className="text-tertiary" size={14} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
+          <NotificationCenter studentId={studentId!} />
           <ThemeToggle />
           <button
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer"
@@ -363,7 +589,7 @@ export default function StudentHome() {
             <span>שיעורי בית</span>
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
             style={{ boxShadow: 'var(--shadow-clay-primary)' }}
             onClick={() => setChatOpen(true)}
           >
@@ -374,10 +600,81 @@ export default function StudentHome() {
       </motion.header>
 
       {/* ── Main Content ── */}
-      <div className="page-shell relative z-10 pt-[68px] pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6">
+      <div
+        className="page-shell relative z-10 pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6"
+        style={{ paddingTop: headerHeight + 16 }}
+      >
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
+          {/* Streak-in-danger banner (amber / tertiary) */}
+          {streakInDanger && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-tertiary/40 bg-tertiary/12 px-5 py-3.5 flex items-center gap-3"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              role="alert"
+            >
+              <Flame className="text-tertiary flex-shrink-0" size={22} />
+              <div className="flex-1 text-right">
+                <div className="font-bold text-on-surface text-sm">
+                  🔥 הרצף שלך בסכנה! פתרו שאלה אחת היום כדי לשמור עליו
+                </div>
+                {freezesAvailable > 0 && (
+                  <div className="font-medium text-on-surface-variant text-xs mt-0.5">
+                    יש לך {freezesAvailable} {freezesAvailable === 1 ? "הקפאה" : "הקפאות"}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Quick actions — shop + review entry points */}
+          <div className="w-full max-w-4xl mb-4 flex flex-wrap gap-3">
+            <button
+              onClick={() => navigate(`/student/${studentId}/shop`)}
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+            >
+              <ElectricBolt tone="spark" size={17} glow={0.5} animated={false} />
+              <span>החנות</span>
+              <span className="num font-bold text-primary">{xpBalance.toLocaleString()}</span>
+            </button>
+            {reviewCount > 0 && (
+              <button
+                onClick={() => navigate(`/student/${studentId}/review`)}
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer"
+                style={{ boxShadow: 'var(--shadow-clay)' }}
+              >
+                <RotateCcw size={16} />
+                <span>חזרה על טעויות</span>
+                <span className="num font-bold px-2 py-0.5 rounded-full bg-secondary text-white text-xs">{reviewCount}</span>
+              </button>
+            )}
+            {leaderboardEnabled && (
+              <button
+                onClick={() => navigate(`/student/${studentId}/leaderboard`)}
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-tertiary/12 border-2 border-tertiary/30 hover:border-tertiary text-tertiary transition-all font-semibold text-sm cursor-pointer"
+                style={{ boxShadow: 'var(--shadow-clay)' }}
+              >
+                <Trophy size={16} />
+                <span>ליגת השבוע</span>
+                {myLeagueRank !== null && (
+                  <span className="num font-bold px-2 py-0.5 rounded-full bg-tertiary text-white text-xs">#{myLeagueRank}</span>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => navigate(`/student/${studentId}/exam`)}
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-secondary hover:text-secondary transition-all font-semibold text-sm cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+            >
+              <FileText size={16} />
+              <span>מצב מתכונת 📝</span>
+            </button>
+          </div>
+
           {/* Section header — circuit-field hero band */}
           <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline backdrop-blur-md"
             style={{ background: 'color-mix(in srgb, var(--color-surface) 82%, transparent)', boxShadow: 'var(--shadow-clay)' }}>
@@ -579,7 +876,16 @@ export default function StudentHome() {
               </div>
             </motion.div>
 
-            {/* Daily goal + weekday streak */}
+            {/* Daily goal ring */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <DailyGoalCard studentId={studentId as Id<"students">} reducedMotion={reducedMotion} />
+            </motion.div>
+
+            {/* Weekly consistency + weekday streak */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}

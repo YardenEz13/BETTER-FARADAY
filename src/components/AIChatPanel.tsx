@@ -3,13 +3,14 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { X, Send, Terminal, ChevronDown, Copy, ThumbsUp, Calculator, ImagePlus, Settings, User, QrCode } from "./electric";
+import { X, Terminal, ChevronDown, Copy, Check, User } from "./electric";
 import { log } from "../lib/logger";
 import {
   isLocalAIAvailable,
   getAIStatus,
   createSession,
   destroySession,
+  setActiveStudentId,
   streamMessage,
   checkNotebookImage,
   analyzeConversation,
@@ -39,6 +40,46 @@ import MathText from "./MathText";
 import FaradayAvatar from "./FaradayAvatar";
 import QRBridgeModal from "./QRBridgeModal";
 import FaradayCanvas from "./FaradayCanvas";
+import ThinkingWave from "./chat/ThinkingWave";
+import FaradayConsole from "./chat/FaradayConsole";
+
+// Adaptive-help stages, mirrored from the tutor's escalation levels (localAI.ts).
+const HELP_STAGES = [
+  { label: "רמז", color: "var(--color-primary)" },
+  { label: "הסבר", color: "var(--color-secondary)" },
+  { label: "דוגמה", color: "var(--color-tertiary)" },
+  { label: "פתרון", color: "var(--color-error)" },
+] as const;
+
+/** Compact meter in the chat header showing how much help Faraday is giving right now. */
+function HelpLevelMeter({ level }: { level: number }) {
+  const lvl = Math.max(0, Math.min(3, level));
+  return (
+    <div className="flex items-center gap-2" title="רמת העזרה עולה ככל שנתקעים באותה שאלה">
+      <span className="font-label-md text-on-surface-variant" style={{ fontSize: 11 }}>עזרה</span>
+      <div className="flex items-center gap-1">
+        {HELP_STAGES.map((s, i) => {
+          const on = i <= lvl;
+          return (
+            <span
+              key={s.label}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: i === lvl ? 18 : 8,
+                height: 8,
+                background: on ? s.color : "var(--color-outline)",
+                boxShadow: i === lvl ? `0 0 8px ${s.color}` : "none",
+              }}
+            />
+          );
+        })}
+      </div>
+      <span className="font-label-md font-bold" style={{ fontSize: 11, color: HELP_STAGES[lvl].color }}>
+        {HELP_STAGES[lvl].label}
+      </span>
+    </div>
+  );
+}
 
 interface AIChatPanelProps {
   isOpen: boolean;
@@ -70,6 +111,11 @@ export default function AIChatPanel({
   const [chatId, setChatId] = useState<Id<"aiChats"> | null>(null);
   const [online, setOnline] = useState(isOnline());
   const [, setIsResumed] = useState(false);
+  // lg+ → the panel docks as a side column beside the question; below that it stays
+  // a bottom sheet. Drives both the entrance animation axis and the layout classes.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches
+  );
 
   // Session Cycling state
   const [cycleState, setCycleState] = useState<"active" | "cycling" | "self_assess">("active");
@@ -85,7 +131,15 @@ export default function AIChatPanel({
   const [attachedImage, setAttachedImage] = useState<PreparedImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [showQRBridge, setShowQRBridge] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const copyMessage = useCallback((text: string, idx: number) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1600);
+    }).catch(() => {});
+  }, []);
 
   const currentContext = questionStem
     ? (topicName ? `נושא: ${topicName}\nשאלה: ${questionStem}` : `שאלה: ${questionStem}`)
@@ -97,11 +151,19 @@ export default function AIChatPanel({
   const sessionStartedAt = useRef(Date.now());
   const lastValidQuestionIdRef = useRef(questionId);
   const userMsgCount = useRef(0);
+  // Adaptive help: how stuck the student is on the CURRENT question (0-3). Reset on
+  // every new question; drives Faraday's escalation hint → concept → example → solution.
+  const struggleRef = useRef(0);
+  const stuckStreakRef = useRef(0); // consecutive stuck-signal messages since the last escalation
+  const [helpLevel, setHelpLevel] = useState(0); // mirror of struggleRef for the UI meter
   const isSendingRef = useRef(false);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
 
   // Keep ref in sync so callbacks always have current value
   useEffect(() => { chatIdRef.current = chatId; }, [chatId]);
+
+  // Forward studentId to localAI so the Gemini proxy can rate-limit per student.
+  useEffect(() => { setActiveStudentId(studentId); }, [studentId]);
 
   useEffect(() => {
     return () => {
@@ -142,6 +204,14 @@ export default function AIChatPanel({
       onBridgeRequestHandled?.();
     }
   }, [requestBridge, isOpen, onBridgeRequestHandled]);
+
+  // Track viewport → dock (desktop) vs bottom sheet (mobile)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // Track online status
   useEffect(() => {
@@ -213,6 +283,7 @@ export default function AIChatPanel({
       setMessages([]);
       setIsResumed(false);
       initGuard.current = false; // allow re-init
+      struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0); // fresh question → back to gentle hints
       prevQuestionIdRef.current = questionId;
     }
   }, [questionId]);
@@ -337,6 +408,7 @@ export default function AIChatPanel({
             setAwaitingSelfAssess(false);
             setPendingNextQuestion(false);
             userMsgCount.current = 0;
+            struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
             initGuard.current = false;
 
             // We defer calling startChat() here just like in createFreshChat,
@@ -436,6 +508,7 @@ export default function AIChatPanel({
     };
     setMessages([carryOver]);
     userMsgCount.current = 0;
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     sessionStartedAt.current = Date.now();
     setSessionIndex(prev => prev + 1);
 
@@ -580,12 +653,13 @@ export default function AIChatPanel({
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isTyping || isSendingRef.current) return;
+  const handleSend = async (overrideText?: string) => {
+    const raw = (overrideText ?? input).trim();
+    if (!raw || isTyping || isSendingRef.current) return;
     isSendingRef.current = true;
 
     try {
-      const userMsg = input.trim();
+      const userMsg = raw;
       setInput("");
       log.ai("user message sent", { agentType, chatId: chatIdRef.current, length: userMsg.length });
 
@@ -594,12 +668,19 @@ export default function AIChatPanel({
       // ── Self-assessment capture ──
       if (awaitingSelfAssess) {
         setAwaitingSelfAssess(false);
-        setMessages(prev => [...prev, newUserMsg]);
-        // Now finalize the brief
+        const updatedMessages = [...messages, newUserMsg];
+        setMessages(updatedMessages);
+        // Persist the answer so it lands in the transcript AND the analysis —
+        // otherwise the student's closing reply to "איך היה?" is dropped.
+        if (chatIdRef.current) {
+          await saveMessages(chatIdRef.current, updatedMessages).catch(console.error);
+        }
+        await persistMessage("user", userMsg);
+        // Now finalize the brief, feeding it the transcript that includes this answer
         if (pendingNextQuestion) {
-          await finalizeWithBriefAndContinue(userMsg);
+          await finalizeWithBriefAndContinue(userMsg, updatedMessages);
         } else {
-          await finalizeWithBrief(userMsg);
+          await finalizeWithBrief(userMsg, updatedMessages);
         }
         return;
       }
@@ -612,6 +693,38 @@ export default function AIChatPanel({
       }
 
       userMsgCount.current++;
+
+      // ── Adaptive help escalation ──
+      // Raise the help level only when the student is STILL stuck after already
+      // getting help on this question — a first message that happens to contain
+      // "לא הבנתי" (e.g. a starter prompt) should not skip straight past the hint
+      // level. Escalate on a repeated stuck signal (not a single one), with a slow
+      // turn-based floor as a backstop for long, unproductive back-and-forth.
+      {
+        const explicitAsk = /פשוט תגיד|תגיד לי את התשובה|תן לי את התשובה|מה התשובה|תפתור לי|פתור לי|just tell|show me the answer/i.test(userMsg);
+        const stuckSignal = /לא הבנתי|לא מבין|לא יודע|תעזור|עזור לי|לא מצליח|עדיין לא|תקוע|לא ברור|קשה לי|מבולבל/.test(userMsg);
+        const turns = userMsgCount.current; // already incremented above; 1 = first message
+
+        if (explicitAsk) {
+          struggleRef.current = 3;
+        } else if (turns === 1) {
+          // First message never escalates on its own — Faraday always starts at a hint.
+          stuckStreakRef.current = stuckSignal ? 1 : 0;
+        } else {
+          stuckStreakRef.current = stuckSignal ? stuckStreakRef.current + 1 : 0;
+          // Two stuck messages in a row (after already receiving help) → bump one level.
+          if (stuckStreakRef.current >= 2) {
+            struggleRef.current += 1;
+            stuckStreakRef.current = 0;
+          }
+          // Slow backstop for long threads that never explicitly say "stuck".
+          if (turns >= 10) struggleRef.current = Math.max(struggleRef.current, 3);
+          else if (turns >= 7) struggleRef.current = Math.max(struggleRef.current, 2);
+          else if (turns >= 4) struggleRef.current = Math.max(struggleRef.current, 1);
+        }
+        struggleRef.current = Math.min(3, struggleRef.current);
+        setHelpLevel(struggleRef.current);
+      }
 
       // ── Ensure chat is created before sending first message ──
       let currentChatId = chatIdRef.current;
@@ -682,7 +795,7 @@ export default function AIChatPanel({
             },
             messages,
             controller.signal,
-            { agentType, questionContext: currentContext }  // always pass fresh context
+            { agentType, questionContext: currentContext, struggleLevel: struggleRef.current as 0 | 1 | 2 | 3 }  // fresh context + adaptive help level
           );
           log.ai("Gemini response received", { length: finalResponse.length });
         } finally {
@@ -864,9 +977,9 @@ export default function AIChatPanel({
   };
 
   // ── Finalize: generate composite brief + save + cleanup ──
-  const finalizeWithBrief = async (selfAssessText: string) => {
+  const finalizeWithBrief = async (selfAssessText: string, msgs?: Message[]) => {
     const currentChatId = chatIdRef.current;
-    const currentMessages = [...messages];
+    const currentMessages = msgs ?? [...messages];
     const currentPartialBriefs = [...partialBriefs];
 
     // Trigger background generation and saving without blocking the user
@@ -876,9 +989,9 @@ export default function AIChatPanel({
     await cleanup();
   };
 
-  const finalizeWithBriefAndContinue = async (selfAssessText: string) => {
+  const finalizeWithBriefAndContinue = async (selfAssessText: string, msgs?: Message[]) => {
     const currentChatId = chatIdRef.current;
-    const currentMessages = [...messages];
+    const currentMessages = msgs ?? [...messages];
     const currentPartialBriefs = [...partialBriefs];
 
     // Trigger background generation and saving without blocking the user
@@ -889,6 +1002,7 @@ export default function AIChatPanel({
     setPartialBriefs([]);
     setSessionIndex(0);
     userMsgCount.current = 0;
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     setSelfAssessment(null);
     setPendingNextQuestion(false);
     setCycleState("active");
@@ -913,6 +1027,7 @@ export default function AIChatPanel({
     setAwaitingSelfAssess(false);
     setPendingNextQuestion(false);
     userMsgCount.current = 0;
+    struggleRef.current = 0; stuckStreakRef.current = 0; setHelpLevel(0);
     initGuard.current = false;
     onClose();
   };
@@ -930,16 +1045,18 @@ export default function AIChatPanel({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", damping: 28, stiffness: 220 }}
-            className="fixed bottom-0 left-0 w-full z-[100] flex flex-col font-body-md shadow-2xl overflow-hidden h-[58vh] md:h-[50vh]"
+            initial={isDesktop ? { x: "100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            animate={{ x: 0, y: 0, opacity: 1 }}
+            exit={isDesktop ? { x: "100%", opacity: 0 } : { y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 260 }}
+            className="fixed z-[100] flex flex-col font-body-md overflow-hidden border-outline
+              bottom-0 left-0 w-full h-[62vh] rounded-t-[24px] border-t-2
+              lg:top-[68px] lg:bottom-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[min(440px,42vw)] lg:rounded-none lg:border-t-0 lg:border-e-2"
             style={{
               background: 'var(--color-surface)',
-              borderTop: '2px solid var(--color-outline-variant)',
-              borderTopLeftRadius: '24px',
-              borderTopRightRadius: '24px',
+              boxShadow: isDesktop
+                ? '-6px 0 28px rgba(20,40,30,0.10)'
+                : '0 -10px 34px rgba(20,40,30,0.14)',
             }}
             dir="rtl"
           >
@@ -957,60 +1074,63 @@ export default function AIChatPanel({
               aria-hidden
             />
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-6 py-2 md:py-3 flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
-              {/* AI identity */}
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
-                    <FaradayAvatar px={48} fill />
+            <div className="flex flex-col flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
+              <div className="flex items-center justify-between gap-2 px-4 md:px-6 py-2 md:py-3">
+                {/* AI identity */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(91,255,159,0.25)]">
+                      <FaradayAvatar px={48} fill />
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_rgba(91,255,159,0.6)]" />
+                  <div className="min-w-0">
+                    <div className="font-headline-md text-on-surface truncate" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
+                      פרופסור פאראדיי
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                      <span className="font-label-md text-primary truncate" style={{ fontSize: '11px' }}>
+                        {aiStatus === "downloading" && loadProgress
+                          ? `טוען מודל... ${loadProgress.percent}%`
+                          : isAnalyzing
+                          ? "מנתח שיחה..."
+                          : cycleState === "cycling"
+                          ? "מחדש הקשר..."
+                          : "מחובר · עוזר AI למתמטיקה"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-headline-md text-on-surface" style={{ textShadow: '0 0 10px rgba(91,255,159,0.08)' }}>
-                    פרופסור פאראדיי
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                    <span className="font-label-md text-primary" style={{ fontSize: '11px' }}>מחובר · עוזר AI למתמטיקה</span>
-                    {aiStatus === "downloading" && loadProgress && (
-                      <span className="font-label-md text-tertiary-container animate-pulse" style={{ fontSize: '11px' }}>
-                        · טוען מודל... {loadProgress.percent}%
-                      </span>
-                    )}
-                    {isAnalyzing && (
-                      <span className="font-label-md text-secondary animate-pulse" style={{ fontSize: '11px' }}>
-                        · מנתח שיחה...
-                      </span>
-                    )}
-                    {cycleState === "cycling" && (
-                      <span className="font-label-md text-tertiary animate-pulse" style={{ fontSize: '11px' }}>
-                        · מחדש הקשר...
-                      </span>
-                    )}
-                  </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={handleEndChat}
+                    disabled={isAnalyzing || messages.length <= 1}
+                    title="סיום שיחה"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="hidden lg:inline">סיום שיחה</span>
+                    <X className="" />
+                  </button>
+                  <button
+                    onClick={handleMinimize}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
+                    title="מזעור"
+                  >
+                    <ChevronDown className="" />
+                  </button>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-
-                <button
-                  onClick={handleEndChat}
-                  disabled={isAnalyzing || messages.length <= 1}
-                  className="flex items-center gap-2 px-3 py-1.5 border-2 border-outline-variant rounded-lg font-label-lg text-on-surface-variant hover:bg-surface-variant transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>סיום שיחה</span>
-                  <X className="" />
-                </button>
-                <button
-                  onClick={handleMinimize}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
-                  title="מזעור"
-                >
-                  <ChevronDown className="" />
-                </button>
-              </div>
+              {/* Adaptive help meter — own row so it never fights the identity/actions for space
+                  in the narrow desktop dock or on small phones. */}
+              {agentType !== "proof" && (
+                <div className="flex items-center px-4 md:px-6 pb-2 -mt-1">
+                  <HelpLevelMeter level={helpLevel} />
+                </div>
+              )}
             </div>
 
             {/* ── Body: messages + optional debug ── */}
@@ -1020,7 +1140,7 @@ export default function AIChatPanel({
               <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col gap-6 scroll-smooth z-10">
+              <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-5 py-6 flex flex-col gap-5 scroll-smooth z-10">
 
                 {/* Context Header */}
                 {topicName && (
@@ -1048,18 +1168,13 @@ export default function AIChatPanel({
                       <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
                       <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
                         {agentType === "practice"
-                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — לא נותן תשובות, בונה איתך את הדרך.`
+                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — מתחילים ברמז, ואם עדיין תקוע נעמיק יחד עד שיהיה ברור.`
                           : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
                       {starterPrompts.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setInput(s)}
-                          className="px-4 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface text-sm font-medium hover:border-primary hover:text-primary transition-all"
-                          style={{ boxShadow: 'var(--shadow-clay)' }}
-                        >
+                        <button key={s} onClick={() => handleSend(s)} className="chip-btn rounded-full">
                           {s}
                         </button>
                       ))}
@@ -1077,6 +1192,10 @@ export default function AIChatPanel({
                   );
 
                   const isAI = msg.role === "model";
+                  // Group consecutive same-role bubbles: avatar + full radius only
+                  // on the first of the run, tighter gap inside the run.
+                  const prev = messages[i - 1];
+                  const firstOfGroup = !prev || prev.role !== msg.role;
 
                   return (
                     <motion.div
@@ -1084,27 +1203,40 @@ export default function AIChatPanel({
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
-                      className={`flex gap-4 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
+                      className={`flex gap-3 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'} ${firstOfGroup ? '' : '-mt-3'}`}
                     >
-                      {/* Avatar */}
-                      <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg ${isAI ? 'bg-surface-bright border border-primary/30 shadow-[0_0_15px_rgba(91,255,159,0.15)]' : 'bg-secondary-container border border-secondary'}`}>
-                        {isAI ? (
-                          <FaradayAvatar px={40} fill />
-                        ) : (
-                          <User size={20} className="text-on-secondary-container" />
+                      {/* Avatar — only on the first bubble of a run */}
+                      <div className="w-9 flex-shrink-0">
+                        {firstOfGroup && (
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ${isAI ? 'bg-surface-bright border-2 border-primary/40' : 'bg-secondary-container border-2 border-secondary/50'}`}>
+                            {isAI ? (
+                              <FaradayAvatar px={36} fill />
+                            ) : (
+                              <User size={18} className="text-on-secondary-container" />
+                            )}
+                          </div>
                         )}
                       </div>
 
                       {/* Bubble */}
                       <div
-                        className={`p-5 shadow-md relative group ${isAI ? 'bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm' : 'bg-surface-variant border border-outline/30 rounded-2xl rounded-tl-sm'}`}
-                        style={{ maxWidth: '85%' }}
+                        className={`px-4 py-3 relative group rounded-2xl border-2 ${
+                          isAI
+                            ? `bg-surface border-outline ${firstOfGroup ? 'rounded-tr-md' : ''}`
+                            : `bg-secondary-container/60 border-secondary/30 ${firstOfGroup ? 'rounded-tl-md' : ''}`
+                        }`}
+                        style={{ maxWidth: '85%', boxShadow: isAI ? 'var(--shadow-clay)' : 'var(--shadow-sm)' }}
                       >
                         {isAI && (
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 bg-surface p-1 rounded-md border border-outline-variant z-10">
-                            <button className="text-on-surface-variant hover:text-primary"><Copy className="text-[18px]" /></button>
-                            <button className="text-on-surface-variant hover:text-primary"><ThumbsUp className="text-[18px]" /></button>
-                          </div>
+                          <button
+                            onClick={() => copyMessage(msg.content, i)}
+                            title={copiedIdx === i ? "הועתק!" : "העתק"}
+                            className={`absolute top-1.5 left-1.5 p-1.5 rounded-lg border border-outline-variant bg-surface transition-all z-10 ${
+                              copiedIdx === i ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-primary'
+                            }`}
+                          >
+                            {copiedIdx === i ? <Check size={15} /> : <Copy size={15} />}
+                          </button>
                         )}
                         {msg.imageUrl && (
                           <img
@@ -1157,103 +1289,20 @@ export default function AIChatPanel({
             </div>
 
             {/* ── Input bar (Faraday Console) ── */}
-            <div className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
-              <div className="max-w-4xl mx-auto">
-                {/* Console panel */}
-                <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-                  {/* Console title bar */}
-                  <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
-                    <Calculator className="" />
-                    <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
-                    <div className="flex-1" />
-                    <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
-                  </div>
-                  {/* Attached image preview */}
-                  {attachedImage && (
-                    <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
-                      <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
-                      <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
-                        <ImagePlus size={14} className="flex-shrink-0" />
-                        <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
-                      </div>
-                      <button
-                        onClick={() => setAttachedImage(null)}
-                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-variant/50 transition-colors flex-shrink-0"
-                        title="הסר תמונה"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )}
-                  {imageError && (
-                    <div className="px-4 py-2 border-b border-outline-variant/40 bg-error/10 text-error font-label-md" style={{ fontSize: '12px' }}>
-                      {imageError}
-                    </div>
-                  )}
-                  {/* Input row */}
-                  <div className="flex items-center p-2 gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isTyping || isAnalyzing}
-                      className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
-                      title="צלם או צרף תמונת מחברת לבדיקה"
-                    >
-                      <ImagePlus className="" />
-                    </button>
-                    <button
-                      onClick={() => setShowQRBridge(true)}
-                      disabled={isTyping || isAnalyzing}
-                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="צלם מהטלפון (QR)"
-                    >
-                      <QrCode className="" />
-                    </button>
-                    <button
-                      onClick={onOpenPlayground}
-                      disabled={!onOpenPlayground}
-                      className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="מגרש המתמטיקה — פתרון בלי דף ועיפרון"
-                    >
-                      <Calculator className="" />
-                    </button>
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md"
-                        placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSubmit()}
-                        disabled={isTyping || isAnalyzing}
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50"
-                        title="הגדרות"
-                      >
-                        <Settings className="" />
-                      </button>
-                      <button
-                        className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-                        onClick={handleSubmit}
-                        disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                        title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
-                      >
-                        <Send className="" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FaradayConsole
+              input={input}
+              onInputChange={setInput}
+              attachedImage={attachedImage}
+              onRemoveImage={() => setAttachedImage(null)}
+              imageError={imageError}
+              isTyping={isTyping}
+              isAnalyzing={isAnalyzing}
+              fileInputRef={fileInputRef}
+              onFileSelect={handleFileSelect}
+              onSubmit={handleSubmit}
+              onOpenQRBridge={() => setShowQRBridge(true)}
+              onOpenPlayground={onOpenPlayground}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1267,38 +1316,6 @@ export default function AIChatPanel({
         />
       )}
     </>
-  );
-}
-
-/* ── "Faraday is thinking" — a live voltage signal reading on an oscilloscope ── */
-function ThinkingWave() {
-  const reducedMotion = useReducedMotion();
-  const bars = [0, 1, 2, 3, 4];
-  if (reducedMotion) {
-    return (
-      <div className="flex items-end gap-1 h-5" aria-hidden>
-        {bars.map(i => (
-          <span
-            key={i}
-            className="w-1 rounded-full bg-primary"
-            style={{ height: i % 2 ? '100%' : '55%' }}
-          />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-end gap-1 h-5" aria-hidden>
-      {bars.map(i => (
-        <motion.span
-          key={i}
-          className="w-1 h-5 rounded-full bg-primary origin-bottom"
-          style={{ boxShadow: '0 0 6px var(--color-inverse-primary)' }}
-          animate={{ scaleY: [0.3, 1, 0.3] }}
-          transition={{ duration: 0.7, delay: i * 0.1, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      ))}
-    </div>
   );
 }
 

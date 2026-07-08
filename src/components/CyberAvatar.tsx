@@ -4,6 +4,32 @@ interface AvatarProps {
   name: string;
   size?: number;
   showText?: boolean;
+  /** Optional explicit avatar color (e.g. students.avatarColor). Overrides the
+      name-derived hue so shop avatar-color purchases actually take effect. */
+  color?: string;
+}
+
+/** Parse a #rrggbb (or #rgb) hex to an {h,s,l} so an explicit avatar color can
+    drive the same tinted-bg / border / text treatment as the derived hue. */
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+  const m = hex.trim().replace("#", "");
+  const full = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+  if (full.length !== 6 || /[^0-9a-f]/i.test(full)) return null;
+  const r = parseInt(full.slice(0, 2), 16) / 255;
+  const g = parseInt(full.slice(2, 4), 16) / 255;
+  const b = parseInt(full.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
 // Derive a stable hue from a name
@@ -15,19 +41,21 @@ function nameHue(name: string): number {
   return Math.abs(h) % 360;
 }
 
-export default function CyberAvatar({ name, size = 48, showText = true }: AvatarProps) {
-  const hue     = nameHue(name);
+export default function CyberAvatar({ name, size = 48, showText = true, color: colorProp }: AvatarProps) {
   const initial = name.slice(0, 1);
   const fontSize = Math.round(size * 0.38);
 
-  // Lean green-wards: shift hue toward green band (80–160)
-  const greenBias = ((hue % 160) + 60) % 360;
+  // An explicit avatar color (shop purchase) drives the hue directly; otherwise
+  // derive a stable hue from the name and lean it green-wards.
+  const explicit = colorProp ? hexToHsl(colorProp) : null;
+  const hueBase = explicit ? explicit.h : ((nameHue(name) % 160) + 60) % 360;
+  const sat = explicit ? Math.max(explicit.s, 45) : 55;
 
-  const bg     = `hsl(${greenBias}, 55%, 88%)`;
-  const border = `hsl(${greenBias}, 50%, 70%)`;
-  const color  = `hsl(${greenBias}, 60%, 30%)`;
-  const glow   = `hsla(${greenBias}, 60%, 50%, 0.30)`;
-  const ring   = `hsla(${greenBias}, 40%, 100%, 0.50)`;
+  const bg     = `hsl(${hueBase}, ${sat}%, 88%)`;
+  const border = `hsl(${hueBase}, ${sat - 5}%, 70%)`;
+  const color  = `hsl(${hueBase}, ${sat + 5}%, 30%)`;
+  const glow   = `hsla(${hueBase}, ${sat + 5}%, 50%, 0.30)`;
+  const ring   = `hsla(${hueBase}, 40%, 100%, 0.50)`;
 
   return (
     <div

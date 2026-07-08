@@ -5,14 +5,16 @@ import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, RotateCcw, Zap, Bot, Activity,
+  ChevronLeft, Zap, Bot, Activity,
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
 import AIChatPanel from "../components/AIChatPanel";
+import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
-import { Lightbulb as ElectricBulb, Battery } from "../components/electric";
+import { Lightbulb as ElectricBulb, Battery, SparkBurst } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
@@ -44,7 +46,12 @@ export default function PracticeSession() {
   useEffect(() => { setActiveQuestion(null); }, [topicId]);
 
   const submitAttempt = useMutation(api.attempts.submitAttempt);
+  const endSession    = useMutation(api.goals.endSession);
   const generateHint  = useMutation(api.ai.generateHint);
+
+  const [sessionId, setSessionId]     = useState<Id<"sessions"> | null>(null);
+  const [recapId, setRecapId]         = useState<Id<"sessions"> | null>(null);
+  const [showRecap, setShowRecap]     = useState(false);
 
   const [selected, setSelected]             = useState<number | null>(null);
   const [submitted, setSubmitted]           = useState(false);
@@ -99,11 +106,16 @@ export default function PracticeSession() {
     setTimeout(() => card.classList.remove(cls), 900);
   };
 
-  /* GSAP elastic shake on a wrong answer. */
+  /* Gentle clay wiggle on a wrong answer — x ±6px over ~0.35s, no harsh flood.
+     The error shadow flash is handled separately by flashCard("wrong"). */
   const shakeCard = () => {
     const card = questionCardRef.current;
     if (!card || reducedMotion) return;
-    gsap.fromTo(card, { x: -13 }, { x: 0, duration: 0.75, ease: "elastic.out(1, 0.22)", clearProps: "x" });
+    gsap.fromTo(
+      card,
+      { x: 0 },
+      { keyframes: { x: [-6, 6, -4, 4, 0] }, duration: 0.35, ease: "power1.inOut", clearProps: "x" },
+    );
   };
 
   /* The earned XP flies from the answered option to the XP counter (MotionPath). */
@@ -193,12 +205,13 @@ export default function PracticeSession() {
     // Enter review phase with 5-second minimum
     setReviewPhase(true);
     setCountdown(5);
-    await submitAttempt({
+    const res = await submitAttempt({
       studentId: studentId as Id<"students">, questionId: activeQuestion._id,
       topicId: topicId as Id<"topics">, choiceIndex: idx, isCorrect,
       timeMs: Date.now() - startTimeRef.current, hintsUsed, difficulty: activeQuestion.difficulty,
     });
-    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id });
+    if (res?.sessionId) setSessionId(res.sessionId);
+    log.practice("attempt persisted to Convex", { questionId: activeQuestion._id, dailyGoalReached: res?.dailyGoalReached });
   };
 
   const handleHint = async () => {
@@ -223,6 +236,31 @@ export default function PracticeSession() {
     setQuestionKey(k => k + 1);
   };
 
+  // End the session → freeze the window and show the recap. If the student
+  // never answered anything, skip straight back to the map.
+  const handleEndSession = async () => {
+    if (questionsAnswered === 0) {
+      navigate(`/student/${studentId}`);
+      return;
+    }
+    const id = await endSession({ studentId: studentId as Id<"students"> });
+    setRecapId((id as Id<"sessions"> | null) ?? sessionId);
+    setShowRecap(true);
+  };
+
+  // "עוד סיבוב" — dismiss the recap and start a fresh session/question.
+  const handleNewSession = () => {
+    setShowRecap(false);
+    setRecapId(null);
+    setSessionId(null);
+    setCombo(0);
+    setSessionXP(0);
+    setQuestionsAnswered(0);
+    setReviewPhase(false);
+    setActiveQuestion(null);
+    setQuestionKey(k => k + 1);
+  };
+
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
   const timerStr  = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
 
@@ -240,7 +278,7 @@ export default function PracticeSession() {
         style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         <div className="flex items-center gap-4">
-          <button className="btn-icon" onClick={() => navigate(`/student/${studentId}`)}>
+          <button className="btn-icon" onClick={handleEndSession} aria-label="סיום הסבב">
             <ChevronLeft size={18} />
           </button>
           <div>
@@ -256,16 +294,26 @@ export default function PracticeSession() {
           {/* Questions chip */}
           <div className="stat-chip">
             <Activity size={13} className="text-primary" />
-            <span className="num font-bold text-sm text-on-surface">{questionsAnswered}</span>
+            <span key={questionsAnswered} className="num font-bold text-sm text-on-surface pop">{questionsAnswered}</span>
             <span className="text-xs text-on-surface-variant">שאלות</span>
           </div>
-          {/* XP chip */}
+          {/* XP chip — the number pops on every increment (keyed re-mount) */}
           <div className="stat-chip" ref={xpChipRef}>
             <Zap size={13} className="text-tertiary" />
-            <span className="num font-bold text-sm text-tertiary">+{sessionXP}</span>
+            <span key={sessionXP} className="num font-bold text-sm text-tertiary pop">+{sessionXP}</span>
             <span className="text-xs text-on-surface-variant">XP</span>
           </div>
           <ThemeToggle />
+          {questionsAnswered > 0 && (
+            <button
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary font-semibold text-sm transition-all cursor-pointer"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              onClick={handleEndSession}
+            >
+              <CheckCircle2 size={14} className="text-primary" />
+              סיים סבב
+            </button>
+          )}
           <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
             <Bot size={14} />
             עזרת AI
@@ -275,13 +323,11 @@ export default function PracticeSession() {
 
       {/* ── Main arena ── */}
       <div
-        className="relative z-10 min-h-screen flex flex-col"
-        style={{
-          justifyContent: chatOpen ? 'flex-start' : 'center',
-          paddingTop: chatOpen ? '120px' : '96px',
-          paddingBottom: chatOpen ? '58vh' : '64px',
-          transition: 'padding 0.3s ease',
-        }}
+        className={`relative z-10 min-h-screen flex flex-col transition-[padding] duration-300 ${
+          chatOpen
+            ? 'justify-start pt-[112px] pb-[64vh] lg:pb-16 lg:pt-24 lg:ps-[min(464px,44vw)]'
+            : 'justify-center pt-24 pb-16'
+        }`}
       >
         <div className="page-shell flex gap-6 items-start">
 
@@ -314,8 +360,7 @@ export default function PracticeSession() {
 
           {!activeQuestion && question === undefined ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
-              <RotateCcw size={36} className="animate-spin mb-4 text-primary opacity-50" />
-              <p className="text-sm text-on-surface-variant">טוען שאלה...</p>
+              <ElectricLoader fullscreen={false} size={48} label="טוען שאלה..." />
             </div>
           ) : !activeQuestion && question === null ? (
             <div className="clay-card p-16 flex flex-col items-center justify-center text-center">
@@ -340,7 +385,7 @@ export default function PracticeSession() {
                 {/* Question card */}
                 <div
                   ref={questionCardRef}
-                  className="clay-card relative overflow-hidden p-8 backdrop-blur-md"
+                  className="clay-card relative overflow-hidden p-5 md:p-8 backdrop-blur-md"
                   style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)' }}
                 >
                   {/* Top accent bar */}
@@ -361,7 +406,7 @@ export default function PracticeSession() {
                   </div>
 
                   {/* Stem — letters jump in one by one via animateLetters */}
-                  <div className="text-xl leading-relaxed font-semibold text-on-surface mb-8">
+                  <div className="text-lg md:text-xl leading-relaxed font-semibold text-on-surface mb-8">
                     <MathText animateLetters>{activeQuestion.stem}</MathText>
                   </div>
 
@@ -495,8 +540,8 @@ export default function PracticeSession() {
                         className={`mt-6 rounded-2xl overflow-hidden border-2 ${isCorrect ? 'border-primary/40 bg-primary/5' : 'border-error/40 bg-error/5'}`}
                       >
                         {/* Review header */}
-                        <div className={`flex items-center justify-between px-6 py-4 border-b-2 ${isCorrect ? 'bg-primary/10 border-primary/20' : 'bg-error/10 border-error/20'}`}>
-                          <div className="flex items-center gap-3">
+                        <div className={`flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-4 border-b-2 ${isCorrect ? 'bg-primary/10 border-primary/20' : 'bg-error/10 border-error/20'}`}>
+                          <div className="flex items-center gap-3 flex-wrap">
                             {isCorrect
                               ? <CheckCircle2 size={22} className="text-primary" />
                               : <XCircle size={22} className="text-error" />}
@@ -604,46 +649,17 @@ export default function PracticeSession() {
       <Suspense fallback={null}>
         <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
       </Suspense>
-    </div>
-  );
-}
 
-/* ── Electric spark discharge — radiating rays + a flash ring on a correct answer ── */
-function SparkBurst() {
-  const rays = Array.from({ length: 12 });
-  return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
-      <div className="relative">
-        {/* flash ring */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0.7 }}
-          animate={{ scale: 2.4, opacity: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="absolute left-1/2 top-1/2 w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary"
-        />
-        {/* rays */}
-        {rays.map((_, i) => (
-          <div
-            key={i}
-            className="absolute left-1/2 top-1/2"
-            style={{ transform: `rotate(${(i / rays.length) * 360}deg)` }}
-          >
-            <motion.div
-              initial={{ scaleY: 0, opacity: 0, y: 0 }}
-              animate={{ scaleY: 1, opacity: [0, 1, 0], y: -52 }}
-              transition={{ duration: 0.55, delay: i * 0.012, ease: 'easeOut' }}
-              style={{
-                width: 3,
-                height: 30,
-                borderRadius: 9999,
-                transformOrigin: 'center',
-                background: 'var(--color-inverse-primary)',
-                boxShadow: '0 0 8px var(--color-inverse-primary)',
-              }}
-            />
-          </div>
-        ))}
-      </div>
+      <AnimatePresence>
+        {showRecap && (
+          <SessionRecap
+            studentId={studentId as Id<"students">}
+            sessionId={recapId}
+            onNewSession={handleNewSession}
+            onBackToMap={() => navigate(`/student/${studentId}`)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

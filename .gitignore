@@ -27,6 +27,10 @@ dist-ssr
 .gemini/
 .agents/
 
+# Vite transient config timestamps
+vite.config.ts.timestamp-*.mjs
+*.timestamp-*.mjs
+
 # Generated outputs & Analysis
 graphify-out/
 lint_errors.json
@@ -49,9 +53,10 @@ __pycache__/
 storybook-static
 
 # design-sync artifacts
-.design-sync/sb-reference/
-.design-sync/learnings/
-.design-sync/.cache/
-.design-sync/node_modules
+.design-sync/
 .ds-sync/
 ds-bundle/
+
+# local agent/skill tooling (not app code)
+.agent/
+skills-lock.json

@@ -6,6 +6,7 @@ export default defineSchema({
   classrooms: defineTable({
     name: v.string(),
     teacherName: v.string(),
+    leaderboardEnabled: v.optional(v.boolean()), // teacher master switch; default ON when unset
   }),
 
   students: defineTable({
@@ -16,6 +17,15 @@ export default defineSchema({
     streak: v.number(),
     level: v.optional(v.number()), // 1-5: מתחיל, חוקר, מתקדם, מומחה, מאסטר
     homeworkTheme: v.optional(v.string()), // e.g. "כדורגל", "חברים" — used to personalize homework questions
+    // ── Gamification (denormalized; optional so existing rows stay valid) ──
+    xp: v.optional(v.number()),            // total XP earned (sum of positive xpEvents)
+    xpSpent: v.optional(v.number()),       // total XP spent in the shop
+    lastActiveDate: v.optional(v.string()),// YYYY-MM-DD in Israel time — streak bookkeeping
+    streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
+    equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map ("electric" | "night"); absent = default backdrop
+    onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
+    dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
+    hideFromLeaderboard: v.optional(v.boolean()), // per-student opt-out of the weekly class leaderboard
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({
@@ -46,6 +56,7 @@ export default defineSchema({
     timeMs: v.number(),
     hintsUsed: v.number(),
     difficulty: v.number(),
+    source: v.optional(v.string()), // e.g. "review" — distinguishes review-deck answers
   })
     .index("by_student", ["studentId"])
     .index("by_student_topic", ["studentId", "topicId"])
@@ -247,6 +258,35 @@ export default defineSchema({
     fullSolution: v.string(),
   }).index("by_difficulty", ["difficulty"]),
 
+  // ── Bagrut exam simulation (מתכונת) attempts ──
+  // One row per exam sitting. compoundQuestionIds are frozen at start time; the
+  // per-question / per-section student work + grading lives inline in perQuestion
+  // (bounded: 2-3 questions, a handful of sections each). Solutions are NEVER
+  // returned to the client while status is "in_progress" — see convex/exams.ts.
+  examAttempts: defineTable({
+    studentId: v.id("students"),
+    compoundQuestionIds: v.array(v.id("compoundQuestions")),
+    startedAt: v.number(),
+    durationMinutes: v.number(),          // allotted time (30 * question count)
+    submittedAt: v.optional(v.number()),
+    status: v.string(),                   // "in_progress" | "submitted" | "expired"
+    perQuestion: v.array(v.object({
+      compoundQuestionId: v.id("compoundQuestions"),
+      sectionResults: v.array(v.object({
+        sectionLabel: v.string(),
+        studentAnswer: v.string(),
+        isCorrect: v.optional(v.boolean()),    // absent = self-check (proof/expression)
+        pointsEarned: v.optional(v.number()),
+        pointsPossible: v.number(),
+        selfGraded: v.optional(v.boolean()),   // student self-assessed this section
+        needsSelfCheck: v.optional(v.boolean()),// shown as "בדיקה עצמית"
+      })),
+      totalEarned: v.number(),
+      totalPossible: v.number(),
+    })),
+    finalScore: v.optional(v.number()),   // 0-100, weighted by points
+  }).index("by_student", ["studentId"]),
+
   // ── Homework assignments ──
   homework: defineTable({
     classroomId: v.id("classrooms"),
@@ -328,6 +368,64 @@ export default defineSchema({
       reason: v.string(),
     })),
   }).index("by_homework", ["homeworkId"]),
+
+  // ── Teacher Weekly Digest (per-class, last-7-days summary) ──
+  // One row per classroom per generation. The whole rendered summary lives in
+  // the typed `payload` object (bounded: fixed-size totals + at most a handful
+  // of per-topic / top-3 student entries), so a single index-based read gives
+  // the dashboard everything the digest card needs.
+  weeklyDigests: defineTable({
+    classroomId: v.id("classrooms"),
+    weekStart: v.number(),        // ms — start of the 7-day window
+    generatedAt: v.number(),
+    payload: v.object({
+      // Headline totals for the week
+      totals: v.object({
+        activeStudents: v.number(),
+        totalStudents: v.number(),
+        attempts: v.number(),
+        accuracy: v.number(),          // 0-100, class accuracy this week
+        accuracyDelta: v.number(),     // vs previous week (points)
+        homeworkCompletion: v.number(),// 0-100, submitted / assigned
+      }),
+      // Per-topic accuracy this week vs previous week
+      topicDeltas: v.array(v.object({
+        topicId: v.id("topics"),
+        name: v.string(),
+        pct: v.number(),               // 0-100 this week
+        delta: v.number(),             // points vs previous week
+        attempts: v.number(),
+      })),
+      // Top 3 struggling / improving students (one-line Hebrew reasons)
+      struggling: v.array(v.object({
+        studentId: v.id("students"),
+        name: v.string(),
+        avatarColor: v.string(),
+        acc: v.number(),               // 0-100 this week
+        trend: v.number(),             // points vs previous week
+        reason: v.string(),
+      })),
+      improving: v.array(v.object({
+        studentId: v.id("students"),
+        name: v.string(),
+        avatarColor: v.string(),
+        acc: v.number(),
+        trend: v.number(),
+        reason: v.string(),
+      })),
+      // Notable events (streak milestones, pending level suggestions, …)
+      notableEvents: v.array(v.object({
+        kind: v.string(),              // "streak" | "level" | "homework"
+        who: v.string(),
+        text: v.string(),
+      })),
+      // 2-4 rule-based recommended teacher actions
+      recommendedActions: v.array(v.object({
+        priority: v.string(),          // "high" | "medium" | "low"
+        text: v.string(),
+      })),
+    }),
+  }).index("by_classroom", ["classroomId"]),
 
   // ── Level progression suggestions ──
   levelSuggestions: defineTable({
@@ -513,4 +611,74 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
+
+  // ── Parent report capability links (long-lived, revocable) ──
+  // Same capability-URL philosophy as bridgeSessions, but LONG-lived: a parent
+  // opens /parent/<token> to see a warm weekly snapshot of their child. The
+  // token is the ONLY key — the report query never exposes studentId. Revoke by
+  // stamping revokedAt (row kept for audit). One active link per student.
+  parentLinks: defineTable({
+    studentId: v.id("students"),
+    token: v.string(),                 // random, unguessable — in the /parent URL
+    createdAt: v.number(),
+    revokedAt: v.optional(v.number()), // set on revoke; absent = active
+    lastViewedAt: v.optional(v.number()),
+  }).index("by_token", ["token"])
+    .index("by_student", ["studentId"]),
+
+  // ── XP ledger: append-only log of every XP change (earn or spend) ──
+  // students.xp / students.xpSpent are denormalized rollups of these rows.
+  xpEvents: defineTable({
+    studentId: v.id("students"),
+    amount: v.number(),   // positive = earned, negative = spent (e.g. "purchase")
+    reason: v.string(),   // "attempt_correct" | "attempt_wrong" | "streak_day" | "homework_submitted" | "level_up_bonus" | "purchase" | "review_correct"
+    refId: v.optional(v.string()), // loose ref to the source doc (questionId, itemId, …)
+    createdAt: v.number(),
+  }).index("by_student", ["studentId"]),
+
+  // ── XP shop catalogue ──
+  shopItems: defineTable({
+    name: v.string(),        // Hebrew display name
+    description: v.string(),
+    icon: v.string(),        // lucide icon name or emoji
+    category: v.string(),    // "avatar_color" | "theme" | "streak_freeze" | "badge"
+    // Machine-usable payload for equippable items. avatar_color → the CSS color
+    // string written to students.avatarColor (hex, matching AVATAR_COLORS).
+    // theme → the equippedTheme key ("electric" | "night"). Absent for others.
+    value: v.optional(v.string()),
+    price: v.number(),
+    sortOrder: v.number(),
+    active: v.boolean(),
+  }).index("by_active", ["active"]),
+
+  // ── Notification read-state (per student, per derived notification key) ──
+  // Notifications themselves are DERIVED at read time (no stored notification
+  // rows). This table only records which stable keys a student has dismissed /
+  // read, keyed by the same stable string the query emits (e.g. "hw_<id>",
+  // "streak_<israelDate>"). Read is a bounded index scan by student.
+  notificationReads: defineTable({
+    studentId: v.id("students"),
+    notificationKey: v.string(),
+    readAt: v.number(),
+  }).index("by_student", ["studentId"])
+    .index("by_student_key", ["studentId", "notificationKey"]),
+
+  // ── Purchases (one row per acquisition) ──
+  purchases: defineTable({
+    studentId: v.id("students"),
+    itemId: v.id("shopItems"),
+    price: v.number(),
+    createdAt: v.number(),
+    consumed: v.optional(v.boolean()), // for consumables (streak_freeze)
+  }).index("by_student", ["studentId"])
+    .index("by_student_item", ["studentId", "itemId"]),
+
+  // ── System flags (kill-switches / feature toggles) ──
+  // Single-row-per-key table so ops can flip Faraday off without a deploy.
+  // Checked by convex/http.ts on every Gemini proxy request.
+  systemFlags: defineTable({
+    key: v.string(),
+    enabled: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

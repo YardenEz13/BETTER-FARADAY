@@ -1,5 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { awardXpHelper, xpForAttempt } from "./xp";
+import { touchStreakHelper } from "./streaks";
+import { maybeAwardDailyGoalHelper } from "./goals";
 
 export const submitAttempt = mutation({
   args: {
@@ -39,14 +42,16 @@ export const submitAttempt = mutation({
       newDifficulty = Math.max(1, args.difficulty - 1);
     }
 
+    let sessionId;
     if (session && !session.endedAt) {
       await ctx.db.patch(session._id, {
         questionsAttempted: session.questionsAttempted + 1,
         correctCount: session.correctCount + (args.isCorrect ? 1 : 0),
         currentDifficulty: newDifficulty,
       });
+      sessionId = session._id;
     } else {
-      await ctx.db.insert("sessions", {
+      sessionId = await ctx.db.insert("sessions", {
         studentId: args.studentId,
         topicId: args.topicId,
         startedAt: Date.now(),
@@ -59,7 +64,20 @@ export const submitAttempt = mutation({
     // Update student's current topic
     await ctx.db.patch(args.studentId, { currentTopicId: args.topicId });
 
-    return { newDifficulty };
+    // Gamification: award XP for the attempt and keep the streak alive.
+    await awardXpHelper(
+      ctx,
+      args.studentId,
+      xpForAttempt(args.isCorrect, args.difficulty),
+      args.isCorrect ? "attempt_correct" : "attempt_wrong",
+      args.questionId,
+    );
+    await touchStreakHelper(ctx, args.studentId);
+
+    // Daily-goal bonus: award once when the day's attempt count crosses the goal.
+    const dailyGoalReached = await maybeAwardDailyGoalHelper(ctx, args.studentId);
+
+    return { newDifficulty, sessionId, dailyGoalReached };
   },
 });
 

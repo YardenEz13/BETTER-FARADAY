@@ -38,4 +38,22 @@ crons.interval(
   internal.packetImport.sweepStalePackets,
 );
 
+// Daily: flag students who haven't practiced today (streak in danger).
+// 21:00 UTC ≈ midnight Israel time. Compute-only, no push.
+crons.cron(
+  "flag-inactive-streaks",
+  "0 21 * * *",
+  internal.streaks.flagInactiveStreaks,
+  {},
+);
+
+// Weekly: generate the teacher weekly digest for all classrooms.
+// Sundays 04:00 UTC.
+crons.cron(
+  "generate-weekly-digests",
+  "0 4 * * 0",
+  internal.digest.generateAllDigests,
+  {},
+);
+
 export default crons;
