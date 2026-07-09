@@ -1,5 +1,16 @@
 import { gsap, prefersReducedMotion } from "../../lib/gsapUtils";
-import { type FaradayVariant, type Mouse, type GetP, type DrawFn, ha, rnd } from "./types";
+import {
+  type FaradayVariant,
+  type Mouse,
+  type GetP,
+  type DrawFn,
+  ha,
+  rnd,
+  glowDot,
+  makeBuckets,
+  addSeg,
+  strokeBuckets,
+} from "./types";
 
 /**
  * Build the per-frame draw function for a variant. Particle state lives in the
@@ -66,22 +77,10 @@ export function makeVariant(
             ctx.lineWidth = 1.2;
             ctx.stroke();
             const ex = Math.cos(r.ang) * r.rx, ey = Math.sin(r.ang) * r.ry;
-            ctx.beginPath();
-            ctx.arc(ex, ey, 2.6, 0, Math.PI * 2);
-            ctx.fillStyle = p.spark;
-            ctx.shadowColor = p.spark;
-            ctx.shadowBlur = p.glow ? 10 : 6;
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            glowDot(ctx, ex, ey, 2.6, p.spark, p.glow ? 10 : 6);
             ctx.restore();
           });
-          ctx.beginPath();
-          ctx.arc(cx, cy, 3.4, 0, Math.PI * 2);
-          ctx.fillStyle = p.green;
-          ctx.shadowColor = p.green;
-          ctx.shadowBlur = p.glow ? 16 : 8;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          glowDot(ctx, cx, cy, 3.4, p.green, p.glow ? 16 : 8);
         });
         ctx.restore();
       };
@@ -126,33 +125,23 @@ export function makeVariant(
         });
         ctx.save();
         if (p.glow) ctx.globalCompositeOperation = "lighter";
+        const linkBuckets = makeBuckets();
         for (let i = 0; i < ps.length; i++) {
           for (let j = i + 1; j < ps.length; j++) {
             const a = ps[i], b = ps[j];
             const d = Math.hypot(a.x - b.x, a.y - b.y);
-            if (d < D) {
-              ctx.beginPath();
-              ctx.moveTo(a.x, a.y);
-              ctx.lineTo(b.x, b.y);
-              ctx.strokeStyle = ha(p.green, (1 - d / D) * (p.glow ? 0.36 : 0.2));
-              ctx.lineWidth = 0.9;
-              ctx.stroke();
-            }
+            if (d < D) addSeg(linkBuckets, a.x, a.y, b.x, b.y, 1 - d / D);
           }
         }
+        strokeBuckets(ctx, linkBuckets, p.green, p.glow ? 0.36 : 0.2, 0.9);
+        const conceptBuckets = makeBuckets();
         ps.forEach((pt) => {
           concepts.forEach((cn) => {
             const d = Math.hypot(pt.x - cn.x, pt.y - cn.y);
-            if (d < D * 1.3) {
-              ctx.beginPath();
-              ctx.moveTo(pt.x, pt.y);
-              ctx.lineTo(cn.x, cn.y);
-              ctx.strokeStyle = ha(p.violet, (1 - d / (D * 1.3)) * (p.glow ? 0.4 : 0.2));
-              ctx.lineWidth = 0.9;
-              ctx.stroke();
-            }
+            if (d < D * 1.3) addSeg(conceptBuckets, pt.x, pt.y, cn.x, cn.y, 1 - d / (D * 1.3));
           });
         });
+        strokeBuckets(ctx, conceptBuckets, p.violet, p.glow ? 0.4 : 0.2, 0.9);
         for (let i = 0; i < concepts.length; i++) {
           for (let j = i + 1; j < concepts.length; j++) {
             const a = concepts[i], b = concepts[j];
@@ -168,24 +157,13 @@ export function makeVariant(
           }
         }
         if (mouse.active) {
+          const mouseBuckets = makeBuckets();
           ps.forEach((pt) => {
             const d = Math.hypot(pt.x - mouse.x, pt.y - mouse.y);
-            if (d < 180) {
-              ctx.beginPath();
-              ctx.moveTo(mouse.x, mouse.y);
-              ctx.lineTo(pt.x, pt.y);
-              ctx.strokeStyle = ha(p.spark, (1 - d / 180) * 0.55);
-              ctx.lineWidth = 1;
-              ctx.stroke();
-            }
+            if (d < 180) addSeg(mouseBuckets, mouse.x, mouse.y, pt.x, pt.y, 1 - d / 180);
           });
-          ctx.beginPath();
-          ctx.arc(mouse.x, mouse.y, 4.5, 0, Math.PI * 2);
-          ctx.fillStyle = p.spark;
-          ctx.shadowColor = p.spark;
-          ctx.shadowBlur = 14;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          strokeBuckets(ctx, mouseBuckets, p.spark, 0.55, 1);
+          glowDot(ctx, mouse.x, mouse.y, 4.5, p.spark, 14);
         }
         ctx.restore();
         ps.forEach((pt) => {
@@ -201,13 +179,7 @@ export function makeVariant(
           ctx.strokeStyle = ha(p.violet, (1 - ph) * 0.5);
           ctx.lineWidth = 1.5;
           ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(cn.x, cn.y, 5.5, 0, Math.PI * 2);
-          ctx.fillStyle = p.violet;
-          ctx.shadowColor = p.violet;
-          ctx.shadowBlur = p.glow ? 16 : 10;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          glowDot(ctx, cn.x, cn.y, 5.5, p.violet, p.glow ? 16 : 10);
           ctx.save();
           ctx.font = "700 13px Assistant, sans-serif";
           ctx.textAlign = "center";
@@ -274,14 +246,15 @@ export function makeVariant(
           drawPath(wi.pts);
           ctx.setLineDash([10, 20]);
           ctx.lineDashOffset = -(t * 0.04 * wi.speed + wi.off);
+          // fake the old shadowBlur glow with a wide low-alpha underlay stroke
+          ctx.strokeStyle = ha(p.spark, p.glow ? 0.3 : 0.2);
+          ctx.lineWidth = p.glow ? 7 : 5;
+          ctx.stroke();
           ctx.strokeStyle = p.spark;
           ctx.lineWidth = 2.4;
-          ctx.shadowColor = p.spark;
-          ctx.shadowBlur = p.glow ? 10 : 6;
           ctx.stroke();
         });
         ctx.setLineDash([]);
-        ctx.shadowBlur = 0;
         nodes.forEach((n) => {
           const ph = ((t * 0.0005) + n.ph) % 1;
           const rr = 10 + ph * 52;
@@ -290,13 +263,7 @@ export function makeVariant(
           ctx.strokeStyle = ha(p.green, (1 - ph) * 0.45);
           ctx.lineWidth = 2;
           ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = p.green;
-          ctx.shadowColor = p.green;
-          ctx.shadowBlur = 14;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          glowDot(ctx, n.x, n.y, 4, p.green, 14);
         });
         for (let k = ripples.length - 1; k >= 0; k--) {
           const rp = ripples[k];
@@ -356,13 +323,7 @@ export function makeVariant(
             ln.pulses[idx] = pp;
             const gi = Math.min(pts.length - 1, Math.round((pp * w) / 10));
             const gp = pts[gi] || pts[pts.length - 1];
-            ctx.beginPath();
-            ctx.arc(gp.x, gp.y, 3, 0, Math.PI * 2);
-            ctx.fillStyle = p.spark;
-            ctx.shadowColor = p.spark;
-            ctx.shadowBlur = p.glow ? 12 : 6;
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            glowDot(ctx, gp.x, gp.y, 3, p.spark, p.glow ? 12 : 6);
           });
         });
         if (mouse.active) {
@@ -406,6 +367,7 @@ export function makeVariant(
         const p = getP();
         ctx.clearRect(0, 0, w, h);
         ctx.lineCap = "round";
+        const gridBuckets = makeBuckets();
         grid.forEach((g) => {
           const [fx, fy] = fieldAt(g.x, g.y);
           const mag = Math.hypot(fx, fy);
@@ -413,13 +375,14 @@ export function makeVariant(
           const a = Math.atan2(fy, fx);
           const len = Math.min(sp * 0.44, 4 + mag * 6);
           const al = Math.min(0.48, 0.08 + mag * 0.4);
-          ctx.beginPath();
-          ctx.moveTo(g.x - Math.cos(a) * len, g.y - Math.sin(a) * len);
-          ctx.lineTo(g.x + Math.cos(a) * len, g.y + Math.sin(a) * len);
-          ctx.strokeStyle = ha(p.green, al);
-          ctx.lineWidth = 1.3;
-          ctx.stroke();
+          addSeg(
+            gridBuckets,
+            g.x - Math.cos(a) * len, g.y - Math.sin(a) * len,
+            g.x + Math.cos(a) * len, g.y + Math.sin(a) * len,
+            al / 0.48,
+          );
         });
+        strokeBuckets(ctx, gridBuckets, p.green, 0.48, 1.3);
         ctx.save();
         if (p.glow) ctx.globalCompositeOperation = "lighter";
         flow.forEach((f) => {
@@ -433,32 +396,14 @@ export function makeVariant(
             f.y = rnd(0, h);
             f.life = rnd(50, 100);
           }
-          ctx.beginPath();
-          ctx.arc(f.x, f.y, 1.9, 0, Math.PI * 2);
-          ctx.fillStyle = p.spark;
-          ctx.shadowColor = p.spark;
-          ctx.shadowBlur = p.glow ? 8 : 4;
-          ctx.fill();
+          glowDot(ctx, f.x, f.y, 1.9, p.spark, p.glow ? 8 : 4);
         });
-        ctx.shadowBlur = 0;
         ctx.restore();
         poles.forEach((c, i) => {
-          ctx.beginPath();
-          ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
-          ctx.fillStyle = i === 0 ? p.green : p.violet;
-          ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = p.glow ? 20 : 10;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          glowDot(ctx, c.x, c.y, 7, i === 0 ? p.green : p.violet, p.glow ? 20 : 10);
         });
         if (mouse.active) {
-          ctx.beginPath();
-          ctx.arc(mouse.x, mouse.y, 8, 0, Math.PI * 2);
-          ctx.fillStyle = p.spark;
-          ctx.shadowColor = p.spark;
-          ctx.shadowBlur = 16;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          glowDot(ctx, mouse.x, mouse.y, 8, p.spark, 16);
         }
       };
     }
@@ -611,41 +556,29 @@ export function makeVariant(
         });
         ctx.save();
         if (p.glow) ctx.globalCompositeOperation = "lighter";
+        const linkBuckets = makeBuckets();
         for (let i = 0; i < ps.length; i++) {
           for (let j = i + 1; j < ps.length; j++) {
             const a = ps[i], b = ps[j];
             const d = Math.hypot(a.x - b.x, a.y - b.y);
             if (d < D && clipEntry(a.x, a.y, b.x, b.y) >= 1) {
-              ctx.beginPath();
-              ctx.moveTo(a.x, a.y);
-              ctx.lineTo(b.x, b.y);
-              ctx.strokeStyle = ha(p.green, (1 - d / D) * (p.glow ? 0.34 : 0.2));
-              ctx.lineWidth = 1;
-              ctx.stroke();
+              addSeg(linkBuckets, a.x, a.y, b.x, b.y, 1 - d / D);
             }
           }
         }
+        strokeBuckets(ctx, linkBuckets, p.green, p.glow ? 0.34 : 0.2, 1);
         if (mouse.active && !inside(mouse.x, mouse.y)) {
+          const rayBuckets = makeBuckets();
           ps.forEach((pt) => {
             const d = Math.hypot(pt.x - mouse.x, pt.y - mouse.y);
             if (d < 220) {
               const te = clipEntry(mouse.x, mouse.y, pt.x, pt.y);
               const ex = mouse.x + (pt.x - mouse.x) * te, ey = mouse.y + (pt.y - mouse.y) * te;
-              ctx.beginPath();
-              ctx.moveTo(mouse.x, mouse.y);
-              ctx.lineTo(ex, ey);
-              ctx.strokeStyle = ha(p.spark, (1 - d / 220) * 0.5);
-              ctx.lineWidth = 1.1;
-              ctx.stroke();
+              addSeg(rayBuckets, mouse.x, mouse.y, ex, ey, 1 - d / 220);
             }
           });
-          ctx.beginPath();
-          ctx.arc(mouse.x, mouse.y, 4.5, 0, Math.PI * 2);
-          ctx.fillStyle = p.spark;
-          ctx.shadowColor = p.spark;
-          ctx.shadowBlur = 14;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          strokeBuckets(ctx, rayBuckets, p.spark, 0.5, 1.1);
+          glowDot(ctx, mouse.x, mouse.y, 4.5, p.spark, 14);
         }
         ps.forEach((pt) => {
           ctx.beginPath();
@@ -701,13 +634,7 @@ export function makeVariant(
           ringCorners.forEach((c) => {
             const pc = project(c.x, ry, c.z);
             const k = depthCue(pc.z);
-            ctx.beginPath();
-            ctx.arc(pc.x, pc.y, 1.8 + 1.8 * k, 0, Math.PI * 2);
-            ctx.fillStyle = ha(p.spark, 0.35 + 0.55 * k);
-            ctx.shadowColor = p.spark;
-            ctx.shadowBlur = (p.glow ? 12 : 6) * k;
-            ctx.fill();
-            ctx.shadowBlur = 0;
+            glowDot(ctx, pc.x, pc.y, 1.8 + 1.8 * k, p.spark, (p.glow ? 12 : 6) * k, 0.35 + 0.55 * k);
           });
         });
         ctx.restore();
@@ -744,45 +671,36 @@ export function makeVariant(
             rate *= 1 + Math.max(0, 1 - dy / 170) * 1.6;
           }
           const amp = 28 + (b % 2) * 10;
-          let prevTop: { x: number; y: number } | null = null;
-          let prevBot: { x: number; y: number } | null = null;
+          // constant style per beam — one polyline path each instead of a
+          // beginPath/stroke pair for every 9px segment
+          const topPath = new Path2D();
+          const botPath = new Path2D();
+          const rungs = new Path2D();
           for (let x = 0; x <= w; x += 9) {
             const ang = x * rate + t * 1.3 + b * 0.7;
             const off = Math.sin(ang) * amp;
-            const tp = { x, y: by + off };
-            const bp = { x, y: by - off };
-            if (prevTop && prevBot) {
-              ctx.beginPath();
-              ctx.moveTo(prevTop.x, prevTop.y);
-              ctx.lineTo(tp.x, tp.y);
-              ctx.strokeStyle = ha(p.green, p.glow ? 0.48 : 0.32);
-              ctx.lineWidth = 1.6;
-              ctx.stroke();
-              ctx.beginPath();
-              ctx.moveTo(prevBot.x, prevBot.y);
-              ctx.lineTo(bp.x, bp.y);
-              ctx.strokeStyle = ha(p.violet, p.glow ? 0.4 : 0.24);
-              ctx.lineWidth = 1.6;
-              ctx.stroke();
+            const ty = by + off, byy = by - off;
+            if (x === 0) {
+              topPath.moveTo(x, ty);
+              botPath.moveTo(x, byy);
+            } else {
+              topPath.lineTo(x, ty);
+              botPath.lineTo(x, byy);
             }
             if (x % 48 < 9) {
-              ctx.beginPath();
-              ctx.moveTo(tp.x, tp.y);
-              ctx.lineTo(bp.x, bp.y);
-              ctx.strokeStyle = ha(p.spark, 0.45);
-              ctx.lineWidth = 1;
-              ctx.stroke();
+              rungs.moveTo(x, ty);
+              rungs.lineTo(x, byy);
             }
-            prevTop = tp;
-            prevBot = bp;
           }
-          ctx.beginPath();
-          ctx.arc(5, by, 3, 0, Math.PI * 2);
-          ctx.fillStyle = p.green;
-          ctx.shadowColor = p.green;
-          ctx.shadowBlur = 8;
-          ctx.fill();
-          ctx.shadowBlur = 0;
+          ctx.lineWidth = 1.6;
+          ctx.strokeStyle = ha(p.green, p.glow ? 0.48 : 0.32);
+          ctx.stroke(topPath);
+          ctx.strokeStyle = ha(p.violet, p.glow ? 0.4 : 0.24);
+          ctx.stroke(botPath);
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = ha(p.spark, 0.45);
+          ctx.stroke(rungs);
+          glowDot(ctx, 5, by, 3, p.green, 8);
         }
         if (mouse.active) {
           ctx.beginPath();
