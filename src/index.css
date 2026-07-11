@@ -707,6 +707,13 @@ body {
 }
 @keyframes path-current-flow { to { stroke-dashoffset: -32; } }
 
+/* Faraday chat "typing" — three charged dots bouncing in sequence (1d Clay panel) */
+.chat-tdot { animation: chat-tdot 1.2s infinite; }
+@keyframes chat-tdot {
+  0%, 70%, 100% { transform: translateY(0);    opacity: 0.35; }
+  35%           { transform: translateY(-4px); opacity: 1; }
+}
+
 /* Lines of force radiating from a charged (active) node */
 .field-ring { animation: field-pulse 2.4s ease-out infinite; }
 .field-ring--2 { animation-delay: 1.2s; }

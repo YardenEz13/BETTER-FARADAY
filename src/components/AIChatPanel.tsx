@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { X, Terminal, ChevronDown, Copy, Check, User } from "./electric";
+import { X, Terminal, ChevronDown, Copy, Check } from "./electric";
 import { log } from "../lib/logger";
 import {
   isLocalAIAvailable,
@@ -39,8 +39,6 @@ import {
 import MathText from "./MathText";
 import FaradayAvatar from "./FaradayAvatar";
 import QRBridgeModal from "./QRBridgeModal";
-import FaradayCanvas from "./FaradayCanvas";
-import ThinkingWave from "./chat/ThinkingWave";
 import FaradayConsole from "./chat/FaradayConsole";
 
 // Adaptive-help stages, mirrored from the tutor's escalation levels (localAI.ts).
@@ -1053,7 +1051,7 @@ export default function AIChatPanel({
               bottom-0 left-0 w-full h-[62vh] rounded-t-[24px] border-t-2
               lg:top-[68px] lg:bottom-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[min(440px,42vw)] lg:rounded-none lg:border-t-0 lg:border-e-2"
             style={{
-              background: 'var(--color-surface)',
+              background: 'var(--color-background)',
               boxShadow: isDesktop
                 ? '-6px 0 28px rgba(20,40,30,0.10)'
                 : '0 -10px 34px rgba(20,40,30,0.14)',
@@ -1074,7 +1072,7 @@ export default function AIChatPanel({
               aria-hidden
             />
             {/* ── Header ── */}
-            <div className="flex flex-col flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/60 relative z-[2]">
+            <div className="flex flex-col flex-shrink-0 bg-surface border-b-2 border-outline relative z-[2]">
               <div className="flex items-center justify-between gap-2 px-4 md:px-6 py-2 md:py-3">
                 {/* AI identity */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -1097,7 +1095,7 @@ export default function AIChatPanel({
                           ? "מנתח שיחה..."
                           : cycleState === "cycling"
                           ? "מחדש הקשר..."
-                          : "מחובר · עוזר AI למתמטיקה"}
+                          : "⚡ העוזר האישי שלך למתמטיקה"}
                       </span>
                     </div>
                   </div>
@@ -1133,11 +1131,21 @@ export default function AIChatPanel({
               )}
             </div>
 
+            {/* Live wire — current flowing through the circuit, right under the header (1d Clay signature) */}
+            <svg
+              viewBox="0 0 392 4" width="100%" height="4" preserveAspectRatio="none"
+              className="block flex-shrink-0 relative z-[2]" aria-hidden
+            >
+              <line
+                x1="0" y1="2" x2="392" y2="2"
+                stroke="var(--color-primary)" strokeWidth="2"
+                strokeDasharray="6 10" strokeLinecap="round" opacity="0.7"
+                className="wire-current-path"
+              />
+            </svg>
+
             {/* ── Body: messages + optional debug ── */}
             <div className="flex flex-1 overflow-hidden relative">
-
-              {/* Knowledge constellation field — particle network with named concept nodes */}
-              <FaradayCanvas variant="constellation" style={{ zIndex: 0 }} />
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-5 py-6 flex flex-col gap-5 scroll-smooth z-10">
@@ -1145,7 +1153,7 @@ export default function AIChatPanel({
                 {/* Context Header */}
                 {topicName && (
                   <div className="text-center mb-2">
-                    <span className="inline-block bg-surface-container-highest text-on-surface-variant font-label-sm px-4 py-1.5 rounded-full border border-outline-variant shadow-sm">
+                    <span className="inline-block bg-tertiary-container text-on-tertiary-container font-label-sm px-4 py-1.5 rounded-full">
                       {topicName}
                     </span>
                   </div>
@@ -1205,27 +1213,32 @@ export default function AIChatPanel({
                       transition={{ duration: 0.3, type: "spring", stiffness: 200, damping: 20 }}
                       className={`flex gap-3 w-full max-w-4xl ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'} ${firstOfGroup ? '' : '-mt-3'}`}
                     >
-                      {/* Avatar — only on the first bubble of a run */}
-                      <div className="w-9 flex-shrink-0">
-                        {firstOfGroup && (
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ${isAI ? 'bg-surface-bright border-2 border-primary/40' : 'bg-secondary-container border-2 border-secondary/50'}`}>
-                            {isAI ? (
+                      {/* Avatar — Faraday only, on the first bubble of a run (1d Clay: student has no avatar) */}
+                      {isAI && (
+                        <div className="w-9 flex-shrink-0">
+                          {firstOfGroup && (
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden bg-surface-bright border-2 border-primary glow-primary">
                               <FaradayAvatar px={36} fill />
-                            ) : (
-                              <User size={18} className="text-on-secondary-container" />
-                            )}
-                          </div>
-                        )}
-                      </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                      {/* Bubble */}
+                      {/* Bubble — clay surface with an electric edge (AI) / solid primary (student) */}
                       <div
-                        className={`px-4 py-3 relative group rounded-2xl border-2 ${
-                          isAI
-                            ? `bg-surface border-outline ${firstOfGroup ? 'rounded-tr-md' : ''}`
-                            : `bg-secondary-container/60 border-secondary/30 ${firstOfGroup ? 'rounded-tl-md' : ''}`
-                        }`}
-                        style={{ maxWidth: '85%', boxShadow: isAI ? 'var(--shadow-clay)' : 'var(--shadow-sm)' }}
+                        className="px-4 py-3 relative group"
+                        style={{
+                          maxWidth: '85%',
+                          borderRadius: isAI
+                            ? (firstOfGroup ? '22px 22px 22px 7px' : '22px')
+                            : (firstOfGroup ? '22px 22px 7px 22px' : '22px'),
+                          border: isAI
+                            ? '2px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-outline))'
+                            : '2px solid transparent',
+                          background: isAI ? 'var(--color-surface)' : 'var(--color-primary)',
+                          color: isAI ? 'var(--color-on-surface)' : '#fff',
+                          boxShadow: isAI ? 'var(--shadow-clay)' : 'var(--shadow-clay-primary)',
+                        }}
                       >
                         {isAI && (
                           <button
@@ -1245,7 +1258,7 @@ export default function AIChatPanel({
                             className="rounded-xl mb-3 max-h-72 w-auto border border-outline/40 shadow-md"
                           />
                         )}
-                        <div className="text-on-background leading-relaxed">
+                        <div className="leading-relaxed" style={{ color: 'inherit' }}>
                           <MathText>{msg.content}</MathText>
                         </div>
                       </div>
@@ -1255,12 +1268,24 @@ export default function AIChatPanel({
 
                 {/* Typing indicator */}
                 {isTyping && (
-                  <div className="flex gap-4 w-full max-w-4xl mr-auto">
-                    <div className="w-10 h-10 rounded-full bg-surface-bright border border-primary/30 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_15%,transparent)]">
-                      <FaradayAvatar px={40} fill />
+                  <div className="flex gap-3 w-full max-w-4xl mr-auto">
+                    <div className="w-9 h-9 rounded-full bg-surface-bright border-2 border-primary glow-primary flex-shrink-0 flex items-center justify-center overflow-hidden">
+                      <FaradayAvatar px={36} fill />
                     </div>
-                    <div className="bg-surface-container border border-primary/50 rounded-2xl rounded-tr-sm px-5 py-4 shadow-lg flex items-center gap-3">
-                      <ThinkingWave />
+                    <div
+                      className="flex items-center gap-2.5 px-4 py-3"
+                      style={{
+                        borderRadius: '22px',
+                        border: '2px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-outline))',
+                        background: 'var(--color-surface)',
+                        boxShadow: 'var(--shadow-clay)',
+                      }}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-[7px] h-[7px] rounded-full bg-primary chat-tdot" />
+                        <span className="w-[7px] h-[7px] rounded-full bg-primary chat-tdot" style={{ animationDelay: '.15s' }} />
+                        <span className="w-[7px] h-[7px] rounded-full bg-primary chat-tdot" style={{ animationDelay: '.3s' }} />
+                      </span>
                       <span className="font-label-md text-on-surface-variant" style={{ fontSize: '12px' }}>
                         פאראדיי חושב…
                       </span>

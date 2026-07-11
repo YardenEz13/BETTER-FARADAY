@@ -28,17 +28,13 @@ export default function FaradayConsole({
   onOpenQRBridge, onOpenPlayground,
 }: FaradayConsoleProps) {
   return (
-    <div dir="rtl" className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
+    <div dir="rtl" className="flex-shrink-0 bg-background border-t border-outline-variant/60 p-3 z-20 relative">
       <div className="max-w-4xl mx-auto">
-        {/* Console panel */}
-        <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-          {/* Console title bar */}
-          <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
-            <Calculator className="" />
-            <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
-            <div className="flex-1" />
-            <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
-          </div>
+        {/* Console panel — clay pill (1d Faraday Clay) */}
+        <div
+          className="bg-surface rounded-[18px] border-2 border-outline flex flex-col overflow-hidden focus-within:border-primary/60 transition-all"
+          style={{ boxShadow: 'var(--shadow-clay)' }}
+        >
           {/* Attached image preview */}
           {attachedImage && (
             <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
@@ -114,7 +110,8 @@ export default function FaradayConsole({
                 <Settings className="" />
               </button>
               <button
-                className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-11 h-11 bg-primary hover:brightness-105 text-white rounded-[13px] flex items-center justify-center transition-all active:translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none"
+                style={{ boxShadow: 'var(--shadow-clay-primary)' }}
                 onClick={onSubmit}
                 disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
                 title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
