@@ -131,7 +131,7 @@ describe("CompoundQuestionRenderer Component", () => {
       />
     );
 
-    const textarea = screen.getByPlaceholderText("[ INSERT_SOLUTION_HERE ]");
+    const textarea = screen.getByPlaceholderText("כתוב את הפתרון כאן…");
     const submitBtn = screen.getByRole("button", { name: /SUBMIT/ });
 
     // Type and submit answer

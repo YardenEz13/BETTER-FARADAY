@@ -4,10 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import QuestionImportModal from "../components/QuestionImportModal";
-import PacketImportButton from "../components/PacketImportButton";
-import PacketCropBuilder from "../components/PacketCropBuilder";
+import MathText from "../components/MathText";
 import {
-  ArrowRight, ArrowLeft, Check, Sparkles, Scissors, Calendar, Clock,
+  ArrowRight, ArrowLeft, Check, Sparkles, Calendar, Clock,
   Send, FileText, Loader as Loader2,
 } from "../components/electric";
 
@@ -64,7 +63,6 @@ export default function HomeworkCreateWizard() {
   const [scheduleOn, setScheduleOn] = useState(false);
 
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showCropBuilder, setShowCropBuilder] = useState(false);
   const [busy, setBusy] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -342,6 +340,7 @@ export default function HomeworkCreateWizard() {
               <p className="text-xs text-on-surface-variant mb-3">
                 שאלות שתייבאו ותסמנו כאן יתווספו לכל תלמיד כמו שהן.
               </p>
+              {/* Packet-level imports live in ניהול מטלות → "מטלה חדשה" — one entry per flow. */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <button
                   type="button"
@@ -350,16 +349,6 @@ export default function HomeworkCreateWizard() {
                 >
                   <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
                 </button>
-                {classroomId && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCropBuilder(true)}
-                    className="btn-clay-ghost !px-4 !py-2.5 !text-sm"
-                  >
-                    <Scissors size={16} /> ייבוא חוברת בחיתוך ידני
-                  </button>
-                )}
-                {classroomId && <PacketImportButton classroomId={classroomId} />}
               </div>
 
               {approvedImports && approvedImports.length > 0 ? (
@@ -387,7 +376,7 @@ export default function HomeworkCreateWizard() {
                           {pinned && <Check size={13} className="text-white" />}
                         </span>
                         <span className="flex-1 text-sm text-on-surface truncate min-w-0">
-                          {imp.draft?.stem ?? "שאלה מיובאת"}
+                          <MathText>{imp.draft?.stem ?? "שאלה מיובאת"}</MathText>
                         </span>
                         <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant flex-shrink-0">
                           {imp.draft?.format === "multiple_choice" ? "אמריקאית" : "השלמה"}
@@ -565,9 +554,6 @@ export default function HomeworkCreateWizard() {
           onClose={() => setShowImportModal(false)}
           onApproved={handleImportApproved}
         />
-      )}
-      {showCropBuilder && classroomId && (
-        <PacketCropBuilder classroomId={classroomId} onClose={() => setShowCropBuilder(false)} />
       )}
     </div>
   );

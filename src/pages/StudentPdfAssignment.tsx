@@ -10,6 +10,7 @@ import {
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricLoader } from "../components/electric";
+import MathText from "../components/MathText";
 
 export default function StudentPdfAssignment() {
   const { studentId, assignmentId } = useParams<{ studentId: string; assignmentId: string }>();
@@ -188,7 +189,7 @@ export default function StudentPdfAssignment() {
                       {submitted && !isCorrect && (
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-error/10 border border-error/30 text-xs text-error" style={{ marginInlineStart: multiPart ? 44 : 0 }}>
                           <XCircle size={14} className="flex-shrink-0" />
-                          לא נכון. התשובה הנכונה: <strong className="font-bold">{part.correctAnswer}</strong>
+                          לא נכון. התשובה הנכונה: <strong className="font-bold"><MathText>{part.correctAnswer}</MathText></strong>
                         </div>
                       )}
                       {submitted && isCorrect && (

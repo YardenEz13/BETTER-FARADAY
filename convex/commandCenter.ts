@@ -202,7 +202,7 @@ export const getCommandCenter = query({
       alertCandidates.push({
         tone: "secondary",
         who: st.name,
-        text: "ביקש/ה עזרה מפרופ׳ פאראדיי",
+        text: "ביקש/ה עזרה מפרופסור פאראדיי",
         ms: h._creationTime,
       });
     }

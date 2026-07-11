@@ -80,7 +80,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
 
           <div className="grid gap-3 mb-6">
             <Rule icon={<Timer size={18} />} text="שעון עצר: 30 דקות לכל שאלה. כשהזמן נגמר — המתכונת מוגשת אוטומטית." />
-            <Rule icon={<ShieldOff size={18} />} text="אין מורה AI ואין רמזים. אתם לבד, בדיוק כמו בבגרות." />
+            <Rule icon={<ShieldOff size={18} />} text="אין מורה AI ואין רמזים. אתה לבד, בדיוק כמו בבגרות." />
             <Rule icon={<Check size={18} />} text="בסיום — פירוק ניקוד מלא לכל סעיף, פתרונות מלאים, וניקוד סופי." />
           </div>
 
@@ -360,7 +360,7 @@ function ExamActive({
                     value={val}
                     onChange={(e) => handleChange(q._id, s.label, e.target.value)}
                     onBlur={(e) => handleBlur(q._id, s.label, e.target.value)}
-                    placeholder={isProof ? "כתבו כאן את מהלך ההוכחה…" : "התשובה שלכם…"}
+                    placeholder={isProof ? "כתוב כאן את מהלך ההוכחה…" : "התשובה שלך…"}
                     className="w-full bg-surface border-2 border-outline rounded-2xl px-4 py-3 text-on-surface focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>

@@ -332,7 +332,7 @@ function QuestionRow({
           {KIND_HE[q.kind] ?? q.kind}
         </span>
         <span className="flex-1 text-xs text-[var(--text-muted)] truncate min-w-0">
-          {q.draft?.kind === "simple" ? q.draft.stem : q.draft?.kind === "compound" ? q.draft.preamble : q.topicHe}
+          <MathText>{(q.draft?.kind === "simple" ? q.draft.stem : q.draft?.kind === "compound" ? q.draft.preamble : q.topicHe) ?? ""}</MathText>
         </span>
       </button>
       {q.topicId ? null : (

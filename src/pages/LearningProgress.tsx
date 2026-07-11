@@ -225,13 +225,6 @@ export default function LearningProgress() {
                             <span>{correct} תשובות נכונות מתוך {total}</span>
                           </div>
                         </div>
-                        <button
-                          className="px-5 py-2.5 bg-primary text-white rounded-2xl font-bold text-sm hover:-translate-y-0.5 active:translate-y-0.5 transition-all"
-                          style={{ boxShadow: 'var(--shadow-clay-primary)', fontFamily: 'Assistant, sans-serif' }}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/student/${studentId}/practice/${topic._id}`); }}
-                        >
-                          {percent > 0 ? "המשך לתרגל" : "התחל תרגול"}
-                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -325,14 +318,13 @@ export default function LearningProgress() {
             </div>
           </motion.div>
 
-          {/* Achievement card */}
+          {/* Achievement card — informational only; flows are entered from the learning map */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.35 }}
-            className="bg-surface rounded-2xl border-2 border-dashed border-outline-variant/70 p-5 flex items-center gap-5 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all"
+            className="bg-surface rounded-2xl border-2 border-dashed border-outline-variant/70 p-5 flex items-center gap-5"
             style={{ boxShadow: 'var(--shadow-clay)' }}
-            onClick={() => navigate(`/student/${studentId}/homework`)}
           >
             <div
               className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center flex-shrink-0 border-2 border-outline"
@@ -350,28 +342,19 @@ export default function LearningProgress() {
             </div>
           </motion.div>
 
-          {/* Quick actions */}
+          {/* Back to the learning map — the single hub all flows start from */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.45 }}
-            className="grid grid-cols-2 gap-3"
           >
             <button
-              className="flex flex-col items-center gap-2 p-4 bg-surface rounded-2xl border-2 border-outline hover:border-primary/50 hover:bg-primary/5 transition-all font-semibold text-sm text-on-surface"
+              className="w-full flex flex-col items-center gap-2 p-4 bg-surface rounded-2xl border-2 border-outline hover:border-primary/50 hover:bg-primary/5 transition-all font-semibold text-sm text-on-surface"
               style={{ boxShadow: 'var(--shadow-clay)' }}
               onClick={() => navigate(`/student/${studentId}`)}
             >
               <BookOpen size={20} className="text-primary" />
               מפת למידה
-            </button>
-            <button
-              className="flex flex-col items-center gap-2 p-4 bg-surface rounded-2xl border-2 border-outline hover:border-secondary/50 hover:bg-secondary/5 transition-all font-semibold text-sm text-on-surface"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
-              onClick={() => navigate(`/student/${studentId}/homework`)}
-            >
-              <ElectricBolt size={22} tone="violet" glow={0.5} animated={false} />
-              שיעורי בית
             </button>
           </motion.div>
         </div>

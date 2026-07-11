@@ -2,13 +2,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, Zap, Bot, Activity,
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
-import AIChatPanel from "../components/AIChatPanel";
+import { useFaraday } from "../components/chat/FaradayProvider";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -18,8 +18,6 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
-
-const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
 const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
@@ -68,10 +66,24 @@ export default function PracticeSession() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const startTimeRef = useRef(Date.now());
   const transitionLockRef = useRef(false); // prevents click-through to next question
-  const [chatOpen, setChatOpen]             = useState(false);
-  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const faraday = useFaraday();
+  const chatOpen = faraday.isOpen;
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
   const reducedMotion = !!useReducedMotion();
+
+  const openChat = () => faraday.open({
+    studentId: studentId!,
+    agentType: "practice",
+    questionStem: activeQuestion?.stem,
+    topicName: currentTopic?.nameHe,
+    topicId,
+    questionId: activeQuestion?._id,
+  });
+  // Keep Faraday's context on the current question while the panel is open.
+  const { updateContext } = faraday;
+  useEffect(() => {
+    updateContext({ questionStem: activeQuestion?.stem, questionId: activeQuestion?._id });
+  }, [activeQuestion?._id, activeQuestion?.stem, updateContext]);
   const questionCardRef = useRef<HTMLDivElement>(null);
   const xpChipRef = useRef<HTMLDivElement>(null);
   const choicesRef = useRef<HTMLDivElement>(null);
@@ -314,9 +326,9 @@ export default function PracticeSession() {
               סיים סבב
             </button>
           )}
-          <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
+          <button className="btn-clay-primary px-4 py-2 text-sm" onClick={openChat}>
             <Bot size={14} />
-            עזרת AI
+            שאל את פאראדיי
           </button>
         </div>
       </motion.header>
@@ -633,22 +645,6 @@ export default function PracticeSession() {
         </div>
         </div>
       </div>
-
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        studentId={studentId!}
-        agentType="practice"
-        questionStem={activeQuestion?.stem}
-        topicName={currentTopic?.nameHe}
-        topicId={topicId}
-        questionId={activeQuestion?._id}
-        onOpenPlayground={() => setPlaygroundOpen(true)}
-      />
-
-      <Suspense fallback={null}>
-        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
-      </Suspense>
 
       <AnimatePresence>
         {showRecap && (

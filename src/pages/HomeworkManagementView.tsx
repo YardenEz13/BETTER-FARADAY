@@ -3,9 +3,11 @@ import type { FunctionReturnType } from "convex/server";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
+import { usePacketIngest } from "../components/usePacketIngest";
+import MathText from "../components/MathText";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -48,6 +50,9 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const [showCropBuilder, setShowCropBuilder] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; message: string; confirmLabel: string; tone: "danger" | "primary"; onConfirm: () => void } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const packetInputRef = useRef<HTMLInputElement>(null);
+  const { ingest: ingestPacket, busy: packetBusy, error: packetError } = usePacketIngest(classroomId);
 
   // Run a confirmed mutation: always close the dialog; surface failures.
   const runConfirmed = async (fn: () => Promise<unknown>, failMsg: string) => {
@@ -166,7 +171,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 <div className="absolute z-40 mt-2 end-0 w-64 rounded-2xl border-2 border-outline bg-surface overflow-hidden" style={{ boxShadow: "var(--shadow-clay)" }}>
                   <MenuItem Icon={FileText} title="מטלה אדפטיבית" subtitle="שאלות מותאמות לכל תלמיד" onClick={() => { setMenuOpen(false); navigate("/teacher/homework/new"); }} />
                   <MenuItem Icon={Scissors} title="מטלת PDF אישית" subtitle="חיתוך שאלות לתלמיד יחיד" onClick={() => { setMenuOpen(false); setShowPdfBuilder(true); }} />
-                  <MenuItem Icon={Package} title="ייבוא חוברת" subtitle="חוברת שלמה בחיתוך ידני" onClick={() => { setMenuOpen(false); setShowCropBuilder(true); }} />
+                  <MenuItem Icon={Package} title="ייבוא חוברת בחיתוך ידני" subtitle="חוברת שלמה, סימון שאלות בעצמכם" onClick={() => { setMenuOpen(false); setShowCropBuilder(true); }} />
+                  <MenuItem Icon={Zap} title="ייבוא חוברת אוטומטי" subtitle="חילוץ שאלות מ-PDF באמצעות AI" onClick={() => { setMenuOpen(false); packetInputRef.current?.click(); }} />
                 </div>
               </>
             )}
@@ -239,6 +245,27 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
         )}
       </div>
 
+      {/* Hidden picker for the auto packet import (menu: ייבוא חוברת אוטומטי) */}
+      <input
+        ref={packetInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) ingestPacket(f);
+        }}
+      />
+      {packetBusy && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm"
+          style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
+        >
+          <Loader2 size={16} className="animate-spin" /> מעלה את החוברת…
+        </div>
+      )}
+
       {/* Modals */}
       {showPdfBuilder && classroomId && (
         <PdfAssignmentBuilder classroomId={classroomId} onClose={() => setShowPdfBuilder(false)} />
@@ -272,12 +299,12 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       )}
 
       {/* Error toast */}
-      {errorMsg && (
+      {(errorMsg ?? packetError) && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm"
           style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
         >
-          <AlertTriangle size={16} style={{ color: "var(--color-error)" }} /> {errorMsg}
+          <AlertTriangle size={16} style={{ color: "var(--color-error)" }} /> {errorMsg ?? packetError}
         </div>
       )}
     </div>
@@ -792,7 +819,7 @@ function StudentQuestionsPanel({ g, onBack }: { g: StudentGroup; onBack: () => v
                       )}
                     </div>
                     <div className="text-xs text-on-surface mb-1">
-                      <span className="text-on-surface-variant me-1">תשובה:</span>{ans.studentAnswer}
+                      <span className="text-on-surface-variant me-1">תשובה:</span><MathText>{ans.studentAnswer ?? ""}</MathText>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-on-surface-variant">
                       {ans.hintsUsed > 0 && <span className="flex items-center gap-1"><Zap size={10} className="text-tertiary" />{ans.hintsUsed} רמזים</span>}
@@ -854,11 +881,11 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
                           : <XCircle size={14} style={{ color: "var(--color-error)" }} className="flex-shrink-0" />}
                         <span className="text-on-surface">
                           <span className="text-on-surface-variant">ענה: </span>
-                          <strong style={{ color: correct ? "var(--color-primary)" : "var(--color-error)" }}>{p.studentAnswer}</strong>
+                          <strong style={{ color: correct ? "var(--color-primary)" : "var(--color-error)" }}><MathText>{p.studentAnswer ?? ""}</MathText></strong>
                         </span>
                         {!correct && (
                           <span className="text-on-surface-variant">
-                            נכון: <strong className="text-on-surface">{p.correctAnswer}</strong>
+                            נכון: <strong className="text-on-surface"><MathText>{p.correctAnswer}</MathText></strong>
                           </span>
                         )}
                       </>

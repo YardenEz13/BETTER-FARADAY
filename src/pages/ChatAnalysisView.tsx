@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { motion } from "framer-motion";
 import CyberAvatar from "../components/CyberAvatar";
+import MathText from "../components/MathText";
 import {
   ArrowLeft, MessageSquare, Clock, User, Bot, AlertTriangle, CheckCircle,
   Target, Sparkles, Frown, Smile, Meh,
@@ -158,7 +159,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
                     style={{ maxWidth: "82%", alignSelf: isUser ? "flex-start" : "flex-end" }}
                   >
                     <div className="text-xs font-bold mb-1.5 flex items-center gap-1.5" style={{ color: accent, justifyContent: isUser ? "flex-start" : "flex-end" }}>
-                      {isUser ? <><User size={12} /> תלמיד</> : isSystem ? "מערכת" : <>{chat.studentName ? "פאראדיי" : "AI"} <Bot size={12} /></>}
+                      {isUser ? <><User size={12} /> תלמיד</> : isSystem ? "מערכת" : <>פאראדיי <Bot size={12} /></>}
                     </div>
                     <div
                       className="text-sm text-on-surface leading-relaxed p-3.5"
@@ -168,7 +169,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
                         border: `2px solid color-mix(in srgb, ${accent} 22%, transparent)`,
                       }}
                     >
-                      {msg.content}
+                      <MathText>{msg.content}</MathText>
                     </div>
                     {msg.flag === "confusion" && (
                       <span className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold rounded-full px-2.5 py-1" style={{ color: "var(--color-error)", background: "color-mix(in srgb, var(--color-error) 9%, transparent)" }}>

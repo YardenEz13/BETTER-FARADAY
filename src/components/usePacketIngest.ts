@@ -1,24 +1,24 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { Upload, Loader as Loader2 } from "./electric";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
-// Teacher entry point for the full-PDF packet import (מטלת קיץ): uploads the
-// source PDF to Convex storage, kicks off the extraction pipeline, and routes
-// to the review page. Distinct from QuestionImportModal (single question).
-export default function PacketImportButton({ classroomId }: { classroomId: Id<"classrooms"> }) {
+// Full-PDF packet import (auto AI pipeline): uploads the source PDF to Convex
+// storage, kicks off the extraction pipeline, and routes to the review page.
+// Distinct from QuestionImportModal (single question) and PacketCropBuilder
+// (manual crop). Single entry point: the "מטלה חדשה" menu in ניהול מטלות.
+export function usePacketIngest(classroomId: Id<"classrooms"> | null) {
   const navigate = useNavigate();
   const generateUploadUrl = useMutation(api.packetImport.generateUploadUrl);
   const start = useMutation(api.packetImport.start);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ingest = async (file: File) => {
+    if (!classroomId) return;
     setError(null);
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
@@ -52,29 +52,5 @@ export default function PacketImportButton({ classroomId }: { classroomId: Id<"c
     }
   };
 
-  return (
-    <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = "";
-          if (f) ingest(f);
-        }}
-      />
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] transition-all font-bold text-sm rounded-lg disabled:opacity-60"
-      >
-        {busy ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-        ייבוא חוברת מלאה
-      </button>
-      {error && <p className="text-xs text-[var(--danger)] mt-1">{error}</p>}
-    </div>
-  );
+  return { ingest, busy, error };
 }

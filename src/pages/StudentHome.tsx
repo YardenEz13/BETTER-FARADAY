@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap, useScrollReveal } from "../lib/gsapUtils";
 import { animateSafe, remove } from "../lib/anime";
@@ -12,12 +12,10 @@ import {
   RotateCcw, Trophy, Target, PencilLine, X, FileText,
 } from "../components/electric";
 import { SparkBurst } from "../components/electric";
-import AIChatPanel from "../components/AIChatPanel";
+import { useFaraday } from "../components/chat/FaradayProvider";
 import CyberAvatar from "../components/CyberAvatar";
 import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
-
-const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import { SkeletonCard } from "../components/SkeletonCard";
@@ -498,8 +496,9 @@ export default function StudentHome() {
     api.leaderboard.getWeeklyLeaderboard,
     student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
   );
-  const [chatOpen, setChatOpen] = useState(false);
-  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  // Faraday opens with a general practice context — the map has no active question.
+  const faraday = useFaraday();
+  const openChat = () => faraday.open({ studentId: studentId!, agentType: "practice" });
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
@@ -685,10 +684,10 @@ export default function StudentHome() {
           <button
             className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
             style={{ boxShadow: 'var(--shadow-clay-primary)' }}
-            onClick={() => setChatOpen(true)}
+            onClick={openChat}
           >
             <Bot size={16} />
-            <span className="hidden sm:inline">AI מורה</span>
+            <span className="hidden sm:inline">מורה AI</span>
           </button>
         </div>
       </motion.header>
@@ -1033,7 +1032,7 @@ export default function StudentHome() {
                   <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>מייקל פאראדיי</h4>
+                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>פרופסור פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
                     אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
                     בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
@@ -1041,10 +1040,10 @@ export default function StudentHome() {
                   <button
                     className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer"
                     style={{ boxShadow: 'var(--shadow-clay-primary)' }}
-                    onClick={() => setChatOpen(true)}
+                    onClick={openChat}
                   >
                     <MessageSquare size={15} />
-                    שאל שאלה
+                    שאל את פאראדיי
                   </button>
                 </div>
               </div>
@@ -1077,7 +1076,7 @@ export default function StudentHome() {
         style={{ boxShadow: '0 -4px 0 0 var(--color-outline), 0 -1px 8px rgba(0,0,0,0.06)' }}>
         {[
           { icon: Map, label: 'מפה', action: () => navigate(`/student/${studentId}`), active: true },
-          { icon: Bot, label: 'מורה AI', action: () => setChatOpen(true), active: false },
+          { icon: Bot, label: 'מורה AI', action: openChat, active: false },
           { icon: Activity, label: 'התקדמות', action: () => navigate(`/student/${studentId}/progress`), active: false },
           { icon: Package, label: 'שיעורי בית', action: () => navigate(`/student/${studentId}/homework`), active: false },
           { icon: Palette, label: 'נושא', action: () => setThemePickerOpen(true), active: false },
@@ -1105,17 +1104,6 @@ export default function StudentHome() {
         currentTheme={student.homeworkTheme}
       />
 
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        studentId={studentId!}
-        agentType="homework"
-        onOpenPlayground={() => setPlaygroundOpen(true)}
-      />
-
-      <Suspense fallback={null}>
-        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
-      </Suspense>
     </div>
   );
 }

@@ -322,7 +322,7 @@ export default function StudentHomeworkList() {
                 <span className="font-bold text-sm text-tertiary">טיפ מהמערכת</span>
               </div>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                התחילו מהסעיף הראשון בכל שאלה. האלגוריתם מנתח את הפתרון שלכם ולומד את דרך החשיבה שלכם שלב אחר שלב.
+                התחל מהסעיף הראשון בכל שאלה. האלגוריתם מנתח את הפתרון שלך ולומד את דרך החשיבה שלך שלב אחר שלב.
               </p>
             </div>
           </motion.div>
