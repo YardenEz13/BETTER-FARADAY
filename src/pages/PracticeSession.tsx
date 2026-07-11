@@ -286,21 +286,21 @@ export default function PracticeSession() {
       <motion.header
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b-2 border-outline backdrop-blur-xl"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 border-b-2 border-outline backdrop-blur-xl"
         style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
-        <div className="flex items-center gap-4">
-          <button className="btn-icon" onClick={handleEndSession} aria-label="סיום הסבב">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button className="btn-icon flex-shrink-0" onClick={handleEndSession} aria-label="סיום הסבב">
             <ChevronLeft size={18} />
           </button>
-          <div>
-            <div className="font-semibold text-sm text-on-surface">{currentTopic.nameHe}</div>
+          <div className="min-w-0">
+            <div className="font-semibold text-sm text-on-surface truncate">{currentTopic.nameHe}</div>
             <div className="label-mono text-[0.6rem]">מצב תרגול</div>
           </div>
         </div>
 
         {/* Session stats */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Charge meter — builds with each correct answer in a row */}
           <ChargeMeter combo={combo} max={CHARGE_MAX} />
           {/* Questions chip */}
@@ -326,9 +326,14 @@ export default function PracticeSession() {
               סיים סבב
             </button>
           )}
-          <button className="btn-clay-primary px-4 py-2 text-sm" onClick={openChat}>
-            <Bot size={14} />
-            שאל את פאראדיי
+          {/* Icon-only on phones — the labeled pill overflowed the narrow header */}
+          <button
+            className="btn-clay-primary !p-0 w-11 h-11 sm:w-auto sm:h-auto sm:!px-4 sm:!py-2 text-sm justify-center flex-shrink-0"
+            onClick={openChat}
+            aria-label="שאל את פאראדיי"
+          >
+            <Bot size={16} />
+            <span className="hidden sm:inline">שאל את פאראדיי</span>
           </button>
         </div>
       </motion.header>

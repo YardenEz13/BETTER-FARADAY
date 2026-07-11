@@ -609,11 +609,11 @@ export default function StudentHome() {
         ref={setHeaderEl}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 md:px-10 py-2.5 md:py-3 border-b-2 border-outline backdrop-blur-md gap-2"
         style={{ boxShadow: 'var(--shadow-clay)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
         {/* Left: back + student info */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3 min-w-0">
           <button
             className="w-9 h-9 md:w-9 md:h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
             onClick={() => navigate("/")}
@@ -622,11 +622,14 @@ export default function StudentHome() {
             <LogOut size={16} />
           </button>
 
-          {/* Avatar + name — opens theme picker */}
+          {/* Avatar + name. Desktop: opens the homework-theme picker (the pill hints
+              "בחר נושא"). Mobile: identity display only — the picker's single mobile
+              entry is the "נושא" tab in the bottom nav, so tapping your profile no
+              longer surprise-opens a sheet that blacks out the header. */}
           <button
-            className="flex items-center gap-2.5 bg-surface-container px-3 py-1.5 rounded-full border-2 border-outline hover:border-primary/50 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 md:gap-2.5 bg-surface-container px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default"
             style={{ boxShadow: 'var(--shadow-clay)' }}
-            onClick={() => setThemePickerOpen(true)}
+            onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
               <CyberAvatar name={student.name} size={32} color={student.avatarColor} />
@@ -638,9 +641,10 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
-              {ownedBadges && ownedBadges.length > 0 && <BadgeChips badges={ownedBadges} />}
+              {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
+              {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
-              <div className="num font-bold text-primary text-[10px] md:hidden">{totalXP.toLocaleString()} XP</div>
+              <div className="num font-bold text-primary text-[10px] md:hidden leading-tight">{totalXP.toLocaleString()} XP</div>
               <div className="hidden md:block">
                 {student.homeworkTheme ? (
                   <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
@@ -665,9 +669,9 @@ export default function StudentHome() {
         </div>
 
         {/* Right: actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
-          <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30" style={{ boxShadow: 'var(--shadow-clay)' }}>
+          <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30" style={{ boxShadow: 'var(--shadow-clay)' }}>
             <Flame className="text-tertiary" size={14} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
@@ -788,67 +792,10 @@ export default function StudentHome() {
             </div>
           </div>
 
-          {/* ── MOBILE: card list ── */}
-          <div className="flex md:hidden flex-col gap-3 w-full max-w-[24rem]">
-            {topics.map((topic, idx) => {
-              const { isCompleted, isActive, progress } = nodeStates[idx];
-              return (
-                <motion.div
-                  key={topic._id}
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.06 }}
-                >
-                  <button
-                    onClick={() => navigate(`/student/${studentId}/practice/${topic._id}`)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all active:scale-95 cursor-pointer
-                      ${isCompleted
-                        ? "border-primary/40 bg-primary/5"
-                        : isActive
-                          ? "border-primary bg-surface"
-                          : "border-outline bg-surface"
-                      }`}
-                    style={{ boxShadow: isCompleted || isActive ? 'var(--shadow-clay-primary)' : 'var(--shadow-clay)' }}
-                  >
-                    {/* Icon bubble */}
-                    <div className={`w-14 h-14 flex-shrink-0 rounded-2xl flex items-center justify-center border-2
-                      ${isCompleted
-                        ? "bg-primary border-primary-dark"
-                        : isActive
-                          ? "bg-surface border-primary"
-                          : "bg-surface-container border-outline"
-                      }`}>
-                      {isCompleted ? (
-                        <Check className="text-white" size={24} strokeWidth={3} />
-                      ) : (
-                        <Play className={`${isActive ? 'text-primary' : 'text-on-surface-variant'} fill-current`} size={20} />
-                      )}
-                    </div>
-
-                    {/* Text */}
-                    <div className="flex-1 text-right">
-                      <div className={`font-semibold text-base ${isCompleted ? "text-on-surface" : isActive ? "text-on-surface" : "text-on-surface-variant"}`}>
-                        {topic.nameHe}
-                      </div>
-                      <div className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% — תמשיך מכאן` : "מוכן? בוא נתחיל ▶"}
-                      </div>
-                      {progress > 0 && progress < 80 && (
-                        <div className="mt-2 w-full bg-surface-container rounded-full h-2 overflow-hidden border border-outline">
-                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* ── DESKTOP: serpentine field-line learning path (signature) ──
-              Nodes zig-zag across the section's width instead of stacking in a
-              thin vertical column; a curved SVG wire connects their true centers. */}
-          <div className="hidden md:block relative w-full md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-12">
+          {/* ── Serpentine field-line learning path (signature) — the one map,
+              phone included. Node positions are % based, so the zig-zag simply
+              tightens on a narrow screen instead of degrading into a flat list. */}
+          <div className="block relative w-full max-w-[22rem] md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-8 md:py-12">
             <div className="relative w-full" style={{ height: wireHeight }}>
               <svg
                 className="absolute inset-0 h-full w-full pointer-events-none"
