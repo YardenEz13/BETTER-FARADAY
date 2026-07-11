@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -9,7 +10,7 @@ import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
   Loader as Loader2, Zap, Scissors, User, BarChart2,
-  Edit, Trash2, Send, Package,
+  Edit, Trash2, Send, Package, ChevronLeft, ArrowRight,
 } from "../components/electric";
 
 type Bucket = "draft" | "active" | "closed";
@@ -413,22 +414,32 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
 function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
   const [activeTab, setActiveTab] = useState<"students" | "questions" | "overview">("students");
   const [studentFilter, setStudentFilter] = useState<"all" | "submitted" | "pending">("all");
-  const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
+  // Master→detail: null = compact list of all students; set = drill into one student's questions.
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
 
   const rundown = useQuery(api.homeworkRundown.getRundown, { homeworkId });
   const studentSubmissions = useQuery(api.homework.getStudentSubmissions, { homeworkId });
   const questionStats = useQuery(api.homework.getHomeworkQuestionStats, { homeworkId });
 
-  const submittedCount = studentSubmissions?.filter((s) => s.status === "submitted").length ?? 0;
-  const inProgressCount = studentSubmissions?.filter((s) => s.status === "in_progress").length ?? 0;
-  const pendingCount = studentSubmissions?.filter((s) => s.status === "pending").length ?? 0;
-  const totalStudents = studentSubmissions?.length ?? 0;
+  // Each student gets several assigned questions (one per difficulty level), so
+  // getStudentSubmissions returns multiple rows per student. Collapse to one row
+  // per student; the drill-in shows all of that student's questions.
+  const studentGroups = studentSubmissions ? groupByStudent(studentSubmissions) : undefined;
 
-  const filteredStudents = studentSubmissions?.filter((s) => {
-    if (studentFilter === "submitted") return s.status === "submitted";
-    if (studentFilter === "pending") return s.status !== "submitted";
+  const submittedCount = studentGroups?.filter((g) => g.status === "submitted").length ?? 0;
+  const inProgressCount = studentGroups?.filter((g) => g.status === "in_progress").length ?? 0;
+  const pendingCount = studentGroups?.filter((g) => g.status === "pending").length ?? 0;
+  const totalStudents = studentGroups?.length ?? 0;
+
+  const filteredStudents = studentGroups?.filter((g) => {
+    if (studentFilter === "submitted") return g.status === "submitted";
+    if (studentFilter === "pending") return g.status !== "submitted";
     return true;
   }) ?? [];
+
+  const openStudent = openStudentId
+    ? studentGroups?.find((g) => g.studentId === openStudentId) ?? null
+    : null;
 
   const tabs = [
     { id: "students" as const, label: "תלמידים", Icon: Users },
@@ -454,72 +465,76 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
 
       {/* STUDENTS */}
       {activeTab === "students" && (
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-2 flex-wrap">
-            {([
-              { label: "הכל", value: "all" as const, count: totalStudents },
-              { label: "הגישו", value: "submitted" as const, count: submittedCount },
-              { label: "טרם הגישו", value: "pending" as const, count: pendingCount + inProgressCount },
-            ]).map((f) => {
-              const on = studentFilter === f.value;
-              return (
-                <button key={f.value} onClick={() => setStudentFilter(f.value)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors"
-                  style={{ background: on ? "var(--color-primary)" : "var(--color-surface)", borderColor: on ? "var(--color-primary)" : "var(--color-outline)", color: on ? "var(--color-on-primary)" : "var(--color-on-surface-variant)" }}>
-                  {f.label} <span className="px-1.5 py-0.5 rounded-full" style={{ background: on ? "color-mix(in srgb, black 12%, transparent)" : "var(--color-surface-container-high)" }}>{f.count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {totalStudents > 0 && (
-            <div className="clay-card p-4">
-              <div className="flex justify-between text-xs text-on-surface-variant mb-2">
-                <span>השלמת מטלה</span>
-                <span className="num">{Math.round((submittedCount / totalStudents) * 100)}%</span>
-              </div>
-              <div className="w-full rounded-full h-2 overflow-hidden bg-surface-container-high">
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(submittedCount / totalStudents) * 100}%`, background: "var(--color-primary)" }} />
-              </div>
-              <div className="flex justify-between text-xs mt-2 text-on-surface-variant">
-                <span>{submittedCount} הגישו</span>
-                {inProgressCount > 0 && <span>{inProgressCount} בתהליך</span>}
-                <span>{pendingCount} טרם</span>
-              </div>
-            </div>
-          )}
-
-          {studentSubmissions === undefined ? (
-            <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {filteredStudents.map((s) => {
-                const isSub = s.status === "submitted";
-                const isIP = s.status === "in_progress";
-                const isExpanded = expandedStudent === s.assignedQuestionId;
+        openStudent ? (
+          /* ── Drill-in: one student's questions ── */
+          <StudentQuestionsPanel g={openStudent} onBack={() => setOpenStudentId(null)} />
+        ) : (
+          /* ── Master: compact, scannable list of all students ── */
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2 flex-wrap">
+              {([
+                { label: "הכל", value: "all" as const, count: totalStudents },
+                { label: "הגישו", value: "submitted" as const, count: submittedCount },
+                { label: "טרם הגישו", value: "pending" as const, count: pendingCount + inProgressCount },
+              ]).map((f) => {
+                const on = studentFilter === f.value;
                 return (
-                  <div key={s.assignedQuestionId} className="flex flex-col rounded-xl border-2 border-outline bg-surface">
-                    <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-surface-container-high transition-colors rounded-xl"
-                      onClick={() => setExpandedStudent(isExpanded ? null : s.assignedQuestionId)}>
+                  <button key={f.value} onClick={() => setStudentFilter(f.value)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors"
+                    style={{ background: on ? "var(--color-primary)" : "var(--color-surface)", borderColor: on ? "var(--color-primary)" : "var(--color-outline)", color: on ? "var(--color-on-primary)" : "var(--color-on-surface-variant)" }}>
+                    {f.label} <span className="px-1.5 py-0.5 rounded-full" style={{ background: on ? "color-mix(in srgb, black 12%, transparent)" : "var(--color-surface-container-high)" }}>{f.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {totalStudents > 0 && (
+              <div className="clay-card p-4">
+                <div className="flex justify-between text-xs text-on-surface-variant mb-2">
+                  <span>השלמת מטלה</span>
+                  <span className="num">{Math.round((submittedCount / totalStudents) * 100)}%</span>
+                </div>
+                <div className="w-full rounded-full h-2 overflow-hidden bg-surface-container-high">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(submittedCount / totalStudents) * 100}%`, background: "var(--color-primary)" }} />
+                </div>
+                <div className="flex justify-between text-xs mt-2 text-on-surface-variant">
+                  <span>{submittedCount} הגישו</span>
+                  {inProgressCount > 0 && <span>{inProgressCount} בתהליך</span>}
+                  <span>{pendingCount} טרם</span>
+                </div>
+              </div>
+            )}
+
+            {studentSubmissions === undefined ? (
+              <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredStudents.map((g) => {
+                  const isSub = g.status === "submitted";
+                  const isIP = g.status === "in_progress";
+                  return (
+                    <div key={g.studentId}
+                      className="flex items-center gap-3 p-3 rounded-xl border-2 border-outline bg-surface cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => setOpenStudentId(g.studentId)}>
                       <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
-                        style={{ background: s.avatarColor + "22", border: `2px solid ${s.avatarColor}55`, color: s.avatarColor }}>
-                        {s.studentName.charAt(0)}
+                        style={{ background: g.avatarColor + "22", border: `2px solid ${g.avatarColor}55`, color: g.avatarColor }}>
+                        {g.studentName.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-on-surface truncate">{s.studentName}</div>
+                        <div className="font-semibold text-sm text-on-surface truncate">{g.studentName}</div>
                         <div className="text-xs flex flex-wrap items-center gap-2 mt-0.5 text-on-surface-variant">
-                          {isSub && s.submittedAt && <span className="flex items-center gap-1"><CheckCircle2 size={11} /> הושלם</span>}
-                          {isIP && <span className="text-tertiary">בתהליך · {s.answersCount} סעיפים</span>}
-                          {s.status === "pending" && <span className="text-error">טרם התחיל</span>}
-                          <span className="px-1.5 rounded bg-surface-container-high">רמה {s.assignedDifficulty}</span>
-                          {s.totalTimeMs > 0 && <span className="flex items-center gap-1"><Clock size={11} /> {Math.ceil(s.totalTimeMs / 60000)} דק׳</span>}
-                          {s.aiInteractions > 0 && <span className="flex items-center gap-1"><Zap size={11} /> {s.aiInteractions} AI</span>}
+                          {isSub && <span className="flex items-center gap-1"><CheckCircle2 size={11} /> הושלם</span>}
+                          {isIP && <span className="text-tertiary">בתהליך</span>}
+                          {g.status === "pending" && <span className="text-error">טרם התחיל</span>}
+                          <span className="px-1.5 rounded bg-surface-container-high">{g.subs.length} שאלות</span>
+                          {g.totalTimeMs > 0 && <span className="flex items-center gap-1"><Clock size={11} /> {Math.ceil(g.totalTimeMs / 60000)} דק׳</span>}
+                          {g.aiInteractions > 0 && <span className="flex items-center gap-1"><Zap size={11} /> {g.aiInteractions} AI</span>}
                         </div>
                       </div>
                       <div className="flex-shrink-0">
                         {isSub ? (
-                          <span className="num font-extrabold text-base" style={{ color: s.score !== null && s.score >= 70 ? "var(--color-primary)" : s.score !== null && s.score >= 40 ? "var(--color-tertiary)" : "var(--color-error)" }}>
-                            {s.score !== null ? `${s.score}%` : "—"}
+                          <span className="num font-extrabold text-base" style={{ color: g.score !== null && g.score >= 70 ? "var(--color-primary)" : g.score !== null && g.score >= 40 ? "var(--color-tertiary)" : "var(--color-error)" }}>
+                            {g.score !== null ? `${g.score}%` : "—"}
                           </span>
                         ) : isIP ? (
                           <Loader2 size={16} className="animate-spin text-tertiary" />
@@ -527,44 +542,17 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
                           <Circle size={16} className="text-on-surface-variant" />
                         )}
                       </div>
+                      <ChevronLeft size={16} className="text-on-surface-variant flex-shrink-0" />
                     </div>
-                    {isExpanded && s.answers && s.answers.length > 0 && (
-                      <div className="p-4 border-t-2 border-outline">
-                        <div className="text-xs font-bold text-on-surface-variant mb-3">פירוט תשובות ({s.answers.length})</div>
-                        <div className="flex flex-col gap-2">
-                          {s.answers.map((ans, idx: number) => (
-                            <div key={idx} className="bg-surface-container-low p-3 rounded-lg border-2 border-outline text-sm">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-semibold text-on-surface">סעיף {ans.sectionLabel}</span>
-                                {ans.isCorrect !== undefined ? (
-                                  <span className="text-xs font-bold" style={{ color: ans.isCorrect ? "var(--color-primary)" : "var(--color-error)" }}>
-                                    {ans.isCorrect ? "נכון ✓" : "שגוי ✗"}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-on-surface-variant">ממתין לבדיקה</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-on-surface mb-1">
-                                <span className="text-on-surface-variant me-1">תשובה:</span>{ans.studentAnswer}
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-on-surface-variant">
-                                {ans.hintsUsed > 0 && <span className="flex items-center gap-1"><Zap size={10} className="text-tertiary" />{ans.hintsUsed} רמזים</span>}
-                                {ans.timeMs != null && ans.timeMs > 0 && <span className="flex items-center gap-1"><Clock size={10} />{Math.ceil(ans.timeMs / 1000)} שנ׳</span>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {filteredStudents.length === 0 && (
-                <div className="clay-card p-8 text-center text-sm text-on-surface-variant">אין תלמידים בקטגוריה זו.</div>
-              )}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+                {filteredStudents.length === 0 && (
+                  <div className="clay-card p-8 text-center text-sm text-on-surface-variant">אין תלמידים בקטגוריה זו.</div>
+                )}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* QUESTIONS */}
@@ -675,6 +663,149 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
         </div>
       )}
     </>
+  );
+}
+
+// ── Collapse per-assignment rows into one entry per student ──
+type StudentSub = FunctionReturnType<typeof api.homework.getStudentSubmissions>[number];
+type StudentGroup = {
+  studentId: StudentSub["studentId"];
+  studentName: string;
+  avatarColor: string;
+  subs: StudentSub[];
+  status: "submitted" | "in_progress" | "pending";
+  score: number | null;
+  totalTimeMs: number;
+  aiInteractions: number;
+};
+
+function groupByStudent(subs: StudentSub[]): StudentGroup[] {
+  const map = new Map<string, StudentSub[]>();
+  const order: string[] = [];
+  for (const s of subs) {
+    const key = s.studentId as string;
+    if (!map.has(key)) { map.set(key, []); order.push(key); }
+    map.get(key)!.push(s);
+  }
+  const groups = order.map((key) => {
+    const g = map.get(key)!;
+    const status: StudentGroup["status"] =
+      g.every((s) => s.status === "submitted") ? "submitted"
+      : g.every((s) => s.status === "pending") ? "pending"
+      : "in_progress";
+    const scored = g.filter((s) => s.status === "submitted" && s.score !== null);
+    const score = scored.length
+      ? Math.round(scored.reduce((sum, s) => sum + (s.score as number), 0) / scored.length)
+      : null;
+    return {
+      studentId: g[0].studentId,
+      studentName: g[0].studentName,
+      avatarColor: g[0].avatarColor,
+      subs: g,
+      status,
+      score,
+      totalTimeMs: g.reduce((sum, s) => sum + s.totalTimeMs, 0),
+      aiInteractions: g.reduce((sum, s) => sum + s.aiInteractions, 0),
+    };
+  });
+  const statusOrder: Record<StudentGroup["status"], number> = { submitted: 0, in_progress: 1, pending: 2 };
+  groups.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+  return groups;
+}
+
+// ── Drill-in: one student, all of their assigned questions for this homework ──
+function StudentQuestionsPanel({ g, onBack }: { g: StudentGroup; onBack: () => void }) {
+  const isSub = g.status === "submitted";
+  const isIP = g.status === "in_progress";
+  const scoreColor = (v: number | null) =>
+    v !== null && v >= 70 ? "var(--color-primary)" : v !== null && v >= 40 ? "var(--color-tertiary)" : "var(--color-error)";
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Back */}
+      <button onClick={onBack}
+        className="self-start flex items-center gap-1.5 text-sm font-bold text-on-surface-variant hover:text-primary transition-colors">
+        <ArrowRight size={16} /> חזרה לכל התלמידים
+      </button>
+
+      {/* Student header */}
+      <div className="clay-card p-4 flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-base font-bold"
+          style={{ background: g.avatarColor + "22", border: `2px solid ${g.avatarColor}55`, color: g.avatarColor }}>
+          {g.studentName.charAt(0)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-extrabold text-base text-on-surface truncate">{g.studentName}</div>
+          <div className="text-xs flex flex-wrap items-center gap-2 mt-0.5 text-on-surface-variant">
+            {isSub && <span className="flex items-center gap-1"><CheckCircle2 size={11} /> הושלם</span>}
+            {isIP && <span className="text-tertiary">בתהליך</span>}
+            {g.status === "pending" && <span className="text-error">טרם התחיל</span>}
+            <span className="px-1.5 rounded bg-surface-container-high">{g.subs.length} שאלות</span>
+            {g.totalTimeMs > 0 && <span className="flex items-center gap-1"><Clock size={11} /> {Math.ceil(g.totalTimeMs / 60000)} דק׳</span>}
+            {g.aiInteractions > 0 && <span className="flex items-center gap-1"><Zap size={11} /> {g.aiInteractions} AI</span>}
+          </div>
+        </div>
+        {isSub && (
+          <span className="num font-extrabold text-xl flex-shrink-0" style={{ color: scoreColor(g.score) }}>
+            {g.score !== null ? `${g.score}%` : "—"}
+          </span>
+        )}
+      </div>
+
+      {/* One card per assigned question */}
+      {g.subs.map((s, qi) => {
+        const answers = s.answers ?? [];
+        return (
+          <div key={s.assignedQuestionId} className="clay-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-on-surface">שאלה {qi + 1}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">רמה {s.assignedDifficulty}</span>
+              </div>
+              {s.status === "submitted" ? (
+                <span className="num font-extrabold text-sm" style={{ color: scoreColor(s.score) }}>
+                  {s.score !== null ? `${s.score}%` : "—"}
+                </span>
+              ) : s.status === "in_progress" ? (
+                <span className="text-xs text-tertiary">בתהליך</span>
+              ) : (
+                <span className="text-xs text-on-surface-variant">טרם התחיל</span>
+              )}
+            </div>
+
+            {answers.length === 0 ? (
+              <div className="text-xs text-on-surface-variant">
+                {s.status === "pending" ? "התלמיד עדיין לא התחיל שאלה זו." : "אין תשובות להצגה עדיין."}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {answers.map((ans, idx: number) => (
+                  <div key={idx} className="bg-surface-container-low p-3 rounded-lg border-2 border-outline text-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-on-surface">סעיף {ans.sectionLabel}</span>
+                      {ans.isCorrect !== undefined ? (
+                        <span className="text-xs font-bold" style={{ color: ans.isCorrect ? "var(--color-primary)" : "var(--color-error)" }}>
+                          {ans.isCorrect ? "נכון ✓" : "שגוי ✗"}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-on-surface-variant">ממתין לבדיקה</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-on-surface mb-1">
+                      <span className="text-on-surface-variant me-1">תשובה:</span>{ans.studentAnswer}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-on-surface-variant">
+                      {ans.hintsUsed > 0 && <span className="flex items-center gap-1"><Zap size={10} className="text-tertiary" />{ans.hintsUsed} רמזים</span>}
+                      {ans.timeMs != null && ans.timeMs > 0 && <span className="flex items-center gap-1"><Clock size={10} />{Math.ceil(ans.timeMs / 1000)} שנ׳</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
