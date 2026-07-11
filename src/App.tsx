@@ -26,6 +26,7 @@ const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
+const HomeworkCreateWizard = lazy(() => import("./pages/HomeworkCreateWizard"));
 
 function RouteFallback() {
   return <ElectricLoader label="טוען…" />;
@@ -73,6 +74,8 @@ function AnimatedRoutes() {
             <Route path="/student/:studentId/exam" element={<ExamMode />} />
             <Route path="/student/:studentId/exam/:examId" element={<ExamMode />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/teacher/homework/new" element={<HomeworkCreateWizard />} />
+            <Route path="/teacher/homework/:homeworkId/edit" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />

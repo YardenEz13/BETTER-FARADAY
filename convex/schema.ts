@@ -296,7 +296,11 @@ export default defineSchema({
     questionCount: v.number(),            // target per student (3-4)
     createdAt: v.number(),
     deadline: v.number(),
-    status: v.string(),                   // "active" | "closed" | "graded"
+    status: v.string(),                   // "draft" | "scheduled" | "active" | "closed" | "graded"
+    // When set, the homework is inserted as "scheduled" and auto-published at
+    // this ms-epoch via internal.homework.publishScheduled. Absent for drafts
+    // and for homework published immediately.
+    publishAt: v.optional(v.number()),
     // Teacher-imported questions pinned to this homework — assigned to EVERY
     // student verbatim, before the mastery-based auto-fill runs.
     pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
