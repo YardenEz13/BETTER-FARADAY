@@ -5,6 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap, useScrollReveal } from "../lib/gsapUtils";
+import { animateSafe, remove } from "../lib/anime";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
@@ -49,6 +50,99 @@ function buildWirePoints(count: number) {
 function buildWirePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return "";
   return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+}
+
+/**
+ * A pulse of charge racing along the wire toward the next (not-yet-unlocked)
+ * station — powered by anime.js. A short bright dash sweeps the segment by
+ * animating strokeDashoffset, so it hugs the path even though the parent SVG is
+ * scaled non-uniformly (preserveAspectRatio="none"). Stroke-only + a stacked
+ * halo keeps the glow crisp where a blur filter would smear horizontally.
+ * No-op under reduced motion. Lives inside the wire <svg>.
+ */
+function ChargeComet({ d, reducedMotion }: { d: string; reducedMotion: boolean }) {
+  const coreRef = useRef<SVGPathElement>(null);
+  const haloRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const core = coreRef.current;
+    const halo = haloRef.current;
+    if (!core || !halo || !d || reducedMotion) return;
+    const len = core.getTotalLength();
+    const dash = 6; // length of the visible charge, in path units
+    for (const p of [core, halo]) p.style.strokeDasharray = `${dash} ${len + dash}`;
+    // offset dash → -len sweeps the single dash from the completed node to the
+    // next station; loop keeps the charge continuously flowing.
+    const anim = animateSafe([core, halo], {
+      strokeDashoffset: [dash, -len],
+      duration: 1500,
+      ease: "linear",
+      loop: true,
+      loopDelay: 350,
+    });
+    return () => {
+      anim?.pause?.();
+      remove([core, halo]);
+    };
+  }, [d, reducedMotion]);
+
+  if (!d || reducedMotion) return null;
+  return (
+    <>
+      <path ref={haloRef} d={d} fill="none" stroke="var(--color-primary)" strokeWidth="11" strokeLinecap="round" opacity={0.3} vectorEffect="non-scaling-stroke" />
+      <path ref={coreRef} d={d} fill="none" stroke="var(--color-inverse-primary)" strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </>
+  );
+}
+
+/**
+ * The next station lighting up as the charge arrives — a DOM ring that expands
+ * and fades on a loop tuned to ChargeComet's period (~1850ms), so each pulse
+ * lands roughly when the comet reaches this node. DOM (not SVG) so it stays
+ * perfectly round despite the parent path's non-uniform scale. No-op under
+ * reduced motion. `x` is a percentage of the path width, `y` is px (node center).
+ */
+function ChargeArrival({ x, y, reducedMotion }: { x: number; y: number; reducedMotion: boolean }) {
+  const ringRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ringRef.current;
+    if (!el || reducedMotion) return;
+    const anim = animateSafe(el, {
+      scale: [0.45, 1.9],
+      opacity: [0.6, 0],
+      duration: 700,
+      delay: 1250,     // let the charge travel most of the wire before the flash
+      loopDelay: 1150, // 700 + 1150 = 1850ms → matches the comet's lap
+      loop: true,
+      ease: "outQuad",
+    });
+    return () => {
+      anim?.pause?.();
+      remove(el);
+    };
+  }, [x, y, reducedMotion]);
+
+  if (reducedMotion) return null;
+  return (
+    <div
+      className="absolute pointer-events-none z-0"
+      style={{ left: `${x}%`, top: y, transform: "translate(-50%,-50%)" }}
+      aria-hidden
+    >
+      <div
+        ref={ringRef}
+        style={{
+          width: 74,
+          height: 74,
+          borderRadius: "50%",
+          border: "2.5px solid var(--color-primary)",
+          boxShadow: "0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent)",
+          opacity: 0,
+        }}
+      />
+    </div>
+  );
 }
 
 /* ── A single station on the learning circuit ── */
@@ -801,6 +895,9 @@ export default function StudentHome() {
                     )}
                   </>
                 )}
+
+                {/* anime.js — a charge pulse flowing toward the next station */}
+                <ChargeComet d={nextWireD} reducedMotion={reducedMotion} />
               </svg>
 
               {topics.map((topic, idx) => {
@@ -824,6 +921,15 @@ export default function StudentHome() {
                   </div>
                 );
               })}
+
+              {/* anime.js — the next station energizes as the charge arrives */}
+              {nextWireD && wirePoints[completedTopics + 1] && (
+                <ChargeArrival
+                  x={wirePoints[completedTopics + 1].x}
+                  y={wirePoints[completedTopics + 1].y}
+                  reducedMotion={reducedMotion}
+                />
+              )}
             </div>
           </div>
         </section>

@@ -19,6 +19,7 @@
     "@types/katex": "^0.16.8",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "animejs": "^4.5.0",
     "convex": "^1.42.0",
     "framer-motion": "^12.38.0",
     "gsap": "^3.15.0",
