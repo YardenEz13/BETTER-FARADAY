@@ -3,10 +3,13 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
 // Student queries
+// Login name-picker (RolePage). Projects to {_id, name} so the subscription
+// doesn't ship every student field (xp, streaks, themes…) to a pre-login page.
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("students").collect();
+    const students = await ctx.db.query("students").collect();
+    return students.map((s) => ({ _id: s._id, name: s.name }));
   },
 });
 
@@ -222,7 +225,3 @@ export const getDashboardStats = query({
     };
   },
 });
-export const getStudents = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("students").collect(); } });
-export const getTopics = query({ args: {}, handler: async (ctx) => { return await ctx.db.query("topics").collect(); } });
-export const getCounts = query({ args: {}, handler: async (ctx) => { const q = await ctx.db.query("questions").collect(); const cq = await ctx.db.query("compoundQuestions").collect(); return { q: q.length, cq: cq.length }; } });
-export const getPrecomputedCount = query({ args: {}, handler: async (ctx) => { const q = await ctx.db.query("precomputedThemedQuestions").collect(); return q.length; } });

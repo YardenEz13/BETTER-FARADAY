@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "loadtest": "k6 run loadtest/convex_read.js",
+    "loadtest:cloud": "k6 run -o cloud loadtest/convex_read.js",
+    "loadtest:frontend": "k6 run loadtest/frontend.js"
   },
   "dependencies": {
     "@convex-dev/rate-limiter": "^0.3.2",
