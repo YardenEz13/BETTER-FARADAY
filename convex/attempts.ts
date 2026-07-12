@@ -84,10 +84,14 @@ export const submitAttempt = mutation({
 export const getStudentStats = query({
   args: { studentId: v.id("students") },
   handler: async (ctx, { studentId }) => {
+    // Bounded: subscribed by every student's home screen and re-run on each
+    // answer. The most recent 500 attempts are indistinguishable in the UI
+    // from all-time, and the read stays flat as the table grows.
     const attempts = await ctx.db
       .query("attempts")
       .withIndex("by_student", (q) => q.eq("studentId", studentId))
-      .collect();
+      .order("desc")
+      .take(500);
 
     const byTopic: Record<string, { correct: number; total: number; avgTime: number; totalTime: number }> = {};
 
@@ -121,13 +125,16 @@ export const getRecentAttempts = query({
 export const getQuestionFailureRates = query({
   args: {},
   handler: async (ctx) => {
-    const questions = await ctx.db.query("questions").collect();
+    const questions = await ctx.db.query("questions").take(500);
     const result = [];
     for (const q of questions) {
+      // Recent attempts are enough for a failure-rate signal — unbounded
+      // per-question scans would make this a full-table sweep.
       const attempts = await ctx.db
         .query("attempts")
         .withIndex("by_question", (a) => a.eq("questionId", q._id))
-        .collect();
+        .order("desc")
+        .take(100);
       if (attempts.length === 0) continue;
       const wrong = attempts.filter((a) => !a.isCorrect).length;
       result.push({

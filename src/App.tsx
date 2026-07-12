@@ -7,6 +7,7 @@ import { ThemeProvider } from "./components/ThemeContext";
 import { ElectricLoader } from "./components/electric";
 import PageTransition from "./components/PageTransition";
 import FaradayProvider from "./components/chat/FaradayProvider";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
@@ -40,16 +41,18 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        {/* Single mount of the Faraday tutor — screens open it via useFaraday() */}
-        <FaradayProvider>
-          <AnimatedRoutes />
-        </FaradayProvider>
-      </BrowserRouter>
-      <Analytics />
-      <SpeedInsights />
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <BrowserRouter>
+          {/* Single mount of the Faraday tutor — screens open it via useFaraday() */}
+          <FaradayProvider>
+            <AnimatedRoutes />
+          </FaradayProvider>
+        </BrowserRouter>
+        <Analytics />
+        <SpeedInsights />
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }
 

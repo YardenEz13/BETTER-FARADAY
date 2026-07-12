@@ -16,10 +16,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const getTopicCharges = query({
   args: { studentId: v.id("students") },
   handler: async (ctx, { studentId }) => {
+    // Bounded: subscribed by every student's map + progress screens. Recent
+    // 400 attempts are plenty for charge/accuracy, and the read stays flat
+    // as the attempts table grows.
     const attempts = await ctx.db
       .query("attempts")
       .withIndex("by_student", (q) => q.eq("studentId", studentId))
-      .collect();
+      .order("desc")
+      .take(400);
 
     const topics = await ctx.db.query("topics").collect();
     const now = Date.now();
