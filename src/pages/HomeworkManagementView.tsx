@@ -3,11 +3,14 @@ import type { FunctionReturnType } from "convex/server";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
 import { usePacketIngest } from "../components/usePacketIngest";
 import MathText from "../components/MathText";
+import { useCountUp } from "../lib/gsapUtils";
+import { animateSafe, remove as animeRemove } from "../lib/anime";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -203,8 +206,13 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           })}
         </div>
 
-        {/* List */}
-        <div className="flex flex-col gap-2.5 w-full">
+        {/* List — rows cascade in */}
+        <motion.div
+          className="flex flex-col gap-2.5 w-full"
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+        >
           {homeworkList === undefined ? (
             <div className="flex items-center justify-center py-12 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
           ) : filtered.length === 0 ? (
@@ -214,19 +222,20 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
               <div className="text-sm text-on-surface-variant">התחילו מ״מטלה חדשה״ למעלה.</div>
             </div>
           ) : filtered.map((it) => (
-            <AssignmentRow
-              key={`${it.kind}-${it.id}`}
-              it={it}
-              selected={isSelected(it)}
-              onOpen={() => openRow(it)}
-              onEdit={it.kind === "hw" ? () => navigate(`/teacher/homework/${it.id}/edit`) : undefined}
-              onPublish={it.kind === "hw" ? () => handlePublish(it.id) : undefined}
-              onDelete={it.kind === "hw" ? () => handleDelete(it.id) : undefined}
-              onClose={it.kind === "hw" ? () => handleClose(it.id) : undefined}
-              onCancelSchedule={it.kind === "hw" ? () => handleCancelSchedule(it.id) : undefined}
-            />
+            <motion.div key={`${it.kind}-${it.id}`} variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
+              <AssignmentRow
+                it={it}
+                selected={isSelected(it)}
+                onOpen={() => openRow(it)}
+                onEdit={it.kind === "hw" ? () => navigate(`/teacher/homework/${it.id}/edit`) : undefined}
+                onPublish={it.kind === "hw" ? () => handlePublish(it.id) : undefined}
+                onDelete={it.kind === "hw" ? () => handleDelete(it.id) : undefined}
+                onClose={it.kind === "hw" ? () => handleClose(it.id) : undefined}
+                onCancelSchedule={it.kind === "hw" ? () => handleCancelSchedule(it.id) : undefined}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       {/* ══════════ RIGHT: detail ══════════ */}
@@ -490,14 +499,28 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
         })}
       </div>
 
-      {/* STUDENTS */}
+      {/* STUDENTS — master list ↔ drill-in swap slides like a native stack */}
       {activeTab === "students" && (
-        openStudent ? (
-          /* ── Drill-in: one student's questions ── */
-          <StudentQuestionsPanel g={openStudent} onBack={() => setOpenStudentId(null)} />
-        ) : (
-          /* ── Master: compact, scannable list of all students ── */
-          <div className="flex flex-col gap-3">
+        <AnimatePresence mode="wait" initial={false}>
+          {openStudent ? (
+            <motion.div
+              key={`drill-${openStudent.studentId}`}
+              initial={{ opacity: 0, x: -28 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -28 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <StudentQuestionsPanel g={openStudent} onBack={() => setOpenStudentId(null)} />
+            </motion.div>
+          ) : (
+          <motion.div
+            key="master"
+            className="flex flex-col gap-3"
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 28 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
             <div className="flex gap-2 flex-wrap">
               {([
                 { label: "הכל", value: "all" as const, count: totalStudents },
@@ -516,31 +539,25 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
             </div>
 
             {totalStudents > 0 && (
-              <div className="clay-card p-4">
-                <div className="flex justify-between text-xs text-on-surface-variant mb-2">
-                  <span>השלמת מטלה</span>
-                  <span className="num">{Math.round((submittedCount / totalStudents) * 100)}%</span>
-                </div>
-                <div className="w-full rounded-full h-2 overflow-hidden bg-surface-container-high">
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(submittedCount / totalStudents) * 100}%`, background: "var(--color-primary)" }} />
-                </div>
-                <div className="flex justify-between text-xs mt-2 text-on-surface-variant">
-                  <span>{submittedCount} הגישו</span>
-                  {inProgressCount > 0 && <span>{inProgressCount} בתהליך</span>}
-                  <span>{pendingCount} טרם</span>
-                </div>
-              </div>
+              <CompletionCard submitted={submittedCount} inProgress={inProgressCount} pending={pendingCount} total={totalStudents} />
             )}
 
             {studentSubmissions === undefined ? (
               <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <motion.div
+                className="flex flex-col gap-2"
+                initial="hidden"
+                animate="visible"
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.045 } } }}
+              >
                 {filteredStudents.map((g) => {
                   const isSub = g.status === "submitted";
                   const isIP = g.status === "in_progress";
                   return (
-                    <div key={g.studentId}
+                    <motion.div key={g.studentId}
+                      variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+                      whileHover={{ y: -2 }}
                       className="flex items-center gap-3 p-3 rounded-xl border-2 border-outline bg-surface cursor-pointer hover:border-primary transition-colors"
                       onClick={() => setOpenStudentId(g.studentId)}>
                       <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
@@ -570,16 +587,17 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
                         )}
                       </div>
                       <ChevronLeft size={16} className="text-on-surface-variant flex-shrink-0" />
-                    </div>
+                    </motion.div>
                   );
                 })}
                 {filteredStudents.length === 0 && (
                   <div className="clay-card p-8 text-center text-sm text-on-surface-variant">אין תלמידים בקטגוריה זו.</div>
                 )}
-              </div>
+              </motion.div>
             )}
-          </div>
-        )
+          </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* QUESTIONS */}
@@ -690,6 +708,56 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
         </div>
       )}
     </>
+  );
+}
+
+// ── Completion summary — GSAP count-up % + anime.js charged progress bar ──
+function CompletionCard({ submitted, inProgress, pending, total }: {
+  submitted: number; inProgress: number; pending: number; total: number;
+}) {
+  const pct = Math.round((submitted / total) * 100);
+  const pctRef = useCountUp<HTMLSpanElement>(pct, { suffix: "%", duration: 1 });
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // The fill "charges up" to its width, then a soft glow pulse lands on arrival.
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const anim = animateSafe(el, {
+      width: [`0%`, `${pct}%`],
+      duration: 900,
+      ease: "outCubic",
+      onComplete: () => {
+        animateSafe(el, {
+          boxShadow: [
+            "0 0 0px color-mix(in srgb, var(--color-primary) 0%, transparent)",
+            "0 0 12px color-mix(in srgb, var(--color-primary) 65%, transparent)",
+            "0 0 0px color-mix(in srgb, var(--color-primary) 0%, transparent)",
+          ],
+          duration: 700,
+          ease: "inOutQuad",
+        });
+      },
+    });
+    if (!anim) el.style.width = `${pct}%`; // reduced motion: jump to the value
+    return () => { if (el) animeRemove(el); };
+  }, [pct]);
+
+  return (
+    <div className="clay-card p-4">
+      <div className="flex justify-between text-xs text-on-surface-variant mb-2">
+        <span>השלמת מטלה</span>
+        <span className="num" ref={pctRef}>{pct}%</span>
+      </div>
+      <div className="w-full rounded-full h-2 overflow-hidden bg-surface-container-high">
+        <div ref={barRef} className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--color-primary)" }} />
+      </div>
+      <div className="flex justify-between text-xs mt-2 text-on-surface-variant">
+        <span>{submitted} הגישו</span>
+        {inProgress > 0 && <span>{inProgress} בתהליך</span>}
+        <span>{pending} טרם</span>
+      </div>
+    </div>
   );
 }
 

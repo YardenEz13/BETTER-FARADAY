@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronRight, Trophy, Zap, Star, SparkBurst, Sparkles,
@@ -11,6 +11,8 @@ import { ThemeToggle } from "../components/ThemeContext";
 import CyberAvatar from "../components/CyberAvatar";
 import FaradayCanvas from "../components/FaradayCanvas";
 import ClaySkeleton from "../components/ClaySkeleton";
+import { useCountUp } from "../lib/gsapUtils";
+import { fireStreak } from "../lib/celebrations";
 
 type Row = {
   rank: number;
@@ -48,6 +50,12 @@ function useResetCountdown(weekStart: number | undefined) {
   return label;
 }
 
+/** GSAP-driven XP odometer — counts up on reveal and re-tweens on live updates. */
+function CountUpXp({ value }: { value: number }) {
+  const ref = useCountUp<HTMLSpanElement>(value, { duration: 1 });
+  return <span ref={ref}>{value.toLocaleString()}</span>;
+}
+
 function PodiumCard({ row, place, reducedMotion }: { row: Row; place: number; reducedMotion: boolean }) {
   const p = PODIUM[place];
   return (
@@ -74,7 +82,7 @@ function PodiumCard({ row, place, reducedMotion }: { row: Row; place: number; re
       <div className="text-center max-w-full px-1 mb-2">
         <div className="font-bold text-sm text-on-surface truncate">{row.name}</div>
         <div className="num font-extrabold flex items-center justify-center gap-1 text-sm" style={{ color: p.color }}>
-          <Zap size={13} /> {row.weeklyXp.toLocaleString()}
+          <Zap size={13} /> <CountUpXp value={row.weeklyXp} />
         </div>
       </div>
       {/* pedestal */}
@@ -114,7 +122,7 @@ function RankRow({ row, reducedMotion }: { row: Row; reducedMotion: boolean }) {
       </span>
       <span className="num font-extrabold flex items-center gap-1 text-on-surface flex-shrink-0">
         <Zap size={15} className="text-primary" />
-        {row.weeklyXp.toLocaleString()}
+        <CountUpXp value={row.weeklyXp} />
       </span>
     </motion.div>
   );
@@ -152,6 +160,15 @@ export default function Leaderboard() {
   const countdown = useResetCountdown(board?.weekStart);
   const hidden = student?.hideFromLeaderboard === true;
   const back = () => navigate(`/student/${studentId}`);
+
+  // Once per visit: being #1 deserves fireworks.
+  const celebratedRef = useRef(false);
+  useEffect(() => {
+    if (board?.myRank === 1 && !celebratedRef.current) {
+      celebratedRef.current = true;
+      fireStreak(5);
+    }
+  }, [board?.myRank]);
 
   if (student === undefined || board === undefined) return <LeaderboardSkeleton onBack={back} />;
 

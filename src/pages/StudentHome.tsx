@@ -4,7 +4,7 @@ import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, memo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { gsap, useScrollReveal } from "../lib/gsapUtils";
+import { gsap, useScrollReveal, useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove } from "../lib/anime";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
@@ -17,6 +17,7 @@ import CyberAvatar from "../components/CyberAvatar";
 import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
+import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -481,6 +482,12 @@ function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; ico
   );
 }
 
+/** GSAP odometer for header XP — re-tweens as XP grows live. */
+function CountUpNum({ value, suffix }: { value: number; suffix?: string }) {
+  const ref = useCountUp<HTMLSpanElement>(value, { suffix, duration: 1.1 });
+  return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -491,6 +498,7 @@ export default function StudentHome() {
   const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
   const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
   const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
+  const topicCharges = useQuery(api.retention.getTopicCharges, { studentId: studentId as Id<"students"> });
   const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
   const leaderboard = useQuery(
     api.leaderboard.getWeeklyLeaderboard,
@@ -500,6 +508,7 @@ export default function StudentHome() {
   const faraday = useFaraday();
   const openChat = () => faraday.open({ studentId: studentId!, agentType: "practice" });
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [liveSheetOpen, setLiveSheetOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
   // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
@@ -563,6 +572,9 @@ export default function StudentHome() {
   const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
   const leaderboardEnabled = leaderboard?.enabled ?? false;
   const myLeagueRank = leaderboard?.myRank ?? null;
+  const decayingTopics = (topicCharges ?? []).filter(
+    (t): t is typeof t & { charge: number; accuracy: number } => t.decaying && t.charge !== null && t.accuracy !== null,
+  );
 
   const nodeStates = topics.map((topic) => {
     const progress = getProgress(topic._id);
@@ -644,7 +656,7 @@ export default function StudentHome() {
               {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
               {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
-              <div className="num font-bold text-primary text-[10px] md:hidden leading-tight">{totalXP.toLocaleString()} XP</div>
+              <div className="num font-bold text-primary text-[10px] md:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
               <div className="hidden md:block">
                 {student.homeworkTheme ? (
                   <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
@@ -660,7 +672,7 @@ export default function StudentHome() {
         <div className="hidden md:flex items-center gap-3">
           <div className="stat-chip">
             <ElectricBolt tone="spark" size={18} glow={0.55} animated={false} />
-            <span>{totalXP.toLocaleString()} XP</span>
+            <span><CountUpNum value={totalXP} suffix=" XP" /></span>
           </div>
           <div className="stat-chip">
             <Flame className="text-tertiary" size={15} />
@@ -723,6 +735,41 @@ export default function StudentHome() {
                     יש לך {freezesAvailable} {freezesAvailable === 1 ? "הקפאה" : "הקפאות"}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Live class — the teacher is broadcasting a question right now */}
+          <LiveBanner studentId={studentId!} onJoin={() => setLiveSheetOpen(true)} />
+
+          {/* Retention nudge — topics whose charge is draining (forgetting curve) */}
+          {decayingTopics.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              role="alert"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <Battery className="text-secondary flex-shrink-0" size={20} />
+                <div className="font-bold text-on-surface text-sm">
+                  המטען יורד! נושאים שלמדת מתחילים להישכח — שאלה אחת מחזירה את הזרם ⚡
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {decayingTopics.slice(0, 3).map((t) => (
+                  <button
+                    key={t.topicId}
+                    onClick={() => navigate(`/student/${studentId}/practice/${t.topicId}`)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer"
+                    style={{ boxShadow: 'var(--shadow-clay)' }}
+                  >
+                    <span className="text-on-surface">{t.nameHe}</span>
+                    <span className="num font-bold text-secondary">{t.charge}%</span>
+                    <span className="text-[10px] text-on-surface-variant">היה {t.accuracy}%</span>
+                  </button>
+                ))}
               </div>
             </motion.div>
           )}
@@ -1050,6 +1097,11 @@ export default function StudentHome() {
         studentId={studentId!}
         currentTheme={student.homeworkTheme}
       />
+
+      {/* Live class answer sheet */}
+      {liveSheetOpen && (
+        <LiveQuestionSheet studentId={studentId!} onClose={() => setLiveSheetOpen(false)} />
+      )}
 
     </div>
   );

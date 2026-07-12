@@ -16,6 +16,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
+import LiveClassPanel from "../components/LiveClassPanel";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { SkeletonCard } from "../components/SkeletonCard";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -60,6 +61,7 @@ export default function TeacherDashboard() {
   const [sel, setSel] = useState<CCStudent | null>(null);
   const [profileId, setProfileId] = useState<Id<"students"> | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [liveOpen, setLiveOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   // Phone vs. desktop — drives the bottom-sheet drawer (mobile) vs side drawer (desktop)
@@ -151,6 +153,14 @@ export default function TeacherDashboard() {
 
         {/* actions */}
         <div className="order-2 lg:order-3 flex items-center gap-2 ms-auto lg:ms-0">
+          <button
+            className="flex items-center gap-2 px-3.5 py-2 rounded-full border-2 font-bold text-sm cursor-pointer transition-all hover:-translate-y-0.5"
+            style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)", boxShadow: "var(--shadow-clay)" }}
+            onClick={() => setLiveOpen(true)}
+          >
+            <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+            <span className="hidden sm:inline">שיעור חי</span>
+          </button>
           <span className="stat-chip hidden md:inline-flex" style={{ cursor: "default" }}>
             <span className="charge-drift" style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
             זמן אמת
@@ -209,6 +219,11 @@ export default function TeacherDashboard() {
           />
         )}
       </AnimatePresence>
+
+      {/* ══════════ LIVE CLASS (שיעור חי) ══════════ */}
+      {liveOpen && classroom?._id && (
+        <LiveClassPanel classroomId={classroom._id} onClose={() => setLiveOpen(false)} />
+      )}
 
       {/* ══════════ TOAST ══════════ */}
       <AnimatePresence>

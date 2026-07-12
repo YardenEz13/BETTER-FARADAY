@@ -10,6 +10,7 @@ import {
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import FaradayCanvas from "../components/FaradayCanvas";
+import { fireConfetti } from "../lib/celebrations";
 
 /* ── Animated count-up number that pops on change ── */
 function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotion: boolean }) {
@@ -140,7 +141,13 @@ function ShopCard({
     setBusy(true);
     try {
       await purchase({ studentId: studentId as Id<"students">, itemId: item._id as Id<"shopItems"> });
-      if (!reducedMotion) { setBurst(true); setTimeout(() => setBurst(false), 700); }
+      if (!reducedMotion) {
+        setBurst(true);
+        setTimeout(() => setBurst(false), 700);
+        // Confetti pops from the purchased card itself
+        const r = cardRef.current?.getBoundingClientRect();
+        if (r) fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
+      }
       onBought();
     } catch (e) {
       shake();

@@ -9,6 +9,7 @@ import {
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
 import { useFaraday } from "../components/chat/FaradayProvider";
+import FaradayAvatar from "../components/FaradayAvatar";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -69,6 +70,10 @@ export default function PracticeSession() {
   const faraday = useFaraday();
   const chatOpen = faraday.isOpen;
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
+  // Proactive Faraday — consecutive misses trigger a help nudge (once per session)
+  const [wrongStreak, setWrongStreak]       = useState(0);
+  const [showNudge, setShowNudge]           = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
   const openChat = () => faraday.open({
@@ -210,9 +215,16 @@ export default function PracticeSession() {
         flyXP(r, xpGained);
       }
       if (newCombo >= 3) fireStreak(newCombo);
+      setWrongStreak(0);
     } else {
       flashCard("wrong");
       shakeCard();
+      // Proactive Faraday: after two misses in a row he offers help himself.
+      setWrongStreak(w => {
+        const next = w + 1;
+        if (next >= 2 && !chatOpen && !nudgeDismissed) setShowNudge(true);
+        return next;
+      });
     }
     // Enter review phase with 5-second minimum
     setReviewPhase(true);
@@ -650,6 +662,43 @@ export default function PracticeSession() {
         </div>
         </div>
       </div>
+
+      {/* Proactive Faraday — floats in after two misses in a row */}
+      <AnimatePresence>
+        {showNudge && !chatOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            className="fixed bottom-6 inset-x-3 sm:inset-x-auto sm:start-6 z-[90] sm:max-w-[22rem] rounded-3xl border-2 border-primary/40 bg-surface p-4 flex items-start gap-3"
+            style={{ boxShadow: "var(--shadow-clay-primary)" }}
+            role="status"
+          >
+            <div className="w-11 h-11 rounded-full bg-primary/10 border-2 border-primary/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <FaradayAvatar px={40} fill />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-on-surface">פרופסור פאראדיי שם לב שקצת קשה כאן ⚡</div>
+              <p className="text-xs text-on-surface-variant mt-0.5 leading-snug">בוא נפרק את השאלה יחד, צעד אחר צעד — בלי לחשוף את התשובה.</p>
+              <div className="flex gap-2 mt-2.5">
+                <button
+                  className="btn-clay-primary !px-3.5 !py-1.5 !text-xs"
+                  onClick={() => { setShowNudge(false); setNudgeDismissed(true); openChat(); }}
+                >
+                  <Bot size={13} /> שאל את פאראדיי
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-xl border-2 border-outline text-xs font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                  onClick={() => { setShowNudge(false); setNudgeDismissed(true); }}
+                >
+                  לא עכשיו
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showRecap && (

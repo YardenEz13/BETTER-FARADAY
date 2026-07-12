@@ -685,4 +685,26 @@ export default defineSchema({
     enabled: v.boolean(),
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
+
+  // ── Live class mode (שיעור חי) ──
+  // Teacher broadcasts one question to the whole classroom; answers stream in
+  // live (Convex reactivity does the heavy lifting). One active session per
+  // classroom at a time; one answer per student per session.
+  liveSessions: defineTable({
+    classroomId: v.id("classrooms"),
+    questionId: v.id("questions"),
+    status: v.union(v.literal("active"), v.literal("ended")),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+  }).index("by_classroom", ["classroomId"]),
+
+  liveAnswers: defineTable({
+    sessionId: v.id("liveSessions"),
+    studentId: v.id("students"),
+    choiceIndex: v.number(),
+    isCorrect: v.boolean(),
+    answeredAt: v.number(),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_session_student", ["sessionId", "studentId"]),
 });

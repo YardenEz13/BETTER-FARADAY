@@ -11,6 +11,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import FaradayCanvas from "../components/FaradayCanvas";
 import MathText from "../components/MathText";
+import { fireStreak } from "../lib/celebrations";
 
 type Card = {
   questionId: string;
@@ -94,7 +95,11 @@ export default function ReviewDeck() {
   };
 
   const handleNext = () => {
-    if (index + 1 >= total) { setDone(true); return; }
+    if (index + 1 >= total) {
+      setDone(true);
+      fireStreak(Math.min(Math.max(correctCount, 1), 6)); // deck cleared — celebrate by how well it went
+      return;
+    }
     setIndex(i => i + 1);
     setSelected(null);
     setAnswered(false);

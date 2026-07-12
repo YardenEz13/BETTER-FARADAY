@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
-import { ElectricBolt, SignalWave, Lens } from "../components/electric";
+import { ElectricBolt, SignalWave, Lens, Battery } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { useCountUp } from "../lib/gsapUtils";
 
@@ -16,6 +16,8 @@ export default function LearningProgress() {
   const student = useQuery(api.classroom.get, { id: studentId as Id<"students"> });
   const topics = useQuery(api.topics.list);
   const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
+  const topicCharges = useQuery(api.retention.getTopicCharges, { studentId: studentId as Id<"students"> });
+  const chargeOf = (topicId: string) => topicCharges?.find((t) => t.topicId === topicId);
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
 
   const getTopicStats = (topicId: string) => {
@@ -181,6 +183,19 @@ export default function LearningProgress() {
                         <h3 className="font-bold text-on-surface text-base truncate" style={{ fontFamily: "'Yarden', 'Assistant', sans-serif" }}>
                           {topic.nameHe || topic.name}
                         </h3>
+                        {(() => {
+                          const c = chargeOf(topic._id);
+                          if (!c || c.charge === null) return null;
+                          const draining = c.decaying;
+                          return (
+                            <span
+                              className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border-2 ${draining ? "border-secondary/40 bg-secondary/10 text-secondary" : "border-primary/30 bg-primary/8 text-primary"}`}
+                              title={draining ? `הידע נשחק — היה ${c.accuracy}%` : "מטען הידע בנושא"}
+                            >
+                              <Battery size={11} /> {c.charge}%
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="text-on-surface-variant text-sm mb-3">{topic.name}</p>
 
