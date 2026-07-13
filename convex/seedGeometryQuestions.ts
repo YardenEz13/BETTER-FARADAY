@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export const addGeometryQuestions = mutation({
+export const addGeometryQuestions = internalMutation({
   args: {},
   handler: async (ctx) => {
     const topics = await ctx.db.query("topics").collect();

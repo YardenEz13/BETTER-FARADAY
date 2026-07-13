@@ -2,7 +2,7 @@
 // Run with: npx convex run seedBagrut:seedBagrutQuestions
 // Dedup: simple questions are matched by (topicId, stem); compound questions
 // by preamble. Re-running inserts only what is missing.
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import {
   SEQUENCES_QUESTIONS,
   PROBABILITY_QUESTIONS,
@@ -22,7 +22,7 @@ const ALL_SIMPLE: SimpleQuestionSeed[] = [
   ...GEOMETRY_QUESTIONS,
 ];
 
-export const seedBagrutQuestions = mutation({
+export const seedBagrutQuestions = internalMutation({
   args: {},
   handler: async (ctx) => {
     const topics = await ctx.db.query("topics").collect();

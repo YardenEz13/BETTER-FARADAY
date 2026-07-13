@@ -1,6 +1,6 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export default mutation({
+export default internalMutation({
   args: {},
   handler: async (ctx) => {
     const t = await ctx.db.query("topics").collect();

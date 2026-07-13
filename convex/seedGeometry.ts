@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
 const DIAGRAM_SVG = `<svg viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
   <polygon points="80,50 220,50 260,150 120,150" fill="rgba(56,189,248,0.06)" stroke="#38bdf8" stroke-width="2" stroke-linejoin="round"/>
@@ -71,7 +71,7 @@ const PROOF_SECTIONS = [
   },
 ];
 
-export const seedGeometryProof = mutation({
+export const seedGeometryProof = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Find or create geometry topic
