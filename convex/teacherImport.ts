@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { schedulePrecompute } from "./packetPublish";
 
 // Mirrors the `draft` object on the teacherImportedQuestions table. Kept as a
 // reusable validator so createImport / updateDraft stay in sync with the schema.
@@ -95,6 +96,7 @@ export const approveImport = mutation({
         fullSolution: d.explanation,
       });
       await ctx.db.patch(importId, { status: "approved", publishedCompoundId: compoundId });
+      await schedulePrecompute(ctx);
       return { questionId: null, compoundId };
     }
 
@@ -110,6 +112,7 @@ export const approveImport = mutation({
       explanation: d.explanation,
     });
     await ctx.db.patch(importId, { status: "approved", publishedQuestionId: questionId });
+    await schedulePrecompute(ctx);
     return { questionId, compoundId: null };
   },
 });

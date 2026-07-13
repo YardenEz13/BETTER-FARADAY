@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
@@ -211,6 +211,7 @@ export const submitCropPacket = mutation({
       .collect();
     if (rows.length === 0) throw new Error("לא נחתכו שאלות");
     await ctx.db.patch(packetId, { status: "solving", totalQuestions: rows.length });
+    await armWatchdog(ctx, packetId);
     await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, { packetId });
   },
 });
@@ -293,7 +294,7 @@ export const writeStructureResult = internalMutation({
 });
 
 // Heartbeat: a pipeline action stamps every pending row of its packet when it
-// starts, proving something is still in flight. See sweepStalePackets.
+// starts, proving something is still in flight. See sweepStalePacket.
 export const touchPendingRows = internalMutation({
   args: { packetId: v.id("packetImports") },
   handler: async (ctx, { packetId }) => {
@@ -308,38 +309,55 @@ export const touchPendingRows = internalMutation({
   },
 });
 
-// Cron watchdog: fail orphaned pending rows so the teacher sees a retry button
-// instead of a progress bar frozen forever.
-export const sweepStalePackets = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+// Per-packet watchdog (replaces the old every-5-min full-table cron): fail
+// orphaned pending rows so the teacher sees a retry button instead of a
+// progress bar frozen forever. Scheduled when a packet enters "solving";
+// reschedules itself only while the packet is still solving, so idle
+// deployments run zero watchdog work. Overlapping instances are harmless —
+// every step is an idempotent status check.
+const WATCHDOG_INTERVAL_MS = 5 * 60 * 1000;
+
+export const sweepStalePacket = internalMutation({
+  args: { packetId: v.id("packetImports") },
+  handler: async (ctx, { packetId }) => {
+    const packet = await ctx.db.get(packetId);
+    if (!packet || packet.status !== "solving") return; // done — stop the loop
+
     const now = Date.now();
-    const packets = await ctx.db.query("packetImports").collect();
-    for (const packet of packets) {
-      if (packet.status !== "solving") continue;
-      const pending = await ctx.db
-        .query("packetImportQuestions")
-        .withIndex("by_packet_status", (q) => q.eq("packetId", packet._id).eq("status", "pending"))
-        .collect();
-      if (pending.length === 0) continue;
-      let failedSome = false;
-      for (const row of pending) {
-        if (!isStalePending(row, now)) continue;
+    const pending = await ctx.db
+      .query("packetImportQuestions")
+      .withIndex("by_packet_status", (q) => q.eq("packetId", packetId).eq("status", "pending"))
+      .collect();
+
+    let stillPending = 0;
+    for (const row of pending) {
+      if (isStalePending(row, now)) {
         await ctx.db.patch(row._id, {
           status: "failed",
           errorMessage: "העיבוד נתקע ולא הסתיים — נסה שוב שאלה זו.",
         });
-        failedSome = true;
+      } else {
+        stillPending++;
       }
-      if (!failedSome) continue;
-      const stillPending = await ctx.db
-        .query("packetImportQuestions")
-        .withIndex("by_packet_status", (q) => q.eq("packetId", packet._id).eq("status", "pending"))
-        .first();
-      if (!stillPending) await ctx.db.patch(packet._id, { status: "review" });
     }
+
+    if (pending.length > 0 && stillPending === 0) {
+      await ctx.db.patch(packetId, { status: "review" });
+      return;
+    }
+
+    await ctx.scheduler.runAfter(WATCHDOG_INTERVAL_MS, internal.packetImport.sweepStalePacket, {
+      packetId,
+    });
   },
 });
+
+// Arm the watchdog for a packet that just entered (or re-entered) "solving".
+async function armWatchdog(ctx: MutationCtx, packetId: Id<"packetImports">) {
+  await ctx.scheduler.runAfter(WATCHDOG_INTERVAL_MS, internal.packetImport.sweepStalePacket, {
+    packetId,
+  });
+}
 
 export const markRowsFailed = internalMutation({
   args: { questionIds: v.array(v.id("packetImportQuestions")), message: v.string() },
@@ -439,6 +457,7 @@ export const writeInventory = internalMutation({
     }
     const pageCount = items.reduce((m, it) => Math.max(m, it.pageEnd), 0) || undefined;
     await ctx.db.patch(packetId, { status: "solving", totalQuestions: items.length, pageCount });
+    await armWatchdog(ctx, packetId);
 
     const labels = pickBatch(items.map((it) => ({ sourceLabelRaw: it.sourceLabelRaw, kind: it.kind })));
     await ctx.scheduler.runAfter(0, internal.packetPipeline.runChunk, { packetId, labels });
@@ -564,6 +583,7 @@ export const retryAllFailed = mutation({
       await ctx.db.patch(row._id, { status: "pending", errorMessage: undefined });
     }
     await ctx.db.patch(packetId, { status: "solving" });
+    await armWatchdog(ctx, packetId);
     if (packet.mode === "crops") {
       await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {
         packetId,
@@ -638,6 +658,7 @@ export const retryQuestion = mutation({
     const packet = await ctx.db.get(row.packetId);
     if (packet && ["solving", "verifying", "review"].includes(packet.status)) {
       if (packet.status !== "solving") await ctx.db.patch(row.packetId, { status: "solving" });
+      await armWatchdog(ctx, row.packetId);
       if (packet.mode === "crops") {
         // Crop mode: re-structure just this row from its own crops.
         await ctx.scheduler.runAfter(0, internal.packetPipeline.runStructure, {

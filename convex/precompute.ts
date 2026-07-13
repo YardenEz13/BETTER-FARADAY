@@ -1,4 +1,4 @@
-import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
@@ -173,13 +173,22 @@ ${JSON.stringify(inputs, null, 2)}
       console.log(`[precomputeThemeBatch] Saved ${savedCount} precomputed variations.`);
     }
 
-    // Schedule the next batch in 300 seconds (5 minute delay to respect limits heavily)
-    await ctx.scheduler.runAfter(300000, internal.precompute.precomputeThemeBatch);
+    // A full batch (10) means there may be more work — continue in 5 minutes
+    // (heavy delay to respect rate limits). A short batch means the backlog
+    // drained: stop, and let the next question-creation event re-trigger us.
+    if (missing.length >= 10) {
+      await ctx.scheduler.runAfter(300000, internal.precompute.precomputeThemeBatch);
+    } else {
+      console.log("[precomputeThemeBatch] Backlog drained; pipeline stopped.");
+    }
   }
 });
 
-// A manual trigger to kickstart the pipeline
-export const startPrecomputePipeline = mutation({
+// Manual trigger for backfills: `npx convex run precompute:startPrecomputePipeline`.
+// Internal on purpose — it kicks off Gemini spend, so it must not be callable
+// from the public client API. Question-creation paths (teacherImport,
+// packetPublish) schedule precomputeThemeBatch directly.
+export const startPrecomputePipeline = internalMutation({
   args: {},
   handler: async (ctx) => {
     await ctx.scheduler.runAfter(0, internal.precompute.precomputeThemeBatch);

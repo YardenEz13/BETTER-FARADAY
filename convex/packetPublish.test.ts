@@ -16,7 +16,8 @@ function makeCtx() {
     }),
     get: vi.fn(),
   };
-  return { ctx: { db } as any, tables, patches };
+  const scheduler = { runAfter: vi.fn(async () => {}) };
+  return { ctx: { db, scheduler } as any, tables, patches, scheduler };
 }
 
 const mcRow = {

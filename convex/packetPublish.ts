@@ -34,6 +34,7 @@ export async function publishRow(
       explanation: d.explanation,
     });
     await ctx.db.patch(row._id, { status: "approved", publishedQuestionId: questionId });
+    await schedulePrecompute(ctx);
     return { questionId, compoundId: null };
   }
 
@@ -105,5 +106,13 @@ export async function publishRow(
     });
   }
 
+  await schedulePrecompute(ctx);
   return { questionId: null, compoundId };
+}
+
+// New live content → refresh the themed-question precompute pipeline. 60s
+// delay batches bulk-approve bursts into one run; overlapping runs are safe
+// (savePrecomputedBatch dedups per question+theme).
+export async function schedulePrecompute(ctx: MutationCtx): Promise<void> {
+  await ctx.scheduler.runAfter(60_000, internal.precompute.precomputeThemeBatch, {});
 }

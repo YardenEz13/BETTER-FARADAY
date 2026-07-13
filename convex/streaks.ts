@@ -115,19 +115,3 @@ export const getStreakStatus = query({
     };
   },
 });
-
-// ── Daily cron helper: flag inactive students (compute only, no push) ──
-export const flagInactiveStreaks = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const today = israelDate();
-    // Bounded read: cap the scan so this stays within transaction limits even
-    // as the student table grows. (Small classrooms in practice.)
-    const students = await ctx.db.query("students").take(1000);
-    const inDanger = students
-      .filter((s) => s.streak > 0 && s.lastActiveDate !== today)
-      .map((s) => s._id);
-    console.log(`[streaks] ${inDanger.length} students in danger for ${today}`);
-    return { date: today, inDangerCount: inDanger.length };
-  },
-});
