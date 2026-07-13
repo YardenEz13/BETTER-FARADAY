@@ -9,6 +9,7 @@ import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
 import { usePacketIngest } from "../components/usePacketIngest";
 import MathText from "../components/MathText";
+import { SegTabs, ProgressBar } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import {
@@ -158,7 +159,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
               <BookOpen size={22} className="text-primary" />
             </span>
             <div>
-              <h1 className="text-2xl font-extrabold text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>ניהול מטלות</h1>
+              <h1 className="text-2xl font-extrabold text-on-surface">ניהול מטלות</h1>
               <p className="text-sm text-on-surface-variant">כל המטלות של הכיתה במקום אחד.</p>
             </div>
           </div>
@@ -171,7 +172,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                <div className="absolute z-40 mt-2 end-0 w-64 rounded-2xl border-2 border-outline bg-surface overflow-hidden" style={{ boxShadow: "var(--shadow-clay)" }}>
+                <div className="absolute z-40 mt-2 end-0 w-64 rounded-2xl border-2 border-outline bg-surface overflow-hidden shadow-(--shadow-clay)">
                   <MenuItem Icon={FileText} title="מטלה אדפטיבית" subtitle="שאלות מותאמות לכל תלמיד" onClick={() => { setMenuOpen(false); navigate("/teacher/homework/new"); }} />
                   <MenuItem Icon={Scissors} title="מטלת PDF אישית" subtitle="חיתוך שאלות לתלמיד יחיד" onClick={() => { setMenuOpen(false); setShowPdfBuilder(true); }} />
                   <MenuItem Icon={Package} title="ייבוא חוברת בחיתוך ידני" subtitle="חוברת שלמה, סימון שאלות בעצמכם" onClick={() => { setMenuOpen(false); setShowCropBuilder(true); }} />
@@ -267,10 +268,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
         }}
       />
       {packetBusy && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm"
-          style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
-        >
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm bg-inverse-surface text-inverse-on-surface shadow-lg">
           <Loader2 size={16} className="animate-spin" /> מעלה את החוברת…
         </div>
       )}
@@ -285,7 +283,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
       {/* Confirm dialog */}
       {confirm && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" style={{ background: "var(--color-scrim, rgba(0,0,0,0.45))" }} onClick={() => setConfirm(null)}>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/45" onClick={() => setConfirm(null)}>
           <div className="clay-card w-full max-w-[26rem] p-6" onClick={(e) => e.stopPropagation()}>
             <div className="text-lg font-extrabold text-on-surface mb-2">{confirm.title}</div>
             <p className="text-sm text-on-surface-variant mb-5 leading-relaxed">{confirm.message}</p>
@@ -309,11 +307,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
       {/* Error toast */}
       {(errorMsg ?? packetError) && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm"
-          style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
-        >
-          <AlertTriangle size={16} style={{ color: "var(--color-error)" }} /> {errorMsg ?? packetError}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm bg-inverse-surface text-inverse-on-surface shadow-lg">
+          <AlertTriangle size={16} className="text-error" /> {errorMsg ?? packetError}
         </div>
       )}
     </div>
@@ -374,11 +369,7 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
   return (
     <div
       onClick={onOpen}
-      className="rounded-2xl bg-surface p-4 cursor-pointer border-2 transition-colors w-full"
-      style={{
-        borderColor: selected ? "var(--color-primary)" : "var(--color-outline)",
-        boxShadow: "var(--shadow-clay)",
-      }}
+      className={`rounded-2xl bg-surface p-4 cursor-pointer border-2 transition-colors w-full shadow-(--shadow-clay) ${selected ? "border-primary" : "border-outline"}`}
     >
       <div className="flex items-center gap-3 min-w-0">
         <span className="w-11 h-11 rounded-xl bg-surface-container-high flex items-center justify-center flex-shrink-0 text-on-surface-variant">
@@ -486,18 +477,13 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
   return (
     <>
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-2xl flex-shrink-0 bg-surface-container-low border-2 border-outline">
-        {tabs.map((tab) => {
-          const on = activeTab === tab.id;
-          return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-semibold transition-colors"
-              style={{ background: on ? "var(--color-primary)" : "transparent", color: on ? "var(--color-on-primary)" : "var(--color-on-surface-variant)" }}>
-              <tab.Icon size={15} /> {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <SegTabs
+        label="תצוגת נתוני מטלה"
+        className="flex-shrink-0 w-full [&>button]:flex-1"
+        tabs={tabs.map((tab) => ({ id: tab.id, icon: <tab.Icon size={15} />, label: tab.label }))}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* STUDENTS — master list ↔ drill-in swap slides like a native stack */}
       {activeTab === "students" && (
@@ -621,9 +607,7 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
                   <span className="font-semibold text-sm text-on-surface">סעיף {q.label} <span className="text-on-surface-variant text-xs">(רמה {q.difficulty})</span></span>
                   <span className="num font-extrabold text-lg" style={{ color: qColor }}>{q.successRate !== null ? `${q.successRate}%` : "—"}</span>
                 </div>
-                <div className="w-full rounded-full h-1.5 mb-3 overflow-hidden bg-surface-container-high">
-                  <div className="h-full rounded-full" style={{ width: `${q.successRate ?? 0}%`, background: qColor }} />
-                </div>
+                <ProgressBar value={q.successRate ?? 0} color={qColor} className="h-1.5 mb-3" label={`סעיף ${q.label}`} />
                 <div className="flex items-center gap-4 text-xs text-on-surface-variant">
                   <span>{q.correct}/{q.total} ענו נכון</span>
                   {q.avgHints > 0 && <span className="flex items-center gap-1"><Zap size={10} className="text-tertiary" />{q.avgHints} רמזים</span>}

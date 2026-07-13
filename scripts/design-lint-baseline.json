@@ -10,7 +10,7 @@
     "src/pages/ExamMode.tsx": 17,
     "src/pages/HeatmapView.tsx": 3,
     "src/pages/HomeworkCreateWizard.tsx": 11,
-    "src/pages/HomeworkManagementView.tsx": 35,
+    "src/pages/HomeworkManagementView.tsx": 26,
     "src/pages/Leaderboard.tsx": 16,
     "src/pages/LearningProgress.tsx": 23,
     "src/pages/MobileBridgeUpload.tsx": 2,
