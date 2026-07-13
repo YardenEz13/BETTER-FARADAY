@@ -114,7 +114,7 @@ describe("CompoundQuestionRenderer Component", () => {
     );
 
     // Click hint button
-    const hintButton = screen.getByRole("button", { name: /REQUEST_HINT/ });
+    const hintButton = screen.getByRole("button", { name: /רמז/ });
     fireEvent.click(hintButton);
 
     // First hint should be revealed
@@ -132,7 +132,7 @@ describe("CompoundQuestionRenderer Component", () => {
     );
 
     const textarea = screen.getByPlaceholderText("כתוב את הפתרון כאן…");
-    const submitBtn = screen.getByRole("button", { name: /SUBMIT/ });
+    const submitBtn = screen.getByRole("button", { name: /בדוק תשובה/ });
 
     // Type and submit answer
     fireEvent.change(textarea, { target: { value: "(1,0) וגם (3,0)" } });

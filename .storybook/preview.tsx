@@ -5,7 +5,6 @@ import type { Preview, Decorator } from '@storybook/react-vite';
 // production: CSS variables (--color-primary / --color-inverse-primary "spark"),
 // the clay/glass surfaces, fonts, and the RTL-aware base.
 import '../src/index.css';
-import '../src/stitch-theme.css';
 
 /** Mirrors the app's ThemeContext: data-theme on <html> + <body>, dir=rtl. */
 const withAppTheme: Decorator = (Story, context) => {

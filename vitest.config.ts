@@ -13,9 +13,15 @@ export default defineConfig({
     projects: [{
       extends: true,
       test: {
+        name: 'unit',
         environment: 'happy-dom',
         globals: true,
         setupFiles: ['./vitest.setup.ts'],
+        // Modules read VITE_CONVEX_URL at import time (localAI.gemini.ts), which
+        // runs before any vi.stubEnv in a test file — inject it here instead.
+        env: {
+          VITE_CONVEX_URL: 'https://test.convex.cloud'
+        },
         alias: {
           '@': path.resolve(__dirname, './src')
         }

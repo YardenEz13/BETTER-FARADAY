@@ -54,6 +54,7 @@ vi.mock("../services/localAI", () => ({
   onDebugUpdate: vi.fn().mockReturnValue(() => {}),
   analyzeConversation: vi.fn().mockResolvedValue({}),
   generateCompositeBrief: vi.fn().mockResolvedValue({}),
+  setActiveStudentId: vi.fn(),
 }));
 
 // Mock chat storage to prevent actual IndexedDB access in UI test
