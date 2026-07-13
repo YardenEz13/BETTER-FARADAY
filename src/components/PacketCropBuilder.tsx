@@ -271,7 +271,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b-2 border-[var(--border-subtle)] bg-[var(--color-surface)]">
+        <div className="flex items-center justify-between px-5 py-3 border-b-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)]">
           <div className="font-extrabold flex items-center gap-2">
             <Scissors size={18} className="text-[var(--color-primary)]" />
             ייבוא חוברת בחיתוך ידני
@@ -303,7 +303,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                     : `עכשיו סמן את התשובה לשאלה ${pairs.length + 1} (בדפי הפתרונות) — או דלג`}
                 </div>
 
-                <div className="flex-1 overflow-auto rounded-xl border-2 border-[var(--border-subtle)] bg-white relative">
+                <div className="flex-1 overflow-auto rounded-xl border-2 border-[var(--color-outline-variant)] bg-white relative">
                   <div
                     className="relative inline-block touch-none select-none cursor-crosshair"
                     onPointerDown={onPointerDown}
@@ -329,29 +329,29 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 <div className="flex items-center gap-2 mt-3">
                   <button type="button" aria-label="עמוד קודם" disabled={pageNum <= 1}
                     onClick={() => setPageNum((n) => Math.max(1, n - 1))}
-                    className="p-2 rounded-lg border-2 border-[var(--border-subtle)] disabled:opacity-40">
+                    className="p-2 rounded-lg border-2 border-[var(--color-outline-variant)] disabled:opacity-40">
                     <ChevronRight size={16} />
                   </button>
                   <span className="text-sm font-bold">{pageNum} / {pageCount}</span>
                   <button type="button" aria-label="עמוד הבא" disabled={pageNum >= pageCount}
                     onClick={() => setPageNum((n) => Math.min(pageCount, n + 1))}
-                    className="p-2 rounded-lg border-2 border-[var(--border-subtle)] disabled:opacity-40">
+                    className="p-2 rounded-lg border-2 border-[var(--color-outline-variant)] disabled:opacity-40">
                     <ChevronLeft size={16} />
                   </button>
                   <div className="flex-1" />
                   {stage === "question" ? (
                     <button type="button" onClick={takeQuestionCrop} disabled={!sel}
-                      className="btn btn-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
+                      className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
                       <Scissors size={14} /> גזור שאלה
                     </button>
                   ) : (
                     <>
                       <button type="button" onClick={skipAnswer}
-                        className="px-4 py-2 rounded-lg border-2 border-[var(--border-subtle)] font-bold text-sm">
+                        className="px-4 py-2 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm">
                         דלג (בלי תשובה)
                       </button>
                       <button type="button" onClick={takeAnswerCrop} disabled={!sel}
-                        className="btn btn-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
+                        className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
                         <Scissors size={14} /> גזור תשובה
                       </button>
                     </>
@@ -364,8 +364,8 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
           </div>
 
           {/* Pairs list */}
-          <div className="w-72 border-s-2 border-[var(--border-subtle)] bg-[var(--color-surface)] flex flex-col min-h-0">
-            <div className="px-4 py-3 font-bold text-sm border-b-2 border-[var(--border-subtle)]">
+          <div className="w-72 border-s-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] flex flex-col min-h-0">
+            <div className="px-4 py-3 font-bold text-sm border-b-2 border-[var(--color-outline-variant)]">
               שאלות שנחתכו ({pairs.length})
             </div>
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
@@ -376,15 +376,15 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 </div>
               )}
               {pairs.map((p, i) => (
-                <div key={i} className="rounded-xl border-2 border-[var(--border-subtle)] p-2">
+                <div key={i} className="rounded-xl border-2 border-[var(--color-outline-variant)] p-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold">שאלה {i + 1}</span>
                     <span className="flex items-center gap-1.5">
                       {p.answerDataUrl
                         ? <span className="text-[10px] text-[var(--color-primary)] font-bold flex items-center gap-0.5"><Check size={11} /> תשובה</span>
-                        : <span className="text-[10px] text-[var(--text-muted)]">בלי תשובה</span>}
+                        : <span className="text-[10px] text-[var(--color-on-surface-variant)]">בלי תשובה</span>}
                       <button type="button" aria-label="מחק" onClick={() => removePair(i)}>
-                        <Trash2 size={13} className="text-[var(--danger)]" />
+                        <Trash2 size={13} className="text-[var(--color-error)]" />
                       </button>
                     </span>
                   </div>
@@ -392,19 +392,19 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 </div>
               ))}
               {pairs.length === 0 && !pendingQuestion && (
-                <div className="text-xs text-[var(--text-muted)] text-center py-6">
+                <div className="text-xs text-[var(--color-on-surface-variant)] text-center py-6">
                   גזור שאלה ואז את התשובה שלה — הזוגות יופיעו כאן.
                 </div>
               )}
             </div>
-            <div className="p-3 border-t-2 border-[var(--border-subtle)]">
-              {error && <p className="text-xs text-[var(--danger)] font-bold mb-2">{error}</p>}
+            <div className="p-3 border-t-2 border-[var(--color-outline-variant)]">
+              {error && <p className="text-xs text-[var(--color-error)] font-bold mb-2">{error}</p>}
               {progress && <p className="text-xs text-[var(--color-primary)] font-bold mb-2">{progress}</p>}
               <button
                 type="button"
                 disabled={pairs.length === 0 || submitting}
                 onClick={handleSubmit}
-                className="btn btn-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold disabled:opacity-50"
+                className="btn-clay-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold disabled:opacity-50"
               >
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {submitting ? "שולח…" : <>שלח הכל ל-AI <Send size={14} /></>}

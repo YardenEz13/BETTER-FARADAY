@@ -89,7 +89,7 @@ export default function PacketReviewPage() {
   }
   if (packet === null) {
     return (
-      <div className="min-h-screen grid place-items-center text-[var(--text-muted)]" dir="rtl">
+      <div className="min-h-screen grid place-items-center text-[var(--color-on-surface-variant)]" dir="rtl">
         החבילה לא נמצאה.
       </div>
     );
@@ -148,7 +148,7 @@ export default function PacketReviewPage() {
   const filters = ["all", "review", "flagged", "proof_unverified", "approved", "failed"];
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-accent)]" dir="rtl">
+    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-secondary)]" dir="rtl">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-4">
@@ -159,14 +159,14 @@ export default function PacketReviewPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="px-3 py-2 rounded-lg border-2 border-[var(--border-subtle)] text-sm font-bold hover:bg-[var(--bg-elevated)]"
+            className="px-3 py-2 rounded-lg border-2 border-[var(--color-outline-variant)] text-sm font-bold hover:bg-[var(--color-surface-container-high)]"
           >
             חזרה
           </button>
         </div>
 
         {/* Progress */}
-        <div className="rounded-2xl border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] p-4 mb-5">
+        <div className="rounded-2xl border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] p-4 mb-5">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 font-bold text-sm">
               {running && <Loader2 size={16} className={`${spin} text-[var(--color-primary)]`} />}
@@ -176,20 +176,20 @@ export default function PacketReviewPage() {
               <button
                 type="button"
                 onClick={() => cancel({ packetId: id })}
-                className="text-xs px-3 py-1.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-danger)_50%,transparent)] text-[var(--danger)] font-bold hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]"
+                className="text-xs px-3 py-1.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-error)_50%,transparent)] text-[var(--color-error)] font-bold hover:bg-[color-mix(in_srgb,var(--color-error)_10%,transparent)]"
               >
                 בטל
               </button>
             )}
           </div>
-          <div className="h-3 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+          <div className="h-3 rounded-full bg-[var(--color-surface-container-high)] overflow-hidden">
             <div
               className={`h-full bg-[var(--color-primary)] ${reduce ? "" : "transition-all duration-500"}`}
               style={{ width: `${pct}%` }}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
-            <div className="text-xs text-[var(--text-muted)]">
+            <div className="text-xs text-[var(--color-on-surface-variant)]">
               חולצו {resolved} מתוך {total} שאלות
               {packet.status === "failed" && packet.error ? ` — ${packet.error}` : ""}
             </div>
@@ -225,7 +225,7 @@ export default function PacketReviewPage() {
               className={`text-xs px-3 py-1.5 rounded-full border-2 font-bold transition-all ${
                 filter === f
                   ? "border-[var(--color-primary)] bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)] text-[var(--color-primary)]"
-                  : "border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--color-primary)]"
+                  : "border-[var(--color-outline-variant)] text-[var(--color-on-surface-variant)] hover:border-[var(--color-primary)]"
               }`}
             >
               {f === "all" ? "הכל" : Q_STATUS_HE[f]}
@@ -238,13 +238,13 @@ export default function PacketReviewPage() {
         {selected.size > 0 && (
           <div className="sticky top-2 z-10 flex items-center gap-2 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] px-4 py-2.5 mb-4 shadow-lg">
             <span className="text-sm font-bold flex-1">נבחרו {selected.size}</span>
-            <button type="button" onClick={runBulkApprove} className="btn btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
+            <button type="button" onClick={runBulkApprove} className="btn-clay-primary text-xs px-4 py-2 flex items-center gap-1.5">
               <Check size={14} /> אשר ופרסם
             </button>
             <button
               type="button"
               onClick={runBulkDiscard}
-              className="text-xs px-4 py-2 rounded-lg border-2 border-[var(--border-subtle)] font-bold hover:bg-[var(--bg-elevated)]"
+              className="text-xs px-4 py-2 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold hover:bg-[var(--color-surface-container-high)]"
             >
               מחק
             </button>
@@ -255,7 +255,7 @@ export default function PacketReviewPage() {
         <div className="flex flex-col gap-2">
           {questions === undefined && <Loader2 size={20} className={`${spin} text-[var(--color-primary)] mx-auto`} />}
           {questions && sorted.length === 0 && (
-            <div className="text-center text-sm text-[var(--text-muted)] py-8">אין שאלות בסינון זה.</div>
+            <div className="text-center text-sm text-[var(--color-on-surface-variant)] py-8">אין שאלות בסינון זה.</div>
           )}
           {sorted.map((q) => (
             <QuestionRow
@@ -272,14 +272,14 @@ export default function PacketReviewPage() {
         {packet.status === "review" && (
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
             {missingTopic > 0 && (
-              <span className="text-xs text-[var(--danger)] font-bold">{missingTopic} שאלות ללא נושא</span>
+              <span className="text-xs text-[var(--color-error)] font-bold">{missingTopic} שאלות ללא נושא</span>
             )}
             <button
               type="button"
               onClick={makeHomework}
               disabled={publishable === 0}
               title={publishable === 0 ? "אין שאלות לפרסום" : undefined}
-              className="btn btn-primary flex items-center gap-2 px-6 py-3 font-bold disabled:opacity-50"
+              className="btn-clay-primary flex items-center gap-2 px-6 py-3 font-bold disabled:opacity-50"
             >
               <Sparkles size={16} /> צור שיעורי בית מהחוברת
             </button>
@@ -319,29 +319,29 @@ function QuestionRow({
     <div
       className={`flex items-center gap-3 rounded-xl border-2 bg-[var(--color-surface)] px-3 py-2.5 ${
         flagged
-          ? "border-[color-mix(in_srgb,var(--color-danger)_45%,transparent)]"
+          ? "border-[color-mix(in_srgb,var(--color-error)_45%,transparent)]"
           : proof
             ? "border-[color-mix(in_srgb,var(--color-tertiary)_55%,transparent)]"
-            : "border-[var(--border-subtle)]"
+            : "border-[var(--color-outline-variant)]"
       }`}
     >
       <input type="checkbox" checked={selected} onChange={onToggle} className="w-4 h-4 accent-[var(--color-primary)]" />
       <button type="button" onClick={onOpen} className="flex-1 flex items-center gap-3 min-w-0 text-right">
         <span className="font-bold text-sm whitespace-nowrap">{q.sourceLabelRaw}</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)] whitespace-nowrap">
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] whitespace-nowrap">
           {KIND_HE[q.kind] ?? q.kind}
         </span>
-        <span className="flex-1 text-xs text-[var(--text-muted)] truncate min-w-0">
+        <span className="flex-1 text-xs text-[var(--color-on-surface-variant)] truncate min-w-0">
           {q.draft?.kind === "simple" ? q.draft.stem : q.draft?.kind === "compound" ? q.draft.preamble : q.topicHe}
         </span>
       </button>
       {q.topicId ? null : (
-        <span className="text-[10px] text-[var(--danger)] font-bold whitespace-nowrap">ללא נושא</span>
+        <span className="text-[10px] text-[var(--color-error)] font-bold whitespace-nowrap">ללא נושא</span>
       )}
       {(flagged || proof) && (
-        <AlertTriangle size={15} className={flagged ? "text-[var(--danger)]" : "text-[var(--color-tertiary)]"} />
+        <AlertTriangle size={15} className={flagged ? "text-[var(--color-error)]" : "text-[var(--color-tertiary)]"} />
       )}
-      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] whitespace-nowrap">
+      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] whitespace-nowrap">
         {Q_STATUS_HE[q.status] ?? q.status}
       </span>
     </div>
@@ -429,7 +429,7 @@ function QuestionEditor({
         className="ms-auto h-full w-full max-w-3xl bg-[var(--color-background)] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-[var(--color-surface)] border-b-2 border-[var(--border-subtle)] px-5 py-3 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-[var(--color-surface)] border-b-2 border-[var(--color-outline-variant)] px-5 py-3 flex items-center justify-between z-10">
           <div className="font-extrabold">{question.sourceLabelRaw} · {KIND_HE[question.kind]}</div>
           <button type="button" aria-label="סגור" onClick={onClose}><X size={20} /></button>
         </div>
@@ -443,7 +443,7 @@ function QuestionEditor({
               <select
                 value={topicId ?? ""}
                 onChange={(e) => setTopicId(e.target.value ? (e.target.value as Id<"topics">) : undefined)}
-                className="w-full rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                className="w-full rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               >
                 <option value="">— בחר נושא —</option>
                 {topics.map((t) => (
@@ -473,25 +473,25 @@ function QuestionEditor({
             )}
 
             {question.verification?.detail && (
-              <div className="text-xs rounded-lg border-2 border-[color-mix(in_srgb,var(--color-danger)_40%,transparent)] px-3 py-2 text-[var(--danger)]">
+              <div className="text-xs rounded-lg border-2 border-[color-mix(in_srgb,var(--color-error)_40%,transparent)] px-3 py-2 text-[var(--color-error)]">
                 בדיקה: {question.verification.detail}
               </div>
             )}
-            {error && <div className="text-sm text-[var(--danger)] font-bold">{error}</div>}
+            {error && <div className="text-sm text-[var(--color-error)] font-bold">{error}</div>}
 
             <div className="flex flex-wrap gap-2 pt-2">
-              <button type="button" disabled={busy} onClick={onApprove} className="btn btn-primary flex items-center gap-1.5 px-5 py-2.5 text-sm">
+              <button type="button" disabled={busy} onClick={onApprove} className="btn-clay-primary flex items-center gap-1.5 px-5 py-2.5 text-sm">
                 <Check size={15} /> אשר ופרסם
               </button>
-              <button type="button" disabled={busy} onClick={onSave} className="px-5 py-2.5 rounded-lg border-2 border-[var(--border-subtle)] font-bold text-sm hover:bg-[var(--bg-elevated)]">
+              <button type="button" disabled={busy} onClick={onSave} className="px-5 py-2.5 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm hover:bg-[var(--color-surface-container-high)]">
                 שמור
               </button>
               {question.status === "failed" && (
-                <button type="button" onClick={() => { retry({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[var(--border-subtle)] font-bold text-sm flex items-center gap-1.5">
+                <button type="button" onClick={() => { retry({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm flex items-center gap-1.5">
                   <RefreshCw size={14} /> נסה שוב
                 </button>
               )}
-              <button type="button" onClick={() => { discard({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-danger)_45%,transparent)] text-[var(--danger)] font-bold text-sm ms-auto">
+              <button type="button" onClick={() => { discard({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-error)_45%,transparent)] text-[var(--color-error)] font-bold text-sm ms-auto">
                 מחק
               </button>
             </div>
@@ -499,7 +499,7 @@ function QuestionEditor({
 
           {/* Preview / source column */}
           <div className="flex flex-col gap-3">
-            <div className="rounded-xl border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] p-3">
+            <div className="rounded-xl border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] p-3">
               <div className="label-mono text-xs text-[var(--color-primary)] mb-1">תצוגה מקדימה</div>
               <div className="text-sm leading-relaxed">
                 <MathText>
@@ -509,12 +509,12 @@ function QuestionEditor({
             </div>
             {images?.questionImageBase64 ? (
               <>
-                <div className="rounded-xl border-2 border-[var(--border-subtle)] bg-white p-2">
+                <div className="rounded-xl border-2 border-[var(--color-outline-variant)] bg-white p-2">
                   <div className="label-mono text-xs text-[var(--color-primary)] mb-1">השאלה המקורית</div>
                   <img src={`data:image/jpeg;base64,${images.questionImageBase64}`} alt="השאלה המקורית" className="w-full rounded" />
                 </div>
                 {images.answerImageBase64 && (
-                  <div className="rounded-xl border-2 border-[var(--border-subtle)] bg-white p-2">
+                  <div className="rounded-xl border-2 border-[var(--color-outline-variant)] bg-white p-2">
                     <div className="label-mono text-xs text-[var(--color-primary)] mb-1">התשובה מהמחוון</div>
                     <img src={`data:image/jpeg;base64,${images.answerImageBase64}`} alt="התשובה מהמחוון" className="w-full rounded" />
                   </div>
@@ -524,7 +524,7 @@ function QuestionEditor({
               <embed
                 src={`${pdfUrl}#page=${question.pageStart}`}
                 type="application/pdf"
-                className="w-full rounded-xl border-2 border-[var(--border-subtle)]"
+                className="w-full rounded-xl border-2 border-[var(--color-outline-variant)]"
                 style={{ height: 460 }}
               />
             ) : null}
@@ -553,7 +553,7 @@ function SimpleFields({ draft, onChange }: { draft: Extract<PacketDraft, { kind:
               <input
                 value={c}
                 onChange={(e) => onChange({ ...draft, choices: draft.choices.map((x, idx) => (idx === i ? e.target.value : x)) })}
-                className="flex-1 rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+                className="flex-1 rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
               />
             </div>
           ))}
@@ -569,11 +569,11 @@ function SimpleFields({ draft, onChange }: { draft: Extract<PacketDraft, { kind:
 function SectionEditor({ section, onChange }: { section: Section; onChange: (patch: Partial<Section>) => void }) {
   const isProof = section.answerType === "proof";
   return (
-    <div className="rounded-xl border-2 border-[var(--border-subtle)] p-3 flex flex-col gap-2">
+    <div className="rounded-xl border-2 border-[var(--color-outline-variant)] p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <span className="font-extrabold text-sm">סעיף {section.label}</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-muted)]">{section.answerType}</span>
-        <span className="text-[10px] text-[var(--text-muted)] ms-auto">{section.points} נק'</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)]">{section.answerType}</span>
+        <span className="text-[10px] text-[var(--color-on-surface-variant)] ms-auto">{section.points} נק'</span>
       </div>
       <Field label="שאלה" value={section.prompt} onChange={(v) => onChange({ prompt: v })} textarea />
       {isProof ? (
@@ -587,13 +587,13 @@ function SectionEditor({ section, onChange }: { section: Section; onChange: (pat
                 value={st.expectedClaim}
                 placeholder="טענה"
                 onChange={(e) => onChange({ proofSteps: (section.proofSteps ?? []).map((x, idx) => (idx === i ? { ...x, expectedClaim: e.target.value } : x)) })}
-                className="rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+                className="rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
               />
               <input
                 value={st.expectedReason}
                 placeholder="נימוק"
                 onChange={(e) => onChange({ proofSteps: (section.proofSteps ?? []).map((x, idx) => (idx === i ? { ...x, expectedReason: e.target.value } : x)) })}
-                className="rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
+                className="rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-2 py-1.5 text-sm"
               />
             </div>
           ))}
@@ -631,13 +631,13 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm resize-y"
+          className="w-full rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-3 py-2 text-sm resize-y"
         />
       ) : (
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border-2 border-[var(--border-subtle)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+          className="w-full rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-3 py-2 text-sm"
         />
       )}
     </div>

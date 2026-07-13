@@ -19,7 +19,7 @@ import { ThemeToggle } from "../components/ThemeContext";
 const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
-import { SkeletonCard } from "../components/SkeletonCard";
+import { Skeleton, SkeletonCard } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
 
@@ -158,13 +158,12 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
 
   return (
     <div
-      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md"
-      style={{ background: "color-mix(in srgb, var(--color-surface) 85%, transparent)", boxShadow: "var(--shadow-clay)" }}
+      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md bg-surface/85 shadow-(--shadow-clay)"
     >
       <div className="flex items-center gap-4">
         {/* Ring */}
         <div className="relative w-[72px] h-[72px] flex-shrink-0">
-          <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: "rotate(-90deg)" }}>
+          <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
             <circle cx="36" cy="36" r={R} fill="none" stroke="var(--color-outline)" strokeWidth="8" />
             <circle
               cx="36" cy="36" r={R} fill="none"
@@ -179,8 +178,8 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
               <Check size={22} strokeWidth={3} className="text-primary" />
             ) : (
               <>
-                <span className="num font-extrabold text-[16px] leading-none text-primary">{answered}</span>
-                <span className="num text-[10px] text-on-surface-variant leading-none mt-0.5">/{goal}</span>
+                <span className="num font-extrabold text-body-lg leading-none text-primary">{answered}</span>
+                <span className="num text-label-sm font-normal text-on-surface-variant leading-none mt-0.5">/{goal}</span>
               </>
             )}
           </div>
@@ -194,7 +193,7 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <Target size={15} className="text-primary flex-shrink-0" />
-            <h4 className="font-bold text-[15px] text-on-surface truncate" style={{ fontFamily: "'Assistant', sans-serif" }}>יעד יומי</h4>
+            <h4 className="font-bold text-[15px] text-on-surface truncate">יעד יומי</h4>
             <button
               onClick={() => setEditOpen(true)}
               className="ms-auto w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
@@ -218,8 +217,7 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-            style={{ background: "color-mix(in srgb, var(--color-scrim, #000) 45%, transparent)" }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/45"
             onClick={() => setEditOpen(false)}
           >
             <motion.div
@@ -228,14 +226,13 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
               exit={{ scale: 0.9, y: 12, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 24 }}
               dir="rtl"
-              className="w-full max-w-[22rem] rounded-[24px] p-6 border-2 border-outline bg-surface"
-              style={{ boxShadow: "var(--shadow-clay)" }}
+              className="w-full max-w-[22rem] rounded-[24px] p-6 border-2 border-outline bg-surface shadow-(--shadow-clay)"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <Target size={18} className="text-primary" />
-                  <h3 className="font-bold text-lg text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>בחירת יעד יומי</h3>
+                  <h3 className="font-bold text-lg text-on-surface">בחירת יעד יומי</h3>
                 </div>
                 <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer" aria-label="סגור">
                   <X size={16} />
@@ -252,10 +249,9 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
                       onClick={() => handlePick(g)}
                       className={`py-3.5 rounded-2xl border-2 font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-60 ${
                         active
-                          ? "bg-primary border-primary-dark text-on-primary"
-                          : "bg-surface border-outline text-on-surface hover:border-primary hover:text-primary"
+                          ? "bg-primary border-primary-dark text-on-primary shadow-(--shadow-clay-primary)"
+                          : "bg-surface border-outline text-on-surface hover:border-primary hover:text-primary shadow-(--shadow-clay)"
                       }`}
-                      style={{ boxShadow: active ? "var(--shadow-clay-primary)" : "var(--shadow-clay)" }}
                     >
                       <span className="num text-lg">{g}</span>
                     </button>
@@ -283,12 +279,11 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
 
   return (
     <div
-      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md"
-      style={{ background: "color-mix(in srgb, var(--color-surface) 85%, transparent)", boxShadow: "var(--shadow-clay)" }}
+      className="rounded-[22px] p-5 border-2 border-outline backdrop-blur-md bg-surface/85 shadow-(--shadow-clay)"
     >
       <div className="flex items-center gap-4 mb-4">
         <div className="relative w-[60px] h-[60px] flex-shrink-0">
-          <svg width="60" height="60" viewBox="0 0 60 60" style={{ transform: "rotate(-90deg)" }}>
+          <svg width="60" height="60" viewBox="0 0 60 60" className="-rotate-90">
             <circle cx="30" cy="30" r={R} fill="none" stroke="var(--color-outline)" strokeWidth="7" />
             <circle
               cx="30" cy="30" r={R} fill="none" stroke="var(--color-primary)" strokeWidth="7" strokeLinecap="round"
@@ -300,7 +295,7 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
           </div>
         </div>
         <div className="flex-1">
-          <h4 className="font-bold text-[15px] text-on-surface mb-0.5" style={{ fontFamily: "'Assistant', sans-serif" }}>עקביות שבועית</h4>
+          <h4 className="font-bold text-[15px] text-on-surface mb-0.5">עקביות שבועית</h4>
           <p className="font-medium text-xs text-on-surface-variant leading-snug">
             {activeThisWeek >= 7
               ? "שבוע מושלם — כל הכבוד! ✨"
@@ -339,7 +334,7 @@ function StudentHomeSkeleton() {
     <div dir="rtl" className="relative min-h-screen bg-background overflow-x-hidden">
       <div className="page-shell pt-[140px] md:pt-[100px] pb-24 flex flex-col xl:flex-row gap-8">
         <section className="flex-1 flex flex-col items-center">
-          <div className="shimmer w-full max-w-4xl rounded-3xl mb-10" style={{ height: 96 }} />
+          <Skeleton className="w-full max-w-4xl mb-10" height={96} rounded={24} />
           <div className="flex flex-col gap-12 py-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -347,8 +342,8 @@ function StudentHomeSkeleton() {
                 className="flex flex-col items-center gap-2.5"
                 style={{ transform: `translateX(${i % 2 === 0 ? -48 : 48}px)` }}
               >
-                <div className="shimmer rounded-full" style={{ width: 64, height: 64 }} />
-                <div className="shimmer rounded-xl" style={{ width: 96, height: 18 }} />
+                <Skeleton width={64} height={64} rounded="full" />
+                <Skeleton width={96} height={18} rounded={12} />
               </div>
             ))}
           </div>
@@ -379,8 +374,7 @@ function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; ico
         <span
           key={b._id}
           title={b.name}
-          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-tertiary/12 border-2 border-tertiary/30"
-          style={{ boxShadow: "var(--shadow-clay)" }}
+          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)"
         >
           {badgeIcon(b.icon)}
         </span>
@@ -516,8 +510,7 @@ export default function StudentHome() {
         ref={setHeaderEl}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2"
-        style={{ boxShadow: 'var(--shadow-clay)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2 bg-surface/88 shadow-(--shadow-clay)"
       >
         {/* Left: back + student info */}
         <div className="flex items-center gap-3">
@@ -531,8 +524,7 @@ export default function StudentHome() {
 
           {/* Avatar + name — opens theme picker */}
           <button
-            className="flex items-center gap-2.5 bg-surface-container px-3 py-1.5 rounded-full border-2 border-outline hover:border-primary/50 transition-all active:scale-95 cursor-pointer"
-            style={{ boxShadow: 'var(--shadow-clay)' }}
+            className="flex items-center gap-2.5 bg-surface-container px-3 py-1.5 rounded-full border-2 border-outline hover:border-primary/50 transition-all active:scale-95 cursor-pointer shadow-(--shadow-clay)"
             onClick={() => setThemePickerOpen(true)}
           >
             <div className="relative">
@@ -574,23 +566,21 @@ export default function StudentHome() {
         {/* Right: actions */}
         <div className="flex items-center gap-2">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
-          <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30" style={{ boxShadow: 'var(--shadow-clay)' }}>
+          <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
             <Flame className="text-tertiary" size={14} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
           <NotificationCenter studentId={studentId!} />
           <ThemeToggle />
           <button
-            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer"
-            style={{ boxShadow: 'var(--shadow-clay)' }}
+            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer shadow-(--shadow-clay)"
             onClick={() => navigate(`/student/${studentId}/homework`)}
           >
             <BookOpen size={15} className="text-primary" />
             <span>שיעורי בית</span>
           </button>
           <button
-            className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
-            style={{ boxShadow: 'var(--shadow-clay-primary)' }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-(--shadow-clay-primary)"
             onClick={() => setChatOpen(true)}
           >
             <Bot size={16} />
@@ -612,8 +602,7 @@ export default function StudentHome() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-tertiary/40 bg-tertiary/12 px-5 py-3.5 flex items-center gap-3"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-tertiary/40 bg-tertiary/12 px-5 py-3.5 flex items-center gap-3 shadow-(--shadow-clay)"
               role="alert"
             >
               <Flame className="text-tertiary flex-shrink-0" size={22} />
@@ -634,8 +623,7 @@ export default function StudentHome() {
           <div className="w-full max-w-4xl mb-4 flex flex-wrap gap-3">
             <button
               onClick={() => navigate(`/student/${studentId}/shop`)}
-              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-primary hover:text-primary transition-all font-semibold text-sm cursor-pointer shadow-(--shadow-clay)"
             >
               <ElectricBolt tone="spark" size={17} glow={0.5} animated={false} />
               <span>החנות</span>
@@ -644,8 +632,7 @@ export default function StudentHome() {
             {reviewCount > 0 && (
               <button
                 onClick={() => navigate(`/student/${studentId}/review`)}
-                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer"
-                style={{ boxShadow: 'var(--shadow-clay)' }}
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-secondary/10 border-2 border-secondary/30 hover:border-secondary text-secondary transition-all font-semibold text-sm cursor-pointer shadow-(--shadow-clay)"
               >
                 <RotateCcw size={16} />
                 <span>חזרה על טעויות</span>
@@ -655,8 +642,7 @@ export default function StudentHome() {
             {leaderboardEnabled && (
               <button
                 onClick={() => navigate(`/student/${studentId}/leaderboard`)}
-                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-tertiary/12 border-2 border-tertiary/30 hover:border-tertiary text-tertiary transition-all font-semibold text-sm cursor-pointer"
-                style={{ boxShadow: 'var(--shadow-clay)' }}
+                className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-tertiary/12 border-2 border-tertiary/30 hover:border-tertiary text-tertiary transition-all font-semibold text-sm cursor-pointer shadow-(--shadow-clay)"
               >
                 <Trophy size={16} />
                 <span>ליגת השבוע</span>
@@ -667,8 +653,7 @@ export default function StudentHome() {
             )}
             <button
               onClick={() => navigate(`/student/${studentId}/exam`)}
-              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-secondary hover:text-secondary transition-all font-semibold text-sm cursor-pointer"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-full bg-surface border-2 border-outline hover:border-secondary hover:text-secondary transition-all font-semibold text-sm cursor-pointer shadow-(--shadow-clay)"
             >
               <FileText size={16} />
               <span>מצב מתכונת 📝</span>
@@ -676,19 +661,17 @@ export default function StudentHome() {
           </div>
 
           {/* Section header — circuit-field hero band */}
-          <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline backdrop-blur-md"
-            style={{ background: 'color-mix(in srgb, var(--color-surface) 82%, transparent)', boxShadow: 'var(--shadow-clay)' }}>
+          <div className="relative w-full max-w-4xl mb-8 rounded-3xl overflow-hidden border-2 border-outline backdrop-blur-md bg-surface/82 shadow-(--shadow-clay)">
             <div className="relative z-10 flex items-center justify-between px-6 py-6">
               <div>
-                <h1 className="font-bold text-2xl text-on-surface mb-1" style={{ fontFamily: "'Assistant', sans-serif" }}>
+                <h1 className="font-bold text-2xl text-on-surface mb-1">
                   מפת הלמידה שלי
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm translate-y-2">
                   יחידה {completedTopics + 1} מתוך {topics.length} · כל שאלה מקרבת אותך ליעד
                 </p>
               </div>
-              <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm"
-                style={{ boxShadow: 'var(--shadow-clay)' }}>
+              <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm shadow-(--shadow-clay)">
                 <Flame className="text-tertiary" size={18} />
                 <span className="text-on-surface font-bold">{student.streak} ימים רצוף</span>
               </div>
@@ -714,8 +697,7 @@ export default function StudentHome() {
                         : isActive
                           ? "border-primary bg-surface"
                           : "border-outline bg-surface"
-                      }`}
-                    style={{ boxShadow: isCompleted || isActive ? 'var(--shadow-clay-primary)' : 'var(--shadow-clay)' }}
+                      } ${isCompleted || isActive ? "shadow-(--shadow-clay-primary)" : "shadow-(--shadow-clay)"}`}
                   >
                     {/* Icon bubble */}
                     <div className={`w-14 h-14 flex-shrink-0 rounded-2xl flex items-center justify-center border-2
@@ -837,10 +819,9 @@ export default function StudentHome() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="rounded-3xl p-6 border-2 border-outline backdrop-blur-md"
-              style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)', boxShadow: 'var(--shadow-clay)' }}
+              className="rounded-3xl p-6 border-2 border-outline backdrop-blur-md bg-surface/85 shadow-(--shadow-clay)"
             >
-              <h3 className="font-bold text-on-surface mb-5" style={{ fontFamily: "'Assistant', sans-serif" }}>סקירת התקדמות</h3>
+              <h3 className="font-bold text-on-surface mb-5">סקירת התקדמות</h3>
               <div className="space-y-4">
                 {/* Completed topics */}
                 <div>
@@ -900,8 +881,7 @@ export default function StudentHome() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => setThemePickerOpen(true)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 bg-primary/10 border-2 border-primary/30 rounded-2xl hover:bg-primary/15 transition-all text-right cursor-pointer"
-                style={{ boxShadow: '0 3px 0 0 rgba(23,201,100,0.2)' }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 bg-primary/10 border-2 border-primary/30 rounded-2xl hover:bg-primary/15 transition-all text-right cursor-pointer shadow-[0_3px_0_0_color-mix(in_srgb,var(--color-primary)_20%,transparent)]"
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 border-2 border-primary/30">
                   <Palette size={18} className="text-primary" />
@@ -918,23 +898,20 @@ export default function StudentHome() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-2xl p-5 border-2 border-outline backdrop-blur-md"
-              style={{ background: 'color-mix(in srgb, var(--color-surface) 85%, transparent)', boxShadow: 'var(--shadow-clay)' }}
+              className="rounded-2xl p-5 border-2 border-outline backdrop-blur-md bg-surface/85 shadow-(--shadow-clay)"
             >
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex-shrink-0 flex items-center justify-center"
-                  style={{ boxShadow: 'var(--shadow-clay-primary)' }}>
+                <div className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex-shrink-0 flex items-center justify-center shadow-(--shadow-clay-primary)">
                   <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface mb-1.5 text-sm" style={{ fontFamily: "'Assistant', sans-serif" }}>מייקל פאראדיי</h4>
+                  <h4 className="font-bold text-on-surface mb-1.5 text-sm">מייקל פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
                     אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
                     בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
                   </p>
                   <button
-                    className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer"
-                    style={{ boxShadow: 'var(--shadow-clay-primary)' }}
+                    className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer shadow-(--shadow-clay-primary)"
                     onClick={() => setChatOpen(true)}
                   >
                     <MessageSquare size={15} />
@@ -945,8 +922,7 @@ export default function StudentHome() {
             </motion.div>
 
             {/* Mobile stats row */}
-            <div className="flex md:hidden items-center justify-around bg-surface rounded-2xl p-4 border-2 border-outline gap-4"
-              style={{ boxShadow: 'var(--shadow-clay)' }}>
+            <div className="flex md:hidden items-center justify-around bg-surface rounded-2xl p-4 border-2 border-outline gap-4 shadow-(--shadow-clay)">
               <div className="flex items-center gap-2">
                 <ElectricBolt tone="spark" size={20} glow={0.55} animated={false} />
                 <span className="font-bold text-on-surface text-sm">{totalXP.toLocaleString()} XP</span>
@@ -967,8 +943,7 @@ export default function StudentHome() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-surface border-t-2 border-outline z-50 flex justify-around items-center px-2 py-2"
-        style={{ boxShadow: '0 -4px 0 0 var(--color-outline), 0 -1px 8px rgba(0,0,0,0.06)' }}>
+      <nav className="md:hidden fixed bottom-0 w-full bg-surface border-t-2 border-outline z-50 flex justify-around items-center px-2 py-2 shadow-[0_-4px_0_0_var(--color-outline),0_-1px_8px_rgba(0,0,0,0.06)]">
         {[
           { icon: Map, label: 'מפה', action: () => navigate(`/student/${studentId}`), active: true },
           { icon: Bot, label: 'מורה AI', action: () => setChatOpen(true), active: false },

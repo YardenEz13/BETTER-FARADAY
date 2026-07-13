@@ -131,7 +131,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     <div className="flex flex-col gap-6">
       {/* ── Preamble ── */}
       <motion.div
-        className="glass p-8 bg-surface border border-outline relative overflow-hidden"
+        className="clay-card p-8 bg-surface border border-outline relative overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -256,7 +256,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         />
                         <div className="flex flex-wrap gap-4 mt-2">
                           <button
-                            className={`btn btn-primary ${!answers[section.label]?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`btn-clay-primary ${!answers[section.label]?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={() => handleSubmitSection(section)}
                             disabled={!answers[section.label]?.trim()}
                           >
@@ -265,7 +265,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                           {section.hints.length > 0 && (
                             <button
-                              className="btn btn-primary btn-ghost"
+                              className="btn-clay-ghost"
                               onClick={() => handleRevealHint(section.label, section.hints.length)}
                               disabled={hintCount >= section.hints.length}
                             >
@@ -275,13 +275,13 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           )}
 
                           {aiChatTrigger && (
-                            <button className="btn btn-primary btn-ghost" onClick={aiChatTrigger}>
+                            <button className="btn-clay-ghost" onClick={aiChatTrigger}>
                               <Bot size={16} /> [ AI_ASSIST ]
                             </button>
                           )}
 
                           {onQrBridge && (
-                            <button className="btn btn-primary btn-ghost" onClick={onQrBridge}>
+                            <button className="btn-clay-ghost" onClick={onQrBridge}>
                               <Smartphone size={16} /> צלם מהטלפון
                             </button>
                           )}
@@ -320,7 +320,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         </div>
 
                         <button
-                          className="btn btn-primary btn-ghost self-start mt-2"
+                          className="btn-clay-ghost self-start mt-2"
                           onClick={() => setShowSolution((prev) => ({ ...prev, [section.label]: !prev[section.label] }))}
                         >
                           {showSolution[section.label] ? "[ HIDE_SOLUTION ]" : "[ REVEAL_SOLUTION ]"}
@@ -346,7 +346,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                         {idx < question.sections.length - 1 && (
                           <button
-                            className="btn btn-primary mt-4 self-end flex items-center gap-2"
+                            className="btn-clay-primary mt-4 self-end flex items-center gap-2"
                             onClick={() => {
                               const next = question.sections[idx + 1];
                               setExpandedSection(next.label);
@@ -369,7 +369,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
       {/* ── Score Summary ── */}
       {allSubmitted && (
         <motion.div
-          className="glass p-8 mt-8 border border-secondary bg-secondary/10 flex flex-col items-center text-center gap-6"
+          className="clay-card p-8 mt-8 border border-secondary bg-secondary/10 flex flex-col items-center text-center gap-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -384,7 +384,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
             <div className="flex items-center gap-2"><ElectricBulb size={18} tone="amber" glow={0.5} /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
-          <button className="btn btn-primary mt-4" onClick={handleFinalize}>
+          <button className="btn-clay-primary mt-4" onClick={handleFinalize}>
             [ CONTINUE_TO_NEXT ] ➜
           </button>
         </motion.div>

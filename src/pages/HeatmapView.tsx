@@ -41,7 +41,7 @@ export function HeatmapView({
       {/* Top Metrics Bento (From Stitch Design) */}
       <section ref={metricsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Metric 1 */}
-        <div className="glass rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
+        <div className="clay-card rounded-lg p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
           <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">תלמידים פעילים</h3>
@@ -56,7 +56,7 @@ export function HeatmapView({
         </div>
 
         {/* Metric 2 */}
-        <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
+        <div className="clay-card rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group hover:border-primary transition-all">
           <div className="absolute inset-0 bg-primary/10 group-hover:bg-primary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-on-surface mr-6 -translate-x-2">שליטה כיתתית</h3>
@@ -74,7 +74,7 @@ export function HeatmapView({
         </div>
 
         {/* Metric 3 (Next Goal) */}
-        <div className="glass rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group border-tertiary/30 hover:border-tertiary transition-all">
+        <div className="clay-card rounded-xl p-6 flex flex-col justify-between h-40 relative overflow-hidden group border-tertiary/30 hover:border-tertiary transition-all">
           <div className="absolute inset-0 bg-tertiary/10 group-hover:bg-tertiary/15 transition-colors" />
           <div className="relative z-10 flex justify-between items-start">
             <h3 className="font-headline-sm text-tertiary mr-6 -translate-x-3">יעד קרוב</h3>
@@ -93,7 +93,7 @@ export function HeatmapView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Heatmap Visualization (Spans 8 cols) */}
-        <div className="lg:col-span-8 glass rounded-xl p-6 flex flex-col shadow-lg">
+        <div className="lg:col-span-8 clay-card rounded-xl p-6 flex flex-col shadow-lg">
           <div className="flex justify-between items-center mb-6 border-b border-outline-variant/30 pb-4">
             <h2 className="font-headline-md text-on-surface flex items-center gap-3 -translate-x-2">
               <CircuitNode size={24} tone="violet" glow={0.55} animated={false} />
@@ -208,7 +208,7 @@ export function HeatmapView({
         </div>
 
         {/* Live Insights Feed (Spans 4 cols) */}
-        <div className="lg:col-span-4 glass rounded-xl p-6 flex flex-col shadow-lg">
+        <div className="lg:col-span-4 clay-card rounded-xl p-6 flex flex-col shadow-lg">
           <div className="flex justify-between items-center mb-6 border-b border-outline-variant/30 pb-4">
             <h2 className="font-headline-md text-on-surface flex items-center gap-3 -translate-x-2">
               <Radio className="text-primary" />

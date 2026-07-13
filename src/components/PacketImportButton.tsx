@@ -74,7 +74,7 @@ export default function PacketImportButton({ classroomId }: { classroomId: Id<"c
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
         ייבוא חוברת מלאה
       </button>
-      {error && <p className="text-xs text-[var(--danger)] mt-1">{error}</p>}
+      {error && <p className="text-xs text-[var(--color-error)] mt-1">{error}</p>}
     </div>
   );
 }

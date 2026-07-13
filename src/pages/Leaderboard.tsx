@@ -10,7 +10,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import CyberAvatar from "../components/CyberAvatar";
 import FaradayCanvas from "../components/FaradayCanvas";
-import ClaySkeleton from "../components/ClaySkeleton";
+import { Skeleton } from "../components/ui";
 
 type Row = {
   rank: number;
@@ -127,10 +127,10 @@ function LeaderboardSkeleton({ onBack }: { onBack: () => void }) {
         <ChevronRight size={20} /> חזרה
       </button>
       <div className="flex items-end justify-center gap-3 mb-8 max-w-[26rem] mx-auto">
-        {[104, 132, 84].map((h, i) => <ClaySkeleton.Block key={i} height={h} width="32%" rounded={16} />)}
+        {[104, 132, 84].map((h, i) => <Skeleton key={i} height={h} width="32%" rounded={16} />)}
       </div>
       <div className="flex flex-col gap-2.5 max-w-[32rem] mx-auto">
-        {Array.from({ length: 6 }).map((_, i) => <ClaySkeleton.Block key={i} height={62} rounded={16} />)}
+        {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={62} rounded={16} />)}
       </div>
     </div>
   );

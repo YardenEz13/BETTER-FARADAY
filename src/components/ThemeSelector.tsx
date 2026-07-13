@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import { Check, X } from "./electric";
-import BottomSheet from "./BottomSheet";
+import BottomSheet from "./ui/BottomSheet";
 
 // Preset themes the student can choose from
 export const HOMEWORK_THEMES = [

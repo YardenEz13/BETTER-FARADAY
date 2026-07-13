@@ -17,7 +17,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import { StudentPowerMapView } from "./StudentPowerMapView";
-import { SkeletonCard } from "../components/SkeletonCard";
+import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { useTheme } from "../components/ThemeContext";
 import {
@@ -109,49 +109,39 @@ export default function TeacherDashboard() {
               <ElectricBolt size={22} tone="spark" glow={1} />
             </div>
             <div>
-              <div className="font-display font-extrabold text-[17px] leading-none text-on-surface">מה מצבנו?</div>
-              <div className="text-[11px] font-semibold text-on-surface-variant mt-0.5">
+              <div className="font-display font-extrabold text-headline-sm leading-none text-on-surface">מה מצבנו?</div>
+              <div className="text-label-md text-on-surface-variant mt-0.5">
                 {data.classroom?.name ?? "כיתה"} · <span className="num">{data.students.length}</span> תלמידים
               </div>
             </div>
           </div>
 
           {/* class-health pill */}
-          <div className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline" style={{ boxShadow: "var(--shadow-clay)" }}>
-            <span className="relative inline-flex items-center justify-center" style={{ width: 38, height: 38 }}>
+          <div className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline shadow-(--shadow-clay)">
+            <span className="relative inline-flex items-center justify-center w-[38px] h-[38px]">
               <MiniRing pct={data.classAvg} />
-              <span className="num absolute font-extrabold text-[11px] text-primary">{data.classAvg}</span>
+              <span className="num absolute font-extrabold text-label-md text-primary">{data.classAvg}</span>
             </span>
             <div className="leading-tight">
               <div className="num font-extrabold text-[15px] text-on-surface">{data.healthLabel}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">בריאות הכיתה</div>
+              <div className="text-label-sm font-bold uppercase tracking-wide text-on-surface-variant">בריאות הכיתה</div>
             </div>
           </div>
         </div>
 
         {/* segmented nav — desktop only; mobile uses the bottom tab bar */}
-        <nav className="order-2 hidden lg:flex items-center gap-1 p-1.5 rounded-2xl bg-surface-container-low border-2 border-outline overflow-x-auto no-scrollbar">
-          {NAV.map((tab) => {
-            const active = view === tab.id || (tab.id === "triage" && view === "profile");
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setView(tab.id)}
-                className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap focus:outline-none flex-shrink-0"
-              >
-                {active && (
-                  <motion.div layoutId="cc-tab" className="absolute inset-0 rounded-xl bg-primary" style={{ boxShadow: "var(--shadow-clay-primary)" }} transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-                )}
-                <span className="relative z-10 flex items-center"><tab.Icon size={16} className={active ? "text-white" : "text-on-surface-variant"} /></span>
-                <span className={`relative z-10 hidden md:inline ${active ? "text-white" : "text-on-surface-variant"}`}>{tab.label}</span>
-              </button>
-            );
-          })}
+        <nav className="order-2 hidden lg:block">
+          <SegTabs
+            label="ניווט לוח המורה"
+            tabs={NAV.map((tab) => ({ id: tab.id, icon: <tab.Icon size={16} />, label: tab.label }))}
+            value={view === "profile" ? "triage" : view}
+            onChange={setView}
+          />
         </nav>
 
         {/* actions */}
         <div className="order-2 lg:order-3 flex items-center gap-2 ms-auto lg:ms-0">
-          <span className="stat-chip hidden md:inline-flex" style={{ cursor: "default" }}>
+          <span className="stat-chip hidden md:inline-flex cursor-default">
             <span className="charge-drift" style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
             זמן אמת
           </span>
@@ -215,8 +205,7 @@ export default function TeacherDashboard() {
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: 20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: 12, x: "-50%" }}
-            className="fixed bottom-6 left-1/2 z-[90] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-[13.5px]"
-            style={{ background: "var(--color-inverse-surface)", color: "var(--color-inverse-on-surface)", boxShadow: "var(--shadow-lg)" }}
+            className="fixed bottom-6 left-1/2 z-[90] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-[13.5px] bg-inverse-surface text-inverse-on-surface shadow-lg"
           >
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
             {toast}
@@ -235,11 +224,10 @@ export default function TeacherDashboard() {
             <button
               key={tab.id}
               onClick={() => { setProfileId(null); setView(tab.id); }}
-              className={`flex flex-col items-center justify-center gap-1 min-w-[56px] flex-1 py-1.5 rounded-xl transition-colors ${active ? "text-primary" : "text-on-surface-variant"}`}
-              style={active ? { background: "color-mix(in srgb, var(--color-primary) 10%, transparent)" } : undefined}
+              className={`flex flex-col items-center justify-center gap-1 min-w-[56px] flex-1 py-1.5 rounded-xl transition-colors ${active ? "text-primary bg-primary/10" : "text-on-surface-variant"}`}
             >
               <tab.Icon size={21} />
-              <span className="text-[10px] font-bold whitespace-nowrap">{tab.short}</span>
+              <span className="text-label-sm font-bold whitespace-nowrap">{tab.short}</span>
             </button>
           );
         })}
@@ -261,7 +249,7 @@ function TeacherDashboardSkeleton() {
         <div className="flex flex-wrap gap-3.5">
           {Array.from({ length: 3 }).map((_, lane) => (
             <div key={lane} className="flex flex-col gap-2.5" style={{ flex: "1 1 230px", minWidth: 220 }}>
-              <div className="shimmer rounded-xl" style={{ height: 42 }} />
+              <Skeleton height={42} rounded={12} />
               {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} variant="student-card" />)}
             </div>
           ))}
@@ -284,7 +272,7 @@ function StaggerList({ className, style, children, options }: {
 /* KPI number that counts up from 0 when scrolled into view. */
 function KpiValue({ value, suffix }: { value: number; suffix?: string }) {
   const ref = useCountUp<HTMLDivElement>(value, { suffix });
-  return <div ref={ref} className="num font-extrabold leading-none mt-3" style={{ fontSize: 28 }} />;
+  return <div ref={ref} className="num font-extrabold leading-none mt-3 text-[28px]" />;
 }
 
 /* ───────────────────────── KPI RIBBON ───────────────────────── */
@@ -300,20 +288,20 @@ function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
         const color = toneColor(k.tone as CCTone);
         const delta = k.spark && k.spark.length >= 2 ? k.spark[k.spark.length - 1] - k.spark[0] : null;
         return (
-          <motion.div key={k.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="clay-card flex-shrink-0 w-[150px] md:w-auto" style={{ padding: "14px 15px" }}>
+          <motion.div key={k.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="clay-card flex-shrink-0 w-[150px] md:w-auto px-[15px] py-3.5">
             <div className="flex items-start justify-between gap-2.5">
-              <span className="inline-flex items-center justify-center rounded-xl" style={{ width: 34, height: 34, background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}>
+              <span className="inline-flex items-center justify-center rounded-xl w-[34px] h-[34px]" style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}>
                 <Icon size={17} />
               </span>
               {delta !== null && delta !== 0 && (
-                <span className="num text-[11px] font-bold px-1.5 py-0.5 rounded-md" style={{ color: delta > 0 ? "var(--color-primary)" : "var(--color-error)", background: `color-mix(in srgb, ${delta > 0 ? "var(--color-primary)" : "var(--color-error)"} 12%, transparent)` }}>
+                <span className={`num text-label-md font-bold px-1.5 py-0.5 rounded-md ${delta > 0 ? "text-primary bg-primary/12" : "text-error bg-error/12"}`}>
                   {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
                 </span>
               )}
             </div>
             <KpiValue value={k.value} suffix={(k as { suffix?: string }).suffix ?? ""} />
             <div className="flex items-end justify-between gap-2 mt-1">
-              <span className="text-[12px] font-semibold text-on-surface-variant">{k.label}</span>
+              <span className="text-label-lg text-on-surface-variant">{k.label}</span>
               <Sparkline values={k.spark} color={color} />
             </div>
           </motion.div>
@@ -579,17 +567,17 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
       <LeaderboardToggleRow classroomId={classroomId} enabled={leaderboardEnabled} fire={fire} />
 
       {data.atRisk > 0 && (
-        <div className="fdr-urgent flex items-center gap-3.5 flex-wrap mb-4.5 px-4 py-3.5 rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-error) 10%, var(--color-surface))", border: "2px solid color-mix(in srgb, var(--color-error) 55%, var(--color-outline))", marginBottom: 18 }}>
-          <span className="flex items-center justify-center rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: "var(--color-error)", color: "#fff", boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-error) 45%, transparent)" }}><AlertTriangle size={20} /></span>
+        <div className="fdr-urgent flex items-center gap-3.5 flex-wrap mb-4.5 px-4 py-3.5 rounded-2xl" style={{ background: "color-mix(in srgb, var(--color-error) 10%, var(--color-surface))", border: "2px solid color-mix(in srgb, var(--color-error) 55%, var(--color-outline))" }}>
+          <span className="flex items-center justify-center rounded-xl flex-shrink-0 w-10 h-10 bg-error text-white" style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--color-error) 45%, transparent)" }}><AlertTriangle size={20} /></span>
           <div className="flex-1 min-w-[180px]">
             <div className="font-extrabold text-[15px] text-on-surface">דרושה התערבות מיידית</div>
             <div className="text-[12.5px] text-on-surface-variant mt-0.5"><span className="num">{data.atRisk}</span> תלמידים מתחת לסף · {urgentNames}</div>
           </div>
-          <button className="btn-clay-primary" style={{ padding: "0.5rem 1rem", fontSize: 13 }} onClick={onReview}>סקור עכשיו</button>
+          <ClayButton className="px-4 py-2 text-body-sm" onClick={onReview}>סקור עכשיו</ClayButton>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4.5 items-start" style={{ gap: 18 }}>
+      <div className="flex flex-wrap gap-4.5 items-start">
         <div className="flex-1 flex flex-wrap gap-3.5" style={{ flexBasis: 640, minWidth: 280 }}>
           {LANES.map((lane) => {
             const list = sortStudents(data.students.filter((s) => s.status === lane.key), "acc")
@@ -597,10 +585,10 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
             const color = STATUS[lane.key].color;
             return (
               <div key={lane.key} style={{ flex: "1 1 230px", minWidth: 220 }}>
-                <div className="flex items-center gap-2.5 mb-3 px-3 py-2 rounded-xl bg-surface border-2 border-outline" style={{ boxShadow: "var(--shadow-clay)" }}>
-                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}` }} />
+                <div className="flex items-center gap-2.5 mb-3 px-3 py-2 rounded-xl bg-surface border-2 border-outline shadow-(--shadow-clay)">
+                  <span className="w-[9px] h-[9px] rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
                   <span className="font-display font-extrabold text-[15px]">{lane.he}</span>
-                  <span className="num font-extrabold text-[13px] ms-auto" style={{ color: "#fff", background: color, padding: "2px 10px", borderRadius: 99 }}>{list.length}</span>
+                  <span className="num font-extrabold text-body-sm ms-auto rounded-full text-white px-2.5 py-[2px]" style={{ background: color }}>{list.length}</span>
                 </div>
                 <StaggerList className="flex flex-col gap-2.5" options={{ stagger: 0.04, y: 34 }}>
                   {list.length === 0 && <div className="text-[12px] text-on-surface-variant px-2 py-3">אין תלמידים</div>}
@@ -612,7 +600,7 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
         </div>
 
         {/* alerts */}
-        <div className="clay-card" style={{ flex: "1 1 290px", minWidth: 280, padding: 20 }}>
+        <div className="clay-card p-5" style={{ flex: "1 1 290px", minWidth: 280 }}>
           <div className="flex items-center gap-2 mb-1">
             <span className="font-display font-extrabold text-[16px]">התראות בזמן אמת</span>
             <span className="charge-drift" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
@@ -627,12 +615,12 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
               return (
                 <div key={i} className="flex gap-3 py-2.5 px-1">
                   <div className="flex flex-col items-center flex-shrink-0">
-                    <span className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, background: `color-mix(in srgb, ${c} 14%, transparent)`, color: c, border: `2px solid color-mix(in srgb, ${c} 28%, transparent)` }}><Icon size={15} /></span>
-                    {i < data.alerts.length - 1 && <span style={{ width: 2, flex: 1, background: "var(--color-outline)", marginTop: 3, minHeight: 8 }} />}
+                    <span className="flex items-center justify-center rounded-lg w-[30px] h-[30px]" style={{ background: `color-mix(in srgb, ${c} 14%, transparent)`, color: c, border: `2px solid color-mix(in srgb, ${c} 28%, transparent)` }}><Icon size={15} /></span>
+                    {i < data.alerts.length - 1 && <span className="w-0.5 flex-1 bg-outline mt-[3px] min-h-2" />}
                   </div>
                   <div className="flex-1 min-w-0 pb-1">
                     <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-[13px]">{a.who}</span>
+                      <span className="font-bold text-body-sm">{a.who}</span>
                       <span className="num text-[11px] text-on-surface-variant whitespace-nowrap">{a.timeLabel}</span>
                     </div>
                     <p className="text-[12.5px] text-on-surface-variant mt-0.5 leading-snug">{a.text}</p>
@@ -651,8 +639,8 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
   const c = STATUS[s.status].color;
   return (
     <div
-      className="fdr-lift cursor-pointer rounded-2xl bg-surface p-3.5"
-      style={{ border: "2px solid var(--color-outline)", borderInlineStartWidth: 5, borderInlineStartColor: c, boxShadow: "var(--shadow-clay)" }}
+      className="fdr-lift cursor-pointer rounded-2xl bg-surface p-3.5 border-2 border-outline shadow-(--shadow-clay)"
+      style={{ borderInlineStartWidth: 5, borderInlineStartColor: c }}
       onClick={() => onSelect(s)}
     >
       <div className="flex items-center gap-2.5">
@@ -676,8 +664,8 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
         <span className="text-[11px] font-semibold text-on-surface-variant me-auto truncate">
           {s.weak ? <>חולשה: {s.weak.name} · <span className="num">{s.weak.pct}%</span></> : "אין מספיק נתונים"}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שלח רמז" className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, border: "2px solid var(--color-outline)", background: "var(--color-surface)", color: "var(--color-tertiary)" }}><Lightbulb size={17} tone="current" animated={false} glow={0.4} /></button>
-        <button onClick={(e) => { e.stopPropagation(); fire(`הודעה נשלחה אל ${s.name}`); }} title="שלח הודעה" className="flex items-center justify-center rounded-lg" style={{ width: 30, height: 30, border: "2px solid var(--color-outline)", background: "var(--color-surface)", color: "var(--color-secondary)" }}><Send size={15} /></button>
+        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שלח רמז" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-tertiary"><Lightbulb size={17} tone="current" animated={false} glow={0.4} /></button>
+        <button onClick={(e) => { e.stopPropagation(); fire(`הודעה נשלחה אל ${s.name}`); }} title="שלח הודעה" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-secondary"><Send size={15} /></button>
       </div>
     </div>
   );
@@ -692,35 +680,35 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
   if (onlyRisk) students = students.filter((s) => s.status !== "thriving");
   students = sortStudents(students, sort);
 
-  const segBtn = (active: boolean): React.CSSProperties => ({
-    display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 10, border: "none", cursor: "pointer",
-    fontWeight: 700, fontSize: 13, fontFamily: "var(--font-body)",
-    background: active ? "var(--color-primary)" : "transparent", color: active ? "#fff" : "var(--color-on-surface-variant)",
-    boxShadow: active ? "var(--shadow-clay-primary)" : "none",
-  });
-
   return (
     <div>
       {/* controls */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
-        <div className="flex gap-1.5 p-1.5 rounded-2xl bg-surface-container-low border-2 border-outline">
-          <button style={segBtn(masteryView === "grid")} onClick={() => setMasteryView("grid")}><LayoutGrid size={14} /> מפת חום</button>
-          <button style={segBtn(masteryView === "radar")} onClick={() => setMasteryView("radar")}><GraduationCap size={14} /> רדאר</button>
-        </div>
-        <span className="hidden sm:block" style={{ width: 1, height: 26, background: "var(--color-outline)" }} />
-        <span className="text-[13px] font-bold text-on-surface-variant hidden sm:inline">מיון</span>
-        <div className="flex gap-1.5 p-1 rounded-xl bg-surface-container-low border-2 border-outline">
-          {(["risk", "acc", "name"] as Sort[]).map((sKey) => (
-            <button key={sKey} style={{ ...segBtn(sort === sKey), padding: "6px 11px", fontSize: 12.5 }} onClick={() => setSort(sKey)}>
-              {sKey === "risk" ? "סיכון" : sKey === "acc" ? "דיוק" : "א־ב"}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setOnlyRisk(!onlyRisk)} className="flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-[12.5px] font-bold" style={{ borderColor: onlyRisk ? "var(--color-primary)" : "var(--color-outline)", background: onlyRisk ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "var(--color-surface)", color: onlyRisk ? "var(--color-primary)" : "var(--color-on-surface-variant)" }}>
-          <span className="inline-flex items-center justify-center rounded" style={{ width: 16, height: 16, border: "2px solid currentColor", fontSize: 10 }}>{onlyRisk ? "✓" : ""}</span>
+        <SegTabs
+          label="תצוגת שליטה"
+          tabs={[
+            { id: "grid", icon: <LayoutGrid size={14} />, label: "מפת חום" },
+            { id: "radar", icon: <GraduationCap size={14} />, label: "רדאר" },
+          ]}
+          value={masteryView}
+          onChange={setMasteryView}
+        />
+        <span className="hidden sm:block w-px h-[26px] bg-outline" />
+        <span className="text-body-sm font-bold text-on-surface-variant hidden sm:inline">מיון</span>
+        <SegTabs
+          label="מיון תלמידים"
+          tabs={(["risk", "acc", "name"] as Sort[]).map((sKey) => ({
+            id: sKey,
+            label: sKey === "risk" ? "סיכון" : sKey === "acc" ? "דיוק" : "א־ב",
+          }))}
+          value={sort}
+          onChange={setSort}
+        />
+        <button onClick={() => setOnlyRisk(!onlyRisk)} className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-[12.5px] font-bold ${onlyRisk ? "border-primary bg-primary/10 text-primary" : "border-outline bg-surface text-on-surface-variant"}`}>
+          <span className="inline-flex items-center justify-center rounded w-4 h-4 border-2 border-current text-label-sm">{onlyRisk ? "✓" : ""}</span>
           רק דורשי תשומת לב
         </button>
-        <span className="num text-[12px] text-on-surface-variant ms-auto hidden md:inline">{students.length} תלמידים</span>
+        <span className="num text-label-lg font-normal text-on-surface-variant ms-auto hidden md:inline">{students.length} תלמידים</span>
       </div>
 
       {/* topic strip */}
@@ -728,12 +716,10 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
         {data.topicAverages.map((t) => {
           const col = t.pct >= 78 ? "var(--color-primary)" : t.pct >= 55 ? "var(--color-tertiary)" : "var(--color-error)";
           return (
-            <div key={t.topicId} className="fdr-lift bg-surface border-2 border-outline rounded-xl" style={{ padding: "10px 11px", boxShadow: "var(--shadow-clay)" }}>
+            <div key={t.topicId} className="fdr-lift bg-surface border-2 border-outline rounded-xl px-[11px] py-2.5 shadow-(--shadow-clay)">
               <div className="text-[11.5px] font-bold text-on-surface-variant truncate">{t.name}</div>
-              <div className="num font-extrabold my-1" style={{ fontSize: 19, color: t.attempts > 0 ? col : "var(--color-on-surface-variant)" }}>{t.attempts > 0 ? `${t.pct}%` : "—"}</div>
-              <div style={{ height: 7, borderRadius: 99, background: "var(--color-surface-container-high)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${t.pct}%`, borderRadius: 99, background: col }} />
-              </div>
+              <div className="num font-extrabold my-1 text-[19px]" style={{ color: t.attempts > 0 ? col : "var(--color-on-surface-variant)" }}>{t.attempts > 0 ? `${t.pct}%` : "—"}</div>
+              <ProgressBar value={t.pct} color={col} label={t.name} className="h-[7px]" />
             </div>
           );
         })}
@@ -744,11 +730,11 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
       ) : (
         <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(208px, 1fr))" }}>
           {students.map((s) => (
-            <div key={s.id} className="clay-card fdr-lift cursor-pointer" style={{ padding: 14 }} onClick={() => onSelect(s)}>
+            <div key={s.id} className="clay-card fdr-lift cursor-pointer p-3.5" onClick={() => onSelect(s)}>
               <div className="flex items-center gap-2.5 mb-2">
                 <Avatar s={s} size={32} radius={9} fs={13} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-[13px] truncate">{s.name}</div>
+                  <div className="font-bold text-body-sm truncate">{s.name}</div>
                   <div className="text-[10.5px] font-bold" style={{ color: STATUS[s.status].color }}>{STATUS[s.status].he}</div>
                 </div>
                 <span className="num font-extrabold text-[14px]" style={{ color: accColor(s.acc) }}>{s.acc}%</span>
@@ -769,10 +755,10 @@ function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; st
   const gridRef = useRef<HTMLDivElement>(null);
   useStaggerReveal(gridRef, { selector: ".mg-cell", stagger: 0.006, y: 0, scale: 0.55, duration: 0.35, ease: "power2.out" });
   return (
-    <div ref={gridRef} className="clay-card" style={{ padding: 16, overflowX: "auto" }}>
+    <div ref={gridRef} className="clay-card p-4 overflow-x-auto">
       <div style={{ minWidth: 120 + cols * 60 }}>
         <div className="grid gap-1.5 mb-1.5" style={{ gridTemplateColumns: template }}>
-          <div className="text-[11px] font-bold text-on-surface-variant flex items-end ps-1 pb-1.5">תלמיד · שליטה כוללת</div>
+          <div className="text-label-md font-bold text-on-surface-variant flex items-end ps-1 pb-1.5">תלמיד · שליטה כוללת</div>
           {data.topics.map((t) => (
             <div key={t.id} className="text-[10.5px] font-bold text-center text-on-surface-variant flex items-end justify-center pb-1.5 leading-tight" title={t.name}>{t.name}</div>
           ))}
@@ -820,29 +806,29 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
   return (
     <div>
       {/* energy hero */}
-      <div className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5" style={{ padding: 30, marginBottom: 18 }}>
+      <div className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
         <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 220, height: 220 }}>
           <div className="field-ring" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <div className="field-ring field-ring--2" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <Gauge pct={animAvg} />
           <div className="absolute z-[2] text-center">
-            <div className="num font-extrabold text-primary leading-none" style={{ fontSize: 52 }}>{Math.round(animAvg)}<span style={{ fontSize: 24 }}>%</span></div>
-            <div className="text-[12px] font-bold text-on-surface-variant mt-1">אנרגיית הכיתה</div>
+            <div className="num font-extrabold text-primary leading-none text-[52px]">{Math.round(animAvg)}<span className="text-[24px]">%</span></div>
+            <div className="text-label-lg font-bold text-on-surface-variant mt-1">אנרגיית הכיתה</div>
           </div>
         </div>
         <div className="flex flex-col gap-3.5" style={{ minWidth: 200 }}>
           <div className="font-display font-extrabold" style={{ fontSize: 22 }}>{data.classAvg >= 65 ? "הכיתה טעונה" : "הכיתה צוברת מתח"}</div>
           <p className="text-[13.5px] text-on-surface-variant m-0 max-w-[280px] leading-relaxed">מבט חי על זרם הלמידה — ככל שהטבעת ירוקה ומלאה יותר, כך הכיתה פעילה ומדויקת יותר.</p>
           <div className="flex gap-2.5 flex-wrap">
-            <span className="stat-chip" style={{ cursor: "default" }}><Activity size={15} className="text-primary" /> <span className="num">{data.activeNow}</span> פעילים</span>
-            <span className="stat-chip" style={{ cursor: "default" }}><Bot size={15} className="text-secondary" /> <span className="num">{data.aiToday}</span> שאלות AI</span>
+            <span className="stat-chip cursor-default"><Activity size={15} className="text-primary" /> <span className="num">{data.activeNow}</span> פעילים</span>
+            <span className="stat-chip cursor-default"><Bot size={15} className="text-secondary" /> <span className="num">{data.aiToday}</span> שאלות AI</span>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-4.5 flex-wrap items-start" style={{ gap: 18 }}>
+      <div className="flex gap-4.5 flex-wrap items-start">
         {/* topic reactors */}
-        <div className="clay-card" style={{ flex: "1 1 460px", padding: 22 }}>
+        <div className="clay-card p-[22px]" style={{ flex: "1 1 460px" }}>
           <div className="font-display font-extrabold text-[16px] mb-4">ריאקטורי נושאים</div>
           <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(104px, 1fr))" }}>
             {data.topicAverages.map((t) => {
@@ -864,7 +850,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
         </div>
 
         {/* constellation */}
-        <div className="clay-card" style={{ flex: "1 1 380px", padding: 22 }}>
+        <div className="clay-card p-[22px]" style={{ flex: "1 1 380px" }}>
           <div className="font-display font-extrabold text-[16px] mb-1">קונסטלציית תלמידים</div>
           <p className="text-[12px] text-on-surface-variant mb-4">גודל וזוהר = רמת שליטה · הקש לפרטים</p>
           <StaggerList className="flex flex-wrap gap-3 justify-center items-center" style={{ minHeight: 150 }}
@@ -884,16 +870,16 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
       </div>
 
       {/* ticker */}
-      <div className="clay-card mt-4.5 overflow-hidden" style={{ padding: 0, marginTop: 18 }}>
+      <div className="clay-card mt-4.5 overflow-hidden">
         <div className="flex items-center">
-          <span className="flex-shrink-0 inline-flex items-center gap-1.5 font-extrabold text-[12.5px]" style={{ padding: "13px 18px", background: "var(--color-primary)", color: "var(--color-on-primary)" }}>
-            <span className="charge-drift" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-on-primary)" }} /> חי
+          <span className="flex-shrink-0 inline-flex items-center gap-1.5 font-extrabold text-[12.5px] px-[18px] py-[13px] bg-primary text-on-primary">
+            <span className="charge-drift w-2 h-2 rounded-full bg-on-primary" /> חי
           </span>
           <div className="flex-1 overflow-hidden">
             <div className="cc-marquee inline-flex whitespace-nowrap" style={{ gap: 36, paddingInline: 24 }}>
               {[...ticker, ...ticker].map((tk, i) => (
-                <span key={i} className="inline-flex items-center gap-2 text-[13px]">
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: toneColor(tk.tone as CCTone) }} />
+                <span key={i} className="inline-flex items-center gap-2 text-body-sm">
+                  <span className="w-[7px] h-[7px] rounded-full" style={{ background: toneColor(tk.tone as CCTone) }} />
                   <strong>{tk.who}</strong> <span className="text-on-surface-variant">{tk.text}</span>
                 </span>
               ))}
@@ -924,39 +910,39 @@ function StudentDrawer({ s, topics, isMobile, onClose, onProfile, fire }: { s: C
           : { width: 420, maxWidth: "92vw", background: "var(--color-surface)", borderInlineEnd: "2px solid var(--color-outline)", boxShadow: "var(--shadow-lg)" }}
       >
         {isMobile && <div className="w-11 h-1.5 rounded-full bg-outline mx-auto mb-3.5" />}
-        <div className="flex items-center gap-3 mb-4.5" style={{ marginBottom: 18 }}>
+        <div className="flex items-center gap-3 mb-4.5">
           <span style={avatarStyle(s.avatarColor, 46, 13, 18)}>{s.initial}</span>
           <div className="flex-1">
-            <div className="font-display font-extrabold text-[20px]">{s.name}</div>
-            <span className="text-[12px] font-bold" style={{ color: c }}>{STATUS[s.status].he}</span>
+            <div className="font-display font-extrabold text-headline-md">{s.name}</div>
+            <span className="text-label-lg font-bold" style={{ color: c }}>{STATUS[s.status].he}</span>
           </div>
-          <button onClick={onClose} className="btn-icon" aria-label="סגור" style={{ width: 38, height: 38 }}><X size={17} /></button>
+          <ClayButton variant="icon" onClick={onClose} aria-label="סגור" className="w-[38px] h-[38px]"><X size={17} /></ClayButton>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 mb-4.5" style={{ marginBottom: 18 }}>
+        <div className="grid grid-cols-2 gap-2.5 mb-4.5">
           {[
             { l: "דיוק כללי", v: `${s.acc}%`, col: accColor(s.acc) },
             { l: "מגמה שבועית", v: `${s.trend > 0 ? "+" : ""}${s.trend}`, col: s.trend > 0 ? "var(--color-primary)" : s.trend < 0 ? "var(--color-error)" : "var(--color-on-surface)" },
             { l: "רצף", v: `${s.streak}`, col: "var(--color-tertiary)" },
             { l: "דקות היום", v: `${s.minutes}`, col: "var(--color-on-surface)" },
           ].map((t) => (
-            <div key={t.l} style={{ background: "var(--color-surface-container-low)", border: "2px solid var(--color-outline)", borderRadius: 13, padding: "11px 13px" }}>
-              <div className="text-[11px] font-bold text-on-surface-variant">{t.l}</div>
+            <div key={t.l} className="bg-surface-container-low border-2 border-outline rounded-[13px] px-[13px] py-[11px]">
+              <div className="text-label-md font-bold text-on-surface-variant">{t.l}</div>
               <div className="num font-extrabold text-[22px]" style={{ color: t.col }}>{t.v}</div>
             </div>
           ))}
         </div>
 
         <div className="flex items-center justify-center py-2">
-          <div style={{ width: "100%", maxWidth: 280 }}>
+          <div className="w-full max-w-[280px]">
             <Radar values={s.mastery.map((m) => m.pct)} labels={topics.map((t) => t.name)} size={230} showLabels stroke={c} fill={`color-mix(in srgb, ${c} 26%, transparent)`} glow={`color-mix(in srgb, ${c} 50%, transparent)`} />
           </div>
         </div>
 
         <div className="flex gap-2 mt-3.5">
-          <button className="btn-clay-secondary flex-1" style={{ padding: "0.6rem 0.5rem", fontSize: 13 }} onClick={() => fire(`רמז נשלח אל ${s.name}`)}>שלח רמז</button>
-          <button className="btn-clay-ghost flex-1" style={{ padding: "0.6rem 0.5rem", fontSize: 13 }} onClick={() => fire(`הודעה נשלחה אל ${s.name}`)}>הודעה</button>
-          <button className="btn-clay-primary flex-1" style={{ padding: "0.6rem 0.5rem", fontSize: 13 }} onClick={onProfile}>פרופיל מלא</button>
+          <ClayButton variant="secondary" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`רמז נשלח אל ${s.name}`)}>שלח רמז</ClayButton>
+          <ClayButton variant="ghost" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`הודעה נשלחה אל ${s.name}`)}>הודעה</ClayButton>
+          <ClayButton className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={onProfile}>פרופיל מלא</ClayButton>
         </div>
 
         <ParentLinkSection studentId={s.id as Id<"students">} studentName={s.name} fire={fire} />

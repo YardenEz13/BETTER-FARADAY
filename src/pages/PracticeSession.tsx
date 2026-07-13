@@ -369,7 +369,7 @@ export default function PracticeSession() {
               <p className="text-sm text-on-surface-variant mb-8">
                 אין עוד שאלות כאן — סימן שאתה שולט בחומר. קדימה לנושא הבא.
               </p>
-              <button className="btn-clay-primary btn-lg" onClick={() => navigate(`/student/${studentId}`)}>
+              <button className="btn-clay-primary px-8 py-4 text-base" onClick={() => navigate(`/student/${studentId}`)}>
                 חזרה למפת הלמידה
               </button>
             </div>

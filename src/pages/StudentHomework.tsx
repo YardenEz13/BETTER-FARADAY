@@ -53,7 +53,7 @@ export default function StudentHomework() {
   return (
     <div className="min-h-screen bg-background text-on-surface relative overflow-hidden flex flex-col">
       {/* ── Return Link ── */}
-      <button className="fixed top-6 left-6 z-40 btn btn-primary btn-ghost" onClick={() => navigate(`/student/${studentId}/homework`)}>
+      <button className="fixed top-6 left-6 z-40 btn-clay-ghost" onClick={() => navigate(`/student/${studentId}/homework`)}>
         <ArrowLeft size={16} /> חזרה לרשימה
       </button>
       <ThemeToggle className="btn-icon fixed top-6 right-6 z-40" />
@@ -78,7 +78,7 @@ export default function StudentHomework() {
                   transition={{ duration: 0.4 }}
                 >
                   <button
-                    className="btn btn-primary btn-ghost mb-8"
+                    className="btn-clay-ghost mb-8"
                     onClick={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                   >
                     <ChevronRight size={16} /> חזרה לרשימה
@@ -119,7 +119,7 @@ export default function StudentHomework() {
                   transition={{ duration: 0.4 }}
                 >
                   <button
-                    className="btn btn-primary btn-ghost mb-8"
+                    className="btn-clay-ghost mb-8"
                     onClick={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
                   >
                     <ChevronRight size={16} /> חזרה לרשימה
@@ -170,7 +170,7 @@ export default function StudentHomework() {
                 </div>
 
                 {/* Progress bar */}
-                <div className="glass p-8 mb-12 relative overflow-hidden">
+                <div className="clay-card p-8 mb-12 relative overflow-hidden">
                   <div className="flex justify-between items-end mb-4">
                     <div className="label-mono text-primary text-lg">ההתקדמות שלך</div>
                     <div className="num font-black text-4xl text-primary">{progress}%</div>
@@ -204,7 +204,7 @@ export default function StudentHomework() {
                     return (
                       <motion.div
                         key={aq._id}
-                        className={`glass p-6 border transition-all relative overflow-hidden flex flex-col gap-4 ${status !== "submitted" ? "cursor-pointer hover:border-primary" : "border-primary bg-primary/10"}`}
+                        className={`clay-card p-6 border transition-all relative overflow-hidden flex flex-col gap-4 ${status !== "submitted" ? "cursor-pointer hover:border-primary" : "border-primary bg-primary/10"}`}
                         onClick={() => status !== "submitted" && setActiveQuestionIdx(idx)}
                         initial={{ opacity: 0, x: -30 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -286,7 +286,7 @@ export default function StudentHomework() {
         {/* ── RIGHT COLUMN: Stats / AI ── */}
         <div className="w-full lg:w-[400px] flex flex-col gap-8">
           
-          <div className="glass p-8 flex flex-col gap-6">
+          <div className="clay-card p-8 flex flex-col gap-6">
             <div className="label-mono text-primary border-b border-outline-variant pb-2 flex items-center gap-2">
               <ElectricBolt size={18} tone="spark" glow={0.5} /> נתוני משימה
             </div>
@@ -317,14 +317,14 @@ export default function StudentHomework() {
           </div>
 
           {currentHw?.teacherNotes && (
-            <div className="glass p-6 border border-tertiary/50 bg-tertiary/10">
+            <div className="clay-card p-6 border border-tertiary/50 bg-tertiary/10">
               <div className="label-mono text-tertiary mb-3">הערות המורה</div>
               <div className="font-mono text-sm leading-relaxed text-tertiary">{currentHw.teacherNotes}</div>
             </div>
           )}
 
           {/* AI Tutor CTA */}
-          <div className="glass p-8 border border-primary bg-primary/5 relative overflow-hidden">
+          <div className="clay-card p-8 border border-primary bg-primary/5 relative overflow-hidden">
             <div className="absolute -top-4 -right-4 opacity-10">
               <ElectricAtom size={120} glow={1} animated={false} />
             </div>
@@ -340,7 +340,7 @@ export default function StudentHomework() {
               נתקעת? פאראדיי כאן כדי לכוון אותך צעד אחר צעד — בלי לחשוף את התשובה הסופית.
             </div>
 
-            <button className="btn btn-primary w-full justify-center relative z-10" onClick={() => setChatOpen(true)}>
+            <button className="btn-clay-primary w-full justify-center relative z-10" onClick={() => setChatOpen(true)}>
               דבר עם פאראדיי
             </button>
           </div>

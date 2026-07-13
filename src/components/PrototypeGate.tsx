@@ -31,7 +31,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-8 bg-background"
     >
-      <div className="glass p-12 max-w-[32rem] w-full border-2 border-primary bg-primary/5 relative overflow-hidden shadow-2xl rounded-2xl">
+      <div className="clay-card p-12 max-w-[32rem] w-full border-2 border-primary bg-primary/5 relative overflow-hidden shadow-2xl rounded-2xl">
         {/* Green accent bar */}
         <div className="absolute top-0 right-0 w-1 h-full bg-primary rounded-r-2xl" />
 
@@ -74,7 +74,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
             </div>
           )}
 
-          <button type="submit" className="btn btn-primary justify-center mt-4 py-4 text-lg tracking-widest hover:scale-[1.02] transition-transform">
+          <button type="submit" className="btn-clay-primary justify-center mt-4 py-4 text-lg tracking-widest hover:scale-[1.02] transition-transform">
             <Unlock size={20} /> [ AUTHENTICATE ]
           </button>
         </form>

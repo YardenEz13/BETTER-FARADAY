@@ -23,6 +23,7 @@ const ReviewDeck         = lazy(() => import("./pages/ReviewDeck"));
 const Leaderboard        = lazy(() => import("./pages/Leaderboard"));
 const ExamMode           = lazy(() => import("./pages/ExamMode"));
 const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
+const DesignGallery      = import.meta.env.DEV ? lazy(() => import("./pages/DesignGallery")) : null; // dev-only styleguide
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
@@ -75,6 +76,7 @@ function AnimatedRoutes() {
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
+            {DesignGallery && <Route path="/design" element={<DesignGallery />} />}
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
             <Route path="/parent/:token" element={<ParentReport />} />
             <Route path="*" element={<Navigate to="/" replace />} />

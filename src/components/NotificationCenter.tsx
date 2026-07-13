@@ -8,7 +8,7 @@ import {
   Bell, BookOpen, FileText, Flame, Trophy, Sparkles, Target, Check,
 } from "./electric";
 import { SparkBurst } from "./electric";
-import BottomSheet from "./BottomSheet";
+import BottomSheet from "./ui/BottomSheet";
 
 type Urgency = "urgent" | "info" | "celebration";
 interface NotificationItem {

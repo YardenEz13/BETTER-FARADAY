@@ -457,7 +457,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
                     <div key={i} className="flex items-center gap-4 bg-surface-container-low p-3 rounded-xl border border-outline-variant">
                       <div className="w-8 font-label-md text-on-surface-variant">#{i+1}</div>
                       <div className="rounded-full w-4 h-4" style={{
-                        background: e.style === "explorer" ? "var(--color-primary)" : e.style === "direct" ? "var(--color-secondary)" : "var(--color-warning)",
+                        background: e.style === "explorer" ? "var(--color-primary)" : e.style === "direct" ? "var(--color-secondary)" : "var(--color-tertiary)",
                       }} />
                       <span className="text-on-surface font-headline-sm">
                         {e.style === "explorer" ? "חוקר" : e.style === "direct" ? "ישיר" : "פסיבי"}

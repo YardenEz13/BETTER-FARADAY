@@ -31,7 +31,7 @@ export default function StudentPdfAssignment() {
       <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-on-background">
         <FileText size={48} className="text-on-surface-variant opacity-50" />
         <div className="font-bold text-lg">המטלה לא נמצאה</div>
-        <button className="btn btn-primary px-6 py-2.5" onClick={() => navigate(`/student/${studentId}/homework`)}>חזרה</button>
+        <button className="btn-clay-primary px-6 py-2.5" onClick={() => navigate(`/student/${studentId}/homework`)}>חזרה</button>
       </div>
     );
   }

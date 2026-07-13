@@ -43,6 +43,48 @@
   --font-label-lg:   'Assistant', sans-serif;
   --font-label-md:   'Assistant', sans-serif;
 
+  /* ── TYPE SCALE — semantic font-size tokens ──
+     Generate utilities like `text-headline-md` (size + line-height + weight).
+     Pair with the matching font-family token when needed (font-headline-xl → Yarden).
+     Usage guide:
+       headline-xl  32px  page hero / big number moments (Yarden)
+       headline-lg  24px  page title (Yarden)
+       headline-md  20px  section title / dialog title
+       headline-sm  17px  card title / list-row title
+       body-lg      16px  reading text, chat, fields
+       body-md      14px  default UI body
+       body-sm      13px  secondary text, table cells
+       label-lg     12px  eyebrow labels, chips, buttons-sm
+       label-md     11px  meta text, captions, axis labels
+       label-sm     10px  micro badges, timestamps                      */
+  --text-headline-xl: 2rem;        /* 32px */
+  --text-headline-xl--line-height: 1.15;
+  --text-headline-xl--font-weight: 700;
+  --text-headline-lg: 1.5rem;      /* 24px */
+  --text-headline-lg--line-height: 1.2;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 1.25rem;     /* 20px */
+  --text-headline-md--line-height: 1.3;
+  --text-headline-md--font-weight: 800;
+  --text-headline-sm: 1.0625rem;   /* 17px */
+  --text-headline-sm--line-height: 1.35;
+  --text-headline-sm--font-weight: 700;
+  --text-body-lg: 1rem;            /* 16px */
+  --text-body-lg--line-height: 1.5;
+  --text-body-md: 0.875rem;        /* 14px */
+  --text-body-md--line-height: 1.5;
+  --text-body-sm: 0.8125rem;       /* 13px */
+  --text-body-sm--line-height: 1.45;
+  --text-label-lg: 0.75rem;        /* 12px */
+  --text-label-lg--line-height: 1.35;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 0.6875rem;      /* 11px */
+  --text-label-md--line-height: 1.3;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 0.625rem;       /* 10px */
+  --text-label-sm--line-height: 1.25;
+  --text-label-sm--font-weight: 600;
+
   --font-weight-normal:    400;
   --font-weight-medium:    500;
   --font-weight-semibold:  600;
@@ -223,39 +265,6 @@
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.4);
 }
 
-/* ═══════════════════ LEGACY VARIABLE MAPPINGS ════════════════════ */
-/* Ensures un-migrated files don't break — all map to new design system */
-:root {
-  --text-primary:          var(--color-on-surface);
-  --text-secondary:        var(--color-on-surface-variant);
-  --text-muted:            var(--color-on-surface-variant);
-  --text-disabled:         color-mix(in srgb, var(--color-on-surface) 40%, transparent);
-  --border-default:        var(--color-outline);
-  --border-subtle:         var(--color-outline-variant);
-  --border-primary:        var(--color-primary);
-  --bg-surface:            var(--color-surface);
-  --bg-elevated:           var(--color-surface-container-high);
-  --bg-overlay:            var(--color-background);
-  --bg-void:               var(--color-background);
-  --bg-inset:              var(--color-surface-container-low);
-  --color-success:         var(--color-primary);
-  --color-success-muted:   color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-  --color-warning:         var(--color-tertiary);
-  --color-warning-muted:   color-mix(in srgb, var(--color-tertiary) 12%, var(--color-surface));
-  --color-danger:          var(--color-error);
-  --color-danger-muted:    color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
-  --color-accent:          var(--color-secondary);
-  --color-accent-muted:    color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
-  --color-primary-muted:   color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
-  --color-primary-light:   color-mix(in srgb, var(--color-primary) 60%, var(--color-surface));
-  --color-primary-dark-v:  var(--color-primary-dark);
-  --color-glow-primary:    color-mix(in srgb, var(--color-primary) 30%, transparent);
-  --danger:                var(--color-error);
-  --warning:               var(--color-tertiary);
-  --amber:                 var(--color-tertiary);
-  --amber-dim:             var(--color-tertiary-container);
-}
-
 /* ═══════════════════ GLOBAL RESET ════════════════════ */
 /* Must live inside @layer base so Tailwind's `@layer utilities` (p-*, m-*, etc.)
    can still override it. An UNLAYERED reset beats all layered utilities in the
@@ -369,51 +378,6 @@ body {
     transform: translateY(-1px);
   }
   .btn-clay-ghost:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-
-  /* ── Backward-compatible aliases ── */
-  .glass, .card, .shard {
-    @apply bg-surface rounded-2xl border-2 border-outline transition-all duration-200 cursor-pointer;
-    box-shadow: var(--shadow-clay);
-  }
-  .glass:hover, .card:hover, .shard:hover {
-    @apply border-outline-variant;
-    box-shadow: 0 6px 0 0 var(--color-outline-variant), 0 2px 12px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-  }
-  .glass:active, .card:active, .shard:active {
-    box-shadow: 0 0 0 0 var(--color-outline), 0 1px 4px rgba(0,0,0,0.06);
-    transform: translateY(4px);
-  }
-  .btn, .btn-primary {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    background-color: var(--color-primary); color: white; font-weight: 700; border-radius: 1rem; border: 2px solid var(--color-primary-dark); transition: all 0.2s; cursor: pointer;
-    padding: 0.75rem 1.5rem;
-    box-shadow: var(--shadow-clay-primary);
-  }
-  .btn:hover, .btn-primary:hover {
-    box-shadow: 0 6px 0 0 var(--color-primary-dark), 0 2px 12px rgba(23,201,100,0.3);
-    transform: translateY(-2px);
-  }
-  .btn:active:not(:disabled), .btn-primary:active:not(:disabled) {
-    box-shadow: 0 0 0 0 var(--color-primary-dark);
-    transform: translateY(4px);
-  }
-  
-  .btn-ghost {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    background-color: var(--color-surface); color: var(--color-on-surface-variant); font-weight: 700; border-radius: 1rem; border: 2px solid var(--color-outline); transition: all 0.2s; cursor: pointer;
-    padding: 0.75rem 1.5rem;
-  }
-  .btn-ghost:hover {
-    border-color: var(--color-outline-variant); color: var(--color-on-surface);
-    box-shadow: 0 4px 0 0 var(--color-outline-variant);
-    transform: translateY(-2px);
-  }
-  .btn-ghost:active:not(:disabled) {
-    box-shadow: none;
-    transform: translateY(2px);
-  }
-  .btn-lg      { @apply px-8 py-4 text-base; }
 
   .btn-icon {
     @apply inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-container border-2 border-outline text-on-surface cursor-pointer;
@@ -804,11 +768,10 @@ body {
 @media (max-width: 768px) {
   .stat-chip       { font-size: 0.75rem; padding: 6px 12px; }
   .clay-card       { padding: 1.25rem !important; }
-  .glass           { padding: 1.25rem !important; }
   .btn-clay-primary, .btn-clay-ghost { padding: 0.6rem 1.2rem; font-size: 0.875rem; }
 }
 @media (max-width: 480px) {
-  .clay-card, .glass { padding: 1rem !important; }
+  .clay-card { padding: 1rem !important; }
 }
 
 /* ═══════════════════ REDUCED MOTION ════════════════════ */

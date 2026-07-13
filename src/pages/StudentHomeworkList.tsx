@@ -10,7 +10,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 import { useCountUp } from "../lib/gsapUtils";
-import { SkeletonBlock, SkeletonCircle } from "../components/ClaySkeleton";
+import { Skeleton as SkeletonBlock, SkeletonCircle } from "../components/ui";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();

@@ -304,7 +304,7 @@ export default function ProofSectionRenderer({
       {!completed && (
         <div className="flex flex-wrap gap-3 items-center">
           <button
-            className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
+            className="btn-clay-primary flex items-center gap-2 disabled:opacity-50"
             onClick={handleCheckProof}
             disabled={isGrading || !allFilled}
           >
@@ -317,7 +317,7 @@ export default function ProofSectionRenderer({
 
           {hints.length > 0 && (
             <button
-              className="btn btn-primary btn-ghost flex items-center gap-2"
+              className="btn-clay-ghost flex items-center gap-2"
               onClick={() => setHintsRevealed((h) => Math.min(h + 1, hints.length))}
               disabled={hintsRevealed >= hints.length}
             >
@@ -327,7 +327,7 @@ export default function ProofSectionRenderer({
 
           {aiChatTrigger && (
             <button
-              className="btn btn-primary btn-ghost flex items-center gap-2"
+              className="btn-clay-ghost flex items-center gap-2"
               onClick={aiChatTrigger}
             >
               <Bot size={14} /> שאל את פאראדיי
