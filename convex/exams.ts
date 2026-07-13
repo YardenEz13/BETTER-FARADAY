@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
 
@@ -37,9 +37,9 @@ function answersMatch(correct: string, student: string): boolean {
   if (!a) return false;
   if (c === a) return true;
   // Numeric tolerance compare when both sides parse as numbers.
-  const cn = Number(c.replace(/[^0-9.\-]/g, ""));
-  const an = Number(a.replace(/[^0-9.\-]/g, ""));
-  if (Number.isFinite(cn) && Number.isFinite(an) && c.replace(/[0-9.\-]/g, "") === "" && a.replace(/[0-9.\-]/g, "") === "") {
+  const cn = Number(c.replace(/[^0-9.-]/g, ""));
+  const an = Number(a.replace(/[^0-9.-]/g, ""));
+  if (Number.isFinite(cn) && Number.isFinite(an) && c.replace(/[0-9.-]/g, "") === "" && a.replace(/[0-9.-]/g, "") === "") {
     return Math.abs(cn - an) < 1e-4;
   }
   // Loose containment for short expression answers.

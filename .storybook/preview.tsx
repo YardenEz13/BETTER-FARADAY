@@ -7,8 +7,7 @@ import type { Preview, Decorator } from '@storybook/react-vite';
 import '../src/index.css';
 
 /** Mirrors the app's ThemeContext: data-theme on <html> + <body>, dir=rtl. */
-const withAppTheme: Decorator = (Story, context) => {
-  const theme = (context.globals.theme as string) ?? 'light';
+function AppThemeFrame({ theme, children }: { theme: string; children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('dir', 'rtl');
@@ -26,10 +25,16 @@ const withAppTheme: Decorator = (Story, context) => {
         fontFamily: "'Assistant', system-ui, sans-serif",
       }}
     >
-      <Story />
+      {children}
     </div>
   );
-};
+}
+
+const withAppTheme: Decorator = (Story, context) => (
+  <AppThemeFrame theme={(context.globals.theme as string) ?? 'light'}>
+    <Story />
+  </AppThemeFrame>
+);
 
 export const globalTypes = {
   theme: {

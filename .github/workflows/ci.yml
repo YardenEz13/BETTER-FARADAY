@@ -1,0 +1,62 @@
+# CI: lint, typecheck+build, unit tests, storybook browser tests.
+# No deploys from CI — Vercel builds the frontend on push; Convex prod deploys
+# stay manual (`npx convex deploy`) until a CONVEX_DEPLOY_KEY story is decided.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint .
+      - run: node scripts/design-lint.mjs
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Read at runtime by the client, but set a placeholder so bundle-time
+      # env inlining never produces an undefined URL.
+      VITE_CONVEX_URL: https://example.convex.cloud
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build # tsc -b && vite build — covers typecheck
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --project unit
+
+  # Separate job so a flaky browser run doesn't block the unit signal.
+  test-storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx vitest run --project storybook

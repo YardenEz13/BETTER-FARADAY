@@ -1,7 +1,6 @@
 import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
 // Mocking some prompts so the server knows what to expect
@@ -66,7 +65,7 @@ export const processAbandonedChats = internalAction({
         let parsed;
         try {
           parsed = JSON.parse(text);
-        } catch(e) {
+        } catch {
            console.error(`Failed to parse Gemini JSON for chat ${chatInfo.chatId}`, text);
            continue;
         }

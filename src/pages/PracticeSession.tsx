@@ -71,7 +71,7 @@ export default function PracticeSession() {
   const chatOpen = faraday.isOpen;
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
   // Proactive Faraday — consecutive misses trigger a help nudge (once per session)
-  const [wrongStreak, setWrongStreak]       = useState(0);
+  const [, setWrongStreak]                  = useState(0);
   const [showNudge, setShowNudge]           = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const reducedMotion = !!useReducedMotion();

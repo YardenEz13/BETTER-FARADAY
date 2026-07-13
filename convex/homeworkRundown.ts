@@ -168,9 +168,6 @@ export const generateRundown = internalMutation({
     ].filter((c) => c.studentIds.length > 0);
 
     // ── Flagged students ──
-    const submittedStudentIds = new Set(
-      submitted.map((a) => a.studentId.toString())
-    );
     const flagged: { studentId: Id<"students">; reason: string }[] = [];
 
     for (const student of students) {

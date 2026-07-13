@@ -200,7 +200,6 @@ export const getTeacherChatAnalytics = query({
       .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
       .collect();
 
-    const studentIds = new Set(students.map((s) => s._id));
     const allChats = [];
 
     for (const student of students) {

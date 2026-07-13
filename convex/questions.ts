@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const getNextQuestion = query({
@@ -24,7 +24,7 @@ export const getNextQuestion = query({
       .order("desc")
       .first();
 
-    let difficulty = session?.currentDifficulty ?? 1;
+    const difficulty = session?.currentDifficulty ?? 1;
 
     // Try to find a question at this difficulty not recently attempted
     const allAtDifficulty = await ctx.db

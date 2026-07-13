@@ -24,5 +24,12 @@ export default tseslint.config({ ignores: ['dist'] }, {
       'warn',
       { allowConstantExport: true },
     ],
+    // Large legacy `any` surface — warn (visible, non-blocking) until typed.
+    '@typescript-eslint/no-explicit-any': 'warn',
+    // `_`-prefixed names mark intentionally unused vars/args.
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
+    ],
   },
 }, storybook.configs["flat/recommended"]);

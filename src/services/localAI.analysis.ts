@@ -20,8 +20,10 @@ function parseGeminiJson(raw: string): any {
   const attempts = [
     s,
     // Collapse raw control chars (literal newlines/tabs inside strings) to spaces.
+    // eslint-disable-next-line no-control-regex
     s.replace(/[\x00-\x1f]+/g, " "),
     // ...and strip trailing commas before } or ].
+    // eslint-disable-next-line no-control-regex
     s.replace(/[\x00-\x1f]+/g, " ").replace(/,\s*([}\]])/g, "$1"),
   ];
   for (const attempt of attempts) {

@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ArrowRight, TrendingUp, Zap, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
+import { ArrowRight, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, ChevronLeft } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, SignalWave, Lens, Battery } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";

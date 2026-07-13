@@ -31,8 +31,7 @@ let _nerdamerPromise: Promise<Nerdamer> | null = null;
 async function getNerdamer(): Promise<Nerdamer> {
   if (!_nerdamerPromise) {
     _nerdamerPromise = import(
-      // nerdamer ships no type declarations; it's used structurally as `any`.
-      // @ts-ignore
+      // @ts-expect-error -- nerdamer ships no type declarations; used structurally as `any`.
       "nerdamer/all.min.js"
     ).then((mod: any) => mod.default ?? mod);
   }

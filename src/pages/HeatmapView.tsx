@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { CheckCircle as CheckCircle2, XCircle, AlertTriangle, ChevronRight, Clock, Users, Target, Flag, Radio, History } from "../components/electric";
+import { CheckCircle as CheckCircle2, AlertTriangle, Users, Flag, Radio, History } from "../components/electric";
 import { SignalWave, CircuitNode, Vector } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
 import { useRef } from "react";

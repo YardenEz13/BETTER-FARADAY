@@ -5,7 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  FileText, Clock, ChevronLeft, Send, Check, X, AlertTriangle,
+  FileText, Clock, ChevronLeft, Check, X, AlertTriangle,
   Trophy, RotateCcw, Timer, ShieldOff, Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -195,7 +195,7 @@ function ExamRunner({ studentId, examId }: { studentId: Id<"students">; examId: 
 
 // ── Active exam (timer + answering) ──
 function ExamActive({
-  studentId, examId, data, submitSection, finishExam,
+  examId, data, submitSection, finishExam,
 }: {
   studentId: Id<"students">;
   examId: Id<"examAttempts">;
@@ -203,7 +203,6 @@ function ExamActive({
   submitSection: ReturnType<typeof useMutation<typeof api.exams.submitExamSection>>;
   finishExam: ReturnType<typeof useMutation<typeof api.exams.finishExam>>;
 }) {
-  const navigate = useNavigate();
   const reduce = useReducedMotion();
   const { attempt, questions } = data;
   const [activeQ, setActiveQ] = useState(0);

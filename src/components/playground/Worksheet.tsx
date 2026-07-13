@@ -25,7 +25,7 @@ const opHeOf = (op: MathOp) => OP_LABELS.find((o) => o.op === op)?.he ?? op;
  * the CAS engine, and a stacked history of computed steps (newest on top). The
  * single MathField is forwarded up so the formula drawer can insert into it.
  */
-const Worksheet = forwardRef<MathFieldHandle, {}>(function Worksheet(_props, ref) {
+const Worksheet = forwardRef<MathFieldHandle, object>(function Worksheet(_props, ref) {
   const fieldRef = useRef<MathFieldHandle>(null);
   const [latex, setLatex] = useState("");
   const [variable, setVariable] = useState("");

@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Clock, CheckCircle as CheckCircle2, CircleIcon as Circle, Bot, ChevronRight
+  ArrowLeft, Clock, CheckCircle as CheckCircle2, CircleIcon as Circle, ChevronRight
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";

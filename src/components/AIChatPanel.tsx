@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -122,7 +122,7 @@ export default function AIChatPanel({
   const [awaitingSelfAssess, setAwaitingSelfAssess] = useState(false);
   const [pendingNextQuestion, setPendingNextQuestion] = useState(false);
   const [, setSelfAssessment] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<AIDebugState | null>(null);
 
   // Notebook image-check state

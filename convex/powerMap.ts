@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -26,8 +26,6 @@ export const recomputePowerMap = internalMutation({
 
       const avgAccuracy =
         topicBriefs.reduce((s, b) => s + b.solutionAccuracy, 0) / topicBriefs.length;
-      const avgAutonomy =
-        topicBriefs.reduce((s, b) => s + b.autonomyLevel, 0) / topicBriefs.length;
       const totalFriction = topicBriefs.reduce(
         (s, b) => s + b.frictionPoints.length, 0
       );

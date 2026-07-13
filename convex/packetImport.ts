@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { packetDraft } from "./packetValidators";
 import { normalizeLabel, pickBatch, matchTopic, indexBySourceLabel } from "./packetParse";
-import { STALE_PENDING_MS, isStalePending } from "./packetWatchdog";
+import { isStalePending } from "./packetWatchdog";
 import { publishRow } from "./packetPublish";
 
 // Re-exported so existing import paths (`./packetImport`) and their test suites

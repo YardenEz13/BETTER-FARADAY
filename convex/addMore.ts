@@ -90,7 +90,7 @@ export const addQuestions = mutation({
 
     let count = 0;
     for (const q of newQuestions) {
-      const { tags, metadata, ...rest } = q;
+      const { tags: _tags, metadata: _metadata, ...rest } = q;
       const formattedQ = {
         ...rest,
         choices: ["תשובה 1", "תשובה 2", "תשובה 3", "תשובה 4"],

@@ -1,7 +1,6 @@
 import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
 const THEMES = [
@@ -106,7 +105,7 @@ export const precomputeThemeBatch = internalAction({
       byTheme[item.theme].push(item);
     }
 
-    let allResults: { id: string; rewritten: string; theme: string }[] = [];
+    const allResults: { id: string; rewritten: string; theme: string }[] = [];
 
     // Process each theme group
     for (const [theme, items] of Object.entries(byTheme)) {

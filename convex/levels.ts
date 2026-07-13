@@ -1,7 +1,6 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
 
 // ── Level names (for display) ──
 // 1: מתחיל  2: חוקר  3: מתקדם  4: מומחה  5: מאסטר
@@ -109,7 +108,6 @@ export const getPendingSuggestions = query({
       .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
       .collect();
 
-    const studentIds = new Set(students.map((s) => s._id));
     const suggestions = [];
 
     for (const student of students) {
