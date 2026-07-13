@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import * as Sentry from "@sentry/react";
 
 /**
  * Root crash shield — a render error anywhere in the tree lands here instead
@@ -17,6 +18,7 @@ export default class AppErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error("[AppErrorBoundary]", error, info.componentStack);
+    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
   }
 
   render() {
