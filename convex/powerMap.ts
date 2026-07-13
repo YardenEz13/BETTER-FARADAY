@@ -149,6 +149,8 @@ export const recomputePowerMap = internalMutation({
     const powerMapData = {
       studentId,
       lastUpdatedAt: now,
+      recomputeScheduledAt: undefined, // clear the debounce latch
+
       topicMastery,
       progressVelocity: {
         overall: Math.round((briefs.filter((b) => b.createdAt >= now - oneWeek).length) * 10) / 10,
@@ -171,6 +173,11 @@ export const recomputePowerMap = internalMutation({
     } else {
       await ctx.db.insert("studentPowerMap", powerMapData);
     }
+
+    // Fresh mastery data → re-check whether this student earned a level-up
+    // (replaces the old 6-hour evaluate-all cron; evaluateStudentLevel is
+    // idempotent and dedups pending suggestions).
+    await ctx.scheduler.runAfter(0, internal.levels.evaluateStudentLevel, { studentId });
   },
 });
 
@@ -208,30 +215,35 @@ export const getClassroomPowerMaps = query({
   },
 });
 
-// ── Scheduled: recompute power maps for students with new briefs ──
-export const scheduledRecompute = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    // Find all students who have briefs
-    const allBriefs = await ctx.db.query("sessionBriefs").order("desc").take(100);
+// ── Event-driven recompute (replaces the old 5-minute cron) ──
+// Called after every sessionBrief insert. Debounced per student via the
+// recomputeScheduledAt latch on studentPowerMap: while a recompute is queued,
+// further briefs are no-ops — the queued run re-reads all briefs anyway.
+const RECOMPUTE_DEBOUNCE_MS = 60_000;
 
-    // Get unique student IDs
-    const studentIds = new Set(allBriefs.map((b) => b.studentId));
+export const requestRecompute = internalMutation({
+  args: { studentId: v.id("students") },
+  handler: async (ctx, { studentId }) => {
+    const existing = await ctx.db
+      .query("studentPowerMap")
+      .withIndex("by_student", (q) => q.eq("studentId", studentId))
+      .first();
 
-    // Check which students need an update
-    for (const studentId of studentIds) {
-      const existingMap = await ctx.db
-        .query("studentPowerMap")
-        .withIndex("by_student", (q) => q.eq("studentId", studentId))
-        .first();
-
-      const latestBrief = allBriefs.find((b) => b.studentId === studentId);
-      if (!latestBrief) continue;
-
-      // Recompute if no map exists or if there are newer briefs
-      if (!existingMap || latestBrief.createdAt > existingMap.lastUpdatedAt) {
-        await ctx.scheduler.runAfter(0, internal.powerMap.recomputePowerMap, { studentId });
-      }
+    // First-ever brief: no map row to latch on — recompute immediately
+    // (recomputePowerMap creates the row).
+    if (!existing) {
+      await ctx.scheduler.runAfter(0, internal.powerMap.recomputePowerMap, { studentId });
+      return;
     }
+
+    const now = Date.now();
+    if (existing.recomputeScheduledAt && existing.recomputeScheduledAt > now) {
+      return; // a recompute is already queued and will see this brief
+    }
+
+    await ctx.db.patch(existing._id, { recomputeScheduledAt: now + RECOMPUTE_DEBOUNCE_MS });
+    await ctx.scheduler.runAfter(RECOMPUTE_DEBOUNCE_MS, internal.powerMap.recomputePowerMap, {
+      studentId,
+    });
   },
 });

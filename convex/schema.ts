@@ -171,6 +171,9 @@ export default defineSchema({
   studentPowerMap: defineTable({
     studentId: v.id("students"),
     lastUpdatedAt: v.number(),
+    // Debounce latch: when a recompute is queued this holds its due-time so
+    // additional briefs inside the window don't queue duplicate recomputes.
+    recomputeScheduledAt: v.optional(v.number()),
 
     // Strength vs. Weakness Heatmap
     topicMastery: v.array(v.object({

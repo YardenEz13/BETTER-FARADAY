@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // ── Create a composite brief when a chat ends ──
 export const createBrief = mutation({
@@ -32,10 +33,16 @@ export const createBrief = mutation({
     selfAssessment: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("sessionBriefs", {
+    const briefId = await ctx.db.insert("sessionBriefs", {
       ...args,
       createdAt: Date.now(),
     });
+    // Event-driven power-map refresh (debounced per student) — replaces the
+    // old recompute-power-maps cron.
+    await ctx.scheduler.runAfter(0, internal.powerMap.requestRecompute, {
+      studentId: args.studentId,
+    });
+    return briefId;
   },
 });
 

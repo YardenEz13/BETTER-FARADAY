@@ -1,6 +1,5 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 
 // ── Level names (for display) ──
 // 1: מתחיל  2: חוקר  3: מתקדם  4: מומחה  5: מאסטר
@@ -151,20 +150,6 @@ export const resolveSuggestion = mutation({
     if (action === "approved") {
       await ctx.db.patch(suggestion.studentId, {
         level: suggestion.suggestedLevel,
-      });
-    }
-  },
-});
-
-// ── Scheduled: evaluate all students for level-up ──
-export const scheduledEvaluateAll = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    // Only evaluate students that have power map data
-    const allMaps = await ctx.db.query("studentPowerMap").collect();
-    for (const map of allMaps) {
-      await ctx.scheduler.runAfter(0, internal.levels.evaluateStudentLevel, {
-        studentId: map.studentId,
       });
     }
   },
