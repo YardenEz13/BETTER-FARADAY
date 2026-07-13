@@ -2,13 +2,14 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useLayoutEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, Zap, Bot, Activity,
   CheckCircle as CheckCircle2, XCircle, ArrowRight, Clock, Star
 } from "../components/electric";
-import AIChatPanel from "../components/AIChatPanel";
+import { useFaraday } from "../components/chat/FaradayProvider";
+import FaradayAvatar from "../components/FaradayAvatar";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -18,8 +19,6 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
-
-const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
 const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
@@ -68,10 +67,28 @@ export default function PracticeSession() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const startTimeRef = useRef(Date.now());
   const transitionLockRef = useRef(false); // prevents click-through to next question
-  const [chatOpen, setChatOpen]             = useState(false);
-  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  const faraday = useFaraday();
+  const chatOpen = faraday.isOpen;
   const [combo, setCombo]                   = useState(0); // session charge / correct streak
+  // Proactive Faraday — consecutive misses trigger a help nudge (once per session)
+  const [wrongStreak, setWrongStreak]       = useState(0);
+  const [showNudge, setShowNudge]           = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const reducedMotion = !!useReducedMotion();
+
+  const openChat = () => faraday.open({
+    studentId: studentId!,
+    agentType: "practice",
+    questionStem: activeQuestion?.stem,
+    topicName: currentTopic?.nameHe,
+    topicId,
+    questionId: activeQuestion?._id,
+  });
+  // Keep Faraday's context on the current question while the panel is open.
+  const { updateContext } = faraday;
+  useEffect(() => {
+    updateContext({ questionStem: activeQuestion?.stem, questionId: activeQuestion?._id });
+  }, [activeQuestion?._id, activeQuestion?.stem, updateContext]);
   const questionCardRef = useRef<HTMLDivElement>(null);
   const xpChipRef = useRef<HTMLDivElement>(null);
   const choicesRef = useRef<HTMLDivElement>(null);
@@ -198,9 +215,16 @@ export default function PracticeSession() {
         flyXP(r, xpGained);
       }
       if (newCombo >= 3) fireStreak(newCombo);
+      setWrongStreak(0);
     } else {
       flashCard("wrong");
       shakeCard();
+      // Proactive Faraday: after two misses in a row he offers help himself.
+      setWrongStreak(w => {
+        const next = w + 1;
+        if (next >= 2 && !chatOpen && !nudgeDismissed) setShowNudge(true);
+        return next;
+      });
     }
     // Enter review phase with 5-second minimum
     setReviewPhase(true);
@@ -274,21 +298,21 @@ export default function PracticeSession() {
       <motion.header
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b-2 border-outline backdrop-blur-xl"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4 border-b-2 border-outline backdrop-blur-xl"
         style={{ boxShadow: 'var(--shadow-sm)', background: 'color-mix(in srgb, var(--color-surface) 88%, transparent)' }}
       >
-        <div className="flex items-center gap-4">
-          <button className="btn-icon" onClick={handleEndSession} aria-label="סיום הסבב">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button className="btn-icon flex-shrink-0" onClick={handleEndSession} aria-label="סיום הסבב">
             <ChevronLeft size={18} />
           </button>
-          <div>
-            <div className="font-semibold text-sm text-on-surface">{currentTopic.nameHe}</div>
+          <div className="min-w-0">
+            <div className="font-semibold text-sm text-on-surface truncate">{currentTopic.nameHe}</div>
             <div className="label-mono text-[0.6rem]">מצב תרגול</div>
           </div>
         </div>
 
         {/* Session stats */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Charge meter — builds with each correct answer in a row */}
           <ChargeMeter combo={combo} max={CHARGE_MAX} />
           {/* Questions chip */}
@@ -314,9 +338,14 @@ export default function PracticeSession() {
               סיים סבב
             </button>
           )}
-          <button className="btn-clay-primary px-4 py-2 text-sm" onClick={() => setChatOpen(true)}>
-            <Bot size={14} />
-            עזרת AI
+          {/* Icon-only on phones — the labeled pill overflowed the narrow header */}
+          <button
+            className="btn-clay-primary !p-0 w-11 h-11 sm:w-auto sm:h-auto sm:!px-4 sm:!py-2 text-sm justify-center flex-shrink-0"
+            onClick={openChat}
+            aria-label="שאל את פאראדיי"
+          >
+            <Bot size={16} />
+            <span className="hidden sm:inline">שאל את פאראדיי</span>
           </button>
         </div>
       </motion.header>
@@ -634,21 +663,42 @@ export default function PracticeSession() {
         </div>
       </div>
 
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        studentId={studentId!}
-        agentType="practice"
-        questionStem={activeQuestion?.stem}
-        topicName={currentTopic?.nameHe}
-        topicId={topicId}
-        questionId={activeQuestion?._id}
-        onOpenPlayground={() => setPlaygroundOpen(true)}
-      />
-
-      <Suspense fallback={null}>
-        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
-      </Suspense>
+      {/* Proactive Faraday — floats in after two misses in a row */}
+      <AnimatePresence>
+        {showNudge && !chatOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 320, damping: 24 }}
+            className="fixed bottom-6 inset-x-3 sm:inset-x-auto sm:start-6 z-[90] sm:max-w-[22rem] rounded-3xl border-2 border-primary/40 bg-surface p-4 flex items-start gap-3"
+            style={{ boxShadow: "var(--shadow-clay-primary)" }}
+            role="status"
+          >
+            <div className="w-11 h-11 rounded-full bg-primary/10 border-2 border-primary/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <FaradayAvatar px={40} fill />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-on-surface">פרופסור פאראדיי שם לב שקצת קשה כאן ⚡</div>
+              <p className="text-xs text-on-surface-variant mt-0.5 leading-snug">בוא נפרק את השאלה יחד, צעד אחר צעד — בלי לחשוף את התשובה.</p>
+              <div className="flex gap-2 mt-2.5">
+                <button
+                  className="btn-clay-primary !px-3.5 !py-1.5 !text-xs"
+                  onClick={() => { setShowNudge(false); setNudgeDismissed(true); openChat(); }}
+                >
+                  <Bot size={13} /> שאל את פאראדיי
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-xl border-2 border-outline text-xs font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                  onClick={() => { setShowNudge(false); setNudgeDismissed(true); }}
+                >
+                  לא עכשיו
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showRecap && (

@@ -139,7 +139,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
                   style={{ boxShadow: 'var(--shadow-clay)' }}
                   onClick={aiChatTrigger}
                 >
-                  <Bot size={20} /> מורה AI
+                  <Bot size={20} /> שאל את פאראדיי
                 </button>
               )}
               {onQrBridge && (

@@ -6,6 +6,8 @@ import { preloadModel } from "./services/localAI";
 import { ThemeProvider } from "./components/ThemeContext";
 import { ElectricLoader } from "./components/electric";
 import PageTransition from "./components/PageTransition";
+import FaradayProvider from "./components/chat/FaradayProvider";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
@@ -27,6 +29,7 @@ const DesignGallery      = import.meta.env.DEV ? lazy(() => import("./pages/Desi
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
+const HomeworkCreateWizard = lazy(() => import("./pages/HomeworkCreateWizard"));
 
 function RouteFallback() {
   return <ElectricLoader label="טוען…" />;
@@ -39,13 +42,18 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <AnimatedRoutes />
-      </BrowserRouter>
-      <Analytics />
-      <SpeedInsights />
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <BrowserRouter>
+          {/* Single mount of the Faraday tutor — screens open it via useFaraday() */}
+          <FaradayProvider>
+            <AnimatedRoutes />
+          </FaradayProvider>
+        </BrowserRouter>
+        <Analytics />
+        <SpeedInsights />
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }
 
@@ -74,6 +82,8 @@ function AnimatedRoutes() {
             <Route path="/student/:studentId/exam" element={<ExamMode />} />
             <Route path="/student/:studentId/exam/:examId" element={<ExamMode />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
+            <Route path="/teacher/homework/new" element={<HomeworkCreateWizard />} />
+            <Route path="/teacher/homework/:homeworkId/edit" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
             <Route path="/electric-demo" element={<ElectricGallery />} />
             {DesignGallery && <Route path="/design" element={<DesignGallery />} />}

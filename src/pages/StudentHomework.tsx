@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Clock, CheckCircle as CheckCircle2, CircleIcon as Circle, Bot, ChevronRight
@@ -10,11 +10,9 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
-import AIChatPanel from "../components/AIChatPanel";
+import { useFaraday } from "../components/chat/FaradayProvider";
 import { Sparkles, Eye, EyeOff } from "../components/electric";
 import { ElectricAtom, ElectricBolt } from "../components/electric";
-
-const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 
 export default function StudentHomework() {
   const { studentId, homeworkId } = useParams<{ studentId: string; homeworkId: string }>();
@@ -33,10 +31,30 @@ export default function StudentHomework() {
   );
 
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [playgroundOpen, setPlaygroundOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
-  const [bridgeRequested, setBridgeRequested] = useState(false);
+
+  const faraday = useFaraday();
+  const chatOpen = faraday.isOpen;
+
+  // Keep Faraday's context on the question the student is viewing.
+  const ctxAssignment = activeQuestionIdx !== null ? homework?.[activeQuestionIdx] : null;
+  const ctxQuestion = ctxAssignment?.questionData;
+  const ctxStem = ctxQuestion
+    ? ("preamble" in ctxQuestion ? (ctxQuestion as { preamble?: string }).preamble : (ctxQuestion as { stem?: string }).stem)
+    : undefined;
+  const ctxQuestionId = ctxAssignment?.questionId ?? undefined;
+  const { updateContext } = faraday;
+  useEffect(() => {
+    updateContext({ questionStem: ctxStem, questionId: ctxQuestionId });
+  }, [ctxStem, ctxQuestionId, updateContext]);
+
+  const openChat = (requestBridge = false) => faraday.open({
+    studentId: studentId!,
+    agentType: "homework",
+    questionStem: ctxStem,
+    questionId: ctxQuestionId,
+    requestBridge,
+  });
 
   if (!student || !homework) return null;
 
@@ -104,8 +122,8 @@ export default function StudentHomework() {
                     question={activeQuestion as any}
                     assignedQuestionId={activeAssignment._id}
                     onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
-                    aiChatTrigger={() => setChatOpen(true)}
-                    onQrBridge={() => { setChatOpen(true); setBridgeRequested(true); }}
+                    aiChatTrigger={() => openChat()}
+                    onQrBridge={() => openChat(true)}
                     overridePreamble={!showOriginal ? activeAssignment.personalizedPreamble : undefined}
                   />
                 </motion.div>
@@ -145,8 +163,8 @@ export default function StudentHomework() {
                     question={activeQuestion as any}
                     assignedQuestionId={activeAssignment._id}
                     onComplete={() => { setActiveQuestionIdx(null); setShowOriginal(false); }}
-                    aiChatTrigger={() => setChatOpen(true)}
-                    onQrBridge={() => { setChatOpen(true); setBridgeRequested(true); }}
+                    aiChatTrigger={() => openChat()}
+                    onQrBridge={() => openChat(true)}
                     overrideStem={!showOriginal ? activeAssignment.personalizedStem : undefined}
                   />
                 </motion.div>
@@ -333,37 +351,21 @@ export default function StudentHomework() {
               <div className="w-10 h-10 rounded-xl border border-primary flex items-center justify-center bg-primary text-white">
                 <ElectricAtom size={22} tone="ghost" glow={0.6} />
               </div>
-              <div className="font-display text-3xl text-primary">מייקל פאראדיי</div>
+              <div className="font-display text-3xl text-primary">פרופסור פאראדיי</div>
             </div>
 
             <div className="font-mono text-sm leading-relaxed text-on-surface opacity-80 mb-8 relative z-10">
               נתקעת? פאראדיי כאן כדי לכוון אותך צעד אחר צעד — בלי לחשוף את התשובה הסופית.
             </div>
 
-            <button className="btn-clay-primary w-full justify-center relative z-10" onClick={() => setChatOpen(true)}>
-              דבר עם פאראדיי
+            <button className="btn-clay-primary w-full justify-center relative z-10" onClick={() => openChat()}>
+              שאל את פאראדיי
             </button>
           </div>
 
         </div>
       </div>
 
-      {/* AI Chat Panel */}
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        studentId={studentId!}
-        agentType="homework"
-        questionStem={activeQuestion ? ("preamble" in activeQuestion ? (activeQuestion as any).preamble : (activeQuestion as any).stem) : undefined}
-        questionId={activeAssignment?.questionId || undefined}
-        requestBridge={bridgeRequested}
-        onBridgeRequestHandled={() => setBridgeRequested(false)}
-        onOpenPlayground={() => setPlaygroundOpen(true)}
-      />
-
-      <Suspense fallback={null}>
-        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
-      </Suspense>
     </div>
   );
 }

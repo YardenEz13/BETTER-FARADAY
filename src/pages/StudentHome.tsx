@@ -2,22 +2,22 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef, memo, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { gsap, useScrollReveal } from "../lib/gsapUtils";
+import { gsap, useScrollReveal, useCountUp } from "../lib/gsapUtils";
+import { animateSafe, remove } from "../lib/anime";
 import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
   RotateCcw, Trophy, Target, PencilLine, X, FileText,
 } from "../components/electric";
 import { SparkBurst } from "../components/electric";
-import AIChatPanel from "../components/AIChatPanel";
+import { useFaraday } from "../components/chat/FaradayProvider";
 import CyberAvatar from "../components/CyberAvatar";
 import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
-
-const MathPlayground = lazy(() => import("../components/playground/MathPlayground"));
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
+import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
 import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
 import { Skeleton, SkeletonCard } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -49,6 +49,99 @@ function buildWirePoints(count: number) {
 function buildWirePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return "";
   return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`).join(" ");
+}
+
+/**
+ * A pulse of charge racing along the wire toward the next (not-yet-unlocked)
+ * station — powered by anime.js. A short bright dash sweeps the segment by
+ * animating strokeDashoffset, so it hugs the path even though the parent SVG is
+ * scaled non-uniformly (preserveAspectRatio="none"). Stroke-only + a stacked
+ * halo keeps the glow crisp where a blur filter would smear horizontally.
+ * No-op under reduced motion. Lives inside the wire <svg>.
+ */
+function ChargeComet({ d, reducedMotion }: { d: string; reducedMotion: boolean }) {
+  const coreRef = useRef<SVGPathElement>(null);
+  const haloRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const core = coreRef.current;
+    const halo = haloRef.current;
+    if (!core || !halo || !d || reducedMotion) return;
+    const len = core.getTotalLength();
+    const dash = 6; // length of the visible charge, in path units
+    for (const p of [core, halo]) p.style.strokeDasharray = `${dash} ${len + dash}`;
+    // offset dash → -len sweeps the single dash from the completed node to the
+    // next station; loop keeps the charge continuously flowing.
+    const anim = animateSafe([core, halo], {
+      strokeDashoffset: [dash, -len],
+      duration: 1500,
+      ease: "linear",
+      loop: true,
+      loopDelay: 350,
+    });
+    return () => {
+      anim?.pause?.();
+      remove([core, halo]);
+    };
+  }, [d, reducedMotion]);
+
+  if (!d || reducedMotion) return null;
+  return (
+    <>
+      <path ref={haloRef} d={d} fill="none" stroke="var(--color-primary)" strokeWidth="11" strokeLinecap="round" opacity={0.3} vectorEffect="non-scaling-stroke" />
+      <path ref={coreRef} d={d} fill="none" stroke="var(--color-inverse-primary)" strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </>
+  );
+}
+
+/**
+ * The next station lighting up as the charge arrives — a DOM ring that expands
+ * and fades on a loop tuned to ChargeComet's period (~1850ms), so each pulse
+ * lands roughly when the comet reaches this node. DOM (not SVG) so it stays
+ * perfectly round despite the parent path's non-uniform scale. No-op under
+ * reduced motion. `x` is a percentage of the path width, `y` is px (node center).
+ */
+function ChargeArrival({ x, y, reducedMotion }: { x: number; y: number; reducedMotion: boolean }) {
+  const ringRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ringRef.current;
+    if (!el || reducedMotion) return;
+    const anim = animateSafe(el, {
+      scale: [0.45, 1.9],
+      opacity: [0.6, 0],
+      duration: 700,
+      delay: 1250,     // let the charge travel most of the wire before the flash
+      loopDelay: 1150, // 700 + 1150 = 1850ms → matches the comet's lap
+      loop: true,
+      ease: "outQuad",
+    });
+    return () => {
+      anim?.pause?.();
+      remove(el);
+    };
+  }, [x, y, reducedMotion]);
+
+  if (reducedMotion) return null;
+  return (
+    <div
+      className="absolute pointer-events-none z-0"
+      style={{ left: `${x}%`, top: y, transform: "translate(-50%,-50%)" }}
+      aria-hidden
+    >
+      <div
+        ref={ringRef}
+        style={{
+          width: 74,
+          height: 74,
+          borderRadius: "50%",
+          border: "2.5px solid var(--color-primary)",
+          boxShadow: "0 0 14px color-mix(in srgb, var(--color-primary) 55%, transparent)",
+          opacity: 0,
+        }}
+      />
+    </div>
+  );
 }
 
 /* ── A single station on the learning circuit ── */
@@ -383,6 +476,12 @@ function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; ico
   );
 }
 
+/** GSAP odometer for header XP — re-tweens as XP grows live. */
+function CountUpNum({ value, suffix }: { value: number; suffix?: string }) {
+  const ref = useCountUp<HTMLSpanElement>(value, { suffix, duration: 1.1 });
+  return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
+}
+
 export default function StudentHome() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
@@ -393,14 +492,17 @@ export default function StudentHome() {
   const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
   const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
   const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
+  const topicCharges = useQuery(api.retention.getTopicCharges, { studentId: studentId as Id<"students"> });
   const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
   const leaderboard = useQuery(
     api.leaderboard.getWeeklyLeaderboard,
     student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
   );
-  const [chatOpen, setChatOpen] = useState(false);
-  const [playgroundOpen, setPlaygroundOpen] = useState(false);
+  // Faraday opens with a general practice context — the map has no active question.
+  const faraday = useFaraday();
+  const openChat = () => faraday.open({ studentId: studentId!, agentType: "practice" });
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [liveSheetOpen, setLiveSheetOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
   // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
@@ -464,6 +566,9 @@ export default function StudentHome() {
   const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
   const leaderboardEnabled = leaderboard?.enabled ?? false;
   const myLeagueRank = leaderboard?.myRank ?? null;
+  const decayingTopics = (topicCharges ?? []).filter(
+    (t): t is typeof t & { charge: number; accuracy: number } => t.decaying && t.charge !== null && t.accuracy !== null,
+  );
 
   const nodeStates = topics.map((topic) => {
     const progress = getProgress(topic._id);
@@ -510,10 +615,10 @@ export default function StudentHome() {
         ref={setHeaderEl}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-3 border-b-2 border-outline backdrop-blur-md flex-wrap gap-y-2 bg-surface/88 shadow-(--shadow-clay)"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 md:px-10 py-2.5 md:py-3 border-b-2 border-outline backdrop-blur-md gap-2 bg-surface/88 shadow-(--shadow-clay)"
       >
         {/* Left: back + student info */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3 min-w-0">
           <button
             className="w-9 h-9 md:w-9 md:h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer"
             onClick={() => navigate("/")}
@@ -522,10 +627,13 @@ export default function StudentHome() {
             <LogOut size={16} />
           </button>
 
-          {/* Avatar + name — opens theme picker */}
+          {/* Avatar + name. Desktop: opens the homework-theme picker (the pill hints
+              "בחר נושא"). Mobile: identity display only — the picker's single mobile
+              entry is the "נושא" tab in the bottom nav, so tapping your profile no
+              longer surprise-opens a sheet that blacks out the header. */}
           <button
-            className="flex items-center gap-2.5 bg-surface-container px-3 py-1.5 rounded-full border-2 border-outline hover:border-primary/50 transition-all active:scale-95 cursor-pointer shadow-(--shadow-clay)"
-            onClick={() => setThemePickerOpen(true)}
+            className="flex items-center gap-2 md:gap-2.5 bg-surface-container px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
+            onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
               <CyberAvatar name={student.name} size={32} color={student.avatarColor} />
@@ -537,9 +645,10 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
-              {ownedBadges && ownedBadges.length > 0 && <BadgeChips badges={ownedBadges} />}
+              {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
+              {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
-              <div className="num font-bold text-primary text-[10px] md:hidden">{totalXP.toLocaleString()} XP</div>
+              <div className="num font-bold text-primary text-[10px] md:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
               <div className="hidden md:block">
                 {student.homeworkTheme ? (
                   <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
@@ -555,7 +664,7 @@ export default function StudentHome() {
         <div className="hidden md:flex items-center gap-3">
           <div className="stat-chip">
             <ElectricBolt tone="spark" size={18} glow={0.55} animated={false} />
-            <span>{totalXP.toLocaleString()} XP</span>
+            <span><CountUpNum value={totalXP} suffix=" XP" /></span>
           </div>
           <div className="stat-chip">
             <Flame className="text-tertiary" size={15} />
@@ -564,9 +673,9 @@ export default function StudentHome() {
         </div>
 
         {/* Right: actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
-          <div className="flex md:hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
+          <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
             <Flame className="text-tertiary" size={14} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
@@ -581,10 +690,10 @@ export default function StudentHome() {
           </button>
           <button
             className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-(--shadow-clay-primary)"
-            onClick={() => setChatOpen(true)}
+            onClick={openChat}
           >
             <Bot size={16} />
-            <span className="hidden sm:inline">AI מורה</span>
+            <span className="hidden sm:inline">מורה AI</span>
           </button>
         </div>
       </motion.header>
@@ -615,6 +724,41 @@ export default function StudentHome() {
                     יש לך {freezesAvailable} {freezesAvailable === 1 ? "הקפאה" : "הקפאות"}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Live class — the teacher is broadcasting a question right now */}
+          <LiveBanner studentId={studentId!} onJoin={() => setLiveSheetOpen(true)} />
+
+          {/* Retention nudge — topics whose charge is draining (forgetting curve) */}
+          {decayingTopics.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5"
+              style={{ boxShadow: 'var(--shadow-clay)' }}
+              role="alert"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <Battery className="text-secondary flex-shrink-0" size={20} />
+                <div className="font-bold text-on-surface text-sm">
+                  המטען יורד! נושאים שלמדת מתחילים להישכח — שאלה אחת מחזירה את הזרם ⚡
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {decayingTopics.slice(0, 3).map((t) => (
+                  <button
+                    key={t.topicId}
+                    onClick={() => navigate(`/student/${studentId}/practice/${t.topicId}`)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer"
+                    style={{ boxShadow: 'var(--shadow-clay)' }}
+                  >
+                    <span className="text-on-surface">{t.nameHe}</span>
+                    <span className="num font-bold text-secondary">{t.charge}%</span>
+                    <span className="text-[10px] text-on-surface-variant">היה {t.accuracy}%</span>
+                  </button>
+                ))}
               </div>
             </motion.div>
           )}
@@ -678,66 +822,10 @@ export default function StudentHome() {
             </div>
           </div>
 
-          {/* ── MOBILE: card list ── */}
-          <div className="flex md:hidden flex-col gap-3 w-full max-w-[24rem]">
-            {topics.map((topic, idx) => {
-              const { isCompleted, isActive, progress } = nodeStates[idx];
-              return (
-                <motion.div
-                  key={topic._id}
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.06 }}
-                >
-                  <button
-                    onClick={() => navigate(`/student/${studentId}/practice/${topic._id}`)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all active:scale-95 cursor-pointer
-                      ${isCompleted
-                        ? "border-primary/40 bg-primary/5"
-                        : isActive
-                          ? "border-primary bg-surface"
-                          : "border-outline bg-surface"
-                      } ${isCompleted || isActive ? "shadow-(--shadow-clay-primary)" : "shadow-(--shadow-clay)"}`}
-                  >
-                    {/* Icon bubble */}
-                    <div className={`w-14 h-14 flex-shrink-0 rounded-2xl flex items-center justify-center border-2
-                      ${isCompleted
-                        ? "bg-primary border-primary-dark"
-                        : isActive
-                          ? "bg-surface border-primary"
-                          : "bg-surface-container border-outline"
-                      }`}>
-                      {isCompleted ? (
-                        <Check className="text-white" size={24} strokeWidth={3} />
-                      ) : (
-                        <Play className={`${isActive ? 'text-primary' : 'text-on-surface-variant'} fill-current`} size={20} />
-                      )}
-                    </div>
-
-                    {/* Text */}
-                    <div className="flex-1 text-right">
-                      <div className={`font-semibold text-base ${isCompleted ? "text-on-surface" : isActive ? "text-on-surface" : "text-on-surface-variant"}`}>
-                        {topic.nameHe}
-                      </div>
-                      <div className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                        {isCompleted ? `✓ הושלם · ${progress}%` : progress > 0 ? `${progress}% — תמשיך מכאן` : "מוכן? בוא נתחיל ▶"}
-                      </div>
-                      {progress > 0 && progress < 80 && (
-                        <div className="mt-2 w-full bg-surface-container rounded-full h-2 overflow-hidden border border-outline">
-                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* ── DESKTOP: serpentine field-line learning path (signature) ──
-              Nodes zig-zag across the section's width instead of stacking in a
-              thin vertical column; a curved SVG wire connects their true centers. */}
-          <div className="hidden md:block relative w-full md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-12">
+          {/* ── Serpentine field-line learning path (signature) — the one map,
+              phone included. Node positions are % based, so the zig-zag simply
+              tightens on a narrow screen instead of degrading into a flat list. */}
+          <div className="block relative w-full max-w-[22rem] md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-8 md:py-12">
             <div className="relative w-full" style={{ height: wireHeight }}>
               <svg
                 className="absolute inset-0 h-full w-full pointer-events-none"
@@ -783,6 +871,9 @@ export default function StudentHome() {
                     )}
                   </>
                 )}
+
+                {/* anime.js — a charge pulse flowing toward the next station */}
+                <ChargeComet d={nextWireD} reducedMotion={reducedMotion} />
               </svg>
 
               {topics.map((topic, idx) => {
@@ -806,6 +897,15 @@ export default function StudentHome() {
                   </div>
                 );
               })}
+
+              {/* anime.js — the next station energizes as the charge arrives */}
+              {nextWireD && wirePoints[completedTopics + 1] && (
+                <ChargeArrival
+                  x={wirePoints[completedTopics + 1].x}
+                  y={wirePoints[completedTopics + 1].y}
+                  reducedMotion={reducedMotion}
+                />
+              )}
             </div>
           </div>
         </section>
@@ -905,17 +1005,17 @@ export default function StudentHome() {
                   <ElectricAtom tone="ghost" size={24} glow={0.6} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface mb-1.5 text-sm">מייקל פאראדיי</h4>
+                  <h4 className="font-bold text-on-surface mb-1.5 text-sm">פרופסור פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
                     אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
                     בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
                   </p>
                   <button
                     className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer shadow-(--shadow-clay-primary)"
-                    onClick={() => setChatOpen(true)}
+                    onClick={openChat}
                   >
                     <MessageSquare size={15} />
-                    שאל שאלה
+                    שאל את פאראדיי
                   </button>
                 </div>
               </div>
@@ -946,7 +1046,7 @@ export default function StudentHome() {
       <nav className="md:hidden fixed bottom-0 w-full bg-surface border-t-2 border-outline z-50 flex justify-around items-center px-2 py-2 shadow-[0_-4px_0_0_var(--color-outline),0_-1px_8px_rgba(0,0,0,0.06)]">
         {[
           { icon: Map, label: 'מפה', action: () => navigate(`/student/${studentId}`), active: true },
-          { icon: Bot, label: 'מורה AI', action: () => setChatOpen(true), active: false },
+          { icon: Bot, label: 'מורה AI', action: openChat, active: false },
           { icon: Activity, label: 'התקדמות', action: () => navigate(`/student/${studentId}/progress`), active: false },
           { icon: Package, label: 'שיעורי בית', action: () => navigate(`/student/${studentId}/homework`), active: false },
           { icon: Palette, label: 'נושא', action: () => setThemePickerOpen(true), active: false },
@@ -974,17 +1074,11 @@ export default function StudentHome() {
         currentTheme={student.homeworkTheme}
       />
 
-      <AIChatPanel
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-        studentId={studentId!}
-        agentType="homework"
-        onOpenPlayground={() => setPlaygroundOpen(true)}
-      />
+      {/* Live class answer sheet */}
+      {liveSheetOpen && (
+        <LiveQuestionSheet studentId={studentId!} onClose={() => setLiveSheetOpen(false)} />
+      )}
 
-      <Suspense fallback={null}>
-        <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
-      </Suspense>
     </div>
   );
 }

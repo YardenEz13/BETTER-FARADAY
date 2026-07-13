@@ -1,11 +1,39 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
 
+// Shared helper: schedule the per-student fan-out for a homework doc. Used by
+// immediate publish (createHomework), scheduled auto-publish (publishScheduled),
+// and manual draft publish (publishHomework) so the args stay in one place.
+async function scheduleAssignment(
+  ctx: MutationCtx,
+  homeworkId: Id<"homework">,
+  hw: {
+    classroomId: Id<"classrooms">;
+    topicIds: Id<"topics">[];
+    questionCount: number;
+    pinnedQuestionIds?: Id<"questions">[];
+    pinnedCompoundIds?: Id<"compoundQuestions">[];
+  }
+) {
+  await ctx.scheduler.runAfter(0, internal.homework.assignToStudents, {
+    homeworkId,
+    classroomId: hw.classroomId,
+    topicIds: hw.topicIds,
+    questionCount: hw.questionCount,
+    pinnedQuestionIds: hw.pinnedQuestionIds,
+    pinnedCompoundIds: hw.pinnedCompoundIds,
+  });
+}
+
 // ── Teacher creates a homework assignment ──
+// Three creation modes, driven by `status` + `publishAt`:
+//   • publishAt set        → inserted "scheduled"; auto-published at publishAt.
+//   • status === "draft"   → inserted "draft"; NO fan-out until published.
+//   • otherwise (active)   → inserted "active"; students get questions now.
 export const createHomework = mutation({
   args: {
     classroomId: v.id("classrooms"),
@@ -14,11 +42,17 @@ export const createHomework = mutation({
     teacherNotes: v.optional(v.string()),
     questionCount: v.number(),
     deadline: v.number(),
+    status: v.optional(v.string()),       // "draft" | "active" (default active)
+    publishAt: v.optional(v.number()),    // ms epoch; when set → scheduled
     // Teacher-imported questions to pin to this homework (assigned to everyone).
     pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
     pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
   },
   handler: async (ctx, args) => {
+    const scheduled = args.publishAt != null;
+    const isDraft = !scheduled && args.status === "draft";
+    const status = scheduled ? "scheduled" : isDraft ? "draft" : "active";
+
     const homeworkId = await ctx.db.insert("homework", {
       classroomId: args.classroomId,
       title: args.title,
@@ -27,22 +61,101 @@ export const createHomework = mutation({
       questionCount: args.questionCount,
       createdAt: Date.now(),
       deadline: args.deadline,
-      status: "active",
+      status,
+      publishAt: scheduled ? args.publishAt : undefined,
       pinnedQuestionIds: args.pinnedQuestionIds,
       pinnedCompoundIds: args.pinnedCompoundIds,
     });
 
-    // Schedule personalized assignment for each student
-    await ctx.scheduler.runAfter(0, internal.homework.assignToStudents, {
-      homeworkId,
-      classroomId: args.classroomId,
-      topicIds: args.topicIds,
-      questionCount: args.questionCount,
-      pinnedQuestionIds: args.pinnedQuestionIds,
-      pinnedCompoundIds: args.pinnedCompoundIds,
-    });
+    if (scheduled) {
+      // Auto-publish at the requested time.
+      await ctx.scheduler.runAt(args.publishAt!, internal.homework.publishScheduled, {
+        homeworkId,
+      });
+    } else if (!isDraft) {
+      // Publish now: schedule personalized assignment for each student.
+      await scheduleAssignment(ctx, homeworkId, args);
+    }
 
     return homeworkId;
+  },
+});
+
+// ── Internal: fire a scheduled homework at its publishAt time ──
+export const publishScheduled = internalMutation({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const hw = await ctx.db.get(homeworkId);
+    // No-op if the row was deleted or already moved past "scheduled".
+    if (!hw || hw.status !== "scheduled") return;
+    await ctx.db.patch(homeworkId, { status: "active" });
+    await scheduleAssignment(ctx, homeworkId, hw);
+  },
+});
+
+// ── Teacher: publish a draft immediately (draft → active + fan-out) ──
+export const publishHomework = mutation({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const hw = await ctx.db.get(homeworkId);
+    if (!hw) throw new Error("Homework not found");
+    if (hw.status !== "draft") throw new Error("Only drafts can be published");
+    await ctx.db.patch(homeworkId, { status: "active", publishAt: undefined });
+    await scheduleAssignment(ctx, homeworkId, hw);
+  },
+});
+
+// ── Teacher: edit a draft (blocked once it's live) ──
+export const updateHomework = mutation({
+  args: {
+    homeworkId: v.id("homework"),
+    title: v.optional(v.string()),
+    topicIds: v.optional(v.array(v.id("topics"))),
+    teacherNotes: v.optional(v.string()),
+    questionCount: v.optional(v.number()),
+    deadline: v.optional(v.number()),
+    pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
+    pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
+  },
+  handler: async (ctx, args) => {
+    const hw = await ctx.db.get(args.homeworkId);
+    if (!hw) throw new Error("Homework not found");
+    if (hw.status !== "draft") throw new Error("Only drafts can be edited");
+
+    const patch: Partial<Doc<"homework">> = {};
+    if (args.title !== undefined) patch.title = args.title;
+    if (args.topicIds !== undefined) patch.topicIds = args.topicIds;
+    if (args.teacherNotes !== undefined) patch.teacherNotes = args.teacherNotes;
+    if (args.questionCount !== undefined) patch.questionCount = args.questionCount;
+    if (args.deadline !== undefined) patch.deadline = args.deadline;
+    if (args.pinnedQuestionIds !== undefined) patch.pinnedQuestionIds = args.pinnedQuestionIds;
+    if (args.pinnedCompoundIds !== undefined) patch.pinnedCompoundIds = args.pinnedCompoundIds;
+    await ctx.db.patch(args.homeworkId, patch);
+  },
+});
+
+// ── Teacher: cancel a scheduled publish (scheduled → draft) ──
+// Only acts on "scheduled" rows: reverts to "draft" and clears publishAt. The
+// already-queued publishScheduled job then no-ops (its status guard sees
+// "draft", not "scheduled"), so no extra scheduler bookkeeping is needed.
+export const cancelScheduled = mutation({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const hw = await ctx.db.get(homeworkId);
+    if (!hw) throw new Error("Homework not found");
+    if (hw.status !== "scheduled") throw new Error("Only scheduled homework can be cancelled");
+    await ctx.db.patch(homeworkId, { status: "draft", publishAt: undefined });
+  },
+});
+
+// ── Teacher: delete a draft (drafts have no assignedQuestions to clean up) ──
+export const deleteHomework = mutation({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const hw = await ctx.db.get(homeworkId);
+    if (!hw) throw new Error("Homework not found");
+    if (hw.status !== "draft") throw new Error("Only drafts can be deleted");
+    await ctx.db.delete(homeworkId);
   },
 });
 
@@ -201,15 +314,76 @@ export const assignToStudents = internalMutation({
   },
 });
 
-// ── Teacher: get homework for a classroom ──
+// ── Teacher: get homework for a classroom (STUDENT-FACING) ──
+// Excludes drafts and scheduled (not-yet-published) homework — the student side
+// (StudentHomeworkList / StudentHomework) consumes this and must only ever see
+// live/closed assignments.
 export const getHomeworkForClassroom = query({
   args: { classroomId: v.id("classrooms") },
   handler: async (ctx, { classroomId }) => {
-    return await ctx.db
+    // Stream newest-first and keep the first 20 visible rows — a classroom
+    // with many drafts/scheduled rows must not starve the student list.
+    const visible = [];
+    const q = ctx.db
+      .query("homework")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
+      .order("desc");
+    for await (const hw of q) {
+      if (hw.status === "draft" || hw.status === "scheduled") continue;
+      visible.push(hw);
+      if (visible.length >= 20) break;
+    }
+    return visible;
+  },
+});
+
+// ── Teacher: management console list (ALL statuses + submission counts) ──
+// Every row is enriched with {submitted, total} where total = distinct students
+// assigned and submitted = distinct students with at least one submitted row.
+// Drafts / scheduled homework have no assignedQuestions yet, so both are 0.
+export const getHomeworkForTeacher = query({
+  args: { classroomId: v.id("classrooms") },
+  handler: async (ctx, { classroomId }) => {
+    const rows = await ctx.db
       .query("homework")
       .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
       .order("desc")
-      .take(20);
+      .take(50);
+
+    const enriched = [];
+    for (const hw of rows) {
+      const assignments = await ctx.db
+        .query("assignedQuestions")
+        .withIndex("by_homework", (q) => q.eq("homeworkId", hw._id))
+        .collect();
+      // A student counts as "submitted" only when EVERY question assigned to
+      // them is submitted (same convention as convex/notifications.ts).
+      const perStudent = new Map<string, boolean>(); // studentId → all submitted so far
+      for (const aq of assignments) {
+        const key = aq.studentId.toString();
+        const done = aq.status === "submitted";
+        perStudent.set(key, (perStudent.get(key) ?? true) && done);
+      }
+      let submitted = 0;
+      for (const allDone of perStudent.values()) if (allDone) submitted++;
+      enriched.push({
+        ...hw,
+        total: perStudent.size,
+        submitted,
+      });
+    }
+    return enriched;
+  },
+});
+
+// ── Teacher: load a single draft for the edit wizard ──
+// Guarded to drafts — the wizard can only edit unpublished homework.
+export const getHomeworkById = query({
+  args: { homeworkId: v.id("homework") },
+  handler: async (ctx, { homeworkId }) => {
+    const hw = await ctx.db.get(homeworkId);
+    if (!hw || hw.status !== "draft") return null;
+    return hw;
   },
 });
 

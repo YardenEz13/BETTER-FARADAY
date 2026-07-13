@@ -248,7 +248,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                       <div className="flex flex-col gap-4">
                         <textarea
                           className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
-                          placeholder="[ INSERT_SOLUTION_HERE ]"
+                          placeholder="כתוב את הפתרון כאן…"
                           value={answers[section.label] ?? ""}
                           onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
                           rows={3}
@@ -260,7 +260,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             onClick={() => handleSubmitSection(section)}
                             disabled={!answers[section.label]?.trim()}
                           >
-                            <Send size={16} /> [ SUBMIT ]
+                            <Send size={16} /> בדוק תשובה
                           </button>
 
                           {section.hints.length > 0 && (
@@ -270,13 +270,13 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               disabled={hintCount >= section.hints.length}
                             >
                               <ElectricBulb size={18} tone="current" animated={false} glow={0.4} />
-                              [ REQUEST_HINT ] ({hintCount}/{section.hints.length})
+                              רמז ({hintCount}/{section.hints.length})
                             </button>
                           )}
 
                           {aiChatTrigger && (
                             <button className="btn-clay-ghost" onClick={aiChatTrigger}>
-                              <Bot size={16} /> [ AI_ASSIST ]
+                              <Bot size={16} /> שאל את פאראדיי
                             </button>
                           )}
 
@@ -323,7 +323,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           className="btn-clay-ghost self-start mt-2"
                           onClick={() => setShowSolution((prev) => ({ ...prev, [section.label]: !prev[section.label] }))}
                         >
-                          {showSolution[section.label] ? "[ HIDE_SOLUTION ]" : "[ REVEAL_SOLUTION ]"}
+                          {showSolution[section.label] ? "הסתר פתרון" : "הצג פתרון"}
                         </button>
 
                         <AnimatePresence>
@@ -385,7 +385,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           </div>
           
           <button className="btn-clay-primary mt-4" onClick={handleFinalize}>
-            [ CONTINUE_TO_NEXT ] ➜
+            המשך לשאלה הבאה
           </button>
         </motion.div>
       )}

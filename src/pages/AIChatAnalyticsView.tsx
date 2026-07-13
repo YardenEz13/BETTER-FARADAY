@@ -7,6 +7,7 @@ import { Bot, Frown, Smile, Meh, MessageSquare, Trash2, AlertTriangle, User, Fil
 import { ElectricAtom, ElectricBolt, Lens } from "../components/electric";
 import { analyzeConversation } from "../services/localAI";
 import CyberAvatar from "../components/CyberAvatar";
+import MathText from "../components/MathText";
 import { ChatAnalysisView } from "./ChatAnalysisView";
 
 export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
@@ -61,7 +62,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
             <h1 className="font-display font-bold text-3xl text-on-surface leading-tight">אנליטיקת שיחות AI</h1>
             <p className="text-sm text-on-surface-variant mt-1">
               מעקב אחר האינטראקציות של התלמידים עם המורה{' '}
-              <span className="font-semibold text-primary">מייקל פאראדיי</span>
+              <span className="font-semibold text-primary">פרופסור פאראדיי</span>
             </p>
           </div>
         </div>
@@ -276,7 +277,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                               className="text-sm text-on-surface leading-relaxed p-3.5 rounded-xl border-2"
                               style={{ borderColor: `color-mix(in srgb, ${accent} 25%, transparent)`, background: `color-mix(in srgb, ${accent} 6%, transparent)` }}
                             >
-                              {msg.content}
+                              <MathText>{msg.content}</MathText>
                             </div>
                           </div>
                         );

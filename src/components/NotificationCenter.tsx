@@ -8,7 +8,6 @@ import {
   Bell, BookOpen, FileText, Flame, Trophy, Sparkles, Target, Check,
 } from "./electric";
 import { SparkBurst } from "./electric";
-import BottomSheet from "./ui/BottomSheet";
 
 type Urgency = "urgent" | "info" | "celebration";
 interface NotificationItem {
@@ -172,26 +171,17 @@ export default function NotificationCenter({ studentId }: { studentId: string })
   const reducedMotion = !!useReducedMotion();
 
   const [open, setOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Close the dropdown on outside tap/click (pointerdown covers touch too)
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // Close desktop dropdown on outside click
-  useEffect(() => {
-    if (!open || isMobile) return;
-    const onDown = (e: MouseEvent) => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open, isMobile]);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
 
   const list = notifications ?? [];
   const unreadCount = list.filter((n) => !n.read).length;
@@ -230,42 +220,29 @@ export default function NotificationCenter({ studentId }: { studentId: string })
         )}
       </button>
 
-      {/* Desktop dropdown */}
-      {!isMobile && (
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 340, damping: 26 }}
-              className="absolute left-0 mt-2 w-[22rem] max-h-[70vh] overflow-y-auto overscroll-contain rounded-3xl border-2 border-outline bg-surface z-[80]"
-              style={{ boxShadow: "var(--shadow-clay), 0 12px 40px rgba(0,0,0,0.15)" }}
-            >
-              <PanelBody
-                notifications={list}
-                reducedMotion={reducedMotion}
-                unreadCount={unreadCount}
-                onRowClick={handleRowClick}
-                onMarkAll={handleMarkAll}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-
-      {/* Mobile bottom sheet */}
-      {isMobile && (
-        <BottomSheet isOpen={open} onClose={() => setOpen(false)} height="70vh">
-          <PanelBody
-            notifications={list}
-            reducedMotion={reducedMotion}
-            unreadCount={unreadCount}
-            onRowClick={handleRowClick}
-            onMarkAll={handleMarkAll}
-          />
-        </BottomSheet>
-      )}
+      {/* Dropdown — anchored under the bell on desktop; on the phone it pins
+          just below the header, full-width. No bottom sheet, no backdrop: the
+          header stays visible instead of blacking out behind a scrim. */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 340, damping: 26 }}
+            className="fixed inset-x-3 top-[76px] md:absolute md:inset-x-auto md:left-0 md:top-auto md:mt-2 w-auto md:w-[22rem] max-h-[60vh] md:max-h-[70vh] overflow-y-auto overscroll-contain rounded-3xl border-2 border-outline bg-surface z-[80]"
+            style={{ boxShadow: "var(--shadow-clay), 0 12px 40px rgba(0,0,0,0.15)" }}
+          >
+            <PanelBody
+              notifications={list}
+              reducedMotion={reducedMotion}
+              unreadCount={unreadCount}
+              onRowClick={handleRowClick}
+              onMarkAll={handleMarkAll}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

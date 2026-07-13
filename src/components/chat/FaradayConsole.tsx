@@ -1,6 +1,7 @@
-import { type ChangeEvent, type RefObject } from "react";
+import { type ChangeEvent, type RefObject, useRef } from "react";
 import { X, Send, Calculator, ImagePlus, Settings, QrCode } from "../electric";
 import { type PreparedImage } from "../../services/imageUpload";
+import { animateSafe } from "../../lib/anime";
 
 interface FaradayConsoleProps {
   input: string;
@@ -27,18 +28,28 @@ export default function FaradayConsole({
   isTyping, isAnalyzing, fileInputRef, onFileSelect, onSubmit,
   onOpenQRBridge, onOpenPlayground,
 }: FaradayConsoleProps) {
+  const sendBtnRef = useRef<HTMLButtonElement>(null);
+  const burstRef = useRef<HTMLSpanElement>(null);
+
+  // Fire a charge when a message is sent: the button recoils + a spark ring
+  // bursts out. anime.js; no-ops under reduced motion. The button is disabled
+  // when there's nothing to send, so onClick only reaches here on a real send.
+  const fireCharge = () => {
+    const btn = sendBtnRef.current;
+    const burst = burstRef.current;
+    if (btn) animateSafe(btn, { scale: [1, 0.82, 1], duration: 340, ease: "outBack" });
+    if (burst) animateSafe(burst, { scale: [0.5, 2.1], opacity: [0.65, 0], duration: 520, ease: "outQuad" });
+    onSubmit();
+  };
+
   return (
-    <div dir="rtl" className="flex-shrink-0 bg-surface/95 backdrop-blur-xl border-t border-outline-variant/60 p-3 z-20 relative">
+    <div dir="rtl" className="flex-shrink-0 bg-background border-t border-outline-variant/60 p-3 z-20 relative">
       <div className="max-w-4xl mx-auto">
-        {/* Console panel */}
-        <div className="bg-on-surface/5 backdrop-blur-lg rounded-[16px] border-2 border-outline-variant shadow-lg flex flex-col overflow-hidden focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-          {/* Console title bar */}
-          <div className="flex items-center gap-2 px-4 py-1.5 border-b border-outline-variant/40 text-on-surface-variant bg-surface-container-low/60">
-            <Calculator className="" />
-            <span className="font-label-md" style={{ fontSize: '11px', letterSpacing: '0.04em' }}>Faraday Console v2.0</span>
-            <div className="flex-1" />
-            <span className="font-label-md opacity-50" style={{ fontSize: '10px' }}>הקש Enter לשליחה</span>
-          </div>
+        {/* Console panel — clay pill (1d Faraday Clay) */}
+        <div
+          className="bg-surface rounded-[18px] border-2 border-outline flex flex-col overflow-hidden focus-within:border-primary/60 transition-all"
+          style={{ boxShadow: 'var(--shadow-clay)' }}
+        >
           {/* Attached image preview */}
           {attachedImage && (
             <div className="flex items-center gap-3 px-4 py-2 border-b border-outline-variant/40 bg-surface-container-low/50">
@@ -113,14 +124,28 @@ export default function FaradayConsole({
               >
                 <Settings className="" />
               </button>
-              <button
-                className="w-11 h-11 bg-primary-container hover:bg-primary text-on-primary rounded-xl shadow-sm flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-                onClick={onSubmit}
-                disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
-              >
-                <Send className="" />
-              </button>
+              <div className="relative flex items-center justify-center">
+                <span
+                  ref={burstRef}
+                  className="absolute w-11 h-11 rounded-full pointer-events-none"
+                  style={{
+                    border: '2px solid var(--color-primary)',
+                    boxShadow: '0 0 12px color-mix(in srgb, var(--color-primary) 60%, transparent)',
+                    opacity: 0,
+                  }}
+                  aria-hidden
+                />
+                <button
+                  ref={sendBtnRef}
+                  className="w-11 h-11 bg-primary hover:brightness-105 text-white rounded-[13px] flex items-center justify-center transition-all active:translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none relative"
+                  style={{ boxShadow: 'var(--shadow-clay-primary)' }}
+                  onClick={fireCharge}
+                  disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
+                  title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
+                >
+                  <Send className="" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

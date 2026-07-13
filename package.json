@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "loadtest": "k6 run loadtest/convex_read.js",
+    "loadtest:cloud": "k6 run -o cloud loadtest/convex_read.js",
+    "loadtest:frontend": "k6 run loadtest/frontend.js"
   },
   "dependencies": {
     "@convex-dev/rate-limiter": "^0.3.2",
@@ -20,6 +23,7 @@
     "@types/katex": "^0.16.8",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "animejs": "^4.5.0",
     "convex": "^1.42.0",
     "framer-motion": "^12.38.0",
     "gsap": "^3.15.0",
