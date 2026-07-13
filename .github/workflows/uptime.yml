@@ -1,0 +1,35 @@
+# Uptime probe: curls the Convex /health endpoint (and the Vercel prod URL if
+# configured) every 15 minutes. A failing run triggers GitHub's failed-workflow
+# email to the repo owner.
+#
+# Setup: set repo *variables* (Settings → Secrets and variables → Actions →
+# Variables):
+#   CONVEX_SITE_URL  — the prod deployment's HTTP-actions host,
+#                      e.g. https://<deployment>.convex.site   (note: .site, not .cloud)
+#   PROD_APP_URL     — optional, the Vercel prod URL, e.g. https://faraday.example.com
+#
+# Caveats: GitHub schedules can lag several minutes under load, and schedules
+# are auto-disabled after 60 days without repo activity.
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Convex /health
+        if: vars.CONVEX_SITE_URL != ''
+        run: |
+          curl -fsS --max-time 15 "${{ vars.CONVEX_SITE_URL }}/health"
+          echo
+      - name: Frontend
+        if: vars.PROD_APP_URL != ''
+        run: curl -fsS -o /dev/null --max-time 15 "${{ vars.PROD_APP_URL }}"
+      - name: No URLs configured
+        if: vars.CONVEX_SITE_URL == '' && vars.PROD_APP_URL == ''
+        run: |
+          echo "::warning::Set the CONVEX_SITE_URL repo variable to enable uptime checks."

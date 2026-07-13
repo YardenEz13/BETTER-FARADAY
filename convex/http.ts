@@ -67,6 +67,22 @@ function rateLimitedResponse(retryAfterMs?: number, streaming?: boolean) {
 
 const http = httpRouter();
 
+// ── Health check ──
+// Exercises router + runtime + a real DB read in one probe. Pinged by the
+// uptime workflow (.github/workflows/uptime.yml) against the `.convex.site`
+// host of the prod deployment.
+http.route({
+  path: "/health",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    const aiEnabled = await ctx.runQuery(internal.aiGate.isAiEnabled, {});
+    return new Response(JSON.stringify({ ok: true, aiEnabled, ts: Date.now() }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
 // ── Streaming tutor proxy ──
 // Pipes Gemini's SSE straight back to the browser (including non-OK statuses, so
 // the client's existing 429 → next-model fallback keeps working). Abort is
