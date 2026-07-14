@@ -12,6 +12,7 @@ import type * as addMore from "../addMore.js";
 import type * as ai from "../ai.js";
 import type * as aiChat from "../aiChat.js";
 import type * as aiGate from "../aiGate.js";
+import type * as aiUsage from "../aiUsage.js";
 import type * as attempts from "../attempts.js";
 import type * as bridge from "../bridge.js";
 import type * as classroom from "../classroom.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   aiChat: typeof aiChat;
   aiGate: typeof aiGate;
+  aiUsage: typeof aiUsage;
   attempts: typeof attempts;
   bridge: typeof bridge;
   classroom: typeof classroom;

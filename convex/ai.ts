@@ -53,6 +53,12 @@ export const processAbandonedChats = internalAction({
           }
         });
 
+        await ctx.runMutation(internal.aiUsage.record, {
+          task: "analysis",
+          ok: result.ok,
+          promptTokens: result.ok ? (result.data?.usageMetadata?.promptTokenCount ?? 0) : 0,
+          outputTokens: result.ok ? (result.data?.usageMetadata?.candidatesTokenCount ?? 0) : 0,
+        });
         if (!result.ok) {
           console.error(`Gemini API error for chat ${chatInfo.chatId}: ${result.status} ${result.error}`);
           continue;
@@ -254,6 +260,12 @@ ${JSON.stringify(inputs, null, 2)}
               }
             }
           },
+        });
+        await ctx.runMutation(internal.aiUsage.record, {
+          task: "rewrite",
+          ok: result.ok,
+          promptTokens: result.ok ? (result.data?.usageMetadata?.promptTokenCount ?? 0) : 0,
+          outputTokens: result.ok ? (result.data?.usageMetadata?.candidatesTokenCount ?? 0) : 0,
         });
 
         if (!result.ok) {

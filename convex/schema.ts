@@ -689,6 +689,21 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  // ── AI usage metering (daily aggregates) ──
+  // One row per Israel-time day × task, incremented at every Gemini call site
+  // (http proxy + server actions). Aggregate rows, never per-request, so the
+  // table stays tiny and the teacher-dashboard read is one indexed range scan.
+  aiUsage: defineTable({
+    day: v.string(),          // "2026-07-14" (Israel time, streaks.israelDate)
+    task: v.string(),         // "chat" | "vision" | "analysis" | "rewrite" | "grading" | "unknown"
+    requests: v.number(),
+    errors: v.number(),
+    promptTokens: v.number(), // 0 where unknown (streaming path isn't buffered)
+    outputTokens: v.number(),
+  })
+    .index("by_day_task", ["day", "task"])
+    .index("by_day", ["day"]),
+
   // ── Live class mode (שיעור חי) ──
   // Teacher broadcasts one question to the whole classroom; answers stream in
   // live (Convex reactivity does the heavy lifting). One active session per

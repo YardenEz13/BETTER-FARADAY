@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, ElectricBolt, Trophy, Copy, QrCode, Trash2
+  Zap, GraduationCap, ElectricBolt, Trophy, Copy, QrCode, Trash2, Sparkles
 } from "../components/electric";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -292,7 +292,7 @@ function KpiValue({ value, suffix }: { value: number; suffix?: string }) {
 
 /* ───────────────────────── KPI RIBBON ───────────────────────── */
 function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
-  const ICON: Record<string, typeof Users> = { students: Users, mastery: Zap, active: Activity, ai: Bot, risk: AlertTriangle };
+  const ICON: Record<string, typeof Users> = { students: Users, mastery: Zap, active: Activity, ai: Bot, aiUsage: Sparkles, risk: AlertTriangle };
   return (
     <div
       className="flex md:grid gap-3 md:gap-3.5 mb-5 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0"

@@ -149,6 +149,12 @@ ${JSON.stringify(inputs, null, 2)}
             }
           },
         });
+        await ctx.runMutation(internal.aiUsage.record, {
+          task: "rewrite",
+          ok: result.ok,
+          promptTokens: result.ok ? (result.data?.usageMetadata?.promptTokenCount ?? 0) : 0,
+          outputTokens: result.ok ? (result.data?.usageMetadata?.candidatesTokenCount ?? 0) : 0,
+        });
 
         if (!result.ok) {
           console.error(`[precomputeThemeBatch] Gemini error ${result.status} for theme ${theme}: ${result.error}`);

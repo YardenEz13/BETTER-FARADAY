@@ -161,6 +161,12 @@ ${stepsBlock}
       },
       { maxAttemptsPerModel: 3 },
     );
+    await ctx.runMutation(internal.aiUsage.record, {
+      task: "grading",
+      ok: result.ok,
+      promptTokens: result.ok ? (result.data?.usageMetadata?.promptTokenCount ?? 0) : 0,
+      outputTokens: result.ok ? (result.data?.usageMetadata?.candidatesTokenCount ?? 0) : 0,
+    });
 
     if (!result.ok) {
       throw new Error(result.error || "Gemini grading failed");

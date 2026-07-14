@@ -129,6 +129,10 @@ http.route({
       body: JSON.stringify(body.payload ?? {}),
     });
 
+    // Usage metering: request count + ok only. Token counts would require
+    // buffering the SSE body, which would kill streaming latency — skip them.
+    await ctx.runMutation(internal.aiUsage.record, { task: "chat", ok: upstream.ok });
+
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
@@ -192,6 +196,24 @@ http.route({
       });
       if (res.ok) {
         const json = await res.text();
+        // Usage metering: Gemini returns usageMetadata on generateContent.
+        let promptTokens = 0;
+        let outputTokens = 0;
+        try {
+          const parsed = JSON.parse(json) as {
+            usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+          };
+          promptTokens = parsed.usageMetadata?.promptTokenCount ?? 0;
+          outputTokens = parsed.usageMetadata?.candidatesTokenCount ?? 0;
+        } catch {
+          // Non-JSON body — still count the request.
+        }
+        await ctx.runMutation(internal.aiUsage.record, {
+          task: task ?? "unknown",
+          ok: true,
+          promptTokens,
+          outputTokens,
+        });
         return new Response(json, {
           status: 200,
           headers: { "Content-Type": "application/json", ...CORS_HEADERS },
@@ -201,6 +223,7 @@ http.route({
       // Rate limited on this model → try the next one. Any other error is fatal.
       if (res.status !== 429) break;
     }
+    await ctx.runMutation(internal.aiUsage.record, { task: task ?? "unknown", ok: false });
     return new Response(JSON.stringify({ error: `Gemini upstream failed (${lastStatus})` }), {
       status: lastStatus === 429 ? 429 : 502,
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },
