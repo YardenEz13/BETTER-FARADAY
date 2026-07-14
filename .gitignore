@@ -60,3 +60,7 @@ ds-bundle/
 # local agent/skill tooling (not app code)
 .agent/
 skills-lock.json
+
+# Playwright
+test-results/
+playwright-report/

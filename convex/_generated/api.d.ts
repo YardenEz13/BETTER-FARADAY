@@ -53,6 +53,7 @@ import type * as seedBagrut from "../seedBagrut.js";
 import type * as seedBagrutData1 from "../seedBagrutData1.js";
 import type * as seedBagrutData2 from "../seedBagrutData2.js";
 import type * as seedBagrutData3 from "../seedBagrutData3.js";
+import type * as seedE2E from "../seedE2E.js";
 import type * as seedGeometry from "../seedGeometry.js";
 import type * as seedGeometryQuestions from "../seedGeometryQuestions.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
@@ -114,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   seedBagrutData1: typeof seedBagrutData1;
   seedBagrutData2: typeof seedBagrutData2;
   seedBagrutData3: typeof seedBagrutData3;
+  seedE2E: typeof seedE2E;
   seedGeometry: typeof seedGeometry;
   seedGeometryQuestions: typeof seedGeometryQuestions;
   sessionBriefs: typeof sessionBriefs;

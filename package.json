@@ -15,7 +15,8 @@
     "build-storybook": "storybook build",
     "loadtest": "k6 run loadtest/convex_read.js",
     "loadtest:cloud": "k6 run -o cloud loadtest/convex_read.js",
-    "loadtest:frontend": "k6 run loadtest/frontend.js"
+    "loadtest:frontend": "k6 run loadtest/frontend.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@convex-dev/rate-limiter": "^0.3.2",
@@ -43,6 +44,7 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
     "@eslint/js": "^9.13.0",
+    "@playwright/test": "^1.61.1",
     "@sentry/vite-plugin": "^5.4.0",
     "@storybook/addon-a11y": "^10.4.6",
     "@storybook/addon-docs": "^10.4.6",
