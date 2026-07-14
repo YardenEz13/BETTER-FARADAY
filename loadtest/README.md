@@ -62,3 +62,30 @@ k6 run -o cloud loadtest/convex_read.js
 ```
 
 See the recommendation below for the free logs + state tracker.
+
+## Live-class WRITE scenario (convex_live_write.js)
+
+Simulates a live lesson: VU 1 is the teacher (rotates `live:start` rounds every
+20s, polls `live:getResults`), the rest are students answering via
+`live:submitAnswer` under distinct seeded identities.
+
+```powershell
+# Fixtures first (once per deployment):
+npx convex run seedE2E:seed [--prod]
+npx convex run seedE2E:seedLoadStudents [--prod]
+
+npm run loadtest:live                       # smoke vs dev
+k6 run -e STAGE=load loadtest/convex_live_write.js
+# prod requires an explicit opt-in:
+k6 run -e CONVEX_URL=https://befitting-panther-27.convex.cloud -e I_KNOW_THIS_IS_PROD=1 -e STAGE=load loadtest/convex_live_write.js
+```
+
+## Prod baseline — befitting-panther-27, 2026-07-14 (pre-launch, seeded, no users)
+
+| Run | VUs | Requests | Failed | p95 |
+|---|---|---|---|---|
+| convex_read.js STAGE=stress | up to 200 | 31,772 (75/s) | 0% | 177 ms |
+| convex_live_write.js STAGE=load | 25 | 5,576 (18.5/s) | 0% | 183 ms (mutations 243 ms) |
+
+All thresholds passed with wide margins (read p95 budget 800ms, write 1000ms);
+279 live answers accepted, zero OCC failures surfaced. No fixes required.
