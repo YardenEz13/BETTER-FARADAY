@@ -56,6 +56,7 @@ import type * as seedBagrutData3 from "../seedBagrutData3.js";
 import type * as seedE2E from "../seedE2E.js";
 import type * as seedGeometry from "../seedGeometry.js";
 import type * as seedGeometryQuestions from "../seedGeometryQuestions.js";
+import type * as seedTopics from "../seedTopics.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
 import type * as shop from "../shop.js";
 import type * as streaks from "../streaks.js";
@@ -118,6 +119,7 @@ declare const fullApi: ApiFromModules<{
   seedE2E: typeof seedE2E;
   seedGeometry: typeof seedGeometry;
   seedGeometryQuestions: typeof seedGeometryQuestions;
+  seedTopics: typeof seedTopics;
   sessionBriefs: typeof sessionBriefs;
   shop: typeof shop;
   streaks: typeof streaks;
