@@ -17,6 +17,8 @@ export default defineConfig({
         environment: 'happy-dom',
         globals: true,
         setupFiles: ['./vitest.setup.ts'],
+        // e2e/ belongs to Playwright (`npm run test:e2e`), not vitest.
+        exclude: ['**/node_modules/**', 'e2e/**'],
         // Modules read VITE_CONVEX_URL at import time (localAI.gemini.ts), which
         // runs before any vi.stubEnv in a test file — inject it here instead.
         env: {
