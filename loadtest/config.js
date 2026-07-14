@@ -27,6 +27,16 @@ export function convexQuery(http, path, args = {}) {
   );
 }
 
+// Call a Convex mutation over HTTP. WRITES DATA — only convex_live_write.js
+// uses this, behind its own prod guard rail.
+export function convexMutation(http, path, args = {}) {
+  return http.post(
+    `${CONVEX_URL}/api/mutation`,
+    JSON.stringify({ path, args, format: "json" }),
+    { headers: HEADERS, tags: { fn: path } }
+  );
+}
+
 // A Convex 200 can still carry a logical error — check the body.
 export function isConvexOk(res) {
   if (res.status !== 200) return false;

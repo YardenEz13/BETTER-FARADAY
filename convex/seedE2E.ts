@@ -70,3 +70,41 @@ export const seed = internalMutation({
     return { classroomId, studentId, topicId };
   },
 });
+
+// ── Load-test roster: N extra students in the E2E classroom ──
+// The k6 live-write scenario (loadtest/convex_live_write.js) answers as these
+// students. Idempotent by name. `npx convex run seedE2E:seedLoadStudents [--prod]`
+export const LOAD_STUDENT_PREFIX = "לוד-טסט";
+const LOAD_STUDENT_COUNT = 50;
+
+export const seedLoadStudents = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const classroom = (await ctx.db.query("classrooms").collect()).find(
+      (c) => c.name === E2E_CLASSROOM,
+    );
+    if (!classroom) throw new Error("Run seedE2E:seed first");
+
+    const existing = await ctx.db
+      .query("students")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", classroom._id))
+      .collect();
+    const names = new Set(existing.map((s) => s.name));
+
+    let inserted = 0;
+    for (let i = 1; i <= LOAD_STUDENT_COUNT; i++) {
+      const name = `${LOAD_STUDENT_PREFIX} ${i}`;
+      if (names.has(name)) continue;
+      await ctx.db.insert("students", {
+        name,
+        classroomId: classroom._id,
+        avatarColor: "#6366f1",
+        streak: 0,
+        level: 1,
+        onboardedAt: Date.now(),
+      });
+      inserted++;
+    }
+    return { classroomId: classroom._id, inserted, total: LOAD_STUDENT_COUNT };
+  },
+});

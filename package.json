@@ -16,7 +16,8 @@
     "loadtest": "k6 run loadtest/convex_read.js",
     "loadtest:cloud": "k6 run -o cloud loadtest/convex_read.js",
     "loadtest:frontend": "k6 run loadtest/frontend.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "loadtest:live": "k6 run loadtest/convex_live_write.js"
   },
   "dependencies": {
     "@convex-dev/rate-limiter": "^0.3.2",
