@@ -11,14 +11,14 @@ export const E2E_TOPIC_HE = "חשבון בסיסי (בדיקות)";
 export const seed = internalMutation({
   args: {},
   handler: async (ctx) => {
-    let classroom = (await ctx.db.query("classrooms").collect()).find(
+    const classroom = (await ctx.db.query("classrooms").collect()).find(
       (c) => c.name === E2E_CLASSROOM,
     );
     const classroomId =
       classroom?._id ??
       (await ctx.db.insert("classrooms", { name: E2E_CLASSROOM, teacherName: "מורה בדיקה" }));
 
-    let student = (await ctx.db.query("students").withIndex("by_classroom", (q) => q.eq("classroomId", classroomId)).collect()).find(
+    const student = (await ctx.db.query("students").withIndex("by_classroom", (q) => q.eq("classroomId", classroomId)).collect()).find(
       (s) => s.name === E2E_STUDENT,
     );
     const studentId =
@@ -32,7 +32,7 @@ export const seed = internalMutation({
         onboardedAt: Date.now(), // skip the first-run wizard in tests
       }));
 
-    let topic = (await ctx.db.query("topics").collect()).find((t) => t.nameHe === E2E_TOPIC_HE);
+    const topic = (await ctx.db.query("topics").collect()).find((t) => t.nameHe === E2E_TOPIC_HE);
     const topicId =
       topic?._id ??
       (await ctx.db.insert("topics", {
