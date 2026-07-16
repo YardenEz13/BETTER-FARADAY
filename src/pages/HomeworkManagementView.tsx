@@ -862,13 +862,23 @@ function StudentQuestionsPanel({ g, onBack }: { g: StudentGroup; onBack: () => v
                   <div key={idx} className="bg-surface-container-low p-3 rounded-lg border-2 border-outline text-sm">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-on-surface">סעיף {ans.sectionLabel}</span>
-                      {ans.isCorrect !== undefined ? (
-                        <span className="text-xs font-bold" style={{ color: ans.isCorrect ? "var(--color-primary)" : "var(--color-error)" }}>
-                          {ans.isCorrect ? "נכון ✓" : "שגוי ✗"}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-on-surface-variant">ממתין לבדיקה</span>
-                      )}
+                      <span className="flex items-center gap-2">
+                        {(ans.attempts ?? 1) > 1 && (
+                          <span
+                            className="text-xs font-bold num px-1.5 py-0.5 rounded bg-surface-container-high"
+                            title="ניסיונות / נכונים"
+                          >
+                            {ans.attempts}/{ans.isCorrect ? 1 : 0}
+                          </span>
+                        )}
+                        {ans.isCorrect !== undefined ? (
+                          <span className="text-xs font-bold" style={{ color: ans.isCorrect ? "var(--color-primary)" : "var(--color-error)" }}>
+                            {ans.isCorrect ? "נכון ✓" : "שגוי ✗"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-on-surface-variant">ממתין לבדיקה</span>
+                        )}
+                      </span>
                     </div>
                     <div className="text-xs text-on-surface mb-1">
                       <span className="text-on-surface-variant me-1">תשובה:</span><MathText>{ans.studentAnswer ?? ""}</MathText>

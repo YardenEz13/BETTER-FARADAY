@@ -125,6 +125,7 @@ export default function StudentHomework() {
                     aiChatTrigger={() => openChat()}
                     onQrBridge={() => openChat(true)}
                     overridePreamble={!showOriginal ? activeAssignment.personalizedPreamble : undefined}
+                    existingAnswers={activeAssignment.answers as any}
                   />
                 </motion.div>
               ) : (
@@ -279,6 +280,11 @@ export default function StudentHomework() {
                                 style={{ color: aq.score >= 70 ? "var(--color-primary)" : aq.score >= 40 ? "var(--color-tertiary)" : "var(--color-error)" }}
                               >
                                 {aq.score}%
+                              </div>
+                            )}
+                            {status === "in_progress" && isCompound && (aq.answers?.length ?? 0) > 0 && (
+                              <div className="label-mono text-xs text-tertiary whitespace-nowrap">
+                                {aq.answers?.length}/{(qData as any).sections?.length ?? "?"} סעיפים · נשמר
                               </div>
                             )}
                           </div>

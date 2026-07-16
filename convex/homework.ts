@@ -433,12 +433,17 @@ export const submitAnswer = mutation({
     if (!aq) throw new Error("Assigned question not found");
 
     const existingAnswers = aq.answers ?? [];
+    const prior = existingAnswers.find((a) => a.sectionLabel === args.sectionLabel);
+    // Unlimited retries: every (re)submit bumps the attempt counter. A prior row
+    // without `attempts` (legacy data) is treated as a single earlier try.
+    const attempts = (prior?.attempts ?? (prior ? 1 : 0)) + 1;
     const newAnswer = {
       sectionLabel: args.sectionLabel,
       studentAnswer: args.studentAnswer,
       isCorrect: args.isCorrect,
       timeMs: args.timeMs,
       hintsUsed: args.hintsUsed,
+      attempts,
     };
 
     // Replace if already answered, otherwise append
@@ -456,15 +461,23 @@ export const submitAnswer = mutation({
 
 // ── Student: finalize submission ──
 export const finalizeSubmission = mutation({
-  args: { assignedQuestionId: v.id("assignedQuestions") },
-  handler: async (ctx, { assignedQuestionId }) => {
+  args: {
+    assignedQuestionId: v.id("assignedQuestions"),
+    // Total sections in the question. When provided (compound questions) the
+    // score is computed over ALL sections, so a partial submission (some
+    // סעיפים left blank) is scored honestly instead of over only what was
+    // answered. Falls back to the answered count for legacy/single questions.
+    totalSections: v.optional(v.number()),
+  },
+  handler: async (ctx, { assignedQuestionId, totalSections }) => {
     const aq = await ctx.db.get(assignedQuestionId);
     if (!aq) throw new Error("Assigned question not found");
 
     const answers = aq.answers ?? [];
     const correctCount = answers.filter((a) => a.isCorrect).length;
-    const score = answers.length > 0
-      ? Math.round((correctCount / answers.length) * 100)
+    const denominator = totalSections && totalSections > 0 ? totalSections : answers.length;
+    const score = denominator > 0
+      ? Math.round((correctCount / denominator) * 100)
       : 0;
 
     const wasSubmitted = aq.status === "submitted";

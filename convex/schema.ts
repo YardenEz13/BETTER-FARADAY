@@ -334,6 +334,9 @@ export default defineSchema({
       isCorrect: v.optional(v.boolean()),
       timeMs: v.optional(v.number()),
       hintsUsed: v.number(),
+      // Total tries the student made on this section (unlimited retries after a
+      // wrong answer). Optional so pre-existing rows stay valid; absent ≈ 1.
+      attempts: v.optional(v.number()),
       proofStepResults: v.optional(v.array(v.object({
         stepIndex: v.number(),
         studentClaim: v.string(),

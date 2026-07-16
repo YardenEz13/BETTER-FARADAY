@@ -1,13 +1,31 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone } from "../components/electric";
+import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone, RefreshCw } from "../components/electric";
 import { Lightbulb as ElectricBulb } from "../components/electric";
 import { log } from "../lib/logger";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
+
+// MathLive is heavy — load it only when a math section actually renders.
+const MathField = lazy(() => import("./playground/MathField"));
+// Answer types that get the visual LaTeX editor. Everything else (free text)
+// keeps the plain textarea; proofs use ProofSectionRenderer.
+const MATH_ANSWER_TYPES = new Set(["numeric", "expression", "coordinates", "range"]);
+
+// Normalize a possibly-LaTeX answer for lenient comparison (strip spaces,
+// braces, and common LaTeX operator commands so "\frac{1}{2}" ≈ "1/2"-ish).
+function normalizeMath(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/\\left|\\right|\\,|\\;|\\!|\\ /g, "")
+    .replace(/\\cdot|\\times/g, "*")
+    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "$1/$2")
+    .replace(/[\s{}$]/g, "")
+    .replace(/\\/g, "");
+}
 
 interface ProofStep {
   stepIndex: number;
@@ -47,6 +65,13 @@ interface CompoundQuestionData {
   fullSolution: string;
 }
 
+interface ExistingAnswer {
+  sectionLabel: string;
+  studentAnswer: string;
+  isCorrect?: boolean;
+  attempts?: number;
+}
+
 interface Props {
   question: CompoundQuestionData;
   assignedQuestionId: Id<"assignedQuestions">;
@@ -55,14 +80,32 @@ interface Props {
   onQrBridge?: () => void;
   /** AI-generated preamble override (themed version). If undefined, original is shown. */
   overridePreamble?: string;
+  /** Previously-saved section answers, so reopening a question restores progress. */
+  existingAnswers?: ExistingAnswer[];
 }
 
-export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, onQrBridge, overridePreamble }: Props) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
-  const [results, setResults] = useState<Record<string, boolean>>({});
+export default function CompoundQuestionRenderer({ question, assignedQuestionId, onComplete, aiChatTrigger, onQrBridge, overridePreamble, existingAnswers }: Props) {
+  // Hydrate local state from any previously-saved answers so partial progress
+  // isn't lost when a student leaves and reopens the question.
+  const prior = existingAnswers ?? [];
+  const [answers, setAnswers] = useState<Record<string, string>>(
+    () => Object.fromEntries(prior.map((a) => [a.sectionLabel, a.studentAnswer])),
+  );
+  const [submitted, setSubmitted] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(prior.map((a) => [a.sectionLabel, true])),
+  );
+  const [results, setResults] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(prior.map((a) => [a.sectionLabel, !!a.isCorrect])),
+  );
+  const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>(
+    () => Object.fromEntries(prior.map((a) => [a.sectionLabel, a.attempts ?? 1])),
+  );
   const [hintsRevealed, setHintsRevealed] = useState<Record<string, number>>({});
-  const [expandedSection, setExpandedSection] = useState<string>("א");
+  // Resume on the first not-yet-answered section (falls back to the first one).
+  const [expandedSection, setExpandedSection] = useState<string>(
+    () => question.sections.find((s) => !prior.some((a) => a.sectionLabel === s.label))?.label
+      ?? question.sections[0]?.label ?? "א",
+  );
   const [showSolution, setShowSolution] = useState<Record<string, boolean>>({});
   const [sectionTimes, setSectionTimes] = useState<Record<string, number>>({});
   const [sectionStartTime, setSectionStartTime] = useState(Date.now());
@@ -90,14 +133,18 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     const timeMs = Date.now() - sectionStartTime;
     setSectionTimes((prev) => ({ ...prev, [section.label]: timeMs }));
 
-    const correctLower = section.correctAnswer.toLowerCase().replace(/\s+/g, "");
-    const answerLower = answer.toLowerCase().replace(/\s+/g, "");
+    // Normalize both sides so LaTeX answers (from the MathField editor) compare
+    // sensibly against the stored plain-text correctAnswer.
+    const correctLower = normalizeMath(section.correctAnswer);
+    const answerLower = normalizeMath(answer);
     const isCorrect = correctLower.includes(answerLower) || answerLower.includes(correctLower) || answerLower.length > 5;
 
+    const attempts = (attemptCounts[section.label] ?? 0) + 1;
+    setAttemptCounts((prev) => ({ ...prev, [section.label]: attempts }));
     setSubmitted((prev) => ({ ...prev, [section.label]: true }));
     setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
 
-    log.homework("section submitted", { section: section.label, isCorrect, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
+    log.homework("section submitted", { section: section.label, isCorrect, attempts, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
 
     await submitAnswer({
       assignedQuestionId,
@@ -113,13 +160,24 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     // so the student has time to review the solution steps and feedback.
   };
 
+  // Unlimited retries: reopen a wrong section for another attempt. The previous
+  // answer stays in the field and the attempt counter is preserved; the next
+  // submit bumps it (surfaced to the teacher as "attempts/correct").
+  const handleRetrySection = (section: Section) => {
+    setSubmitted((prev) => ({ ...prev, [section.label]: false }));
+    setShowSolution((prev) => ({ ...prev, [section.label]: false }));
+    setSectionStartTime(Date.now());
+    setExpandedSection(section.label);
+  };
+
   const handleFinalize = async () => {
-    log.homework("finalizing homework submission", { assignedQuestionId });
-    await finalizeSubmission({ assignedQuestionId });
+    log.homework("finalizing homework submission", { assignedQuestionId, totalSections: question.sections.length });
+    await finalizeSubmission({ assignedQuestionId, totalSections: question.sections.length });
     log.homework("homework finalized");
     onComplete();
   };
 
+  const answeredCount = question.sections.filter((s) => submitted[s.label]).length;
   const allSubmitted = question.sections.every((s) => submitted[s.label]);
   const correctCount = Object.values(results).filter(Boolean).length;
   const totalPoints = question.sections.reduce((s, sec) => s + sec.points, 0);
@@ -246,14 +304,41 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                       />
                     ) : !isSubmitted ? (
                       <div className="flex flex-col gap-4">
-                        <textarea
-                          className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
-                          placeholder="כתוב את הפתרון כאן…"
-                          value={answers[section.label] ?? ""}
-                          onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
-                          rows={3}
-                          dir="rtl"
-                        />
+                        {MATH_ANSWER_TYPES.has(section.answerType) ? (
+                          <div className="flex flex-col gap-2">
+                            <div className="label-mono text-[10px] text-on-surface-variant flex items-center gap-1">
+                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — הקלד ישירות או השתמש במקלדת המתמטית
+                            </div>
+                            <Suspense
+                              fallback={
+                                <div className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface-variant font-mono text-sm">
+                                  טוען עורך נוסחאות…
+                                </div>
+                              }
+                            >
+                              <MathField
+                                value={answers[section.label] ?? ""}
+                                onChange={(latex) => setAnswers((prev) => ({ ...prev, [section.label]: latex }))}
+                                onEnter={() => handleSubmitSection(section)}
+                                placeholder="הקלד את התשובה…"
+                              />
+                            </Suspense>
+                          </div>
+                        ) : (
+                          <textarea
+                            className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
+                            placeholder="כתוב את הפתרון כאן…"
+                            value={answers[section.label] ?? ""}
+                            onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
+                            rows={3}
+                            dir="rtl"
+                          />
+                        )}
+                        {attemptCounts[section.label] > 0 && (
+                          <div className="label-mono text-[10px] text-tertiary">
+                            ניסיון {(attemptCounts[section.label] ?? 0) + 1}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-4 mt-2">
                           <button
                             className={`btn-clay-primary ${!answers[section.label]?.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -319,12 +404,29 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                           )}
                         </div>
 
-                        <button
-                          className="btn-clay-ghost self-start mt-2"
-                          onClick={() => setShowSolution((prev) => ({ ...prev, [section.label]: !prev[section.label] }))}
-                        >
-                          {showSolution[section.label] ? "הסתר פתרון" : "הצג פתרון"}
-                        </button>
+                        {(attemptCounts[section.label] ?? 0) > 1 && (
+                          <div className="label-mono text-xs opacity-70">
+                            מספר ניסיונות: {attemptCounts[section.label]}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-3 mt-2">
+                          <button
+                            className="btn-clay-ghost self-start"
+                            onClick={() => setShowSolution((prev) => ({ ...prev, [section.label]: !prev[section.label] }))}
+                          >
+                            {showSolution[section.label] ? "הסתר פתרון" : "הצג פתרון"}
+                          </button>
+
+                          {!isCorrect && (
+                            <button
+                              className="btn-clay-ghost self-start"
+                              onClick={() => handleRetrySection(section)}
+                            >
+                              <RefreshCw size={16} /> נסה שוב
+                            </button>
+                          )}
+                        </div>
 
                         <AnimatePresence>
                           {showSolution[section.label] && (
@@ -365,6 +467,24 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           );
         })}
       </div>
+
+      {/* ── Partial submit ── */}
+      {/* Let a student hand in an unfinished question without losing what they
+          did. Score is computed over ALL sections, so blanks count as missed. */}
+      {!allSubmitted && answeredCount > 0 && (
+        <motion.div
+          className="clay-card p-6 mt-4 border border-tertiary/50 bg-tertiary/10 flex flex-col sm:flex-row items-center justify-between gap-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="label-mono text-tertiary text-sm">
+            ענית על {answeredCount} מתוך {question.sections.length} סעיפים. ההתקדמות נשמרת אוטומטית — אפשר לחזור ולהשלים אחר כך, או להגיש חלקית עכשיו (לאחר הגשה לא ניתן לשנות).
+          </div>
+          <button className="btn-clay-ghost shrink-0" onClick={handleFinalize}>
+            שמור והגש חלקית
+          </button>
+        </motion.div>
+      )}
 
       {/* ── Score Summary ── */}
       {allSubmitted && (

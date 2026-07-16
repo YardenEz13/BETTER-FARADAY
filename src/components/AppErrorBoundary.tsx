@@ -18,7 +18,15 @@ export default class AppErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error("[AppErrorBoundary]", error, info.componentStack);
-    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+    // Tag with the route it crashed on and mark it fatal (it white-screens the
+    // whole app, unlike a caught mutation error) so these triage above noise.
+    Sentry.withScope((scope) => {
+      scope.setLevel("fatal");
+      scope.setTag("source", "errorBoundary");
+      scope.setTag("route", window.location.pathname);
+      scope.setExtra("componentStack", info.componentStack);
+      Sentry.captureException(error);
+    });
   }
 
   render() {

@@ -17,6 +17,19 @@ vi.mock("convex/react", () => ({
   useQuery: () => null,
 }));
 
+// Mock the lazy-loaded MathLive editor with a plain textarea so the math
+// answer sections are testable in jsdom (the real <math-field> web component
+// doesn't run here). Exposes the same value/onChange/placeholder contract.
+vi.mock("./playground/MathField", () => ({
+  default: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+    <textarea
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  ),
+}));
+
 // Mock api
 vi.mock("../../convex/_generated/api", () => ({
   api: {
@@ -131,7 +144,9 @@ describe("CompoundQuestionRenderer Component", () => {
       />
     );
 
-    const textarea = screen.getByPlaceholderText("כתוב את הפתרון כאן…");
+    // "coordinates" is a math answer type → the MathField editor (mocked to a
+    // textarea) with its own placeholder. Lazy-loaded, so query async.
+    const textarea = await screen.findByPlaceholderText("הקלד את התשובה…");
     const submitBtn = screen.getByRole("button", { name: /בדוק תשובה/ });
 
     // Type and submit answer
