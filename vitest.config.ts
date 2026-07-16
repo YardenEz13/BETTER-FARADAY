@@ -9,6 +9,15 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [react()],
+  // The "storybook" project runs on vitest's browser-mode module runner,
+  // which requires a newer vite (nested vite@8.1.5, rolldown/oxc-based) than
+  // the app's own vite@5.4.10. That rolldown-based dep optimizer sometimes
+  // fails to synthesize named ESM exports from certain CJS packages pulled in
+  // transitively by @storybook/addon-vitest's test setup — pre-bundling them
+  // explicitly here works around it.
+  optimizeDeps: {
+    include: ['aria-query', 'lz-string', 'pretty-format'],
+  },
   test: {
     projects: [{
       extends: true,
