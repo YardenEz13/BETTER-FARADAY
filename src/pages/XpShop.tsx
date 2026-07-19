@@ -9,6 +9,7 @@ import {
   ElectricBolt, Battery, SparkBurst,
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
+import { ToastStack, useToasts } from "../components/ui/Toast";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { fireConfetti } from "../lib/celebrations";
 
@@ -237,13 +238,7 @@ export default function XpShop() {
   const navigate = useNavigate();
   const reducedMotion = !!useReducedMotion();
   const shop = useQuery(api.shop.getShop, { studentId: studentId as Id<"students"> });
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3200);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const { toasts, push, dismiss } = useToasts(3200);
 
   const grouped = (() => {
     const items = (shop?.items ?? []) as ShopItem[];
@@ -341,7 +336,7 @@ export default function XpShop() {
                   balance={shop.balance}
                   reducedMotion={reducedMotion}
                   onBought={() => { /* useQuery is reactive — balance updates live */ }}
-                  onError={setToast}
+                  onError={(msg) => push("error", "הקנייה לא הושלמה", msg)}
                 />
               ))}
             </div>
@@ -353,18 +348,7 @@ export default function XpShop() {
         )}
       </div>
 
-      {/* Error toast */}
-      {toast && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl bg-error text-white font-semibold text-sm border-2 border-error"
-          style={{ boxShadow: "var(--shadow-clay)" }}
-          role="alert"
-        >
-          {toast}
-        </motion.div>
-      )}
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

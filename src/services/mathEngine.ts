@@ -12,6 +12,7 @@ export type MathOp =
   | "solve"
   | "simplify"
   | "factor"
+  | "expand"
   | "derivative"
   | "integral";
 
@@ -20,6 +21,13 @@ export interface MathResult {
   latex: string;
   /** Engine's plain infix form — handy for copy / debugging. */
   plain: string;
+  /** Decimal approximation of an exact symbolic result (e.g. "1.414214"), when it adds information. */
+  approx?: string;
+  /**
+   * Reusable fragment for "continue from this result": the bare expression
+   * without the d/dx(...)= / ∫...dx= presentation wrapper. Falls back to latex.
+   */
+  reuseLatex?: string;
   /** Hebrew error message, or null on success. */
   error: string | null;
 }
@@ -84,6 +92,20 @@ const ok = (expr: any): MathResult => ({
 
 const fail = (msg = GENERIC_ERROR): MathResult => ({ latex: "", plain: "", error: msg });
 
+/** Decimal approximation of an exact result, only when it adds information
+ *  (i.e. the exact form isn't already a plain number). */
+function approxOf(N: Nerdamer, expr: any): string | undefined {
+  try {
+    const dec: string = N(expr.toString()).evaluate().text("decimals", 6);
+    if (!dec || /[a-zA-Z]/.test(dec)) return undefined; // symbolic — no numeric value
+    const plain = expr.toString();
+    if (dec === plain) return undefined; // already a plain number
+    return dec;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Run one CAS operation on a LaTeX expression and get LaTeX back.
  * `variable` is only used by derivative / integral / solve (defaults to x).
@@ -112,25 +134,61 @@ export async function compute(
             ? `(${latexToExpr(N, sides[0])})-(${latexToExpr(N, sides[1])})`
             : latexToExpr(N, latex);
         const v = pickVariable(N, exprStr, variable);
-        return ok(N(`solve(${exprStr}, ${v})`));
+        const sols = N.solveEquations
+          ? N.solveEquations(`${exprStr}=0`, v)
+          : N(`solve(${exprStr}, ${v})`);
+        const arr: any[] = Array.isArray(sols) ? sols : [sols];
+        if (arr.length === 0) return fail("לא נמצאו פתרונות ממשיים.");
+        // x_1 = …, x_2 = … — the reusable fragment is the first solution.
+        const parts = arr.map((s, i) => {
+          const e = N(s.toString());
+          return `${v}_{${i + 1}}=${e.toTeX()}`;
+        });
+        const first = N(arr[0].toString());
+        return {
+          latex: parts.join(",\\;\\;"),
+          plain: arr.map((s) => s.toString()).join(", "),
+          reuseLatex: first.toTeX(),
+          approx: arr.length === 1 ? approxOf(N, first) : undefined,
+          error: null,
+        };
       }
       case "simplify":
         return ok(N(`simplify(${latexToExpr(N, latex)})`));
       case "factor":
         return ok(N(`factor(${latexToExpr(N, latex)})`));
+      case "expand":
+        return ok(N(`expand(${latexToExpr(N, latex)})`));
       case "derivative": {
         const exprStr = latexToExpr(N, latex);
         const v = pickVariable(N, exprStr, variable);
-        return ok(N(`diff(${exprStr}, ${v})`));
+        const src = N(exprStr);
+        const out = N(`diff(${exprStr}, ${v})`);
+        return {
+          latex: `\\frac{d}{d${v}}\\left(${src.toTeX()}\\right)=${out.toTeX()}`,
+          plain: out.toString(),
+          reuseLatex: out.toTeX(),
+          error: null,
+        };
       }
       case "integral": {
         const exprStr = latexToExpr(N, latex);
         const v = pickVariable(N, exprStr, variable);
-        return ok(N(`integrate(${exprStr}, ${v})`));
+        const src = N(exprStr);
+        const out = N(`integrate(${exprStr}, ${v})`);
+        return {
+          latex: `\\int ${src.toTeX()}\\,d${v}=${out.toTeX()}+C`,
+          plain: out.toString(),
+          reuseLatex: out.toTeX(),
+          error: null,
+        };
       }
       case "evaluate":
-      default:
-        return ok(N(latexToExpr(N, latex)).evaluate());
+      default: {
+        // Exact symbolic form first; a ≈ decimal line when it adds information.
+        const exact = N(`simplify(${latexToExpr(N, latex)})`);
+        return { ...ok(exact), approx: approxOf(N, exact) };
+      }
     }
   } catch {
     return fail();
@@ -143,6 +201,7 @@ export const OP_LABELS: { op: MathOp; he: string }[] = [
   { op: "solve", he: "פתור" },
   { op: "simplify", he: "פשט" },
   { op: "factor", he: "פרק לגורמים" },
+  { op: "expand", he: "הרחב" },
   { op: "derivative", he: "נגזרת" },
   { op: "integral", he: "אינטגרל" },
 ];

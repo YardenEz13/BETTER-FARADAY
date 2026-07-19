@@ -7,6 +7,8 @@ export interface SegTab<T extends string> {
   label: ReactNode;
   /** Optional leading icon; receives no props — pass a sized element. */
   icon?: ReactNode;
+  /** Optional trailing count badge (e.g. open items). */
+  count?: number;
 }
 
 export interface SegTabsProps<T extends string> {
@@ -54,6 +56,16 @@ export function SegTabs<T extends string>({ tabs, value, onChange, label, classN
               </span>
             )}
             <span className={`relative z-10 ${active ? "text-on-primary" : "text-on-surface-variant"}`}>{tab.label}</span>
+            {tab.count != null && (
+              <span
+                className={`relative z-10 font-mono rounded-full px-2 ${
+                  active ? "bg-on-primary/20 text-on-primary" : "bg-surface-container-high text-on-surface-variant"
+                }`}
+                style={{ fontSize: "0.72rem", lineHeight: "1.2rem" }}
+              >
+                {tab.count}
+              </span>
+            )}
           </button>
         );
       })}

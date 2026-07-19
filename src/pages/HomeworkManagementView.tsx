@@ -9,7 +9,7 @@ import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
 import { usePacketIngest } from "../components/usePacketIngest";
 import MathText from "../components/MathText";
-import { SegTabs, ProgressBar } from "../components/ui";
+import { SegTabs, ProgressBar, ToastStack } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import {
@@ -18,6 +18,7 @@ import {
   Loader as Loader2, Zap, Scissors, User, BarChart2,
   Edit, Trash2, Send, Package, ChevronLeft, ArrowRight,
 } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 
 type Bucket = "draft" | "active" | "closed";
 type Filter = "all" | "draft" | "active" | "closed";
@@ -215,7 +216,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
         >
           {homeworkList === undefined ? (
-            <div className="flex items-center justify-center py-12 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
+            <ElectricLoader fullscreen={false} size={36} className="py-6" />
           ) : filtered.length === 0 ? (
             <div className="clay-card p-10 text-center">
               <BookOpen size={40} className="mx-auto mb-3 text-on-surface-variant" />
@@ -307,9 +308,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
 
       {/* Error toast */}
       {(errorMsg ?? packetError) && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm bg-inverse-surface text-inverse-on-surface shadow-lg">
-          <AlertTriangle size={16} className="text-error" /> {errorMsg ?? packetError}
-        </div>
+        <ToastStack toasts={[{ id: 1, kind: "error", title: "משהו השתבש", description: errorMsg ?? packetError }]} />
       )}
     </div>
   );
@@ -529,7 +528,7 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
             )}
 
             {studentSubmissions === undefined ? (
-              <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
+              <ElectricLoader fullscreen={false} size={36} className="py-6" />
             ) : (
               <motion.div
                 className="flex flex-col gap-2"
@@ -590,7 +589,7 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
       {activeTab === "questions" && (
         <div className="flex flex-col gap-3">
           {questionStats === undefined ? (
-            <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
+            <ElectricLoader fullscreen={false} size={36} className="py-6" />
           ) : questionStats.length === 0 ? (
             <div className="clay-card p-10 text-center text-on-surface-variant">
               <AlertTriangle size={36} className="mx-auto mb-3" />
@@ -904,9 +903,7 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
 
   if (detail === undefined) {
     return (
-      <div className="flex items-center justify-center py-8 text-on-surface-variant">
-        <Loader2 size={18} className="animate-spin ms-2" /> טוען…
-      </div>
+      <ElectricLoader fullscreen={false} size={32} className="py-4" />
     );
   }
   if (!detail) return null;

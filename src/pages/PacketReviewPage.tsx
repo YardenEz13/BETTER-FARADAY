@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { Doc, Id } from "../../convex/_generated/dataModel";
 import MathText from "../components/MathText";
 import { Check, X, AlertTriangle, Loader as Loader2, RefreshCw, Sparkles } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 
 type PacketQuestion = Doc<"packetImportQuestions">;
 type PacketDraft = NonNullable<PacketQuestion["draft"]>;
@@ -81,11 +82,7 @@ export default function PacketReviewPage() {
   );
 
   if (packet === undefined) {
-    return (
-      <div className="min-h-screen grid place-items-center" dir="rtl">
-        <Loader2 size={28} className={`${spin} text-[var(--color-primary)]`} />
-      </div>
-    );
+    return <ElectricLoader label="טוען..." />;
   }
   if (packet === null) {
     return (

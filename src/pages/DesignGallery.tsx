@@ -14,8 +14,12 @@ import {
   Skeleton,
   SkeletonCard,
   BottomSheet,
+  Modal,
+  ToastStack,
+  useToasts,
   type BadgeTone,
   type StatTone,
+  type ModalTone,
 } from "../components/ui";
 import { useTheme } from "../components/ThemeContext";
 
@@ -60,6 +64,8 @@ export default function DesignGallery() {
   const [segValue, setSegValue] = useState<"a" | "b" | "c">("a");
   const [chipSelected, setChipSelected] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [modalTone, setModalTone] = useState<ModalTone | null>(null);
+  const { toasts, push, dismiss } = useToasts();
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-on-background py-10">
@@ -222,6 +228,10 @@ export default function DesignGallery() {
             <div className="w-52"><ProgressBar value={45} variant="gradient" label="gradient" /></div>
             <div className="w-52"><ProgressBar value={90} variant="tertiary" label="tertiary" /></div>
           </Row>
+          <Row label="current (electric, XP/level)">
+            <div className="w-52"><ProgressBar value={64} variant="current" label="current" /></div>
+            <div className="w-52"><ProgressBar value={100} variant="current" label="current full (spark)" /></div>
+          </Row>
           <Row label="size=&quot;sm&quot;">
             <div className="w-52"><ProgressBar value={60} size="sm" label="small" /></div>
           </Row>
@@ -238,6 +248,7 @@ export default function DesignGallery() {
               title="אין נתונים להצגה"
               description="כאשר יתווספו נתונים, הם יופיעו כאן."
               action={<ClayButton variant="primary">רענן</ClayButton>}
+              quote
             />
           </ClayCard>
         </Section>
@@ -269,6 +280,42 @@ export default function DesignGallery() {
               <ClayButton variant="ghost" onClick={() => setSheetOpen(false)}>סגור</ClayButton>
             </div>
           </BottomSheet>
+        </Section>
+
+        {/* ── Modal ── */}
+        <Section title="Modal">
+          <Row label="tones">
+            <ClayButton variant="primary" onClick={() => setModalTone("primary")}>primary</ClayButton>
+            <ClayButton variant="secondary" onClick={() => setModalTone("secondary")}>secondary</ClayButton>
+            <ClayButton variant="ghost" onClick={() => setModalTone("danger")}>danger</ClayButton>
+          </Row>
+          <Modal
+            open={modalTone !== null}
+            onClose={() => setModalTone(null)}
+            tone={modalTone ?? "primary"}
+            title={modalTone === "danger" ? "לצאת מהתרגול?" : "נושא הושלם! ✨"}
+            footer={
+              <>
+                <ClayButton variant="primary" onClick={() => setModalTone(null)}>אישור</ClayButton>
+                <ClayButton variant="ghost" onClick={() => setModalTone(null)}>ביטול</ClayButton>
+              </>
+            }
+          >
+            {modalTone === "danger"
+              ? "ההתקדמות בסשן הנוכחי לא תישמר. אפשר תמיד לחזור ולהמשיך מאותו מקום במפת הלמידה."
+              : "כל הכבוד! סיימת את כל 12 השאלות בנושא. פרופסור פאראדיי ממליץ להמשיך לנושא הבא."}
+          </Modal>
+        </Section>
+
+        {/* ── Toast ── */}
+        <Section title="Toast">
+          <Row label="kinds">
+            <ClayButton variant="primary" size="sm" onClick={() => push("success", "תשובה נכונה! ✓", "+20 XP · דיוק 87%")}>הצלחה</ClayButton>
+            <ClayButton variant="secondary" size="sm" onClick={() => push("info", "פרופסור פאראדיי", "אני כאן אם תצטרך רמז")}>מידע</ClayButton>
+            <ClayButton variant="ghost" size="sm" onClick={() => push("streak", "שיא רצף חדש!", "7 ימים ברציפות — כל הכבוד")}>רצף 🔥</ClayButton>
+            <ClayButton variant="ghost" size="sm" onClick={() => push("error", "לא הצלחנו לשמור", "בדוק את החיבור ונסה שוב")}>שגיאה</ClayButton>
+          </Row>
+          <ToastStack toasts={toasts} onDismiss={dismiss} />
         </Section>
       </div>
     </div>

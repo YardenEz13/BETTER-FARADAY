@@ -18,7 +18,7 @@ import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import LiveClassPanel from "../components/LiveClassPanel";
 import { StudentPowerMapView } from "./StudentPowerMapView";
-import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard } from "../components/ui";
+import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { useTheme } from "../components/ThemeContext";
 import {
@@ -60,7 +60,7 @@ export default function TeacherDashboard() {
   const [onlyRisk, setOnlyRisk] = useState(false);
   const [sel, setSel] = useState<CCStudent | null>(null);
   const [profileId, setProfileId] = useState<Id<"students"> | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toasts, push, dismiss } = useToasts(2600);
   const [liveOpen, setLiveOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
@@ -74,19 +74,13 @@ export default function TeacherDashboard() {
     return () => m.removeEventListener("change", apply);
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2600);
-    return () => clearTimeout(t);
-  }, [toast]);
-
   // keep `sel` in sync with fresh data
   const selLive = useMemo(
     () => (sel && data ? data.students.find((s) => s.id === sel.id) ?? null : null),
     [sel, data]
   );
 
-  function fire(msg: string) { setToast(msg); }
+  function fire(msg: string) { push("success", msg); }
 
   if (!data) return <TeacherDashboardSkeleton />;
 
@@ -216,17 +210,7 @@ export default function TeacherDashboard() {
       )}
 
       {/* ══════════ TOAST ══════════ */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: 12, x: "-50%" }}
-            className="fixed bottom-6 left-1/2 z-[90] flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-[13.5px] bg-inverse-surface text-inverse-on-surface shadow-lg"
-          >
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
 
       {/* ══════════ MOBILE BOTTOM TAB BAR ══════════ */}
       <nav

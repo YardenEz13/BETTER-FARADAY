@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown } from "../electric";
 import MathText from "../MathText";
 import { FORMULA_BANK } from "../../data/formulaBank";
+import { dragLatex } from "./dragLatex";
 
 interface Props {
   /** Insert a formula's LaTeX into the active math field. */
@@ -66,9 +67,11 @@ export default function FormulaDrawer({ onInsert }: Props) {
                 {cat.items.map((it) => (
                   <button
                     key={it.id}
+                    draggable
+                    onDragStart={dragLatex(it.insertLatex ?? it.latex)}
                     onClick={() => onInsert(it.insertLatex ?? it.latex)}
-                    title="הוסף לדף העבודה"
-                    className="flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start hover:bg-primary/10 active:scale-[0.99] transition-all"
+                    title="הוסף לדף העבודה — לחיצה או גרירה"
+                    className="flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start hover:bg-primary/10 active:scale-[0.99] transition-all cursor-grab active:cursor-grabbing"
                   >
                     <span className="font-label-md text-on-surface-variant">{it.nameHe}</span>
                     <span dir="ltr" className="text-on-surface">

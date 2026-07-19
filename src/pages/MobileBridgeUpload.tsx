@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { Camera, Loader as Loader2, CheckCircle as CheckCircle2, AlertTriangle } from "../components/electric";
 import { ElectricBolt } from "../components/electric";
+import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { api } from "../../convex/_generated/api";
 import { prepareImageForUpload } from "../services/imageUpload";
 import { log } from "../lib/logger";
@@ -55,7 +56,7 @@ export default function MobileBridgeUpload() {
 
       {/* Loading the session */}
       {publicSession === undefined && (
-        <Loader2 size={32} className="text-on-surface-variant animate-spin" />
+        <ElectricLoader fullscreen={false} size={40} />
       )}
 
       {/* Invalid or expired link */}
