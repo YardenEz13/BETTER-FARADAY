@@ -38,6 +38,7 @@ import {
 } from "../services/chatStorage";
 import MathText from "./MathText";
 import FaradayAvatar from "./FaradayAvatar";
+import FaradayMoodAvatar, { type FaradayMood } from "./FaradayMoodAvatar";
 import QRBridgeModal from "./QRBridgeModal";
 import FaradayConsole from "./chat/FaradayConsole";
 
@@ -156,6 +157,21 @@ export default function AIChatPanel({
   const [helpLevel, setHelpLevel] = useState(0); // mirror of struggleRef for the UI meter
   const isSendingRef = useRef(false);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
+
+  // ── Faraday mood (visual only): thinking while a response streams/pends,
+  //    a brief happy flash when one lands, idle otherwise. ──
+  const [happyFlash, setHappyFlash] = useState(false);
+  const prevTypingRef = useRef(false);
+  useEffect(() => {
+    if (prevTypingRef.current && !isTyping) {
+      setHappyFlash(true);
+      const t = setTimeout(() => setHappyFlash(false), 1500);
+      prevTypingRef.current = isTyping;
+      return () => clearTimeout(t);
+    }
+    prevTypingRef.current = isTyping;
+  }, [isTyping]);
+  const faradayMood: FaradayMood = isTyping ? "thinking" : happyFlash ? "happy" : "idle";
 
   // Keep ref in sync so callbacks always have current value
   useEffect(() => { chatIdRef.current = chatId; }, [chatId]);
@@ -1077,8 +1093,8 @@ export default function AIChatPanel({
                 {/* AI identity */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_25%,transparent)]">
-                      <FaradayAvatar px={48} fill />
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_25%,transparent)]">
+                      <FaradayMoodAvatar mood={faradayMood} px={48} fill />
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_color-mix(in_srgb,var(--color-inverse-primary)_60%,transparent)]" />
                   </div>

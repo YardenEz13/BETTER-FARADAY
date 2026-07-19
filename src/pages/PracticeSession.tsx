@@ -10,6 +10,7 @@ import {
 } from "../components/electric";
 import { useFaraday } from "../components/chat/FaradayProvider";
 import FaradayAvatar from "../components/FaradayAvatar";
+import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -19,6 +20,7 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
 import { gsap, prefersReducedMotion } from "../lib/gsapUtils";
 import { fireConfetti, fireStreak } from "../lib/celebrations";
+import { spark as playSpark, buzz as playBuzz } from "../lib/sfx";
 
 const CHARGE_MAX = 5; // correct answers in a row for a "fully charged" streak
 
@@ -74,6 +76,8 @@ export default function PracticeSession() {
   const [, setWrongStreak]                  = useState(0);
   const [showNudge, setShowNudge]           = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  // Faraday personality pop-in reacting to the last answer
+  const [reaction, setReaction] = useState<{ kind: FaradayReactionKind; count?: number } | null>(null);
   const reducedMotion = !!useReducedMotion();
 
   const openChat = () => faraday.open({
@@ -209,6 +213,7 @@ export default function PracticeSession() {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1800);
       flashCard("correct");
+      playSpark();
       if (choiceEl && !reducedMotion) {
         const r = choiceEl.getBoundingClientRect();
         fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
@@ -216,9 +221,18 @@ export default function PracticeSession() {
       }
       if (newCombo >= 3) fireStreak(newCombo);
       setWrongStreak(0);
+      // Faraday reacts: streak milestone always, otherwise ~1-in-3 on plain correct
+      if (newCombo === 3 || newCombo === 5 || newCombo === 10) {
+        setReaction({ kind: "streak", count: newCombo });
+      } else if (Math.random() < 1 / 3) {
+        setReaction({ kind: "correct" });
+      }
     } else {
       flashCard("wrong");
+      playBuzz();
       shakeCard();
+      // Faraday reacts on every wrong answer with a gentle, growth-minded line
+      setReaction({ kind: "wrong" });
       // Proactive Faraday: after two misses in a row he offers help himself.
       setWrongStreak(w => {
         const next = w + 1;
@@ -699,6 +713,14 @@ export default function PracticeSession() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Faraday personality pop-in — reacts to the last answer, auto-dismisses */}
+      <FaradayReaction
+        kind={reaction?.kind ?? "correct"}
+        streakCount={reaction?.count}
+        visible={!!reaction}
+        onDone={() => setReaction(null)}
+      />
 
       <AnimatePresence>
         {showRecap && (

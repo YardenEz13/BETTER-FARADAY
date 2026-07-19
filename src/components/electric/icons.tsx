@@ -618,6 +618,10 @@ export const LogOut = makeIcon({ paths: ["M26 12 H16 A4 4 0 0 0 12 16 V48 A4 4 0
 export const Upload = makeIcon({ paths: ["M32 40 V12", "M20 24 L32 12 L44 24", "M12 44 V50 A2 2 0 0 0 14 52 H50 A2 2 0 0 0 52 50 V44"] });
 export const ExternalLink = makeIcon({ paths: ["M34 12 H52 V30", "M52 12 L30 34", "M44 36 V50 A2 2 0 0 1 42 52 H14 A2 2 0 0 1 12 50 V22 A2 2 0 0 1 14 20 H28"] });
 
+/* — sound — */
+export const Speaker = makeIcon({ paths: [{ d: "M10 24 H20 L32 14 V50 L20 40 H10 A2 2 0 0 1 8 38 V26 A2 2 0 0 1 10 24 Z", soft: true }, { d: "M40 24 A11 11 0 0 1 40 40", accent: true }, { d: "M46 18 A19 19 0 0 1 46 46", accent: true }] });
+export const SpeakerOff = makeIcon({ paths: [{ d: "M10 24 H20 L32 14 V50 L20 40 H10 A2 2 0 0 1 8 38 V26 A2 2 0 0 1 10 24 Z", soft: true }, { d: "M42 26 L58 42", accent: true }, { d: "M58 26 L42 42", accent: true }] });
+
 /* — theme — */
 export const Moon = makeIcon({ paths: [{ d: "M46 36 A18 18 0 1 1 28 12 A14 14 0 0 0 46 36 Z", soft: true }] });
 export const Sun = makeIcon({ rings: [[32, 32, 11]], paths: [{ d: "M32 6 V14", accent: true }, { d: "M32 50 V58", accent: true }, { d: "M6 32 H14", accent: true }, { d: "M50 32 H58", accent: true }, { d: "M13 13 L19 19", accent: true }, { d: "M45 45 L51 51", accent: true }, { d: "M45 19 L51 13", accent: true }, { d: "M13 51 L19 45", accent: true }] });
@@ -716,6 +720,8 @@ export const ELECTRIC_ICONS = {
   logOut: LogOut,
   upload: Upload,
   externalLink: ExternalLink,
+  speaker: Speaker,
+  speakerOff: SpeakerOff,
   moon: Moon,
   sun: Sun,
   smile: Smile,

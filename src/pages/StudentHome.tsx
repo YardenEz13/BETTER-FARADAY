@@ -10,18 +10,22 @@ import {
   LogOut, BookOpen, Bot, Play, Flame, Check,
   MessageSquare, CheckCircle as CheckCircle2, MapIcon as Map, Activity, Package, Palette, Star,
   RotateCcw, Trophy, Target, PencilLine, X, FileText,
+  Speaker, SpeakerOff, Lightbulb,
 } from "../components/electric";
 import { SparkBurst } from "../components/electric";
+import { isMuted as sfxIsMuted, setMuted as sfxSetMuted } from "../lib/sfx";
 import { useFaraday } from "../components/chat/FaradayProvider";
 import CyberAvatar from "../components/CyberAvatar";
 import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
-import { ElectricBolt, ElectricAtom, Battery } from "../components/electric";
-import { Skeleton, SkeletonCard } from "../components/ui";
+import { ElectricBolt, ElectricAtom, Battery, StreakCapacitor } from "../components/electric";
+import { Skeleton, SkeletonCard, ProgressBar } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
+import DailyExperiment from "../components/DailyExperiment";
+import FaradayTour from "../components/FaradayTour";
 
 /* ── Serpentine path geometry (per the "Learning Map" design spec) ──
    x is a percentage (0-100) of the path container's width, y is px. The wave
@@ -502,6 +506,12 @@ export default function StudentHome() {
   const faraday = useFaraday();
   const openChat = () => faraday.open({ studentId: studentId!, agentType: "practice" });
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [sfxMuted, setSfxMuted] = useState(() => sfxIsMuted());
+  const toggleSfxMuted = () => {
+    const next = !sfxMuted;
+    sfxSetMuted(next);
+    setSfxMuted(next);
+  };
   const [liveSheetOpen, setLiveSheetOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
 
@@ -543,6 +553,53 @@ export default function StudentHome() {
     return () => { tween.kill(); };
   }, [topicCount, reducedMotion]);
 
+  // ── Circuit-complete celebration ──
+  // When a topic actually transitions to completed (≥80%), energize the wire to
+  // the next station and light up that node. We diff against the previously-seen
+  // completed set (a ref) so this fires on the real state change, never on mount
+  // or on unrelated re-renders. `celebrate.idx` is the just-completed station.
+  const [celebrate, setCelebrate] = useState<{ idx: number; token: number } | null>(null);
+  const prevCompletedRef = useRef<Set<string> | null>(null);
+  const celebrateTimer = useRef<number | null>(null);
+  useEffect(() => {
+    if (!topics || !stats) return;
+    const completed = new Set<string>();
+    topics.forEach((t) => {
+      const d = stats.byTopic?.[t._id] as { correct: number; total: number } | undefined;
+      if (d && d.total > 0 && Math.round((d.correct / d.total) * 100) >= 80) completed.add(t._id);
+    });
+    const prev = prevCompletedRef.current;
+    prevCompletedRef.current = completed;
+    if (prev === null || reducedMotion) return; // baseline / no motion → don't celebrate
+    let newlyIdx = -1;
+    topics.forEach((t, i) => {
+      if (completed.has(t._id) && !prev.has(t._id)) newlyIdx = Math.max(newlyIdx, i);
+    });
+    if (newlyIdx < 0) return;
+    setCelebrate({ idx: newlyIdx, token: Date.now() });
+    if (celebrateTimer.current) window.clearTimeout(celebrateTimer.current);
+    celebrateTimer.current = window.setTimeout(() => setCelebrate(null), 2400);
+  }, [topics, stats, reducedMotion]);
+  useEffect(() => () => { if (celebrateTimer.current) window.clearTimeout(celebrateTimer.current); }, []);
+
+  // ── Faraday onboarding tour ──
+  // First visit only (no `faraday_tour_done` flag). Gate on the real page being
+  // rendered (data loaded, not redirected to the welcome wizard) and give the
+  // DOM a beat to mount so the tour's data-tour targets exist before it measures.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (!student || !topics || onboarding === undefined || onboarding?.needed) return;
+    let stored: string | null = null;
+    try { stored = localStorage.getItem("faraday_tour_done"); } catch { /* storage disabled */ }
+    if (stored) return;
+    const t = window.setTimeout(() => setTourOpen(true), 650);
+    return () => window.clearTimeout(t);
+  }, [student, topics, onboarding]);
+  const closeTour = () => {
+    try { localStorage.setItem("faraday_tour_done", "1"); } catch { /* storage disabled */ }
+    setTourOpen(false);
+  };
+
   // Don't flash the map while onboarding state loads; redirect new students to
   // the welcome wizard before rendering anything.
   if (!student || !topics || onboarding === undefined) return <StudentHomeSkeleton />;
@@ -559,6 +616,12 @@ export default function StudentHome() {
   const overallAcc = totalAttempts > 0 ? Math.round((correctTotal / totalAttempts) * 100) : 0;
   const totalXP = (student.streak * 100) + (totalAttempts * 25) + (correctTotal * 50);
   const completedTopics = topics.filter(t => getProgress(t._id) >= 80).length;
+
+  // Level charge-up — 500 XP per level; the sidebar bar fills toward the next.
+  const XP_PER_LEVEL = 500;
+  const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+  const xpIntoLevel = totalXP % XP_PER_LEVEL;
+  const levelPct = Math.round((xpIntoLevel / XP_PER_LEVEL) * 100);
 
   const xpBalance = xpSummary?.balance ?? totalXP;
   const reviewCount = reviewDeck?.length ?? 0;
@@ -577,6 +640,16 @@ export default function StudentHome() {
     return { isCompleted, isActive, progress };
   });
 
+  // Pool for the daily experiment — topics the student has actually unlocked
+  // (completed or the current active one). Station 0 is always active, so this
+  // is never empty once topics exist.
+  const unlockedTopics = topics
+    .filter((_, i) => nodeStates[i].isCompleted || nodeStates[i].isActive)
+    .map((t) => ({ _id: t._id, nameHe: t.nameHe }));
+  const dailyPool = unlockedTopics.length > 0
+    ? unlockedTopics
+    : [{ _id: topics[0]._id, nameHe: topics[0].nameHe }];
+
   const wirePoints = buildWirePoints(topics.length);
   const wireHeight = (topics.length - 1) * PATH_NODE_GAP + PATH_NODE_CENTER + 90;
   const fullWireD = buildWirePath(wirePoints);
@@ -586,6 +659,13 @@ export default function StudentHome() {
   const nextWireD = completedTopics > 0 && completedTopics < topics.length - 1
     ? buildWirePath(wirePoints.slice(completedTopics, completedTopics + 2))
     : "";
+
+  // Celebration geometry — the segment from the just-completed station to the
+  // next, and that next station's position (for the light-up).
+  const celebrateSegD = celebrate && wirePoints[celebrate.idx] && wirePoints[celebrate.idx + 1]
+    ? buildWirePath([wirePoints[celebrate.idx], wirePoints[celebrate.idx + 1]])
+    : "";
+  const celebrateNext = celebrate ? wirePoints[celebrate.idx + 1] : undefined;
 
   const currentThemeLabel = student.homeworkTheme
     ? HOMEWORK_THEMES.find(t => t.id === student.homeworkTheme)?.label ?? student.homeworkTheme
@@ -667,7 +747,7 @@ export default function StudentHome() {
             <span><CountUpNum value={totalXP} suffix=" XP" /></span>
           </div>
           <div className="stat-chip">
-            <Flame className="text-tertiary" size={15} />
+            <StreakCapacitor days={student.streak} size={15} atRisk={streakInDanger} />
             <span className="font-bold">{student.streak} ימים</span>
           </div>
         </div>
@@ -676,10 +756,29 @@ export default function StudentHome() {
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
           <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
-            <Flame className="text-tertiary" size={14} />
+            <StreakCapacitor days={student.streak} size={14} atRisk={streakInDanger} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setTourOpen(true)}
+            aria-label="הצג סיור היכרות"
+            title="סיור היכרות"
+            className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer shadow-(--shadow-clay)"
+          >
+            <span className="font-bold text-sm leading-none">?</span>
+          </button>
           <NotificationCenter studentId={studentId!} />
+          <button
+            type="button"
+            onClick={toggleSfxMuted}
+            aria-pressed={!sfxMuted}
+            aria-label={sfxMuted ? "הפעל צלילים" : "השתק צלילים"}
+            title={sfxMuted ? "הפעל צלילים" : "השתק צלילים"}
+            className="w-9 h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer shadow-(--shadow-clay)"
+          >
+            {sfxMuted ? <SpeakerOff size={16} /> : <Speaker size={16} />}
+          </button>
           <ThemeToggle />
           <button
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer shadow-(--shadow-clay)"
@@ -689,6 +788,7 @@ export default function StudentHome() {
             <span>שיעורי בית</span>
           </button>
           <button
+            data-tour="tutor"
             className="flex items-center justify-center gap-2 px-4 py-2.5 min-w-[44px] min-h-[44px] bg-primary text-on-primary rounded-full font-semibold text-sm border-2 border-primary-dark transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer shadow-(--shadow-clay-primary)"
             onClick={openChat}
           >
@@ -706,6 +806,15 @@ export default function StudentHome() {
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
+          {/* Daily experiment — a featured, deterministic challenge of the day,
+              sitting above the map so it's the first thing a returning student sees. */}
+          <div data-tour="daily" className="w-full max-w-4xl flex flex-col items-center">
+            <DailyExperiment
+              topics={dailyPool}
+              onStart={(topicId) => navigate(`/student/${studentId}/practice/${topicId}`)}
+            />
+          </div>
+
           {/* Streak-in-danger banner (amber / tertiary) */}
           {streakInDanger && (
             <motion.div
@@ -816,7 +925,7 @@ export default function StudentHome() {
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm shadow-(--shadow-clay)">
-                <Flame className="text-tertiary" size={18} />
+                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="text-on-surface font-bold">{student.streak} ימים רצוף</span>
               </div>
             </div>
@@ -825,7 +934,7 @@ export default function StudentHome() {
           {/* ── Serpentine field-line learning path (signature) — the one map,
               phone included. Node positions are % based, so the zig-zag simply
               tightens on a narrow screen instead of degrading into a flat list. */}
-          <div className="block relative w-full max-w-[22rem] md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-8 md:py-12">
+          <div data-tour="map" className="block relative w-full max-w-[22rem] md:max-w-[30rem] lg:max-w-[36rem] xl:max-w-[42rem] mx-auto py-8 md:py-12">
             <div className="relative w-full" style={{ height: wireHeight }}>
               <svg
                 className="absolute inset-0 h-full w-full pointer-events-none"
@@ -874,6 +983,18 @@ export default function StudentHome() {
 
                 {/* anime.js — a charge pulse flowing toward the next station */}
                 <ChargeComet d={nextWireD} reducedMotion={reducedMotion} />
+
+                {/* One-shot: the wire energizes to the next station on completion.
+                    pathLength=100 normalizes the draw regardless of true length;
+                    key restarts the CSS animation on each new celebration. */}
+                {celebrateSegD && (
+                  <g key={celebrate?.token}>
+                    <path d={celebrateSegD} pathLength={100} className="wire-energize" fill="none"
+                      stroke="var(--color-primary)" strokeWidth="13" strokeLinecap="round" opacity={0.35} vectorEffect="non-scaling-stroke" />
+                    <path d={celebrateSegD} pathLength={100} className="wire-energize" fill="none"
+                      stroke="var(--color-inverse-primary)" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                  </g>
+                )}
               </svg>
 
               {topics.map((topic, idx) => {
@@ -906,6 +1027,30 @@ export default function StudentHome() {
                   reducedMotion={reducedMotion}
                 />
               )}
+
+              {/* One-shot: the next station flashes and a Lightbulb lights up as
+                  the charge arrives on completion. AnimatePresence handles the
+                  brief fade-out when the celebration window closes. */}
+              <AnimatePresence>
+                {celebrate && celebrateNext && (
+                  <div
+                    key={celebrate.token}
+                    className="absolute pointer-events-none z-20"
+                    style={{ left: `${celebrateNext.x}%`, top: celebrateNext.y, transform: "translate(-50%,-50%)" }}
+                    aria-hidden
+                  >
+                    <motion.div
+                      initial={{ scale: 0.3, opacity: 0 }}
+                      animate={{ scale: [0.3, 1.15, 1], opacity: [0, 1, 1, 0] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 2.3, times: [0, 0.22, 0.65, 1], ease: "easeOut" }}
+                      style={{ filter: "drop-shadow(0 0 14px color-mix(in srgb, var(--color-primary) 70%, transparent))" }}
+                    >
+                      <Lightbulb size={42} tone="spark" glow={1} />
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </section>
@@ -916,6 +1061,7 @@ export default function StudentHome() {
 
             {/* Progress Card */}
             <motion.div
+              data-tour="stats"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
@@ -946,13 +1092,26 @@ export default function StudentHome() {
                   </div>
                 </div>
 
-                {/* XP */}
-                <div className="pt-3 flex items-center justify-between border-t-2 border-outline">
-                  <span className="font-medium text-on-surface-variant text-sm">נקודות אנרגיה</span>
-                  <span className="font-bold text-primary flex items-center gap-1.5">
-                    <Battery size={20} tone="spark" glow={0.5} />
-                    {totalXP.toLocaleString()}
-                  </span>
+                {/* XP + level charge-up bar */}
+                <div className="pt-3 border-t-2 border-outline">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-on-surface-variant text-sm">
+                      נקודות אנרגיה · רמה <span className="num font-bold text-primary">{level}</span>
+                    </span>
+                    <span className="font-bold text-primary flex items-center gap-1.5">
+                      <Battery size={20} tone="spark" glow={0.5} />
+                      {totalXP.toLocaleString()}
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={levelPct}
+                    variant="current"
+                    size="sm"
+                    label={`התקדמות לרמה ${level + 1}`}
+                  />
+                  <div className="num font-mono text-[11px] text-on-surface-variant mt-1.5 text-start">
+                    {xpIntoLevel.toLocaleString()} / {XP_PER_LEVEL} לרמה הבאה
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1029,7 +1188,7 @@ export default function StudentHome() {
               </div>
               <div className="w-0.5 h-6 bg-outline" />
               <div className="flex items-center gap-2">
-                <Flame className="text-tertiary" size={18} />
+                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="font-bold text-on-surface text-sm">{student.streak} ימים</span>
               </div>
               <div className="w-0.5 h-6 bg-outline" />
@@ -1078,6 +1237,9 @@ export default function StudentHome() {
       {liveSheetOpen && (
         <LiveQuestionSheet studentId={studentId!} onClose={() => setLiveSheetOpen(false)} />
       )}
+
+      {/* Faraday onboarding tour — first visit, or replayed via the header "?" */}
+      <FaradayTour open={tourOpen} onClose={closeTour} />
 
     </div>
   );

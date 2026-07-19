@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, PointerEvent, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { click as playClick } from "../../lib/sfx";
 
 export type ClayButtonVariant = "primary" | "secondary" | "ghost" | "icon";
 export type ClayButtonSize = "sm" | "md" | "lg";
@@ -34,16 +35,21 @@ const SIZE_CLASS: Record<ClayButtonSize, string> = {
  */
 export const ClayButton = forwardRef<HTMLButtonElement, ClayButtonProps>(
   function ClayButton(
-    { variant = "primary", size = "md", loading = false, disabled, className = "", children, ...rest },
+    { variant = "primary", size = "md", loading = false, disabled, className = "", children, onPointerDown, ...rest },
     ref,
   ) {
     const sizeClass = variant === "icon" ? "" : SIZE_CLASS[size];
+    const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+      if (!(disabled || loading)) playClick();
+      onPointerDown?.(e);
+    };
     return (
       <button
         ref={ref}
         type={rest.type ?? "button"}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
+        onPointerDown={handlePointerDown}
         className={`${VARIANT_CLASS[variant]} ${sizeClass} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         {...rest}
       >

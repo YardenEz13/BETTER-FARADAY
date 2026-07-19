@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import { Upload, FileText, Loader as Loader2, Check, X, Sparkles, AlertTriangle, RefreshCw } from "./electric";
+import { ElectricLoader } from "./electric/ElectricLoader";
 import MathText from "./MathText";
 import { prepareMediaForUpload, type PreparedMedia } from "../services/imageUpload";
 import { extractQuestionFromMedia, type ExtractedQuestionDraft } from "../services/localAI";
@@ -203,7 +204,7 @@ export default function QuestionImportModal({ classroomId, onClose, onApproved }
           {/* ── Extracting step ── */}
           {step === "extracting" && (
             <div className="flex flex-col items-center justify-center text-center gap-4 py-20">
-              <Loader2 size={40} className="text-primary animate-spin" />
+              <ElectricLoader fullscreen={false} size={48} />
               <div className="font-headline-md text-on-surface">פאראדיי קורא את השאלה…</div>
               <div className="font-body-md text-on-surface-variant">מחלץ נוסח, מזהה פורמט ומכין טיוטה לעריכה</div>
             </div>

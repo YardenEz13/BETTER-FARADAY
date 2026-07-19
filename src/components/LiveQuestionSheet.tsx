@@ -6,6 +6,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import MathText from "./MathText";
 import { fireConfetti } from "../lib/celebrations";
 import { X, CheckCircle as CheckCircle2, XCircle, Send, Loader as Loader2 } from "./electric";
+import { ElectricLoader } from "./electric/ElectricLoader";
 
 /**
  * Live class mode (שיעור חי) — student side.
@@ -94,7 +95,7 @@ export function LiveQuestionSheet({ studentId, onClose }: { studentId: string; o
         {ended ? (
           <div className="py-8 text-center text-on-surface-variant text-sm">השיעור החי הסתיים.</div>
         ) : live === undefined ? (
-          <div className="flex items-center justify-center py-10 text-on-surface-variant"><Loader2 size={20} className="animate-spin ms-2" /> טוען…</div>
+          <ElectricLoader fullscreen={false} size={36} />
         ) : (
           <>
             <div className="text-base leading-relaxed text-on-surface mb-5"><MathText animateLetters>{live.stem}</MathText></div>

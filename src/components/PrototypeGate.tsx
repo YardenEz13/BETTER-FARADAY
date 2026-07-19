@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Lock, Unlock } from "./electric";
+import { randomQuote } from "../data/faradayQuotes";
 
 export default function PrototypeGate({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
+  const [quote] = useState(randomQuote);
 
   useEffect(() => {
     if (localStorage.getItem("faraday_prototype_auth") === "true") {
@@ -41,6 +43,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
           </div>
           <h1 className="font-display text-5xl font-black tracking-widest text-on-surface mb-2">RESTRICTED</h1>
           <p className="label-mono opacity-70">FARADAY LOGIC // PROTOTYPE ACCESS</p>
+          <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal">{quote.he}</p>
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
