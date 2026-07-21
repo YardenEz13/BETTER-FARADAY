@@ -4,17 +4,16 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import FaradayAvatar from "./FaradayAvatar";
 import { ArrowLeft, X } from "./electric";
 
-/** The four stops on the guided tour. `target` matches a `data-tour="…"`
- *  attribute placed on the corresponding element in StudentHome. */
-export type TourTargetKey = "map" | "stats" | "daily" | "tutor";
-
-interface TourStep {
-  key: TourTargetKey;
+/** One stop on a guided tour. `key` matches a `data-tour="…"` attribute on the
+ *  element to spotlight. */
+export interface TourStep {
+  key: string;
   title: string;
   body: string;
 }
 
-const STEPS: TourStep[] = [
+/** Default (student) tour — spotlights StudentHome. */
+export const STUDENT_TOUR_STEPS: TourStep[] = [
   {
     key: "map",
     title: "מפת הלמידה שלך",
@@ -45,6 +44,8 @@ export interface FaradayTourProps {
   open: boolean;
   /** Called on finish, skip, Escape, or scrim click. Parent persists the "done" flag. */
   onClose: () => void;
+  /** Stops to walk through; defaults to the student tour. */
+  steps?: TourStep[];
 }
 
 /**
@@ -55,30 +56,38 @@ export interface FaradayTourProps {
  * clamped to the viewport (RTL-aware). Escape or a scrim click skips the tour.
  * Respects reduced motion (fades only, no springs).
  */
-export default function FaradayTour({ open, onClose }: FaradayTourProps) {
+export default function FaradayTour({ open, onClose, steps = STUDENT_TOUR_STEPS }: FaradayTourProps) {
   const reducedMotion = !!useReducedMotion();
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const current = steps[Math.min(step, steps.length - 1)];
+  const isLast = step === steps.length - 1;
 
   // Reset to the first step whenever the tour (re)opens.
   useEffect(() => {
     if (open) setStep(0);
   }, [open]);
 
+  // A key may be on two elements (e.g. a desktop nav and its mobile twin) — take
+  // the first one that's actually rendered.
+  const findTarget = useCallback(
+    (key: string) =>
+      // note: not offsetParent — that's null for position:fixed elements too
+      [...document.querySelectorAll<HTMLElement>(`[data-tour="${key}"]`)]
+        .find((e) => e.getBoundingClientRect().width > 0) ?? null,
+    [],
+  );
+
   const measure = useCallback(() => {
-    const el = document.querySelector<HTMLElement>(`[data-tour="${current.key}"]`);
+    const el = findTarget(current.key);
     setRect(el ? el.getBoundingClientRect() : null);
-  }, [current.key]);
+  }, [current.key, findTarget]);
 
   // Scroll the target into view, then measure. Re-measure on resize/scroll.
   useLayoutEffect(() => {
     if (!open) return;
-    document
-      .querySelector<HTMLElement>(`[data-tour="${current.key}"]`)
-      ?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    findTarget(current.key)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
     // A frame after the scroll settles gives a stable rect.
     const raf = requestAnimationFrame(measure);
     window.addEventListener("resize", measure);
@@ -88,7 +97,7 @@ export default function FaradayTour({ open, onClose }: FaradayTourProps) {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [open, current.key, measure, reducedMotion]);
+  }, [open, current.key, measure, findTarget, reducedMotion]);
 
   // Escape skips the tour.
   useEffect(() => {
@@ -104,7 +113,7 @@ export default function FaradayTour({ open, onClose }: FaradayTourProps) {
 
   const next = () => {
     if (isLast) onClose();
-    else setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    else setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   const vw = typeof window !== "undefined" ? window.innerWidth : 0;
@@ -218,7 +227,7 @@ export default function FaradayTour({ open, onClose }: FaradayTourProps) {
 
           {/* Step dots */}
           <div className="flex items-center gap-1.5 mt-4" aria-hidden>
-            {STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <span
                 key={s.key}
                 className="rounded-full transition-all"
@@ -243,7 +252,7 @@ export default function FaradayTour({ open, onClose }: FaradayTourProps) {
           </div>
 
           <span className="num font-mono text-[11px] text-on-surface-variant absolute bottom-3 left-4">
-            {step + 1}/{STEPS.length}
+            {step + 1}/{steps.length}
           </span>
         </motion.div>
       </AnimatePresence>

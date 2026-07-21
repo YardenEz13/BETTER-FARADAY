@@ -20,7 +20,7 @@ import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
-import { ElectricBolt, ElectricAtom, Battery, StreakCapacitor } from "../components/electric";
+import { ElectricBolt, ElectricAtom, Battery, StreakBolt } from "../components/electric";
 import { Skeleton, SkeletonCard, ProgressBar } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
@@ -742,7 +742,7 @@ export default function StudentHome() {
             <span><CountUpNum value={totalXP} suffix=" XP" /></span>
           </div>
           <div className="stat-chip">
-            <StreakCapacitor days={student.streak} size={15} atRisk={streakInDanger} />
+            <StreakBolt days={student.streak} size={15} atRisk={streakInDanger} />
             <span className="font-bold">{student.streak} ימים</span>
           </div>
         </div>
@@ -751,7 +751,7 @@ export default function StudentHome() {
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
           <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
-            <StreakCapacitor days={student.streak} size={14} atRisk={streakInDanger} />
+            <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
           <button
@@ -920,7 +920,7 @@ export default function StudentHome() {
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm shadow-(--shadow-clay)">
-                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
+                <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="text-on-surface font-bold">{student.streak} ימים רצוף</span>
               </div>
             </div>
@@ -1183,7 +1183,7 @@ export default function StudentHome() {
               </div>
               <div className="w-0.5 h-6 bg-outline" />
               <div className="flex items-center gap-2">
-                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
+                <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="font-bold text-on-surface text-sm">{student.streak} ימים</span>
               </div>
               <div className="w-0.5 h-6 bg-outline" />

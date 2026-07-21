@@ -20,6 +20,7 @@ import LiveClassPanel from "../components/LiveClassPanel";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
+import FaradayTour, { type TourStep } from "../components/FaradayTour";
 import { useTheme } from "../components/ThemeContext";
 import {
   CommandCenterData, CCStudent, CCStatus, CCTone,
@@ -39,6 +40,30 @@ const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
 ];
 
 const RISK_ORDER: Record<CCStatus, number> = { risk: 0, watch: 1, thriving: 2 };
+
+const TOUR_KEY = "faraday_teacher_tour_done";
+const TEACHER_TOUR: TourStep[] = [
+  {
+    key: "health",
+    title: "בריאות הכיתה",
+    body: "מדד אחד שמסכם את מצב הכיתה כרגע — ממוצע ההצלחה של כל התלמידים בזמן אמת.",
+  },
+  {
+    key: "kpis",
+    title: "המדדים המהירים",
+    body: "התלמידים בסיכון, הפעילות היומית והמומנטום — הכול במבט אחד לפני שצוללים פנימה.",
+  },
+  {
+    key: "nav",
+    title: "ארבעת המסכים",
+    body: "לוח מיון לתלמידים שצריכים אתכם, מפת שליטה לנושאים, דופק הכיתה למגמות, ושיחות ה-AI ושיעורי הבית.",
+  },
+  {
+    key: "live",
+    title: "שיעור חי",
+    body: "פותח מצב שידור: שאלה משותפת למסך של כל הכיתה ותשובות שנכנסות מולכם בזמן אמת.",
+  },
+];
 
 function sortStudents(list: CCStudent[], sort: Sort): CCStudent[] {
   const arr = [...list];
@@ -82,6 +107,22 @@ export default function TeacherDashboard() {
 
   function fire(msg: string) { push("success", msg); }
 
+  // ── Faraday onboarding tour ── first visit only; wait for data so the
+  // data-tour targets exist before the tour measures them.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (!data) return;
+    let seen: string | null = null;
+    try { seen = localStorage.getItem(TOUR_KEY); } catch { /* storage disabled */ }
+    if (seen) return;
+    const t = window.setTimeout(() => setTourOpen(true), 650);
+    return () => window.clearTimeout(t);
+  }, [data]);
+  const closeTour = () => {
+    try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* storage disabled */ }
+    setTourOpen(false);
+  };
+
   if (!data) return <TeacherDashboardSkeleton />;
 
   const onCommandView = view === "triage" || view === "mastery" || view === "pulse";
@@ -113,7 +154,7 @@ export default function TeacherDashboard() {
           </div>
 
           {/* class-health pill */}
-          <div className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline shadow-(--shadow-clay)">
+          <div data-tour="health" className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline shadow-(--shadow-clay)">
             <span className="relative inline-flex items-center justify-center w-[38px] h-[38px]">
               <MiniRing pct={data.classAvg} />
               <span className="num absolute font-extrabold text-label-md text-primary">{data.classAvg}</span>
@@ -126,7 +167,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* segmented nav — desktop only; mobile uses the bottom tab bar */}
-        <nav className="order-2 hidden lg:block">
+        <nav data-tour="nav" className="order-2 hidden lg:block">
           <SegTabs
             label="ניווט לוח המורה"
             tabs={NAV.map((tab) => ({ id: tab.id, icon: <tab.Icon size={16} />, label: tab.label }))}
@@ -138,6 +179,7 @@ export default function TeacherDashboard() {
         {/* actions */}
         <div className="order-2 lg:order-3 flex items-center gap-2 ms-auto lg:ms-0">
           <button
+            data-tour="live"
             className="flex items-center gap-2 px-3.5 py-2 rounded-full border-2 font-bold text-sm cursor-pointer transition-all hover:-translate-y-0.5"
             style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)", boxShadow: "var(--shadow-clay)" }}
             onClick={() => setLiveOpen(true)}
@@ -149,6 +191,9 @@ export default function TeacherDashboard() {
             <span className="charge-drift" style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
             זמן אמת
           </span>
+          <button className="btn-icon" onClick={() => setTourOpen(true)} aria-label="הצג סיור היכרות" title="סיור היכרות">
+            <span className="font-bold text-sm leading-none">?</span>
+          </button>
           <button className="btn-icon" onClick={toggleTheme} aria-label="מצב תצוגה">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
@@ -163,7 +208,7 @@ export default function TeacherDashboard() {
       {/* ══════════ MAIN ══════════ */}
       <main className="relative z-10 flex-1 overflow-auto">
         <div className="page-shell page-shell--wide pb-28 lg:pb-24 pt-5">
-          {onCommandView && <KpiRibbon kpis={data.kpis} />}
+          {onCommandView && <div data-tour="kpis"><KpiRibbon kpis={data.kpis} /></div>}
 
           <AnimatePresence mode="wait">
             <motion.div key={view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
@@ -212,8 +257,11 @@ export default function TeacherDashboard() {
       {/* ══════════ TOAST ══════════ */}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
 
+      <FaradayTour open={tourOpen} onClose={closeTour} steps={TEACHER_TOUR} />
+
       {/* ══════════ MOBILE BOTTOM TAB BAR ══════════ */}
       <nav
+        data-tour="nav"
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-stretch px-1 pt-1.5 border-t-2 border-outline"
         style={{ background: "color-mix(in srgb, var(--color-surface) 92%, transparent)", backdropFilter: "blur(14px)", paddingBottom: "calc(6px + env(safe-area-inset-bottom))", boxShadow: "0 -4px 0 0 var(--color-outline)" }}
       >
