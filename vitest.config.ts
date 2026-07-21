@@ -4,6 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
+// e2e/ belongs to Playwright (`npm run test:e2e`), not vitest. Sibling git
+// worktrees under .claude/ carry full copies of the suite — never scan them.
+const EXCLUDE = ['**/node_modules/**', '**/e2e/**', '**/.claude/**', '**/.gemini/**'];
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
@@ -26,8 +29,7 @@ export default defineConfig({
         environment: 'happy-dom',
         globals: true,
         setupFiles: ['./vitest.setup.ts'],
-        // e2e/ belongs to Playwright (`npm run test:e2e`), not vitest.
-        exclude: ['**/node_modules/**', 'e2e/**'],
+        exclude: EXCLUDE,
         // Modules read VITE_CONVEX_URL at import time (localAI.gemini.ts), which
         // runs before any vi.stubEnv in a test file — inject it here instead.
         env: {
@@ -47,6 +49,7 @@ export default defineConfig({
       })],
       test: {
         name: 'storybook',
+        exclude: EXCLUDE,
         browser: {
           enabled: true,
           headless: true,
