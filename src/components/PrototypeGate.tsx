@@ -41,8 +41,8 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl border-2 border-primary bg-primary/10 text-primary mb-5">
             <Lock size={32} />
           </div>
-          <h1 className="font-display text-5xl font-black tracking-widest text-on-surface mb-2">RESTRICTED</h1>
-          <p className="label-mono opacity-70">FARADAY LOGIC // PROTOTYPE ACCESS</p>
+          <h1 className="font-display text-5xl font-black tracking-widest text-on-surface mb-2">כניסה לבדיקת פיילוט בלבד</h1>
+          <p className="label-mono opacity-70">אל תגלה לאף אחד... אבל השם משתמש נמצא בפנים</p>
           <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal">{quote}</p>
         </div>
 
@@ -54,7 +54,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-4 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors text-center text-lg"
-              placeholder="Username"
+              placeholder="BDIKA"
               dir="ltr"
             />
           </div>
@@ -73,12 +73,12 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
 
           {error && (
             <div className="text-error label-mono border border-error bg-error/10 p-3 text-center rounded-xl">
-              ACCESS DENIED. INCORRECT CREDENTIALS.
+              מה קרה לך החלקת על השכל?
             </div>
           )}
 
           <button type="submit" className="btn-clay-primary justify-center mt-4 py-4 text-lg tracking-widest hover:scale-[1.02] transition-transform">
-            <Unlock size={20} /> [ AUTHENTICATE ]
+            <Unlock size={20} /> כניסה זמנית
           </button>
         </form>
       </div>
