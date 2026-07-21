@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import FaradayAvatar from "./FaradayAvatar";
@@ -10,7 +10,18 @@ export interface TourStep {
   key: string;
   title: string;
   body: string;
+  /** Ran when the step activates — e.g. switch the dashboard to the view that
+   *  owns this step's target. The tour then waits for the target to mount. */
+  onEnter?: () => void;
+  /** Selector clicked once the target is on screen, to demo a real interaction
+   *  (expanding a student's AI chat, opening the "new assignment" menu).
+   *  Fires once per step activation. */
+  clickOnArrive?: string;
 }
+
+/** Target may mount late (a view swap animates in) — poll rather than assume. */
+const POLL_MS = 90;
+const POLL_TRIES = 30;
 
 /** Default (student) tour — spotlights StudentHome. */
 export const STUDENT_TOUR_STEPS: TourStep[] = [
@@ -49,8 +60,8 @@ export interface FaradayTourProps {
 }
 
 /**
- * A lightweight 4-step guided tour for new students on StudentHome. Each step
- * spotlights a target element (located via its `data-tour` attribute), dims the
+ * A lightweight guided tour. Each step spotlights a target element (located via
+ * its `data-tour` attribute), dims the
  * rest of the page with a scrim cutout, and anchors a clay speech-bubble from
  * Faraday next to it. Positions are measured with getBoundingClientRect and
  * clamped to the viewport (RTL-aware). Escape or a scrim click skips the tour.
@@ -64,9 +75,16 @@ export default function FaradayTour({ open, onClose, steps = STUDENT_TOUR_STEPS 
   const current = steps[Math.min(step, steps.length - 1)];
   const isLast = step === steps.length - 1;
 
-  // Reset to the first step whenever the tour (re)opens.
+  // Guards `clickOnArrive` so a re-run of the effect can't toggle it back off.
+  const clickedFor = useRef(-1);
+
+  // Reset to the first step whenever the tour (re)opens. The click guard is
+  // cleared on *close*, not here: this runs after the layout effect below has
+  // already fired step 0's click, so resetting it here would re-arm and
+  // double-click (toggling the thing it just opened shut).
   useEffect(() => {
     if (open) setStep(0);
+    else clickedFor.current = -1;
   }, [open]);
 
   // A key may be on two elements (e.g. a desktop nav and its mobile twin) — take
@@ -84,20 +102,39 @@ export default function FaradayTour({ open, onClose, steps = STUDENT_TOUR_STEPS 
     setRect(el ? el.getBoundingClientRect() : null);
   }, [current.key, findTarget]);
 
-  // Scroll the target into view, then measure. Re-measure on resize/scroll.
+  // Activate the step: run its side effect (switch view), wait for the target to
+  // mount, scroll to it, optionally demo a click, then measure. Re-measures a
+  // couple of times so the cutout follows a smooth scroll or an expanding card.
   useLayoutEffect(() => {
     if (!open) return;
-    findTarget(current.key)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
-    // A frame after the scroll settles gives a stable rect.
-    const raf = requestAnimationFrame(measure);
+    current.onEnter?.();
+
+    const timers: number[] = [];
+    let tries = 0;
+    const settle = () => {
+      const el = findTarget(current.key);
+      if (!el) {
+        setRect(null);
+        if (tries++ < POLL_TRIES) timers.push(window.setTimeout(settle, POLL_MS));
+        return;
+      }
+      el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      if (current.clickOnArrive && clickedFor.current !== step) {
+        clickedFor.current = step;
+        document.querySelector<HTMLElement>(current.clickOnArrive)?.click();
+      }
+      [0, 320, 900].forEach((d) => timers.push(window.setTimeout(measure, d)));
+    };
+    settle();
+
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
-      cancelAnimationFrame(raf);
+      timers.forEach(window.clearTimeout);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [open, current.key, measure, findTarget, reducedMotion]);
+  }, [open, step, current, measure, findTarget, reducedMotion]);
 
   // Escape skips the tour.
   useEffect(() => {

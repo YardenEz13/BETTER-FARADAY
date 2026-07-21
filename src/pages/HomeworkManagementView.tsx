@@ -166,8 +166,8 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           </div>
 
           {/* Type picker */}
-          <div className="relative">
-            <button className="btn-clay-primary !px-5 !py-2.5 !text-sm" onClick={() => setMenuOpen((v) => !v)}>
+          <div className="relative" data-tour="hw-create">
+            <button data-tour-click="hw-create" className="btn-clay-primary !px-5 !py-2.5 !text-sm" onClick={() => setMenuOpen((v) => !v)}>
               <Plus size={18} /> מטלה חדשה
             </button>
             {menuOpen && (

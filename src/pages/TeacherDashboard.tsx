@@ -42,28 +42,70 @@ const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
 const RISK_ORDER: Record<CCStatus, number> = { risk: 0, watch: 1, thriving: 2 };
 
 const TOUR_KEY = "faraday_teacher_tour_done";
-const TEACHER_TOUR: TourStep[] = [
-  {
-    key: "health",
-    title: "בריאות הכיתה",
-    body: "מדד אחד שמסכם את מצב הכיתה כרגע — ממוצע ההצלחה של כל התלמידים בזמן אמת.",
-  },
-  {
-    key: "kpis",
-    title: "המדדים המהירים",
-    body: "התלמידים בסיכון, הפעילות היומית והמומנטום — הכול במבט אחד לפני שצוללים פנימה.",
-  },
-  {
-    key: "nav",
-    title: "ארבעת המסכים",
-    body: "לוח מיון לתלמידים שצריכים אתכם, מפת שליטה לנושאים, דופק הכיתה למגמות, ושיחות ה-AI ושיעורי הבית.",
-  },
-  {
-    key: "live",
-    title: "שיעור חי",
-    body: "פותח מצב שידור: שאלה משותפת למסך של כל הכיתה ותשובות שנכנסות מולכם בזמן אמת.",
-  },
-];
+
+/** The guided tour walks every teacher view. Each step switches to the view that
+ *  owns its target via `onEnter`; the tour waits for that view to mount. */
+function teacherTour(setView: (v: View) => void): TourStep[] {
+  const on = (v: View) => () => setView(v);
+  return [
+    {
+      key: "health",
+      title: "בריאות הכיתה",
+      body: "מדד אחד שמסכם את מצב הכיתה כרגע — ממוצע ההצלחה של כל התלמידים בזמן אמת.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "kpis",
+      title: "המדדים המהירים",
+      body: "התלמידים בסיכון, הפעילות היומית והמומנטום — הכול במבט אחד לפני שצוללים פנימה.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "nav",
+      title: "חמשת המסכים",
+      body: "מכאן עוברים בין המסכים — ואנחנו נעשה את זה עכשיו יחד, מסך אחרי מסך.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "triage-lanes",
+      title: "לוח המיון",
+      body: "התלמידים מסודרים לשלושה מסלולים: דורשי התערבות, במעקב, ומשגשגים. לחיצה על תלמיד פותחת את הכרטיס המלא שלו.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "mastery-grid",
+      title: "מפת השליטה",
+      body: "מפת חום של תלמיד מול נושא. כל תא הוא רמת השליטה — כך מזהים נושא שכל הכיתה מתקשה בו, לא רק תלמיד בודד.",
+      onEnter: on("mastery"),
+    },
+    {
+      key: "pulse-hero",
+      title: "דופק הכיתה",
+      body: "אנרגיית הכיתה בזמן אמת — כמה תלמידים פעילים עכשיו, כמה שאלות AI נשאלו, ולאן המגמה הולכת.",
+      onEnter: on("pulse"),
+    },
+    {
+      key: "ai-chat-card",
+      title: "שיחות ה-AI של התלמידים",
+      body: "כל שיחה עם פרופסור פאראדיי נשמרת. פתחנו לכם אחת לדוגמה — אפשר לקרוא את ההתכתבות, לראות רמת בלבול וסנטימנט, ולהבין איפה בדיוק התלמיד נתקע.",
+      onEnter: on("aiChats"),
+      clickOnArrive: '[data-tour="ai-chat-card"]',
+    },
+    {
+      key: "hw-create",
+      title: "יצירת מטלה",
+      body: "פתחנו את תפריט היצירה: מטלה אדפטיבית שמתאימה שאלות לכל תלמיד, מטלת PDF אישית, או ייבוא חוברת שלמה — ידנית או אוטומטית עם AI.",
+      onEnter: on("homework"),
+      clickOnArrive: '[data-tour-click="hw-create"]',
+    },
+    {
+      key: "live",
+      title: "שיעור חי",
+      body: "פותח מצב שידור: שאלה משותפת למסך של כל הכיתה ותשובות שנכנסות מולכם בזמן אמת.",
+      onEnter: on("triage"),
+    },
+  ];
+}
 
 function sortStudents(list: CCStudent[], sort: Sort): CCStudent[] {
   const arr = [...list];
@@ -110,6 +152,9 @@ export default function TeacherDashboard() {
   // ── Faraday onboarding tour ── first visit only; wait for data so the
   // data-tour targets exist before the tour measures them.
   const [tourOpen, setTourOpen] = useState(false);
+  // stable identity: the tour effect keys off the current step object, so a
+  // fresh array each render would re-run it forever
+  const tourSteps = useMemo(() => teacherTour(setView), []);
   // depend on the boolean, not `data` — Convex hands back a new object on every
   // real-time update, which would restart the timer before it ever fires
   const dataReady = !!data;
@@ -260,7 +305,7 @@ export default function TeacherDashboard() {
       {/* ══════════ TOAST ══════════ */}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
 
-      <FaradayTour open={tourOpen} onClose={closeTour} steps={TEACHER_TOUR} />
+      <FaradayTour open={tourOpen} onClose={closeTour} steps={tourSteps} />
 
       {/* ══════════ MOBILE BOTTOM TAB BAR ══════════ */}
       <nav
@@ -628,7 +673,7 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
       )}
 
       <div className="flex flex-wrap gap-4.5 items-start">
-        <div className="flex-1 flex flex-wrap gap-3.5" style={{ flexBasis: 640, minWidth: 280 }}>
+        <div data-tour="triage-lanes" className="flex-1 flex flex-wrap gap-3.5" style={{ flexBasis: 640, minWidth: 280 }}>
           {LANES.map((lane) => {
             const list = sortStudents(data.students.filter((s) => s.status === lane.key), "acc")
               .sort((a, b) => (lane.key === "thriving" ? b.acc - a.acc : a.acc - b.acc));
@@ -805,7 +850,7 @@ function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; st
   const gridRef = useRef<HTMLDivElement>(null);
   useStaggerReveal(gridRef, { selector: ".mg-cell", stagger: 0.006, y: 0, scale: 0.55, duration: 0.35, ease: "power2.out" });
   return (
-    <div ref={gridRef} className="clay-card p-4 overflow-x-auto">
+    <div ref={gridRef} data-tour="mastery-grid" className="clay-card p-4 overflow-x-auto">
       <div style={{ minWidth: 120 + cols * 60 }}>
         <div className="grid gap-1.5 mb-1.5" style={{ gridTemplateColumns: template }}>
           <div className="text-label-md font-bold text-on-surface-variant flex items-end ps-1 pb-1.5">תלמיד · שליטה כוללת</div>
@@ -856,7 +901,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
   return (
     <div>
       {/* energy hero */}
-      <div className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
+      <div data-tour="pulse-hero" className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
         <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 220, height: 220 }}>
           <div className="field-ring" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <div className="field-ring field-ring--2" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />

@@ -142,12 +142,14 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
               <div className="text-sm text-on-surface-variant">כשתלמידים ישתמשו במורה AI, השיחות יופיעו כאן.</div>
             </div>
           ) : (
-            chats.map((chat: any) => {
+            chats.map((chat: any, chatIdx: number) => {
               const isSelected = selectedChatId === chat._id;
               const isPractice = chat.agentType === 'practice';
               return (
                 <motion.div
                   key={chat._id}
+                  // the guided tour expands the first chat to show a real conversation
+                  data-tour={chatIdx === 0 ? 'ai-chat-card' : undefined}
                   className="clay-card p-6 cursor-pointer"
                   style={{ borderColor: isSelected ? 'var(--color-primary)' : undefined }}
                   onClick={() => setSelectedChatId(isSelected ? null : chat._id)}
