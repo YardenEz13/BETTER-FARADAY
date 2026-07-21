@@ -10,8 +10,11 @@ export default defineConfig(({ command, mode }) => {
   // runtime crash in the browser (ConvexReactClient throws). Fail the build.
   if (command === 'build' && !loadEnv(mode, process.cwd(), 'VITE_').VITE_CONVEX_URL) {
     throw new Error(
-      'VITE_CONVEX_URL is not set. Set it in .env.local (local) or in the ' +
-        'Vercel env vars for this scope (Production/Preview), then rebuild. See docs/deploy.md.',
+      'VITE_CONVEX_URL is not set.\n' +
+        '  On Vercel: Settings > Environment Variables, scope Production AND Preview ' +
+        '(.env.local is gitignored and never reaches Vercel), then redeploy.\n' +
+        '  Locally: add it to .env.local.\n' +
+        '  URLs are in docs/deploy.md.',
     )
   }
 
