@@ -110,14 +110,17 @@ export default function TeacherDashboard() {
   // ── Faraday onboarding tour ── first visit only; wait for data so the
   // data-tour targets exist before the tour measures them.
   const [tourOpen, setTourOpen] = useState(false);
+  // depend on the boolean, not `data` — Convex hands back a new object on every
+  // real-time update, which would restart the timer before it ever fires
+  const dataReady = !!data;
   useEffect(() => {
-    if (!data) return;
+    if (!dataReady) return;
     let seen: string | null = null;
     try { seen = localStorage.getItem(TOUR_KEY); } catch { /* storage disabled */ }
     if (seen) return;
     const t = window.setTimeout(() => setTourOpen(true), 650);
     return () => window.clearTimeout(t);
-  }, [data]);
+  }, [dataReady]);
   const closeTour = () => {
     try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* storage disabled */ }
     setTourOpen(false);
