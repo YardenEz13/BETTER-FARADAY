@@ -20,6 +20,7 @@ import LiveClassPanel from "../components/LiveClassPanel";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
+import FaradayTour, { type TourStep } from "../components/FaradayTour";
 import { useTheme } from "../components/ThemeContext";
 import {
   CommandCenterData, CCStudent, CCStatus, CCTone,
@@ -39,6 +40,72 @@ const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
 ];
 
 const RISK_ORDER: Record<CCStatus, number> = { risk: 0, watch: 1, thriving: 2 };
+
+const TOUR_KEY = "faraday_teacher_tour_done";
+
+/** The guided tour walks every teacher view. Each step switches to the view that
+ *  owns its target via `onEnter`; the tour waits for that view to mount. */
+function teacherTour(setView: (v: View) => void): TourStep[] {
+  const on = (v: View) => () => setView(v);
+  return [
+    {
+      key: "health",
+      title: "בריאות הכיתה",
+      body: "מדד אחד שמסכם את מצב הכיתה כרגע — ממוצע ההצלחה של כל התלמידים בזמן אמת.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "kpis",
+      title: "המדדים המהירים",
+      body: "התלמידים בסיכון, הפעילות היומית והמומנטום — הכול במבט אחד לפני שצוללים פנימה.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "nav",
+      title: "חמשת המסכים",
+      body: "מכאן עוברים בין המסכים — ואנחנו נעשה את זה עכשיו יחד, מסך אחרי מסך.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "triage-lanes",
+      title: "לוח המיון",
+      body: "התלמידים מסודרים לשלושה מסלולים: דורשי התערבות, במעקב, ומשגשגים. לחיצה על תלמיד פותחת את הכרטיס המלא שלו.",
+      onEnter: on("triage"),
+    },
+    {
+      key: "mastery-grid",
+      title: "מפת השליטה",
+      body: "מפת חום של תלמיד מול נושא. כל תא הוא רמת השליטה — כך מזהים נושא שכל הכיתה מתקשה בו, לא רק תלמיד בודד.",
+      onEnter: on("mastery"),
+    },
+    {
+      key: "pulse-hero",
+      title: "דופק הכיתה",
+      body: "אנרגיית הכיתה בזמן אמת — כמה תלמידים פעילים עכשיו, כמה שאלות AI נשאלו, ולאן המגמה הולכת.",
+      onEnter: on("pulse"),
+    },
+    {
+      key: "ai-chat-card",
+      title: "שיחות ה-AI של התלמידים",
+      body: "כל שיחה עם פרופסור פאראדיי נשמרת. פתחנו לכם אחת לדוגמה — אפשר לקרוא את ההתכתבות, לראות רמת בלבול וסנטימנט, ולהבין איפה בדיוק התלמיד נתקע.",
+      onEnter: on("aiChats"),
+      clickOnArrive: '[data-tour="ai-chat-card"]',
+    },
+    {
+      key: "hw-create",
+      title: "יצירת מטלה",
+      body: "פתחנו את תפריט היצירה: מטלה אדפטיבית שמתאימה שאלות לכל תלמיד, מטלת PDF אישית, או ייבוא חוברת שלמה — ידנית או אוטומטית עם AI.",
+      onEnter: on("homework"),
+      clickOnArrive: '[data-tour-click="hw-create"]',
+    },
+    {
+      key: "live",
+      title: "שיעור חי",
+      body: "פותח מצב שידור: שאלה משותפת למסך של כל הכיתה ותשובות שנכנסות מולכם בזמן אמת.",
+      onEnter: on("triage"),
+    },
+  ];
+}
 
 function sortStudents(list: CCStudent[], sort: Sort): CCStudent[] {
   const arr = [...list];
@@ -82,6 +149,28 @@ export default function TeacherDashboard() {
 
   function fire(msg: string) { push("success", msg); }
 
+  // ── Faraday onboarding tour ── first visit only; wait for data so the
+  // data-tour targets exist before the tour measures them.
+  const [tourOpen, setTourOpen] = useState(false);
+  // stable identity: the tour effect keys off the current step object, so a
+  // fresh array each render would re-run it forever
+  const tourSteps = useMemo(() => teacherTour(setView), []);
+  // depend on the boolean, not `data` — Convex hands back a new object on every
+  // real-time update, which would restart the timer before it ever fires
+  const dataReady = !!data;
+  useEffect(() => {
+    if (!dataReady) return;
+    let seen: string | null = null;
+    try { seen = localStorage.getItem(TOUR_KEY); } catch { /* storage disabled */ }
+    if (seen) return;
+    const t = window.setTimeout(() => setTourOpen(true), 650);
+    return () => window.clearTimeout(t);
+  }, [dataReady]);
+  const closeTour = () => {
+    try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* storage disabled */ }
+    setTourOpen(false);
+  };
+
   if (!data) return <TeacherDashboardSkeleton />;
 
   const onCommandView = view === "triage" || view === "mastery" || view === "pulse";
@@ -113,7 +202,7 @@ export default function TeacherDashboard() {
           </div>
 
           {/* class-health pill */}
-          <div className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline shadow-(--shadow-clay)">
+          <div data-tour="health" className="hidden sm:flex items-center gap-2.5 ms-1 ps-2 pe-3.5 py-1.5 rounded-full bg-surface-container-low border-2 border-outline shadow-(--shadow-clay)">
             <span className="relative inline-flex items-center justify-center w-[38px] h-[38px]">
               <MiniRing pct={data.classAvg} />
               <span className="num absolute font-extrabold text-label-md text-primary">{data.classAvg}</span>
@@ -126,7 +215,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* segmented nav — desktop only; mobile uses the bottom tab bar */}
-        <nav className="order-2 hidden lg:block">
+        <nav data-tour="nav" className="order-2 hidden lg:block">
           <SegTabs
             label="ניווט לוח המורה"
             tabs={NAV.map((tab) => ({ id: tab.id, icon: <tab.Icon size={16} />, label: tab.label }))}
@@ -138,6 +227,7 @@ export default function TeacherDashboard() {
         {/* actions */}
         <div className="order-2 lg:order-3 flex items-center gap-2 ms-auto lg:ms-0">
           <button
+            data-tour="live"
             className="flex items-center gap-2 px-3.5 py-2 rounded-full border-2 font-bold text-sm cursor-pointer transition-all hover:-translate-y-0.5"
             style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)", boxShadow: "var(--shadow-clay)" }}
             onClick={() => setLiveOpen(true)}
@@ -149,6 +239,9 @@ export default function TeacherDashboard() {
             <span className="charge-drift" style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }} />
             זמן אמת
           </span>
+          <button className="btn-icon" onClick={() => setTourOpen(true)} aria-label="הצג סיור היכרות" title="סיור היכרות">
+            <span className="font-bold text-sm leading-none">?</span>
+          </button>
           <button className="btn-icon" onClick={toggleTheme} aria-label="מצב תצוגה">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
@@ -163,7 +256,7 @@ export default function TeacherDashboard() {
       {/* ══════════ MAIN ══════════ */}
       <main className="relative z-10 flex-1 overflow-auto">
         <div className="page-shell page-shell--wide pb-28 lg:pb-24 pt-5">
-          {onCommandView && <KpiRibbon kpis={data.kpis} />}
+          {onCommandView && <div data-tour="kpis"><KpiRibbon kpis={data.kpis} /></div>}
 
           <AnimatePresence mode="wait">
             <motion.div key={view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
@@ -212,8 +305,11 @@ export default function TeacherDashboard() {
       {/* ══════════ TOAST ══════════ */}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
 
+      <FaradayTour open={tourOpen} onClose={closeTour} steps={tourSteps} />
+
       {/* ══════════ MOBILE BOTTOM TAB BAR ══════════ */}
       <nav
+        data-tour="nav"
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-stretch px-1 pt-1.5 border-t-2 border-outline"
         style={{ background: "color-mix(in srgb, var(--color-surface) 92%, transparent)", backdropFilter: "blur(14px)", paddingBottom: "calc(6px + env(safe-area-inset-bottom))", boxShadow: "0 -4px 0 0 var(--color-outline)" }}
       >
@@ -577,7 +673,7 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
       )}
 
       <div className="flex flex-wrap gap-4.5 items-start">
-        <div className="flex-1 flex flex-wrap gap-3.5" style={{ flexBasis: 640, minWidth: 280 }}>
+        <div data-tour="triage-lanes" className="flex-1 flex flex-wrap gap-3.5" style={{ flexBasis: 640, minWidth: 280 }}>
           {LANES.map((lane) => {
             const list = sortStudents(data.students.filter((s) => s.status === lane.key), "acc")
               .sort((a, b) => (lane.key === "thriving" ? b.acc - a.acc : a.acc - b.acc));
@@ -754,7 +850,7 @@ function MasteryGrid({ data, students, onSelect }: { data: CommandCenterData; st
   const gridRef = useRef<HTMLDivElement>(null);
   useStaggerReveal(gridRef, { selector: ".mg-cell", stagger: 0.006, y: 0, scale: 0.55, duration: 0.35, ease: "power2.out" });
   return (
-    <div ref={gridRef} className="clay-card p-4 overflow-x-auto">
+    <div ref={gridRef} data-tour="mastery-grid" className="clay-card p-4 overflow-x-auto">
       <div style={{ minWidth: 120 + cols * 60 }}>
         <div className="grid gap-1.5 mb-1.5" style={{ gridTemplateColumns: template }}>
           <div className="text-label-md font-bold text-on-surface-variant flex items-end ps-1 pb-1.5">תלמיד · שליטה כוללת</div>
@@ -805,7 +901,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
   return (
     <div>
       {/* energy hero */}
-      <div className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
+      <div data-tour="pulse-hero" className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
         <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 220, height: 220 }}>
           <div className="field-ring" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <div className="field-ring field-ring--2" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />

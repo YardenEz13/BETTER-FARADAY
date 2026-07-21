@@ -20,7 +20,7 @@ import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
-import { ElectricBolt, ElectricAtom, Battery, StreakCapacitor } from "../components/electric";
+import { ElectricBolt, ElectricAtom, Battery, StreakBolt } from "../components/electric";
 import { Skeleton, SkeletonCard, ProgressBar } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
@@ -742,7 +742,7 @@ export default function StudentHome() {
             <span><CountUpNum value={totalXP} suffix=" XP" /></span>
           </div>
           <div className="stat-chip">
-            <StreakCapacitor days={student.streak} size={15} atRisk={streakInDanger} />
+            <StreakBolt days={student.streak} size={15} atRisk={streakInDanger} />
             <span className="font-bold">{student.streak} ימים</span>
           </div>
         </div>
@@ -751,7 +751,7 @@ export default function StudentHome() {
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
           <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
-            <StreakCapacitor days={student.streak} size={14} atRisk={streakInDanger} />
+            <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
           <button
@@ -840,8 +840,7 @@ export default function StudentHome() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5 shadow-(--shadow-clay)"
               role="alert"
             >
               <div className="flex items-center gap-3 mb-2">
@@ -855,8 +854,7 @@ export default function StudentHome() {
                   <button
                     key={t.topicId}
                     onClick={() => navigate(`/student/${studentId}/practice/${t.topicId}`)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer"
-                    style={{ boxShadow: 'var(--shadow-clay)' }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer shadow-(--shadow-clay)"
                   >
                     <span className="text-on-surface">{t.nameHe}</span>
                     <span className="num font-bold text-secondary">{t.charge}%</span>
@@ -920,7 +918,7 @@ export default function StudentHome() {
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm shadow-(--shadow-clay)">
-                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
+                <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="text-on-surface font-bold">{student.streak} ימים רצוף</span>
               </div>
             </div>
@@ -1183,7 +1181,7 @@ export default function StudentHome() {
               </div>
               <div className="w-0.5 h-6 bg-outline" />
               <div className="flex items-center gap-2">
-                <StreakCapacitor days={student.streak} size={18} atRisk={streakInDanger} />
+                <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
                 <span className="font-bold text-on-surface text-sm">{student.streak} ימים</span>
               </div>
               <div className="w-0.5 h-6 bg-outline" />

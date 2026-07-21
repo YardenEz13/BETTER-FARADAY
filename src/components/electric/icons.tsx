@@ -101,9 +101,21 @@ export function ElectricBolt({ size = 64, animated = true, glow = 1, tone = "spa
         fill={`color-mix(in srgb, ${c1} 14%, transparent)`}
         strokeDasharray={animated ? 170 : undefined}>
         {animated && (
-          <animate attributeName="stroke-dashoffset" from="170" to="0" dur="1.4s" repeatCount="indefinite" />
+          <>
+            <animate attributeName="stroke-dashoffset" from="170" to="0" dur="1.4s" repeatCount="indefinite" />
+            {/* strike flash: front-loaded keyTimes read as lightning, not a breathe */}
+            <animate attributeName="opacity" values="1;0.5;1;0.8;1" keyTimes="0;0.05;0.1;0.16;1"
+              dur="2.6s" repeatCount="indefinite" />
+          </>
         )}
       </path>
+      {/* spark racing down the bolt */}
+      {animated && (
+        <circle r="2.4" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined}>
+          <animateMotion path={d} dur="1.4s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;1;0" dur="1.4s" repeatCount="indefinite" />
+        </circle>
+      )}
     </svg>
   );
 }
@@ -257,12 +269,22 @@ export function Capacitor({ size = 64, animated = true, glow = 1, tone = "spark"
       <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
       <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" fill="none"
         filter={glow > 0 ? `url(#${filter})` : undefined} />
-      {/* charge crossing the gap */}
+      {/* charge crossing the gap, then arcing across the plates */}
       {animated && (
-        <circle cy="32" r="2.6" fill={c0}>
-          <animate attributeName="cx" values="4;25" dur="1.3s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0;1;1;0" dur="1.3s" repeatCount="indefinite" />
-        </circle>
+        <>
+          <circle cy="32" r="2.6" fill={c0}>
+            <animate attributeName="cx" values="4;25" dur="1.3s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0;1;1;0" dur="1.3s" repeatCount="indefinite" />
+          </circle>
+          {/* discharge arc between the plates — fires as the charge lands */}
+          <path d="M27 30 L31 34 L33 29 L37 33" stroke={c0} strokeWidth={1.8}
+            strokeLinecap="round" strokeLinejoin="round" fill="none"
+            filter={glow > 0 ? `url(#${filter})` : undefined}>
+            {/* keyTimes must end at 1 or the whole animation is discarded */}
+            <animate attributeName="opacity" values="0;0;1;0.2;1;0;0" keyTimes="0;0.68;0.74;0.79;0.84;0.92;1"
+              dur="1.3s" repeatCount="indefinite" />
+          </path>
+        </>
       )}
     </svg>
   );
@@ -274,15 +296,25 @@ export function Battery({ size = 64, animated = true, glow = 1, tone = "spark", 
   const grad = useId();
   const filter = useId();
   const [c0, c1] = TONES[tone];
-  void animated;
   const d = "M4 32 H22 M22 16 V48 M30 23 V41 M38 16 V48 M46 23 V41 M54 16 V48 M54 32 H60";
   return (
     <svg {...svgProps(size, className, title)}>
       <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
       <path d={d} stroke={`url(#${grad})`} strokeWidth={2.4} strokeLinecap="round" fill="none"
         filter={glow > 0 ? `url(#${filter})` : undefined} />
-      {/* terminal plus mark */}
-      <path d="M14 12 H22 M18 8 V16" stroke={c1} strokeWidth={2} strokeLinecap="round" />
+      {/* current drawn off the stack, left lead to right */}
+      {animated && (
+        <circle cy="32" r="2.4" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined}>
+          <animate attributeName="cx" values="4;60" dur="1.6s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;1;0" dur="1.6s" repeatCount="indefinite" />
+        </circle>
+      )}
+      {/* terminal plus mark — flashes as the charge leaves */}
+      <path d="M14 12 H22 M18 8 V16" stroke={c1} strokeWidth={2} strokeLinecap="round">
+        {animated && (
+          <animate attributeName="opacity" values="0.35;1;0.35" dur="1.6s" repeatCount="indefinite" />
+        )}
+      </path>
     </svg>
   );
 }
@@ -405,13 +437,17 @@ export function Lens({ size = 64, animated = true, glow = 1, tone = "spark", cla
   const grad = useId();
   const filter = useId();
   const [c0, c1] = TONES[tone];
-  void animated;
   return (
     <svg {...svgProps(size, className, title)}>
       <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
       <path d="M32 8 C40 20 40 44 32 56 C24 44 24 20 32 8 Z" stroke={`url(#${grad})`} strokeWidth={2.2}
         fill={`color-mix(in srgb, ${c1} 12%, transparent)`} filter={glow > 0 ? `url(#${filter})` : undefined} />
-      <g stroke={c0} strokeWidth={1.8} strokeLinecap="round" opacity={0.85}>
+      {/* light streaming in from the left and out through the focus */}
+      <g stroke={c0} strokeWidth={1.8} strokeLinecap="round" opacity={0.85}
+        strokeDasharray={animated ? "7 9" : undefined}>
+        {animated && (
+          <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.2s" repeatCount="indefinite" />
+        )}
         <path d="M4 20 H26" />
         <path d="M4 32 H24" />
         <path d="M4 44 H26" />
@@ -419,6 +455,12 @@ export function Lens({ size = 64, animated = true, glow = 1, tone = "spark", cla
         <path d="M38 20 L58 28" />
         <path d="M38 44 L58 36" />
       </g>
+      {/* focal point igniting on each pass */}
+      {animated && (
+        <circle cx="48" cy="32" r="2.6" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined}>
+          <animate attributeName="opacity" values="0.2;1;0.2" dur="1.2s" repeatCount="indefinite" />
+        </circle>
+      )}
     </svg>
   );
 }
@@ -455,13 +497,18 @@ export function Vector({ size = 64, animated = true, glow = 1, tone = "spark", c
   const grad = useId();
   const filter = useId();
   const [c0, c1] = TONES[tone];
-  void animated;
-  void c1;
   return (
     <svg {...svgProps(size, className, title)}>
       <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
       <path d="M10 54 L46 18" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
         filter={glow > 0 ? `url(#${filter})` : undefined} />
+      {/* magnitude pulse travelling up the vector */}
+      {animated && (
+        <circle r="2.6" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined}>
+          <animateMotion path="M10 54 L46 18" dur="1.5s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;1;0" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      )}
       <path d="M34 16 L48 16 L48 30" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
         strokeLinejoin="round" fill="none" filter={glow > 0 ? `url(#${filter})` : undefined} />
       <g stroke={c0} strokeWidth={1.6} strokeDasharray="3 4" strokeLinecap="round" opacity={0.75}>

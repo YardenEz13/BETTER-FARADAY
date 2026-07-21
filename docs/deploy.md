@@ -1,7 +1,9 @@
 # Production deployment runbook
 
 Convex project: `cobalt-apollo` (team `yarden-etz-gmail-com`)
-- Dev deployment: `optimistic-weasel-444`
+- Dev / preview deployment: `optimistic-weasel-444`
+  - Client URL: `https://optimistic-weasel-444.convex.cloud`
+  - HTTP actions: `https://optimistic-weasel-444.convex.site`
 - **Prod deployment: `befitting-panther-27`** (created 2026-07-14)
   - Client URL: `https://befitting-panther-27.convex.cloud`
   - HTTP actions (health, Gemini proxy): `https://befitting-panther-27.convex.site`
@@ -22,6 +24,7 @@ npx convex deploy -y        # pushes convex/ to the prod deployment
 | `npx convex env set GEMINI_API_KEY <key> --prod` | ⚠️ **manual** — run yourself (key is in `.env.local` as VITE_GEMINI_API_KEY, or copy from dev: `npx convex env get GEMINI_API_KEY`) |
 | Themed-question precompute backfill: `npx convex run precompute:startPrecomputePipeline --prod` | ⚠️ after GEMINI_API_KEY is set |
 | Vercel prod env vars (dashboard → Project → Settings → Environment Variables, scope Production): `VITE_CONVEX_URL=https://befitting-panther-27.convex.cloud`, `VITE_SENTRY_DSN=<from sentry.io project>`, `SENTRY_AUTH_TOKEN=<sentry org token>` — then redeploy | ⚠️ manual |
+| Vercel **Preview** env vars (same screen, scope Preview): `VITE_CONVEX_URL=https://optimistic-weasel-444.convex.cloud` — branch/preview deploys point at the dev deployment | ⚠️ manual |
 | GitHub repo variables (Settings → Secrets and variables → Actions → Variables): `CONVEX_SITE_URL=https://befitting-panther-27.convex.site`, optional `PROD_APP_URL=<vercel prod URL>` | ⚠️ manual — powers `.github/workflows/uptime.yml` |
 | Sentry: create React project at sentry.io → copy DSN | ⚠️ manual |
 
