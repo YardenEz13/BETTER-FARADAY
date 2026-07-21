@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Lock, Unlock } from "./electric";
 import { randomQuote } from "../data/faradayQuotes";
+import FaradayCanvas from "./FaradayCanvas";
+import { ThemeToggle } from "./ThemeContext";
+import { motion } from "framer-motion";
 
 export default function PrototypeGate({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,29 +34,45 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-8 bg-background"
-    >
-      <div className="clay-card p-12 max-w-[32rem] w-full border-2 border-primary bg-primary/5 relative overflow-hidden shadow-2xl rounded-2xl">
-        {/* Green accent bar */}
-        <div className="absolute top-0 right-0 w-1 h-full bg-primary rounded-r-2xl" />
+    <div className="relative min-h-screen w-full flex items-center justify-center p-6 bg-background overflow-hidden" dir="rtl">
+      {/* Subtle mouse-reactive Faraday background lines */}
+      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0, opacity: 0.5 }} />
 
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl border-2 border-primary bg-primary/10 text-primary mb-5">
-            <Lock size={32} />
+      {/* Global theme switcher accessible on the gate page */}
+      <div className="absolute top-6 left-6 z-20">
+        <ThemeToggle />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="clay-card p-10 lg:p-12 max-w-[30rem] w-full border-2 border-outline bg-surface relative overflow-hidden rounded-[22px] z-10"
+        style={{ boxShadow: "var(--shadow-clay)" }}
+      >
+        {/* Top brand accent bar matching rest of Faraday cards */}
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-primary" />
+
+        <div className="text-center mb-8">
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl border-2 border-primary/20 bg-primary/10 text-primary mb-5"
+            style={{ boxShadow: "0 0 15px rgba(23, 201, 100, 0.15)" }}
+          >
+            <Lock size={32} tone="spark" glow={0.8} />
           </div>
-          <h1 className="font-display text-5xl font-black tracking-widest text-on-surface mb-2">כניסה לבדיקת פיילוט בלבד</h1>
+          <h1 className="font-display text-3xl lg:text-4xl font-extrabold text-on-surface mb-2">כניסה לבדיקת פיילוט</h1>
           <p className="label-mono opacity-70">אל תגלה לאף אחד... אבל השם משתמש נמצא בפנים</p>
-          <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal">{quote}</p>
+          <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal leading-relaxed">{quote}</p>
         </div>
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-6">
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <label className="label-mono text-on-surface">שם משתמש</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-4 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors text-center text-lg"
+              className="w-full bg-surface-container-low border-2 border-outline rounded-2xl px-4 py-3.5 text-on-surface font-mono focus:border-primary focus:bg-surface focus:outline-none transition-all text-center text-lg shadow-inner"
               placeholder="BDIKA"
               dir="ltr"
             />
@@ -65,23 +84,23 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-4 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors text-center tracking-widest text-xl"
+              className="w-full bg-surface-container-low border-2 border-outline rounded-2xl px-4 py-3.5 text-on-surface font-mono focus:border-primary focus:bg-surface focus:outline-none transition-all text-center tracking-widest text-xl shadow-inner"
               placeholder="******"
               dir="ltr"
             />
           </div>
 
           {error && (
-            <div className="text-error label-mono border border-error bg-error/10 p-3 text-center rounded-xl">
+            <div className="text-error label-mono border-2 border-error/30 bg-error/10 p-3 text-center rounded-2xl">
               מה קרה לך החלקת על השכל?
             </div>
           )}
 
           <button type="submit" className="btn-clay-primary justify-center mt-4 py-4 text-lg tracking-widest hover:scale-[1.02] transition-transform">
-            <Unlock size={20} /> כניסה זמנית
+            <Unlock size={20} tone="ghost" glow={0.5} /> כניסה זמנית
           </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

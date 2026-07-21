@@ -3,7 +3,6 @@ import { useEffect, lazy, Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { preloadModel } from "./services/localAI";
-import { ThemeProvider } from "./components/ThemeContext";
 import { ElectricLoader } from "./components/electric";
 import PageTransition from "./components/PageTransition";
 import FaradayProvider from "./components/chat/FaradayProvider";
@@ -43,16 +42,14 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <ThemeProvider>
-        <BrowserRouter>
-          {/* Single mount of the Faraday tutor — screens open it via useFaraday() */}
-          <FaradayProvider>
-            <AnimatedRoutes />
-          </FaradayProvider>
-        </BrowserRouter>
-        <Analytics />
-        <SpeedInsights />
-      </ThemeProvider>
+      <BrowserRouter>
+        {/* Single mount of the Faraday tutor — screens open it via useFaraday() */}
+        <FaradayProvider>
+          <AnimatedRoutes />
+        </FaradayProvider>
+      </BrowserRouter>
+      <Analytics />
+      <SpeedInsights />
     </AppErrorBoundary>
   );
 }
