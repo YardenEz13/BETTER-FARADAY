@@ -840,8 +840,7 @@ export default function StudentHome() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5"
-              style={{ boxShadow: 'var(--shadow-clay)' }}
+              className="w-full max-w-4xl mb-4 rounded-2xl border-2 border-secondary/40 bg-secondary/10 px-5 py-3.5 shadow-(--shadow-clay)"
               role="alert"
             >
               <div className="flex items-center gap-3 mb-2">
@@ -855,8 +854,7 @@ export default function StudentHome() {
                   <button
                     key={t.topicId}
                     onClick={() => navigate(`/student/${studentId}/practice/${t.topicId}`)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer"
-                    style={{ boxShadow: 'var(--shadow-clay)' }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-secondary/40 hover:border-secondary text-sm font-semibold transition-all cursor-pointer shadow-(--shadow-clay)"
                   >
                     <span className="text-on-surface">{t.nameHe}</span>
                     <span className="num font-bold text-secondary">{t.charge}%</span>

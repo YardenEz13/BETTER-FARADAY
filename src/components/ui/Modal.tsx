@@ -48,7 +48,7 @@ export default function Modal({ open, onClose, title, tone = "primary", footer, 
           aria-label={typeof title === "string" ? title : undefined}
           className="fixed inset-0 z-[200] flex items-center justify-center p-6"
           style={{
-            background: "color-mix(in srgb, #0C140E 55%, transparent)",
+            background: "color-mix(in srgb, var(--color-scrim) 55%, transparent)",
             backdropFilter: "blur(4px)",
             WebkitBackdropFilter: "blur(4px)",
           }}

@@ -9,8 +9,9 @@
  */
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("..", import.meta.url).pathname.replace(/^\/([a-zA-Z]:)/, "$1");
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const BASELINE_PATH = join(ROOT, "scripts", "design-lint-baseline.json");
 const UPDATE = process.argv.includes("--update");
 
