@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/react";
 import App from "./App";
 import PrototypeGate from "./components/PrototypeGate";
 import { ThemeProvider } from "./components/ThemeContext";
+import { reportToUser } from "./lib/errors";
 import "./index.css";
 
 // No DSN (local dev, CI) → Sentry stays fully disabled, zero noise.
@@ -24,12 +25,15 @@ if (import.meta.env.DEV) (window as any).__sentryDebug = Sentry;
 // Catch what the React error boundary can't: rejected promises (e.g. a
 // Convex mutation whose .catch was missed) and errors thrown outside React's
 // render/commit cycle (event handlers, timers, third-party scripts).
+// Both handlers also fan the failure out to <ErrorToaster /> so the user gets
+// a toast instead of a button that silently does nothing.
 window.addEventListener("unhandledrejection", (event) => {
   const reason = event.reason;
   console.error("[unhandledrejection]", reason);
   Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)), {
     tags: { source: "unhandledrejection" },
   });
+  reportToUser(reason);
 });
 window.addEventListener("error", (event) => {
   // Skip: React already routes render errors through AppErrorBoundary, and
@@ -37,6 +41,7 @@ window.addEventListener("error", (event) => {
   if (!event.error) return;
   console.error("[window.onerror]", event.error);
   Sentry.captureException(event.error, { tags: { source: "window.onerror" } });
+  reportToUser(event.error);
 });
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);

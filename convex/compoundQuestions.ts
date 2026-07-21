@@ -1,24 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-
-// ── Get a single compound question by ID ──
-export const getById = query({
-  args: { id: v.id("compoundQuestions") },
-  handler: async (ctx, { id }) => {
-    return await ctx.db.get(id);
-  },
-});
-
-// ── Get compound questions filtered by difficulty ──
-export const getByDifficulty = query({
-  args: { difficulty: v.number() },
-  handler: async (ctx, { difficulty }) => {
-    return await ctx.db
-      .query("compoundQuestions")
-      .withIndex("by_difficulty", (q) => q.eq("difficulty", difficulty))
-      .take(20);
-  },
-});
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 // ── Get all compound questions (bounded) ──
 export const list = query({
@@ -39,15 +22,16 @@ export const getFigureUrl = query({
 });
 
 // ── Get compound questions that match any of the given topic IDs ──
-export const getByTopics = query({
-  args: { topicIds: v.array(v.id("topics")) },
-  handler: async (ctx, { topicIds }) => {
-    // compoundQuestions store topicIds as an array, so we fetch all and filter
-    // This is acceptable since compound questions are a curated, small set
-    const all = await ctx.db.query("compoundQuestions").take(100);
-    const topicSet = new Set(topicIds);
-    return all.filter((q) =>
-      q.topicIds.some((tid) => topicSet.has(tid))
-    );
-  },
-});
+// compoundQuestions store topicIds as an array, so there is no index to seek —
+// fetch the (curated, small) set and filter. Shared with homework.ts's
+// adaptive generator, which needs the same candidate list server-side.
+// ponytail: bounded at 100 rows; add a by_topic join table if the bank grows.
+export async function compoundQuestionsForTopics(
+  ctx: QueryCtx,
+  topicIds: Id<"topics">[],
+): Promise<Doc<"compoundQuestions">[]> {
+  const all = await ctx.db.query("compoundQuestions").take(100);
+  const topicSet = new Set(topicIds.map((t) => t.toString()));
+  return all.filter((q) => q.topicIds.some((tid) => topicSet.has(tid.toString())));
+}
+

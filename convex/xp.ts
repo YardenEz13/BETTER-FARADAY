@@ -26,19 +26,6 @@ export async function awardXpHelper(
   return newXp;
 }
 
-// Internal mutation wrapper so scheduled/other-runtime callers can award XP too.
-export const awardXp = internalMutation({
-  args: {
-    studentId: v.id("students"),
-    amount: v.number(),
-    reason: v.string(),
-    refId: v.optional(v.string()),
-  },
-  handler: async (ctx, { studentId, amount, reason, refId }) => {
-    return await awardXpHelper(ctx, studentId, amount, reason, refId);
-  },
-});
-
 // XP awarded for answering a question: correct scales with difficulty (1-5),
 // wrong gives a small participation reward.
 export function xpForAttempt(isCorrect: boolean, difficulty: number): number {

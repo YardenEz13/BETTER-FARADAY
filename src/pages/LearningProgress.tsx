@@ -8,6 +8,7 @@ import { ArrowRight, Trophy, BookOpen, CheckCircle as CheckCircle2, Flame, Chevr
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, SignalWave, Lens, Battery } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
+import FaradayCanvas from "../components/FaradayCanvas";
 import { useCountUp } from "../lib/gsapUtils";
 
 export default function LearningProgress() {
@@ -73,7 +74,9 @@ export default function LearningProgress() {
   return (
     <div className="min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl" style={{ fontFamily: 'Assistant, sans-serif' }}>
 
-      {/* Atmospheric decoration */}
+      {/* Atmospheric decoration — orbiting Bohr atoms behind the mastery rings,
+          the closest visual metaphor the canvas has for "knowledge built up". */}
+      <FaradayCanvas variant="atom" style={{ position: "fixed", zIndex: 0, opacity: 0.55 }} />
       <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 blur-[130px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
@@ -139,8 +142,8 @@ export default function LearningProgress() {
         </div>
       </motion.header>
 
-      {/* Main content */}
-      <main className="page-shell page-shell--wide pt-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
+      {/* Main content — relative z-10 keeps it above the fixed atom canvas */}
+      <main className="relative z-10 page-shell page-shell--wide pt-8 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-72px)]">
 
         {/* ── Topic list (8 cols) ── */}
         <div className="lg:col-span-8 space-y-4">

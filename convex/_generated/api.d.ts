@@ -8,7 +8,6 @@
  * @module
  */
 
-import type * as addMore from "../addMore.js";
 import type * as ai from "../ai.js";
 import type * as aiChat from "../aiChat.js";
 import type * as aiGate from "../aiGate.js";
@@ -16,7 +15,6 @@ import type * as aiUsage from "../aiUsage.js";
 import type * as attempts from "../attempts.js";
 import type * as bridge from "../bridge.js";
 import type * as classroom from "../classroom.js";
-import type * as clear from "../clear.js";
 import type * as commandCenter from "../commandCenter.js";
 import type * as compoundQuestions from "../compoundQuestions.js";
 import type * as crons from "../crons.js";
@@ -31,7 +29,6 @@ import type * as http from "../http.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as levels from "../levels.js";
 import type * as live from "../live.js";
-import type * as mockInteractions from "../mockInteractions.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
 import type * as packetImport from "../packetImport.js";
@@ -71,7 +68,6 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  addMore: typeof addMore;
   ai: typeof ai;
   aiChat: typeof aiChat;
   aiGate: typeof aiGate;
@@ -79,7 +75,6 @@ declare const fullApi: ApiFromModules<{
   attempts: typeof attempts;
   bridge: typeof bridge;
   classroom: typeof classroom;
-  clear: typeof clear;
   commandCenter: typeof commandCenter;
   compoundQuestions: typeof compoundQuestions;
   crons: typeof crons;
@@ -94,7 +89,6 @@ declare const fullApi: ApiFromModules<{
   leaderboard: typeof leaderboard;
   levels: typeof levels;
   live: typeof live;
-  mockInteractions: typeof mockInteractions;
   notifications: typeof notifications;
   onboarding: typeof onboarding;
   packetImport: typeof packetImport;

@@ -5,9 +5,11 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, Check, Lock, Palette, Star, Package, Flame,
+  ChevronLeft, Check, X, Lock, Palette, Star, Package, Flame,
   ElectricBolt, Battery, SparkBurst,
+  ELECTRIC_ICONS, type ElectricIconName,
 } from "../components/electric";
+import { errorMessage } from "../lib/errors";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ToastStack, useToasts } from "../components/ui/Toast";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -74,19 +76,25 @@ type ShopItem = {
   equipped: boolean;
 };
 
+// Shop rows store an icon *name* (seeded server-side) or a raw emoji. Names are
+// resolved through the shared ELECTRIC_ICONS registry rather than a local map,
+// so a new seeded name works without touching this file.
+const ICON_TONE: Partial<Record<ElectricIconName, string>> = {
+  palette: "text-secondary",
+  flame: "text-tertiary",
+};
+
 function ItemIcon({ icon }: { icon: string }) {
-  // emoji vs lucide-name — the electric family covers the shop's names; emoji renders as-is.
-  const map: Record<string, JSX.Element> = {
-    palette: <Palette size={24} className="text-secondary" />,
-    star: <Star size={24} className="text-primary" />,
-    flame: <Flame size={24} className="text-tertiary" />,
-    package: <Package size={24} className="text-primary" />,
-    bolt: <ElectricBolt size={24} tone="spark" glow={0.5} animated={false} />,
-    zap: <ElectricBolt size={24} tone="spark" glow={0.5} animated={false} />,
-  };
   const key = icon?.toLowerCase?.() ?? "";
-  if (map[key]) return map[key];
-  // treat as emoji / raw text
+  const name = (Object.keys(ELECTRIC_ICONS) as ElectricIconName[]).find((n) => n.toLowerCase() === key);
+  if (name) {
+    const Icon = ELECTRIC_ICONS[name];
+    return <Icon size={24} className={ICON_TONE[name] ?? "text-primary"} animated={false} glow={0.5} />;
+  }
+  // An unrecognised *name* (seeded "Snowflake", "Award") would otherwise render
+  // as literal English text in an all-Hebrew card — fall back to a generic
+  // reward glyph. Anything non-ASCII is an emoji and renders as-is.
+  if (/^[\x20-\x7e]+$/.test(icon ?? "")) return <Star size={24} className="text-primary" animated={false} glow={0.5} />;
   return <span className="text-2xl leading-none" aria-hidden>{icon}</span>;
 }
 
@@ -102,6 +110,7 @@ function ShopCard({
   const { studentId } = useParams<{ studentId: string }>();
   const purchase = useMutation(api.shop.purchaseItem);
   const equip = useMutation(api.shop.equipItem);
+  const unequipTheme = useMutation(api.shop.unequipTheme);
   const [busy, setBusy] = useState(false);
   const [burst, setBurst] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -130,8 +139,22 @@ function ShopCard({
       if (!reducedMotion) { setBurst(true); setTimeout(() => setBurst(false), 700); }
     } catch (e) {
       shake();
-      const msg = e instanceof Error ? e.message : "משהו השתבש. נסו שוב.";
-      onError(msg.replace(/^\[.*?\]\s*/, "").replace(/Uncaught Error:\s*/i, "").trim());
+      onError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Themes are the only equippable the student can take back off — avatar
+  // colours always have one active, so there is nothing to revert to.
+  const handleUnequip = async () => {
+    if (busy || !item.equipped) return;
+    setBusy(true);
+    try {
+      await unequipTheme({ studentId: studentId as Id<"students"> });
+    } catch (e) {
+      shake();
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -152,9 +175,7 @@ function ShopCard({
       onBought();
     } catch (e) {
       shake();
-      const msg = e instanceof Error ? e.message : "משהו השתבש. נסו שוב.";
-      // Convex wraps the thrown message; strip the framework prefix for a clean Hebrew toast.
-      onError(msg.replace(/^\[.*?\]\s*/, "").replace(/Uncaught Error:\s*/i, "").trim());
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -189,10 +210,25 @@ function ShopCard({
 
         {item.owned && equippable ? (
           item.equipped ? (
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm"
-              style={{ boxShadow: "var(--shadow-clay-primary)" }}>
-              <Check size={15} strokeWidth={3} /> בשימוש
-            </span>
+            item.category === "theme" ? (
+              <button
+                onClick={handleUnequip}
+                disabled={busy}
+                title="הסרת ערכת הנושא"
+                className="group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer"
+                style={{ boxShadow: "var(--shadow-clay-primary)" }}
+              >
+                <Check size={15} strokeWidth={3} className="group-hover:hidden" />
+                <X size={13} strokeWidth={3} className="hidden group-hover:inline" />
+                <span className="group-hover:hidden">{busy ? "מסיר…" : "בשימוש"}</span>
+                <span className="hidden group-hover:inline">הסר</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm"
+                style={{ boxShadow: "var(--shadow-clay-primary)" }}>
+                <Check size={15} strokeWidth={3} /> בשימוש
+              </span>
+            )
           ) : (
             <button
               onClick={handleEquip}

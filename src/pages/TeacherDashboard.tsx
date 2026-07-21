@@ -10,18 +10,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, ElectricBolt, Trophy, Copy, QrCode, Trash2, Sparkles
+  Zap, GraduationCap, ElectricBolt, Trophy, Copy, QrCode, Trash2, Sparkles,
+  Inductor, TrendingUp, ArrowDown,
 } from "../components/electric";
 import { QRCodeSVG } from "qrcode.react";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import LiveClassPanel from "../components/LiveClassPanel";
+import AiReactorPanel from "../components/AiReactorPanel";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import FaradayTour, { type TourStep } from "../components/FaradayTour";
 import { useTheme } from "../components/ThemeContext";
+import { errorMessage } from "../lib/errors";
 import {
   CommandCenterData, CCStudent, CCStatus, CCTone,
   STATUS, LANES, toneColor, avatarStyle, cellColor, segColor, accColor,
@@ -30,6 +33,7 @@ import {
 
 type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework" | "profile";
 type Sort = "risk" | "acc" | "name";
+type MasteryMode = "grid" | "radar" | "power";
 
 const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
   { id: "triage", label: "לוח מיון", short: "מיון", Icon: Users },
@@ -122,7 +126,7 @@ export default function TeacherDashboard() {
   const digest = useQuery(api.digest.getLatestDigest, classroom ? { classroomId: classroom._id } : "skip");
 
   const [view, setView] = useState<View>("triage");
-  const [masteryView, setMasteryView] = useState<"grid" | "radar">("grid");
+  const [masteryView, setMasteryView] = useState<MasteryMode>("grid");
   const [sort, setSort] = useState<Sort>("risk");
   const [onlyRisk, setOnlyRisk] = useState(false);
   const [sel, setSel] = useState<CCStudent | null>(null);
@@ -264,6 +268,7 @@ export default function TeacherDashboard() {
               {view === "mastery" && (
                 <MasteryView
                   data={data}
+                  classroomId={classroom?._id ?? null}
                   masteryView={masteryView} setMasteryView={setMasteryView}
                   sort={sort} setSort={setSort}
                   onlyRisk={onlyRisk} setOnlyRisk={setOnlyRisk}
@@ -596,6 +601,87 @@ function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
   );
 }
 
+/* Pending level-ups awaiting teacher sign-off.
+ * levels.evaluateStudentLevel writes a suggestion whenever a student's power
+ * map clears the bar; the weekly digest only *mentions* them as a static chip.
+ * This is where they get approved or rejected — nothing else in the app can
+ * resolve one, so a pending suggestion would otherwise sit forever. */
+function PendingLevelsPanel({ classroomId, fire }: {
+  classroomId: Id<"classrooms"> | null; fire: (m: string) => void;
+}) {
+  const pending = useQuery(api.levels.getPendingSuggestions, classroomId ? { classroomId } : "skip");
+  const resolve = useMutation(api.levels.resolveSuggestion);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Nothing pending is the common case — stay out of the way entirely.
+  if (!pending || pending.length === 0) return null;
+
+  const decide = async (id: Id<"levelSuggestions">, action: "approved" | "rejected", name: string) => {
+    if (busyId) return;
+    setBusyId(id);
+    setErr(null);
+    try {
+      await resolve({ suggestionId: id, action });
+      fire(action === "approved" ? `${name} עלה/תה רמה` : `העלאת הרמה של ${name} נדחתה`);
+    } catch (e) {
+      setErr(errorMessage(e, "עדכון הרמה נכשל. נסו שוב."));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="clay-card mb-4.5 p-4">
+      <div className="flex items-center gap-2.5 mb-3">
+        <GraduationCap size={18} className="text-secondary" />
+        <span className="font-display font-extrabold text-[15px] text-on-surface">מוכנים לרמה הבאה</span>
+        <span className="num font-extrabold text-label-md rounded-full text-on-secondary px-2.5 py-[2px] bg-secondary">{pending.length}</span>
+      </div>
+
+      {err && (
+        <div role="alert" className="flex items-center gap-2 text-xs font-semibold px-3 py-2 mb-3 rounded-xl border-2"
+          style={{ borderColor: "var(--color-error)", color: "var(--color-error)", background: "color-mix(in srgb, var(--color-error) 8%, transparent)" }}>
+          <AlertTriangle size={14} /> {err}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {pending.map((s) => (
+          <div key={s._id} className="flex items-center gap-3 flex-wrap px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-outline">
+            <span className="flex-1 min-w-[160px] text-[13px] text-on-surface">
+              <strong>{s.studentName}</strong>
+              <span className="text-on-surface-variant"> · רמה </span>
+              <span className="num">{s.currentLevel}</span>
+              <span className="text-on-surface-variant"> → </span>
+              <span className="num font-extrabold text-secondary">{s.suggestedLevel}</span>
+              {s.reason && <span className="text-on-surface-variant"> · {s.reason}</span>}
+            </span>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => decide(s._id, "approved", s.studentName)}
+                disabled={busyId === s._id}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors disabled:opacity-50"
+                style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}
+              >
+                <CheckCircle2 size={14} /> אשר
+              </button>
+              <button
+                onClick={() => decide(s._id, "rejected", s.studentName)}
+                disabled={busyId === s._id}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors disabled:opacity-50"
+                style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}
+              >
+                <X size={12} /> דחה
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* Small clay toggle row — teacher master switch for the weekly class leaderboard */
 function LeaderboardToggleRow({ classroomId, enabled, fire }: {
   classroomId: Id<"classrooms"> | null; enabled: boolean; fire: (m: string) => void;
@@ -658,6 +744,8 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
   return (
     <div>
       <WeeklyDigest digest={digest} classroomId={classroomId} onSelectStudent={onSelectId} fire={fire} />
+
+      <PendingLevelsPanel classroomId={classroomId} fire={fire} />
 
       <LeaderboardToggleRow classroomId={classroomId} enabled={leaderboardEnabled} fire={fire} />
 
@@ -767,8 +855,9 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
 }
 
 /* ───────────────────────── MASTERY ───────────────────────── */
-function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRisk, setOnlyRisk, onSelect }: {
-  data: CommandCenterData; masteryView: "grid" | "radar"; setMasteryView: (v: "grid" | "radar") => void;
+function MasteryView({ data, classroomId, masteryView, setMasteryView, sort, setSort, onlyRisk, setOnlyRisk, onSelect }: {
+  data: CommandCenterData; classroomId: Id<"classrooms"> | null;
+  masteryView: MasteryMode; setMasteryView: (v: MasteryMode) => void;
   sort: Sort; setSort: (s: Sort) => void; onlyRisk: boolean; setOnlyRisk: (b: boolean) => void; onSelect: (s: CCStudent) => void;
 }) {
   let students = data.students;
@@ -784,6 +873,7 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
           tabs={[
             { id: "grid", icon: <LayoutGrid size={14} />, label: "מפת חום" },
             { id: "radar", icon: <GraduationCap size={14} />, label: "רדאר" },
+            { id: "power", icon: <Inductor size={14} />, label: "מפת עוצמה" },
           ]}
           value={masteryView}
           onChange={setMasteryView}
@@ -820,7 +910,9 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
         })}
       </div>
 
-      {masteryView === "grid" ? (
+      {masteryView === "power" ? (
+        <ClassPowerMap classroomId={classroomId} />
+      ) : masteryView === "grid" ? (
         <MasteryGrid data={data} students={students} onSelect={onSelect} />
       ) : (
         <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(208px, 1fr))" }}>
@@ -839,6 +931,82 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ───────────────────────── CLASS POWER MAP ─────────────────────────
+ * Mastery as the AI tutor sees it. The heat-map/radar modes score students on
+ * answer accuracy; this one reads studentPowerMap, which is recomputed from
+ * Faraday session briefs — so a student who answers correctly but leans on
+ * hints shows up weak here and strong there. Only students who have actually
+ * talked to Faraday have a row.
+ */
+function ClassPowerMap({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
+  const maps = useQuery(api.powerMap.getClassroomPowerMaps, classroomId ? { classroomId } : "skip");
+
+  if (maps === undefined) {
+    return (
+      <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+        {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} variant="student-card" />)}
+      </div>
+    );
+  }
+  if (maps.length === 0) {
+    return (
+      <div className="clay-card p-8 text-center">
+        <Inductor size={40} glow={0.6} className="mx-auto mb-3 text-on-surface-variant" />
+        <div className="font-display font-extrabold text-[16px] text-on-surface mb-1">אין עדיין מפות עוצמה</div>
+        <p className="text-[13px] text-on-surface-variant m-0">מפת העוצמה נבנית משיחות עם פאראדיי. ברגע שתלמידים יתחילו לשוחח, הנתונים יופיעו כאן.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+      {maps.map((m) => {
+        const ranked = [...m.topicMastery].sort((a, b) => b.masteryScore - a.masteryScore);
+        const best = ranked[0];
+        const worst = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+        const avg = ranked.length
+          ? Math.round(ranked.reduce((s, t) => s + t.masteryScore, 0) / ranked.length)
+          : 0;
+        const col = avg >= 70 ? "var(--color-primary)" : avg >= 40 ? "var(--color-tertiary)" : "var(--color-error)";
+        return (
+          <div key={m._id} className="clay-card p-3.5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-[13px] flex-shrink-0"
+                style={{ background: `color-mix(in srgb, ${m.avatarColor ?? col} 20%, var(--color-surface))`, border: `2px solid ${m.avatarColor ?? col}` }}>
+                {m.studentName.charAt(0)}
+              </span>
+              <span className="font-extrabold text-[14px] text-on-surface truncate flex-1 min-w-0">{m.studentName}</span>
+              <span className="num font-extrabold text-[17px] flex-shrink-0" style={{ color: col }}>{avg}%</span>
+            </div>
+            <ProgressBar value={avg} color={col} label={`עוצמה ממוצעת של ${m.studentName}`} className="h-[7px] mb-3" />
+            <div className="flex flex-col gap-1.5 text-[12px]">
+              {best && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TrendingUp size={13} className="flex-shrink-0" style={{ color: "var(--color-primary)" }} />
+                  <span className="text-on-surface-variant flex-shrink-0">חזק ב־</span>
+                  <span className="text-on-surface font-bold truncate">{best.topicName}</span>
+                  <span className="num text-on-surface-variant flex-shrink-0">{best.masteryScore}%</span>
+                </div>
+              )}
+              {worst && (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ArrowDown size={13} className="flex-shrink-0" style={{ color: "var(--color-error)" }} />
+                  <span className="text-on-surface-variant flex-shrink-0">חלש ב־</span>
+                  <span className="text-on-surface font-bold truncate">{worst.topicName}</span>
+                  <span className="num text-on-surface-variant flex-shrink-0">{worst.masteryScore}%</span>
+                </div>
+              )}
+              <div className="num text-[11px] text-on-surface-variant mt-1">
+                {m.engagement.totalSessions} שיחות · {m.progressVelocity.overall} בשבוע
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -963,6 +1131,8 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
           </StaggerList>
         </div>
       </div>
+
+      <AiReactorPanel />
 
       {/* ticker */}
       <div className="clay-card mt-4.5 overflow-hidden">

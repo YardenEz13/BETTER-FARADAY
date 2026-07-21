@@ -1,4 +1,4 @@
-import { query, internalMutation, MutationCtx } from "./_generated/server";
+import { query, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
@@ -89,14 +89,6 @@ async function consumeOneFreezePurchase(
     }
   }
 }
-
-// Internal wrapper for scheduled callers.
-export const touchStreak = internalMutation({
-  args: { studentId: v.id("students") },
-  handler: async (ctx, { studentId }) => {
-    return await touchStreakHelper(ctx, studentId);
-  },
-});
 
 export const getStreakStatus = query({
   args: { studentId: v.id("students") },

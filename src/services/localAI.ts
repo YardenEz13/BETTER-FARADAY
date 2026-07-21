@@ -73,19 +73,6 @@ let currentContext: string = "";
 export const setActiveStudentId = _setActiveStudentId;
 export const getActiveStudentId = _getActiveStudentId;
 
-type ProgressCallback = (percent: number, stage: string) => void;
-let onInitProgress: ProgressCallback | null = null;
-let isReady = false;
-let isFailed = false;
-
-// ── Progress ──
-export function onModelProgress(cb: ProgressCallback) {
-  onInitProgress = cb;
-  if (isReady) {
-    setTimeout(() => cb(100, "מוכן!"), 0);
-  }
-}
-
 // ── Think-block stripping ──
 export function stripThinkBlock(text: string): string {
   // Remove all closed think blocks
@@ -159,48 +146,23 @@ export function violatesSocraticRules(text: string): boolean {
 }
 
 // ── Availability ──
-export async function isLocalAIAvailable(): Promise<boolean> {
-  return !isFailed;
+// The tutor is a server-side Gemini call behind the Convex proxy, so there is
+// no model to download and nothing to warm up. "Session" here is just the
+// agent + question context the next streamMessage() call should use. The old
+// in-browser-model lifecycle (progress callbacks, GPU probe, crash/reinit) is
+// gone — a stub that always returned a constant told callers nothing.
+export function getAIStatus(): "unavailable" | "ready" {
+  return CONVEX_SITE_URL ? "ready" : "unavailable";
 }
 
-export function getAIStatus(): "unavailable" | "downloading" | "ready" {
-  if (isFailed) return "unavailable";
-  if (isReady) return "ready";
-  return "downloading";
+export async function isLocalAIAvailable(): Promise<boolean> {
+  return getAIStatus() === "ready";
 }
 
 // ── Session ──
-export async function preloadModel() {
-  await createSession("practice");
-}
-
-export async function createSession(
-  agentType: AgentType,
-  questionContext?: string
-): Promise<boolean> {
+export function createSession(agentType: AgentType, questionContext?: string) {
   currentAgentType = agentType;
   currentContext = questionContext || "";
-  isReady = true;
-  isFailed = false;
-  setTimeout(() => onInitProgress?.(100, "מוכן!"), 0);
-  return true;
-}
-
-export function handleAICrash(error: unknown) {
-  console.error("[localAI] AI System error. Error:", error);
-  isReady = false;
-  isFailed = false;
-}
-
-export async function reinitSession(
-  agentType: AgentType,
-  questionContext?: string
-): Promise<boolean> {
-  return createSession(agentType, questionContext);
-}
-
-export function isGPUMode(): boolean {
-  return false;
 }
 
 export function destroySession() {
@@ -242,74 +204,10 @@ export async function compactHistory(history: Message[]): Promise<Message[]> {
   return [{ role: "system", content: `[סיכום שיחה קודמת]: ${summary}` }, ...recentMessages];
 }
 
-// ── Debug State ──
-export interface AIDebugState {
-  promptMessages: { role: string; content: string }[] | null;
-  promptTokenEstimate: number;
-  historyLength: number;
-  wasCompacted: boolean;
-  rawStream: string;
-  thinkBlock: string;
-  visibleResponse: string;
-  isGenerating: boolean;
-  chunkCount: number;
-  generationParams: {
-    temperature: number;
-    max_tokens: number;
-  } | null;
-  gpuMode: boolean;
-  modelUrl: string;
-  lastUpdateMs: number;
-}
-
-const _debugState: AIDebugState = {
-  promptMessages: null,
-  promptTokenEstimate: 0,
-  historyLength: 0,
-  wasCompacted: false,
-  rawStream: "",
-  thinkBlock: "",
-  visibleResponse: "",
-  isGenerating: false,
-  chunkCount: 0,
-  generationParams: null,
-  gpuMode: false,
-  modelUrl: "Google Gemini 2.5 Flash",
-  lastUpdateMs: 0,
-};
-
-const _debugListeners: Array<(state: AIDebugState) => void> = [];
-
-export function onDebugUpdate(cb: (state: AIDebugState) => void): () => void {
-  _debugListeners.push(cb);
-  return () => {
-    const idx = _debugListeners.indexOf(cb);
-    if (idx >= 0) _debugListeners.splice(idx, 1);
-  };
-}
-
-export function getDebugState(): Readonly<AIDebugState> {
-  return _debugState;
-}
-
-function _notifyDebug(): void {
-  _debugState.lastUpdateMs = Date.now();
-  const snapshot: AIDebugState = {
-    ..._debugState,
-    promptMessages: _debugState.promptMessages ? [..._debugState.promptMessages] : null,
-  };
-  for (const cb of _debugListeners) {
-    try { cb(snapshot); } catch { /* ignore listener errors */ }
-  }
-}
-
-function _extractThinkContent(rawText: string): string {
-  const start = rawText.indexOf("<think>");
-  if (start === -1) return "";
-  const end = rawText.indexOf("</think>");
-  if (end === -1) return rawText.slice(start + 7);
-  return rawText.slice(start + 7, end);
-}
+// The AI debug pub-sub (AIDebugState + onDebugUpdate + getDebugState) that used
+// to live here fed a sidebar gated on a `useState(false)` nobody could flip.
+// Streaming faults are visible in Sentry and the console; if a live inspector
+// is wanted again, build it against the stream, not a mirrored global.
 
 function buildSystemPrompt(agentType: AgentType, context: string, struggleLevel: StruggleLevel = 0): string {
   const base = agentType === "proof"
@@ -380,19 +278,6 @@ function buildGeminiPayload(
     parts: [{ text: userMessage + TRAILING_CONSTRAINT }]
   });
 
-  // Track in debug state
-  const promptMessagesForDebug: { role: string; content: string }[] = [];
-  promptMessagesForDebug.push({ role: "system", content: systemContent });
-  for (const item of contents) {
-    promptMessagesForDebug.push({
-      role: item.role,
-      content: item.parts[0].text
-    });
-  }
-  _debugState.promptMessages = promptMessagesForDebug;
-  _debugState.promptTokenEstimate = promptMessagesForDebug.reduce((acc, m) => acc + estimateTokens(m.content), 0);
-  _notifyDebug();
-
   return {
     contents,
     systemInstruction: {
@@ -415,8 +300,6 @@ export async function streamMessage(
   abortSignal?: AbortSignal,
   contextOverride?: { agentType?: AgentType; questionContext?: string; struggleLevel?: StruggleLevel }
 ): Promise<string> {
-  console.log("[localAI] streamMessage called. isReady:", isReady);
-
   if (!CONVEX_SITE_URL) {
     console.warn("[localAI] VITE_CONVEX_URL is not defined — cannot reach the Gemini proxy.");
     return "שגיאה: כתובת השרת (VITE_CONVEX_URL) אינה מוגדרת.";
@@ -446,21 +329,6 @@ export async function streamMessage(
     history,
     struggleLevel
   );
-
-  // ── Initialize debug state for this generation ──
-  _debugState.rawStream = "";
-  _debugState.thinkBlock = "";
-  _debugState.visibleResponse = "";
-  _debugState.isGenerating = true;
-  _debugState.chunkCount = 0;
-  _debugState.wasCompacted = wasCompacted;
-  _debugState.historyLength = conversationHistory?.filter(m => m.role !== "system").length ?? 0;
-  _debugState.gpuMode = false;
-  _debugState.generationParams = {
-    temperature: 0.3,
-    max_tokens: struggleLevel >= 3 ? 500 : 260,
-  };
-  _notifyDebug();
 
   let rawText = "";
   let lastVisible = "";
@@ -569,12 +437,6 @@ export async function streamMessage(
                 socraticViolation = true;
                 break;
               }
-              // Live debug tracking on every chunk
-              _debugState.rawStream = rawText;
-              _debugState.thinkBlock = _extractThinkContent(rawText);
-              _debugState.visibleResponse = visible;
-              _debugState.chunkCount = chunkCount;
-              _notifyDebug();
               if (visible && visible !== lastVisible) {
                 lastVisible = visible;
                 onChunk(visible);
@@ -603,19 +465,13 @@ export async function streamMessage(
   }
 
   const finalVisible = stripThinkBlock(rawText);
-  _debugState.isGenerating = false;
 
   if (!finalVisible || (!allowNumbers && violatesSocraticRules(finalVisible))) {
     console.log("[localAI] streamMessage: finalVisible is empty or violates Socratic rules, returning pedagogical fallback.");
-    const fallbackResponse = "אני כאן כדי לעזור לך לפתור את התרגיל צעד אחר צעד. מהו השלב הראשון שבו נתקעת?";
-    _debugState.visibleResponse = fallbackResponse;
-    _notifyDebug();
-    return fallbackResponse;
+    return "אני כאן כדי לעזור לך לפתור את התרגיל צעד אחר צעד. מהו השלב הראשון שבו נתקעת?";
   }
 
   console.log("[localAI] streamMessage completed. final rawText length:", rawText.length, "final visible response:", JSON.stringify(finalVisible));
-  _debugState.visibleResponse = finalVisible;
-  _notifyDebug();
   return finalVisible;
 }
 

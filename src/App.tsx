@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { preloadModel } from "./services/localAI";
 import { ElectricLoader } from "./components/electric";
 import PageTransition from "./components/PageTransition";
 import FaradayProvider from "./components/chat/FaradayProvider";
 import AppErrorBoundary from "./components/AppErrorBoundary";
+import ErrorToaster from "./components/ErrorToaster";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
@@ -23,7 +23,6 @@ const XpShop             = lazy(() => import("./pages/XpShop"));
 const ReviewDeck         = lazy(() => import("./pages/ReviewDeck"));
 const Leaderboard        = lazy(() => import("./pages/Leaderboard"));
 const ExamMode           = lazy(() => import("./pages/ExamMode"));
-const ElectricGallery    = lazy(() => import("./pages/ElectricGallery")); // dev showcase — safe to remove
 const DesignGallery      = import.meta.env.DEV ? lazy(() => import("./pages/DesignGallery")) : null; // dev-only styleguide
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const ParentReport       = lazy(() => import("./pages/ParentReport"));
@@ -35,11 +34,6 @@ function RouteFallback() {
 }
 
 export default function App() {
-  useEffect(() => {
-    // Warm up the AI tutor connection when the app starts
-    preloadModel().catch(console.error);
-  }, []);
-
   return (
     <AppErrorBoundary>
       <BrowserRouter>
@@ -48,6 +42,7 @@ export default function App() {
           <AnimatedRoutes />
         </FaradayProvider>
       </BrowserRouter>
+      <ErrorToaster />
       <Analytics />
       <SpeedInsights />
     </AppErrorBoundary>
@@ -82,7 +77,6 @@ function AnimatedRoutes() {
             <Route path="/teacher/homework/new" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/homework/:homeworkId/edit" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
-            <Route path="/electric-demo" element={<ElectricGallery />} />
             {DesignGallery && <Route path="/design" element={<DesignGallery />} />}
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
             <Route path="/parent/:token" element={<ParentReport />} />

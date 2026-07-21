@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import MathText from "./MathText";
 import { fireConfetti } from "../lib/celebrations";
+import { errorMessage } from "../lib/errors";
 import { X, CheckCircle as CheckCircle2, XCircle, Send, Loader as Loader2 } from "./electric";
 import { ElectricLoader } from "./electric/ElectricLoader";
 
@@ -64,8 +65,7 @@ export function LiveQuestionSheet({ studentId, onClose }: { studentId: string; o
       setResult(res.isCorrect ? "correct" : "wrong");
       if (res.isCorrect) fireConfetti(window.innerWidth / 2, window.innerHeight * 0.4);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "השליחה נכשלה. נסה שוב.";
-      setError(msg.replace(/^\[.*?\]\s*/, "").replace(/Uncaught Error:\s*/i, "").trim());
+      setError(errorMessage(e, "השליחה נכשלה. נסה שוב."));
     } finally {
       setBusy(false);
     }

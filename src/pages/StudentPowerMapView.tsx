@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ChevronRight, ArrowRight, ChevronDown, MessageSquare, Bot, GraduationCap } from "../components/electric";
 import CyberAvatar from "../components/CyberAvatar";
+import FaradayCanvas from "../components/FaradayCanvas";
 import { ElectricBolt } from "../components/electric";
 import MathText from "../components/MathText";
 import { useCountUp } from "../lib/gsapUtils";
@@ -27,6 +28,16 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
     studentId ? { studentId, limit: 5 } : "skip"
   );
   const [openChatId, setOpenChatId] = useState<string | null>(null);
+  // Which topic cell is expanded into its session-brief drill-down.
+  const [openTopicId, setOpenTopicId] = useState<Id<"topics"> | null>(null);
+  const topicBriefs = useQuery(
+    api.sessionBriefs.getBriefsForStudentTopic,
+    studentId && openTopicId ? { studentId, topicId: openTopicId } : "skip"
+  );
+  const recentAttempts = useQuery(
+    api.attempts.getRecentAttempts,
+    studentId ? { studentId } : "skip"
+  );
 
   // GSAP count-up on the engagement tallies. Hooks run before the early return
   // so their order stays stable; guarded for the pre-load render.
@@ -81,15 +92,17 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
           <ChevronRight size={16} /> חזרה למפת חום
         </button>
 
-        {/* Student header */}
+        {/* Student header — the constellation canvas reads as "this student's
+            skills, mapped", which is exactly what the panel below it is. */}
         <div className="bg-surface border border-outline-variant rounded-2xl p-8 mb-10 flex items-center gap-8 w-full shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-2 h-full bg-primary shadow-sm"></div>
+          <FaradayCanvas variant="constellation" style={{ opacity: 0.5 }} />
+          <div className="absolute top-0 right-0 w-2 h-full bg-primary shadow-sm z-10"></div>
           {student && (
-            <div className="w-20 h-20 rounded-full border-4 border-surface shadow-md overflow-hidden bg-primary-container">
+            <div className="relative z-10 w-20 h-20 rounded-full border-4 border-surface shadow-md overflow-hidden bg-primary-container">
                <CyberAvatar name={student.name} size={80} />
             </div>
           )}
-          <div>
+          <div className="relative z-10">
             <div className="text-on-surface mb-2 font-headline-xl">
               {student?.name || "..."}
             </div>
@@ -106,12 +119,16 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
             {powerMap.topicMastery.map((t: any) => {
               const tierVar = t.masteryScore >= 70 ? 'var(--color-primary)' : t.masteryScore >= 40 ? 'var(--color-secondary)' : 'var(--color-error)';
               const intensity = Math.max(0, Math.min(100, t.masteryScore)) / 100;
+              const open = openTopicId === t.topicId;
               return (
-                <div
+                <button
                   key={t.topicId}
-                  className="intensity-cell bg-surface rounded-2xl border-2 p-6 transition-all hover:-translate-y-1"
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => setOpenTopicId(open ? null : t.topicId)}
+                  className="intensity-cell bg-surface rounded-2xl border-2 p-6 text-start transition-all hover:-translate-y-1 cursor-pointer"
                   style={{
-                    borderColor: `color-mix(in srgb, ${tierVar} 45%, transparent)`,
+                    borderColor: open ? tierVar : `color-mix(in srgb, ${tierVar} 45%, transparent)`,
                     boxShadow: `var(--shadow-clay), 0 0 ${Math.round(6 + intensity * 22)}px color-mix(in srgb, ${tierVar} ${Math.round(18 + intensity * 32)}%, transparent)`,
                   }}
                 >
@@ -120,10 +137,13 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
                   <div className="num text-xs text-on-surface-variant mt-2">
                     {t.sessionCount} שיחות · דיוק {t.avgAccuracy.toFixed(1)}/5
                   </div>
-                  <div className="text-sm font-semibold mt-4" style={{ color: t.trend === 'improving' ? 'var(--color-primary)' : t.trend === 'declining' ? 'var(--color-error)' : 'var(--color-secondary)' }}>
-                    {t.trend === 'improving' ? '↑ משתפר' : t.trend === 'declining' ? '↓ יורד' : '─ יציב'}
+                  <div className="flex items-center justify-between gap-2 mt-4">
+                    <span className="text-sm font-semibold" style={{ color: t.trend === 'improving' ? 'var(--color-primary)' : t.trend === 'declining' ? 'var(--color-error)' : 'var(--color-secondary)' }}>
+                      {t.trend === 'improving' ? '↑ משתפר' : t.trend === 'declining' ? '↓ יורד' : '─ יציב'}
+                    </span>
+                    <ChevronDown size={14} className={`text-on-surface-variant transition-transform ${open ? "rotate-180" : ""}`} />
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -132,6 +152,45 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
             אין מספיק נתונים עדיין
           </div>
         )}
+
+        {/* Drill-down: every Faraday session recorded for the selected topic */}
+        <AnimatePresence initial={false}>
+          {openTopicId && (
+            <motion.div
+              key={openTopicId}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden -mt-8 mb-12 w-full"
+            >
+              <div className="bg-surface border border-outline-variant rounded-2xl p-6 shadow-sm">
+                <div className="font-headline-sm text-on-surface mb-4">שיחות בנושא זה</div>
+                {topicBriefs === undefined ? (
+                  <div className="text-on-surface-variant opacity-70 font-body-md">טוען…</div>
+                ) : topicBriefs.length === 0 ? (
+                  <div className="text-on-surface-variant opacity-70 font-body-md">אין עדיין שיחות מתועדות בנושא זה.</div>
+                ) : (
+                  <ul className="flex flex-col gap-2.5 m-0 p-0 list-none">
+                    {topicBriefs.slice(0, 10).map((b) => (
+                      <li key={b._id} className="flex items-start gap-3 bg-surface-container-low border border-outline-variant rounded-xl p-3">
+                        <MessageSquare size={15} className="text-secondary flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm text-on-surface leading-snug">
+                            <MathText>{b.keyInsight || "שיחה ללא סיכום"}</MathText>
+                          </div>
+                          <div className="num text-xs text-on-surface-variant mt-1">
+                            {formatDate(b.createdAt)} · {b.totalMessages} הודעות · אוטונומיה {b.autonomyLevel}/5
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Progress Velocity */}
         <div className="font-headline-md text-on-surface mb-6 border-b border-outline-variant pb-2">מהירות התקדמות</div>
@@ -398,6 +457,34 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
 
       {/* Right panel: Engagement - Wide and expansive sidebar */}
       <div className="w-full lg:w-[420px] lg:flex-shrink-0 flex flex-col gap-6 pb-10 lg:pb-20 lg:overflow-y-auto">
+        {/* Raw answer stream — the briefs above are AI-summarised, this is what
+            the student actually submitted, newest first. */}
+        <div className="font-headline-md text-on-surface border-b border-outline-variant pb-2">תרגול אחרון</div>
+        <div className="bg-surface border border-outline-variant rounded-2xl p-5 w-full shadow-sm">
+          {recentAttempts === undefined ? (
+            <div className="text-on-surface-variant opacity-70 font-body-md">טוען…</div>
+          ) : recentAttempts.length === 0 ? (
+            <div className="text-on-surface-variant opacity-70 font-body-md">התלמיד עוד לא פתר שאלות.</div>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                {recentAttempts.slice(0, 20).map((a) => (
+                  <span
+                    key={a._id}
+                    title={`${a.isCorrect ? "נכון" : "שגוי"} · ${formatDate(a._creationTime)}`}
+                    className="w-3.5 h-3.5 rounded-[4px] flex-shrink-0"
+                    style={{ background: a.isCorrect ? "var(--color-primary)" : "var(--color-error)" }}
+                  />
+                ))}
+              </div>
+              <div className="num text-xs text-on-surface-variant">
+                {recentAttempts.filter((a) => a.isCorrect).length}/{recentAttempts.length} נכונות
+                {" · "}העדכני ביותר {formatDate(recentAttempts[0]._creationTime)}
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="font-headline-md text-on-surface border-b border-outline-variant pb-2">מטריקות מעורבות</div>
 
         {powerMap?.engagement ? (

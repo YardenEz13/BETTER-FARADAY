@@ -12,6 +12,7 @@ import MathText from "../components/MathText";
 import { SegTabs, ProgressBar, ToastStack, Modal } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
+import { errorMessage } from "../lib/errors";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -47,6 +48,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const publishHomework = useMutation(api.homework.publishHomework);
   const deleteHomework = useMutation(api.homework.deleteHomework);
   const cancelScheduled = useMutation(api.homework.cancelScheduled);
+  const deletePdfAssignment = useMutation(api.pdfAssignments.deleteAssignment);
 
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Selection>(null);
@@ -59,12 +61,14 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const packetInputRef = useRef<HTMLInputElement>(null);
   const { ingest: ingestPacket, busy: packetBusy, error: packetError } = usePacketIngest(classroomId);
 
-  // Run a confirmed mutation: always close the dialog; surface failures.
+  // Run a confirmed mutation: always close the dialog; surface failures. The
+  // server's own message wins when there is one ("המטלה כבר נסגרה") — failMsg
+  // is only the fallback for network/unknown errors.
   const runConfirmed = async (fn: () => Promise<unknown>, failMsg: string) => {
     try {
       await fn();
-    } catch {
-      setErrorMsg(failMsg);
+    } catch (e) {
+      setErrorMsg(errorMessage(e, failMsg));
       setTimeout(() => setErrorMsg(null), 3500);
     } finally {
       setConfirm(null);
@@ -149,6 +153,18 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       onConfirm: () => runConfirmed(() => cancelScheduled({ homeworkId: id }), "ביטול התזמון נכשל. נסו שוב."),
     });
 
+  // deleteAssignment also drops the assignment's questions and the stored PDF,
+  // so there is nothing left to recover — hence the blunt warning.
+  const handleDeletePdf = (id: Id<"pdfAssignments">) =>
+    setConfirm({
+      title: "מחיקת מטלת PDF", message: "המטלה, השאלות שסומנו עליה וקובץ ה-PDF יימחקו לצמיתות, יחד עם התשובות שהוגשו.",
+      confirmLabel: "מחק", tone: "danger",
+      onConfirm: () => runConfirmed(async () => {
+        if (selected?.kind === "pdf" && selected.id === id) setSelected(null);
+        await deletePdfAssignment({ assignmentId: id });
+      }, "מחיקת המטלה נכשלה. נסו שוב."),
+    });
+
   return (
     <div className="flex flex-col lg:flex-row w-full h-full gap-4 lg:gap-6 p-4 lg:p-6 overflow-y-auto lg:overflow-hidden" dir="rtl">
       {/* ══════════ LEFT: list ══════════ */}
@@ -231,7 +247,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 onOpen={() => openRow(it)}
                 onEdit={it.kind === "hw" ? () => navigate(`/teacher/homework/${it.id}/edit`) : undefined}
                 onPublish={it.kind === "hw" ? () => handlePublish(it.id) : undefined}
-                onDelete={it.kind === "hw" ? () => handleDelete(it.id) : undefined}
+                onDelete={it.kind === "hw" ? () => handleDelete(it.id) : it.kind === "pdf" ? () => handleDeletePdf(it.id) : undefined}
                 onClose={it.kind === "hw" ? () => handleClose(it.id) : undefined}
                 onCancelSchedule={it.kind === "hw" ? () => handleCancelSchedule(it.id) : undefined}
               />
@@ -367,6 +383,9 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
   const isDraft = it.kind === "hw" && it.status === "draft";
   const isScheduled = it.kind === "hw" && it.status === "scheduled";
   const isActiveHw = it.kind === "hw" && it.status === "active";
+  // PDF assignments have no draft stage — they go live on upload, so delete is
+  // the only lifecycle action and it stays available for the whole life of the row.
+  const isPdf = it.kind === "pdf";
 
   return (
     <div
@@ -399,7 +418,7 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
       </div>
 
       {/* Row actions */}
-      {(isDraft || isScheduled || isActiveHw) && (
+      {(isDraft || isScheduled || isActiveHw || isPdf) && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t-2 border-outline">
           {isScheduled && (
             <button onClick={(e) => { e.stopPropagation(); onCancelSchedule?.(); }}
@@ -431,6 +450,13 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
               style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}>
               <XCircle size={14} /> סגור מטלה
+            </button>
+          )}
+          {isPdf && (
+            <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
+              style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}>
+              <Trash2 size={14} /> מחק מטלה
             </button>
           )}
         </div>
@@ -903,6 +929,23 @@ function StudentQuestionsPanel({ g, onBack }: { g: StudentGroup; onBack: () => v
 // ── Per-part breakdown for one PDF assignment (teacher review) ──
 function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignments"> }) {
   const detail = useQuery(api.pdfAssignments.getAssignment, { assignmentId });
+  const deleteQuestion = useMutation(api.pdfAssignments.deleteQuestion);
+  // Which question is mid-delete — doubles as the disabled flag for its button.
+  const [removing, setRemoving] = useState<Id<"pdfQuestions"> | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const removeQuestion = async (questionId: Id<"pdfQuestions">) => {
+    if (removing) return;
+    setRemoving(questionId);
+    setErr(null);
+    try {
+      await deleteQuestion({ questionId });
+    } catch (e) {
+      setErr(errorMessage(e, "מחיקת השאלה נכשלה. נסו שוב."));
+    } finally {
+      setRemoving(null);
+    }
+  };
 
   if (detail === undefined) {
     return (
@@ -919,6 +962,12 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
           <FileText size={13} /> פתח את ה-PDF המקורי
         </a>
       )}
+      {err && (
+        <div role="alert" className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl border-2"
+          style={{ borderColor: "var(--color-error)", color: "var(--color-error)", background: "color-mix(in srgb, var(--color-error) 8%, transparent)" }}>
+          <AlertTriangle size={14} /> {err}
+        </div>
+      )}
       {detail.questions.length === 0 ? (
         <div className="text-sm text-on-surface-variant py-2">אין שאלות במטלה זו.</div>
       ) : (
@@ -927,7 +976,19 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
             <img src={`data:${q.imageMimeType};base64,${q.imageBase64}`} alt={`שאלה ${qi + 1}`}
               className="w-20 h-20 object-cover rounded-lg border-2 border-outline bg-white flex-shrink-0" />
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-              <div className="text-xs font-bold text-on-surface">שאלה {qi + 1}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-bold text-on-surface">שאלה {qi + 1}</div>
+                <button
+                  onClick={() => removeQuestion(q._id)}
+                  disabled={removing === q._id}
+                  aria-label={`מחק שאלה ${qi + 1}`}
+                  title="מחק שאלה"
+                  className="ms-auto flex items-center gap-1 px-2 py-1 rounded-lg border-2 text-[11px] font-semibold transition-colors disabled:opacity-50"
+                  style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}
+                >
+                  <Trash2 size={12} /> {removing === q._id ? "מוחק…" : "מחק"}
+                </button>
+              </div>
               {q.parts.map((p, pi) => {
                 const answered = p.studentAnswer != null;
                 const correct = p.isCorrect === true;

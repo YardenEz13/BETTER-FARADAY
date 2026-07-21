@@ -74,13 +74,6 @@ export const getNextQuestion = query({
   },
 });
 
-export const getQuestion = query({
-  args: { id: v.id("questions") },
-  handler: async (ctx, { id }) => {
-    return await ctx.db.get(id);
-  },
-});
-
 export const getByTopic = query({
   args: { topicId: v.id("topics") },
   handler: async (ctx, { topicId }) => {

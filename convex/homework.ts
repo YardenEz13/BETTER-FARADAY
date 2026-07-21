@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { Id, Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
+import { compoundQuestionsForTopics } from "./compoundQuestions";
 
 // Shared helper: schedule the per-student fan-out for a homework doc. Used by
 // immediate publish (createHomework), scheduled auto-publish (publishScheduled),
@@ -178,10 +179,7 @@ export const assignToStudents = internalMutation({
     const topicSet = new Set(topicIds.map((t) => t.toString()));
 
     // Fetch all candidate questions
-    const compoundAll = await ctx.db.query("compoundQuestions").take(100);
-    const compoundCandidates = compoundAll.filter((q) =>
-      q.topicIds.some((tid) => topicSet.has(tid.toString()))
-    );
+    const compoundCandidates = await compoundQuestionsForTopics(ctx, topicIds);
 
     const legacyCandidates: typeof legacyAll = [];
     const legacyAll = await ctx.db.query("questions").take(200);

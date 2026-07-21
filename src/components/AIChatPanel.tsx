@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { X, Terminal, ChevronDown, Copy, Check } from "./electric";
+import { X, ChevronDown, Copy, Check } from "./electric";
 import { log } from "../lib/logger";
 import {
   isLocalAIAvailable,
@@ -16,14 +16,11 @@ import {
   analyzeConversation,
   generateCompositeBrief,
   getMockResponse,
-  onModelProgress,
   estimateTokens,
   heuristicSummary,
-  onDebugUpdate,
   type AgentType,
   type Message,
   type PartialBrief,
-  type AIDebugState,
 } from "../services/localAI";
 import { prepareImageForUpload, type PreparedImage } from "../services/imageUpload";
 import { queueMessage, getPendingMessages, clearPendingMessages, isOnline, onOnline } from "../services/offlineQueue";
@@ -105,8 +102,7 @@ export default function AIChatPanel({
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiStatus, setAiStatus] = useState<"ready" | "downloading" | "unavailable">("unavailable");
-  const [loadProgress, setLoadProgress] = useState<{ percent: number; stage: string } | null>(null);
+  const [aiStatus, setAiStatus] = useState<"ready" | "unavailable">("unavailable");
   const [chatId, setChatId] = useState<Id<"aiChats"> | null>(null);
   const [online, setOnline] = useState(isOnline());
   const [, setIsResumed] = useState(false);
@@ -123,8 +119,6 @@ export default function AIChatPanel({
   const [awaitingSelfAssess, setAwaitingSelfAssess] = useState(false);
   const [pendingNextQuestion, setPendingNextQuestion] = useState(false);
   const [, setSelfAssessment] = useState<string | null>(null);
-  const [showDebug] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<AIDebugState | null>(null);
 
   // Notebook image-check state
   const [attachedImage, setAttachedImage] = useState<PreparedImage | null>(null);
@@ -192,23 +186,10 @@ export default function AIChatPanel({
   const syncMessages = useMutation(api.aiChat.syncMessages);
   const createBriefMut = useMutation(api.sessionBriefs.createBrief);
 
-  // Track AI status
+  // Track AI status. The tutor is a server-side Gemini call, so the only two
+  // states are "ready" and "unavailable" — no download progress to poll for.
   useEffect(() => {
     setAiStatus(getAIStatus());
-    onModelProgress((percent, stage) => {
-      setLoadProgress({ percent, stage });
-      setAiStatus(percent >= 100 || stage === "ready" ? "ready" : "downloading");
-    });
-    const interval = setInterval(() => {
-      setAiStatus(getAIStatus());
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Subscribe to AI debug state updates
-  useEffect(() => {
-    const unsub = onDebugUpdate((state) => setDebugInfo(state));
-    return unsub;
   }, []);
 
   // External trigger (e.g. from the homework question) to open the phone-photo bridge
@@ -311,9 +292,7 @@ export default function AIChatPanel({
 
     // If we already have messages in state (panel was just hidden, not unmounted), skip re-init
     if (chatId && messages.length > 0) {
-      createSession(agentType, currentContext).catch((e) =>
-        console.error("[AIChatPanel] Failed to restore session context on reopen:", e)
-      );
+      createSession(agentType, currentContext);
       return;
     }
 
@@ -1105,8 +1084,8 @@ export default function AIChatPanel({
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0" />
                       <span className="font-label-md text-primary truncate" style={{ fontSize: '11px' }}>
-                        {aiStatus === "downloading" && loadProgress
-                          ? `טוען מודל... ${loadProgress.percent}%`
+                        {aiStatus === "unavailable"
+                          ? "פאראדיי לא זמין כרגע"
                           : isAnalyzing
                           ? "מנתח שיחה..."
                           : cycleState === "cycling"
@@ -1312,21 +1291,6 @@ export default function AIChatPanel({
                 <div ref={messagesEndRef} className="h-4" />
               </div>
 
-              {/* Debug sidebar */}
-              {showDebug && (
-                <div className="w-[360px] overflow-y-auto p-5 flex-shrink-0 bg-surface-container-lowest border-r border-outline-variant z-20 shadow-xl">
-                  <div className="font-label-lg text-primary mb-4 flex items-center gap-2">
-                    <Terminal className="" /> AI Diagnostics
-                  </div>
-                  {debugInfo ? (
-                    <pre className="text-[10px] whitespace-pre-wrap text-on-surface-variant font-mono bg-surface p-3 rounded-lg border border-outline/30">
-                      {JSON.stringify(debugInfo, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="font-label-sm text-on-surface-variant/50">אין נתונים</span>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* ── Input bar (Faraday Console) ── */}

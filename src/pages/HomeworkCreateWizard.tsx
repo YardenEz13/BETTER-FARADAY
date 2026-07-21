@@ -7,8 +7,9 @@ import QuestionImportModal from "../components/QuestionImportModal";
 import MathText from "../components/MathText";
 import {
   ArrowRight, ArrowLeft, Check, Sparkles, Calendar, Clock,
-  Send, FileText, Loader as Loader2,
+  Send, FileText, Trash2, Loader as Loader2,
 } from "../components/electric";
+import { errorMessage } from "../lib/errors";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -49,6 +50,7 @@ export default function HomeworkCreateWizard() {
   const createHomework = useMutation(api.homework.createHomework);
   const updateHomework = useMutation(api.homework.updateHomework);
   const publishHomework = useMutation(api.homework.publishHomework);
+  const discardImport = useMutation(api.teacherImport.discardImport);
 
   // ── Form state ──
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -66,6 +68,7 @@ export default function HomeworkCreateWizard() {
   const [busy, setBusy] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [discarding, setDiscarding] = useState<Id<"teacherImportedQuestions"> | null>(null);
 
   // Prefill from the draft once (edit mode).
   useEffect(() => {
@@ -92,6 +95,22 @@ export default function HomeworkCreateWizard() {
     const cid = imp.publishedCompoundId;
     if (qid) setPinnedQuestionIds((p) => (p.includes(qid) ? p.filter((id) => id !== qid) : [...p, qid]));
     else if (cid) setPinnedCompoundIds((p) => (p.includes(cid) ? p.filter((id) => id !== cid) : [...p, cid]));
+  };
+
+  // Unpin first: leaving a discarded import pinned would publish a question the
+  // teacher just said they didn't want.
+  const discardApprovedImport = async (imp: Doc<"teacherImportedQuestions">) => {
+    if (discarding) return;
+    setDiscarding(imp._id);
+    setErrorMsg(null);
+    try {
+      if (isImportPinned(imp)) togglePinnedImport(imp);
+      await discardImport({ importId: imp._id });
+    } catch (e) {
+      setErrorMsg(errorMessage(e, "הסרת השאלה נכשלה. נסו שוב."));
+    } finally {
+      setDiscarding(null);
+    }
   };
 
   const handleImportApproved = (ref: {
@@ -356,32 +375,48 @@ export default function HomeworkCreateWizard() {
                   {approvedImports.map((imp) => {
                     const pinned = isImportPinned(imp);
                     return (
-                      <button
+                      <div
                         key={imp._id}
-                        type="button"
-                        onClick={() => togglePinnedImport(imp)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-start transition-colors"
+                        className="flex items-center gap-1 rounded-xl border-2 transition-colors"
                         style={{
                           background: pinned ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "var(--color-surface)",
                           borderColor: pinned ? "var(--color-primary)" : "var(--color-outline)",
                         }}
                       >
-                        <span
-                          className="w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center"
-                          style={{
-                            background: pinned ? "var(--color-primary)" : "transparent",
-                            borderColor: pinned ? "var(--color-primary)" : "var(--color-outline)",
-                          }}
+                        <button
+                          type="button"
+                          onClick={() => togglePinnedImport(imp)}
+                          className="flex flex-1 items-center gap-2.5 px-3 py-2.5 text-start min-w-0"
                         >
-                          {pinned && <Check size={13} className="text-white" />}
-                        </span>
-                        <span className="flex-1 text-sm text-on-surface truncate min-w-0">
-                          <MathText>{imp.draft?.stem ?? "שאלה מיובאת"}</MathText>
-                        </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant flex-shrink-0">
-                          {imp.draft?.format === "multiple_choice" ? "אמריקאית" : "השלמה"}
-                        </span>
-                      </button>
+                          <span
+                            className="w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center"
+                            style={{
+                              background: pinned ? "var(--color-primary)" : "transparent",
+                              borderColor: pinned ? "var(--color-primary)" : "var(--color-outline)",
+                            }}
+                          >
+                            {pinned && <Check size={13} className="text-white" />}
+                          </span>
+                          <span className="flex-1 text-sm text-on-surface truncate min-w-0">
+                            <MathText>{imp.draft?.stem ?? "שאלה מיובאת"}</MathText>
+                          </span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant flex-shrink-0">
+                            {imp.draft?.format === "multiple_choice" ? "אמריקאית" : "השלמה"}
+                          </span>
+                        </button>
+                        {/* Discard hides the import from every future wizard run;
+                            it never deletes an already-published question. */}
+                        <button
+                          type="button"
+                          onClick={() => discardApprovedImport(imp)}
+                          disabled={discarding === imp._id}
+                          aria-label="הסר שאלה מיובאת מהרשימה"
+                          title="הסר מהרשימה"
+                          className="flex-shrink-0 grid place-items-center w-9 h-9 me-1.5 rounded-lg text-on-surface-variant hover:text-error transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

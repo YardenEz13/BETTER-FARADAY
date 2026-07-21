@@ -86,7 +86,6 @@ import {
   isLocalAIAvailable,
   createSession,
   destroySession,
-  handleAICrash,
   streamMessage,
   analyzeConversation,
   generateCompositeBrief,
@@ -95,11 +94,6 @@ import {
 describe("localAI service", () => {
   beforeEach(() => {
     destroySession();
-    try {
-      handleAICrash(new Error("test reset"));
-    } catch {
-      // ignore
-    }
   });
 
   describe("stripThinkBlock", () => {
@@ -131,7 +125,7 @@ describe("localAI service", () => {
       const mathText = "האם $3 + 5$ נכון?";
       expect(violatesSocraticRules(mathText)).toBe(true);
 
-      await createSession("practice", "תרגיל: $3 + 5$");
+      createSession("practice", "תרגיל: $3 + 5$");
       expect(violatesSocraticRules(mathText)).toBe(false);
     });
 
@@ -250,20 +244,24 @@ describe("localAI service", () => {
   });
 
   describe("model status", () => {
-    it("should reflect default status values", async () => {
-      expect(getAIStatus()).toBe("downloading");
+    // The tutor is a server-side Gemini call, so readiness is purely "is the
+    // Convex proxy URL configured" — it does not depend on session state.
+    it("is ready whenever the proxy URL is configured", async () => {
+      expect(getAIStatus()).toBe("ready");
       await expect(isLocalAIAvailable()).resolves.toBe(true);
     });
 
-    it("should change status to ready after session initialization", async () => {
-      await createSession("practice");
+    it("stays ready across session create/destroy", async () => {
+      createSession("practice");
+      expect(getAIStatus()).toBe("ready");
+      destroySession();
       expect(getAIStatus()).toBe("ready");
     });
   });
 
   describe("streamMessage", () => {
     it("should parse SSE streams and call onChunk", async () => {
-      await createSession("practice");
+      createSession("practice");
       const chunks: string[] = [];
       const result = await streamMessage("עזרה", (chunk) => {
         chunks.push(chunk);
@@ -275,7 +273,7 @@ describe("localAI service", () => {
 
   describe("analyzeConversation & generateCompositeBrief", () => {
     it("should call Gemini and return parsed analytics", async () => {
-      await createSession("practice");
+      createSession("practice");
       const metrics = await analyzeConversation([
         { role: "user", content: "מהי סדרה חשבונית?" }
       ]);
@@ -284,7 +282,7 @@ describe("localAI service", () => {
     });
 
     it("should generate a composite brief via Gemini", async () => {
-      await createSession("practice");
+      createSession("practice");
       const brief = await generateCompositeBrief(
         [],
         [{ role: "user", content: "ניסיתי לפתור" }],
