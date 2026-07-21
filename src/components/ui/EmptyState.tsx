@@ -28,7 +28,7 @@ export function EmptyState({ icon, title, description, action, quote = false, cl
       <div className="text-headline-sm text-on-surface">{title}</div>
       {description && <div className="text-body-sm text-on-surface-variant max-w-sm">{description}</div>}
       {action && <div className="mt-1">{action}</div>}
-      {quote && <div className="italic text-body-sm text-on-surface-variant/70 max-w-sm mt-1">{q.he}</div>}
+      {quote && <div className="italic text-body-sm text-on-surface-variant/70 max-w-sm mt-1">{q}</div>}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import FaradayAvatar from "./FaradayAvatar";
 
@@ -58,13 +58,9 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount }: 
   const reduced = !!useReducedMotion();
   // Freeze the chosen line for the lifetime of a single appearance so it doesn't
   // re-randomize on unrelated re-renders while the bubble is on screen.
-  const lineRef = useRef<string>("");
-  const shownKeyRef = useRef<string>("");
-  const key = `${kind}-${streakCount ?? ""}-${visible}`;
-  if (visible && shownKeyRef.current !== key) {
-    shownKeyRef.current = key;
-    lineRef.current = pickLine(kind, streakCount);
-  }
+  // `visible` is a deliberate dep: it re-rolls the line on each new appearance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const line = useMemo(() => pickLine(kind, streakCount), [kind, streakCount, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -119,7 +115,7 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount }: 
               }}
             />
             <p className="text-sm font-semibold leading-snug text-on-surface">
-              {lineRef.current}
+              {line}
             </p>
           </div>
         </motion.div>

@@ -134,9 +134,7 @@ export async function compute(
             ? `(${latexToExpr(N, sides[0])})-(${latexToExpr(N, sides[1])})`
             : latexToExpr(N, latex);
         const v = pickVariable(N, exprStr, variable);
-        const sols = N.solveEquations
-          ? N.solveEquations(`${exprStr}=0`, v)
-          : N(`solve(${exprStr}, ${v})`);
+        const sols = N.solveEquations(`${exprStr}=0`, v);
         const arr: any[] = Array.isArray(sols) ? sols : [sols];
         if (arr.length === 0) return fail("לא נמצאו פתרונות ממשיים.");
         // x_1 = …, x_2 = … — the reusable fragment is the first solution.

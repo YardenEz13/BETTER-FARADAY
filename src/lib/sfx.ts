@@ -28,15 +28,6 @@ let master: GainNode | null = null;
 /** Cached decision so we don't hit localStorage on every sound. */
 let muted: boolean | null = null;
 
-type WebAudioWindow = Window &
-  typeof globalThis & { webkitAudioContext?: typeof AudioContext };
-
-function audioContextCtor(): typeof AudioContext | null {
-  if (typeof window === "undefined") return null;
-  const w = window as WebAudioWindow;
-  return w.AudioContext ?? w.webkitAudioContext ?? null;
-}
-
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
   try {
@@ -81,13 +72,11 @@ export function setMuted(value: boolean): void {
  * null when audio is unavailable or the user is muted, so callers can bail.
  */
 function ensureContext(): { ac: AudioContext; out: GainNode } | null {
-  if (isMuted()) return null;
-  const Ctor = audioContextCtor();
-  if (!Ctor) return null;
+  if (isMuted() || typeof AudioContext === "undefined") return null;
 
   if (!ctx) {
     try {
-      ctx = new Ctor();
+      ctx = new AudioContext();
       master = ctx.createGain();
       master.gain.value = MASTER;
       master.connect(ctx.destination);
@@ -207,19 +196,4 @@ export function buzz(): void {
   const { ac, out } = c;
   const t = ac.currentTime;
   tone(ac, out, t, { type: "square", from: 150, to: 116, duration: 0.13, gain: 0.14 });
-}
-
-/** Level / topic complete — a 3-note pentatonic arpeggio, sine + slight detune. (~a few notes) */
-export function chime(): void {
-  const c = ensureContext();
-  if (!c) return;
-  const { ac, out } = c;
-  const t = ac.currentTime;
-  // C5 – E5 – G5 (major pentatonic-adjacent), rising, softly overlapping.
-  const notes = [523.25, 659.25, 783.99];
-  notes.forEach((f, i) => {
-    const at = t + i * 0.075;
-    tone(ac, out, at, { type: "sine", from: f, duration: 0.13, gain: 0.42 });
-    tone(ac, out, at, { type: "sine", from: f, duration: 0.13, gain: 0.16, detune: 7 });
-  });
 }

@@ -41,13 +41,6 @@ const BUBBLE_WIDTH = 320;
 const GAP = 14; // gap between the spotlight and the bubble
 const MARGIN = 12; // min distance from any viewport edge
 
-interface Rect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
 export interface FaradayTourProps {
   open: boolean;
   /** Called on finish, skip, Escape, or scrim click. Parent persists the "done" flag. */
@@ -65,7 +58,7 @@ export interface FaradayTourProps {
 export default function FaradayTour({ open, onClose }: FaradayTourProps) {
   const reducedMotion = !!useReducedMotion();
   const [step, setStep] = useState(0);
-  const [rect, setRect] = useState<Rect | null>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -77,19 +70,15 @@ export default function FaradayTour({ open, onClose }: FaradayTourProps) {
 
   const measure = useCallback(() => {
     const el = document.querySelector<HTMLElement>(`[data-tour="${current.key}"]`);
-    if (!el) {
-      setRect(null);
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    setRect(el ? el.getBoundingClientRect() : null);
   }, [current.key]);
 
   // Scroll the target into view, then measure. Re-measure on resize/scroll.
   useLayoutEffect(() => {
     if (!open) return;
-    const el = document.querySelector<HTMLElement>(`[data-tour="${current.key}"]`);
-    el?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    document
+      .querySelector<HTMLElement>(`[data-tour="${current.key}"]`)
+      ?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
     // A frame after the scroll settles gives a stable rect.
     const raf = requestAnimationFrame(measure);
     window.addEventListener("resize", measure);

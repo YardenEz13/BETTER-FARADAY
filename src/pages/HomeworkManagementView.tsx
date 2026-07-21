@@ -9,7 +9,7 @@ import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
 import { usePacketIngest } from "../components/usePacketIngest";
 import MathText from "../components/MathText";
-import { SegTabs, ProgressBar, ToastStack } from "../components/ui";
+import { SegTabs, ProgressBar, ToastStack, Modal } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import {
@@ -283,28 +283,31 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       )}
 
       {/* Confirm dialog */}
-      {confirm && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/45" onClick={() => setConfirm(null)}>
-          <div className="clay-card w-full max-w-[26rem] p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="text-lg font-extrabold text-on-surface mb-2">{confirm.title}</div>
-            <p className="text-sm text-on-surface-variant mb-5 leading-relaxed">{confirm.message}</p>
-            <div className="flex gap-3">
-              <button className="btn-clay-ghost flex-1 !py-2.5" onClick={() => setConfirm(null)}>ביטול</button>
-              <button
-                className="flex-1 !py-2.5 inline-flex items-center justify-center gap-2 rounded-2xl border-2 font-semibold cursor-pointer"
-                style={{
-                  background: confirm.tone === "danger" ? "var(--color-error)" : "var(--color-primary)",
-                  borderColor: confirm.tone === "danger" ? "var(--color-error)" : "var(--color-primary)",
-                  color: confirm.tone === "danger" ? "var(--color-on-error)" : "var(--color-on-primary)",
-                }}
-                onClick={confirm.onConfirm}
-              >
-                {confirm.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        title={confirm?.title ?? ""}
+        tone={confirm?.tone ?? "primary"}
+        maxWidth={416}
+        footer={
+          <>
+            <button className="btn-clay-ghost flex-1 !py-2.5" onClick={() => setConfirm(null)}>ביטול</button>
+            <button
+              className="flex-1 !py-2.5 inline-flex items-center justify-center gap-2 rounded-2xl border-2 font-semibold cursor-pointer"
+              style={{
+                background: confirm?.tone === "danger" ? "var(--color-error)" : "var(--color-primary)",
+                borderColor: confirm?.tone === "danger" ? "var(--color-error)" : "var(--color-primary)",
+                color: confirm?.tone === "danger" ? "var(--color-on-error)" : "var(--color-on-primary)",
+              }}
+              onClick={confirm?.onConfirm}
+            >
+              {confirm?.confirmLabel}
+            </button>
+          </>
+        }
+      >
+        {confirm?.message}
+      </Modal>
 
       {/* Error toast */}
       {(errorMsg ?? packetError) && (

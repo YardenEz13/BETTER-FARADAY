@@ -31,14 +31,12 @@ export function StreakCapacitor({ days, size = 18, atRisk = false, className = "
   const animated = !reducedMotion;
 
   const charge = Math.max(0, Math.min(days, MAX_BARS));
-  const filledBars = Math.round((charge / MAX_BARS) * MAX_BARS);
   const c0 = "color-mix(in srgb, var(--color-tertiary) 50%, white)";
   const c1 = "var(--color-tertiary)";
 
   // plates at x=27 and x=37 (matches the family's Capacitor glyph), gap 27→37.
   // Bars stack vertically inside the gap, each a short horizontal charge tick.
-  const barXs = [29, 30.5, 32, 33.5, 35, 36.5].slice(0, MAX_BARS - 1);
-  const barCount = MAX_BARS - 1;
+  const barXs = [29, 30.5, 32, 33.5, 35, 36.5];
 
   return (
     <svg
@@ -76,9 +74,9 @@ export function StreakCapacitor({ days, size = 18, atRisk = false, className = "
       />
 
       {/* charge bars between the plates, filling proportionally to days/7 */}
-      {barXs.slice(0, barCount).map((x, i) => {
-        const isFilled = i < filledBars;
-        const isOutermost = i === barCount - 1;
+      {barXs.map((x, i) => {
+        const isFilled = i < charge;
+        const isOutermost = i === barXs.length - 1;
         return (
           <line
             key={x}

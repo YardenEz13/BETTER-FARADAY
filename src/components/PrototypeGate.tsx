@@ -43,7 +43,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
           </div>
           <h1 className="font-display text-5xl font-black tracking-widest text-on-surface mb-2">RESTRICTED</h1>
           <p className="label-mono opacity-70">FARADAY LOGIC // PROTOTYPE ACCESS</p>
-          <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal">{quote.he}</p>
+          <p className="label-mono opacity-50 mt-4 text-sm normal-case tracking-normal">{quote}</p>
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">

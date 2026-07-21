@@ -16,22 +16,7 @@ export interface DailyExperimentProps {
 }
 
 /** yyyy-mm-dd in the local timezone — the deterministic seed for the day. */
-function todayKey(): string {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-/** Small stable string hash (djb2) → non-negative int, so the same date always
- *  maps to the same topic without any backend state. */
-function hashString(str: string): number {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
+const todayKey = () => new Date().toLocaleDateString("en-CA");
 
 /**
  * הניסוי היומי — a featured daily challenge card on the student home. Picks a
@@ -56,7 +41,8 @@ export default function DailyExperiment({ topics, onStart }: DailyExperimentProp
 
   if (topics.length === 0) return null;
 
-  const topic = topics[hashString(dateKey) % topics.length];
+  // The date itself is the seed — same day always lands on the same topic.
+  const topic = topics[Number(dateKey.replace(/-/g, "")) % topics.length];
 
   const handleStart = () => {
     try {

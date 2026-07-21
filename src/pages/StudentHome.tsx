@@ -643,12 +643,7 @@ export default function StudentHome() {
   // Pool for the daily experiment — topics the student has actually unlocked
   // (completed or the current active one). Station 0 is always active, so this
   // is never empty once topics exist.
-  const unlockedTopics = topics
-    .filter((_, i) => nodeStates[i].isCompleted || nodeStates[i].isActive)
-    .map((t) => ({ _id: t._id, nameHe: t.nameHe }));
-  const dailyPool = unlockedTopics.length > 0
-    ? unlockedTopics
-    : [{ _id: topics[0]._id, nameHe: topics[0].nameHe }];
+  const dailyPool = topics.filter((_, i) => nodeStates[i].isCompleted || nodeStates[i].isActive);
 
   const wirePoints = buildWirePoints(topics.length);
   const wireHeight = (topics.length - 1) * PATH_NODE_GAP + PATH_NODE_CENTER + 90;
