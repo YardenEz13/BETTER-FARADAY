@@ -5,10 +5,11 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, Check, X, Lock, Palette, Star, Package, Flame,
+  ChevronLeft, Check, X, Lock, Palette, Star, Package, Flame, Trophy,
   ElectricBolt, Battery, SparkBurst,
   ELECTRIC_ICONS, type ElectricIconName,
 } from "../components/electric";
+import { computeAchievements, type Achievement } from "../lib/achievements";
 import { errorMessage } from "../lib/errors";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ToastStack, useToasts } from "../components/ui/Toast";
@@ -59,10 +60,12 @@ function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotio
 const CATEGORY_META: Record<string, { label: string; icon: JSX.Element }> = {
   avatar_color: { label: "צבעי דמות", icon: <Palette size={18} className="text-secondary" /> },
   theme:        { label: "ערכות נושא", icon: <Star size={18} className="text-primary" /> },
+  title:        { label: "תארים", icon: <Trophy size={18} className="text-secondary" /> },
   streak_freeze:{ label: "הקפאות רצף", icon: <Flame size={18} className="text-tertiary" /> },
+  xp_boost:     { label: "מגברי אנרגיה", icon: <Battery size={18} tone="spark" glow={0.5} /> },
   badge:        { label: "תגים", icon: <Package size={18} className="text-primary" /> },
 };
-const CATEGORY_ORDER = ["avatar_color", "theme", "streak_freeze", "badge"];
+const CATEGORY_ORDER = ["avatar_color", "theme", "title", "xp_boost", "streak_freeze", "badge"];
 
 type ShopItem = {
   _id: string;
@@ -72,6 +75,10 @@ type ShopItem = {
   category: string;
   price: number;
   value: string | null;
+  /** Re-buyable charge (freeze / boost) rather than a one-time unlock. */
+  consumable: boolean;
+  /** Writes its value into a student field when equipped. */
+  equippable: boolean;
   owned: boolean;
   equipped: boolean;
 };
@@ -91,18 +98,20 @@ function ItemIcon({ icon }: { icon: string }) {
     const Icon = ELECTRIC_ICONS[name];
     return <Icon size={24} className={ICON_TONE[name] ?? "text-primary"} animated={false} glow={0.5} />;
   }
-  // An unrecognised *name* (seeded "Snowflake", "Award") would otherwise render
-  // as literal English text in an all-Hebrew card — fall back to a generic
-  // reward glyph. Anything non-ASCII is an emoji and renders as-is.
+  // An unrecognised *name* would otherwise render as literal English text in an
+  // all-Hebrew card — fall back to a generic reward glyph. Anything non-ASCII
+  // is an emoji and renders as-is.
   if (/^[\x20-\x7e]+$/.test(icon ?? "")) return <Star size={24} className="text-primary" animated={false} glow={0.5} />;
   return <span className="text-2xl leading-none" aria-hidden>{icon}</span>;
 }
 
 function ShopCard({
-  item, balance, reducedMotion, onBought, onError,
+  item, balance, charge, reducedMotion, onBought, onError,
 }: {
   item: ShopItem;
   balance: number;
+  /** Live charge state for consumables ("יש לך 2 הקפאות"), else null. */
+  charge: string | null;
   reducedMotion: boolean;
   onBought: () => void;
   onError: (msg: string) => void;
@@ -110,13 +119,13 @@ function ShopCard({
   const { studentId } = useParams<{ studentId: string }>();
   const purchase = useMutation(api.shop.purchaseItem);
   const equip = useMutation(api.shop.equipItem);
-  const unequipTheme = useMutation(api.shop.unequipTheme);
+  const unequip = useMutation(api.shop.unequipItem);
   const [busy, setBusy] = useState(false);
   const [burst, setBurst] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const equippable = item.category === "avatar_color" || item.category === "theme";
-  const alwaysBuyable = item.category === "streak_freeze";
+  const equippable = item.equippable;
+  const alwaysBuyable = item.consumable;
   const affordable = balance >= item.price;
   const missing = item.price - balance;
   const disabled = (item.owned && !alwaysBuyable) || (!affordable && !alwaysBuyable) || busy;
@@ -145,13 +154,14 @@ function ShopCard({
     }
   };
 
-  // Themes are the only equippable the student can take back off — avatar
-  // colours always have one active, so there is nothing to revert to.
+  // Avatar colours always have one active, so there is nothing to revert to —
+  // every other equippable (theme, title) can be taken back off.
+  const removable = item.category !== "avatar_color";
   const handleUnequip = async () => {
     if (busy || !item.equipped) return;
     setBusy(true);
     try {
-      await unequipTheme({ studentId: studentId as Id<"students"> });
+      await unequip({ studentId: studentId as Id<"students">, category: item.category });
     } catch (e) {
       shake();
       onError(errorMessage(e));
@@ -210,11 +220,11 @@ function ShopCard({
 
         {item.owned && equippable ? (
           item.equipped ? (
-            item.category === "theme" ? (
+            removable ? (
               <button
                 onClick={handleUnequip}
                 disabled={busy}
-                title="הסרת ערכת הנושא"
+                title="הסרה"
                 className="group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer"
                 style={{ boxShadow: "var(--shadow-clay-primary)" }}
               >
@@ -259,10 +269,54 @@ function ShopCard({
         )}
       </div>
 
-      {/* owned count for consumables (streak freezes) */}
-      {alwaysBuyable && item.owned && (
+      {/* live charge state for consumables (freezes held, boost still running) */}
+      {charge && (
         <div className="text-xs font-semibold text-tertiary flex items-center gap-1.5">
-          <Flame size={12} /> יש לך הקפאות זמינות
+          <Flame size={12} /> {charge}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Live charge state shown under a consumable card. Read at render time — the
+   shop query re-runs on every purchase, which is when this actually changes. */
+function chargeLabel(item: ShopItem, freezes: number, boostUntil: number | null): string | null {
+  if (item.category === "streak_freeze") {
+    return freezes > 0 ? `יש לך ${freezes} ${freezes === 1 ? "הקפאה" : "הקפאות"}` : null;
+  }
+  if (item.category === "xp_boost") {
+    const hours = Math.ceil(((boostUntil ?? 0) - Date.now()) / 3_600_000);
+    if (hours <= 0) return null;
+    return hours >= 48 ? `מגבר פעיל עוד ${Math.round(hours / 24)} ימים` : `מגבר פעיל עוד ${hours} שעות`;
+  }
+  return null;
+}
+
+/* One achievement tile — earned tiles glow, the rest show how close they are. */
+function AchievementTile({ a }: { a: Achievement }) {
+  return (
+    <div
+      className={`rounded-2xl border-2 p-3.5 flex flex-col gap-2 shadow-(--shadow-clay) ${a.earned ? "border-tertiary/50 bg-tertiary/10" : "border-outline bg-surface"}`}
+      title={a.desc}
+    >
+      <div className={`flex items-center gap-2 ${a.earned ? "" : "opacity-45 grayscale"}`}>
+        <ItemIcon icon={a.icon} />
+        <span className="font-bold text-sm text-on-surface leading-tight">{a.name}</span>
+      </div>
+      <p className="text-xs font-medium text-on-surface-variant leading-snug">{a.desc}</p>
+      {a.earned ? (
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-tertiary mt-auto">
+          <Check size={13} strokeWidth={3} /> הושג
+        </span>
+      ) : (
+        <div className="mt-auto">
+          <div className="h-1.5 rounded-full bg-surface-container border border-outline overflow-hidden">
+            <div className="h-full bg-primary transition-all duration-700" style={{ width: `${a.pct}%` }} />
+          </div>
+          <div className="num text-[11px] font-semibold text-on-surface-variant mt-1">
+            {a.value.toLocaleString()} / {a.goal.toLocaleString()}
+          </div>
         </div>
       )}
     </div>
@@ -274,7 +328,22 @@ export default function XpShop() {
   const navigate = useNavigate();
   const reducedMotion = !!useReducedMotion();
   const shop = useQuery(api.shop.getShop, { studentId: studentId as Id<"students"> });
+  // Achievements are derived, not stored — these three subscriptions are the
+  // same ones the home screen already holds, so there is nothing extra to keep
+  // in sync (see src/lib/achievements.ts).
+  const xpSummary = useQuery(api.xp.getXpSummary, { studentId: studentId as Id<"students"> });
+  const stats = useQuery(api.attempts.getStudentStats, { studentId: studentId as Id<"students"> });
+  const streakStatus = useQuery(api.streaks.getStreakStatus, { studentId: studentId as Id<"students"> });
   const { toasts, push, dismiss } = useToasts(3200);
+
+  const byTopic = Object.values(stats?.byTopic ?? {}) as Array<{ correct: number; total: number }>;
+  const achievements = computeAchievements({
+    xp: xpSummary?.earned ?? 0,
+    streak: streakStatus?.streak ?? 0,
+    attempts: stats?.totalAttempts ?? 0,
+    correct: byTopic.reduce((s, t) => s + t.correct, 0),
+    topicsCompleted: byTopic.filter((t) => t.total > 0 && t.correct / t.total >= 0.8).length,
+  });
 
   const grouped = (() => {
     const items = (shop?.items ?? []) as ShopItem[];
@@ -370,6 +439,7 @@ export default function XpShop() {
                   key={item._id}
                   item={item}
                   balance={shop.balance}
+                  charge={chargeLabel(item, shop.freezes, shop.boostUntil)}
                   reducedMotion={reducedMotion}
                   onBought={() => { /* useQuery is reactive — balance updates live */ }}
                   onError={(msg) => push("error", "הקנייה לא הושלמה", msg)}
@@ -382,6 +452,25 @@ export default function XpShop() {
         {shop && (shop.items?.length ?? 0) === 0 && (
           <div className="text-center py-16 text-on-surface-variant font-medium">החנות תיפתח בקרוב ✨</div>
         )}
+
+        {/* ── Achievements — earned by playing, never bought ── */}
+        <section className="mb-4">
+          <div className="flex items-center gap-2.5 mb-1">
+            <Trophy size={18} className="text-tertiary" />
+            <h2 className="font-bold text-lg text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>הישגים</h2>
+            <span className="num font-bold text-sm text-tertiary px-2.5 py-0.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30">
+              {achievements.earnedCount}/{achievements.total}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-on-surface-variant mb-4">
+            {achievements.next
+              ? `היעד הבא: ${achievements.next.name} — ${achievements.next.value.toLocaleString()} מתוך ${achievements.next.goal.toLocaleString()}`
+              : "כל ההישגים הושלמו — אגדה 🏆"}
+          </p>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {achievements.list.map((a) => <AchievementTile key={a.key} a={a} />)}
+          </div>
+        </section>
       </div>
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />

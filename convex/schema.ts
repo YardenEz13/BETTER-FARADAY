@@ -22,7 +22,9 @@ export default defineSchema({
     xpSpent: v.optional(v.number()),       // total XP spent in the shop
     lastActiveDate: v.optional(v.string()),// YYYY-MM-DD in Israel time — streak bookkeeping
     streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
-    equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map ("electric" | "night"); absent = default backdrop
+    equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map (a FaradayCanvas variant, or "night"); absent = default backdrop
+    equippedTitle: v.optional(v.string()), // shop title shown beside the student's name ("מהנדס זרם"); absent = none
+    xpBoostUntil: v.optional(v.number()),  // ms epoch; while in the future every XP award is doubled (shop consumable)
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
     dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
     hideFromLeaderboard: v.optional(v.boolean()), // per-student opt-out of the weekly class leaderboard
@@ -651,10 +653,11 @@ export default defineSchema({
     name: v.string(),        // Hebrew display name
     description: v.string(),
     icon: v.string(),        // lucide icon name or emoji
-    category: v.string(),    // "avatar_color" | "theme" | "streak_freeze" | "badge"
-    // Machine-usable payload for equippable items. avatar_color → the CSS color
-    // string written to students.avatarColor (hex, matching AVATAR_COLORS).
-    // theme → the equippedTheme key ("electric" | "night"). Absent for others.
+    category: v.string(),    // "avatar_color" | "theme" | "title" | "streak_freeze" | "xp_boost" | "badge"
+    // Machine-usable payload. Equippables: avatar_color → the CSS color written
+    // to students.avatarColor (hex, matching AVATAR_COLORS); theme → the
+    // equippedTheme key; title → the Hebrew title text. Consumables: xp_boost →
+    // its duration in hours. Absent for badges.
     value: v.optional(v.string()),
     price: v.number(),
     sortOrder: v.number(),

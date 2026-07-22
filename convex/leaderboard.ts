@@ -59,6 +59,8 @@ type LeaderboardRow = {
   studentId: Id<"students">;
   name: string;
   avatarColor: string;
+  /** Equipped shop title, shown under the name — the point of buying one. */
+  title: string | null;
   weeklyXp: number;
   isMe: boolean;
 };
@@ -88,6 +90,7 @@ export const getWeeklyLeaderboard = query({
         studentId: s._id,
         name: s.name,
         avatarColor: s.avatarColor,
+        title: s.equippedTitle ?? null,
         weeklyXp: await weeklyXpForStudent(ctx, s._id, weekStart),
         hidden: s.hideFromLeaderboard === true,
       })),
@@ -105,6 +108,7 @@ export const getWeeklyLeaderboard = query({
       studentId: s.studentId,
       name: s.name,
       avatarColor: s.avatarColor,
+      title: s.title,
       weeklyXp: s.weeklyXp,
       isMe: studentId ? s.studentId === studentId : false,
     }));

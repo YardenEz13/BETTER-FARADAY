@@ -2,6 +2,22 @@ import { query, internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
+// ── XP boost (shop consumable) ──
+// While students.xpBoostUntil is in the future, every *earned* award is
+// multiplied. The boosted amount is what lands in the ledger, so the leaderboard
+// and every rollup see it without extra bookkeeping.
+export const XP_BOOST_MULTIPLIER = 2;
+
+export function boostedXp(
+  amount: number,
+  xpBoostUntil: number | undefined,
+  now: number,
+): number {
+  // Spends (negative) and no-ops are never multiplied.
+  if (amount <= 0 || !xpBoostUntil || xpBoostUntil <= now) return amount;
+  return amount * XP_BOOST_MULTIPLIER;
+}
+
 // ── Core XP awarding ──
 // Shared helper so any mutation in this codebase can award XP inline (attempts,
 // homework, review) without a cross-transaction ctx.runMutation hop. Inserts an
@@ -13,15 +29,16 @@ export async function awardXpHelper(
   reason: string,
   refId?: string,
 ): Promise<number> {
+  const student = await ctx.db.get(studentId);
+  const final = boostedXp(amount, student?.xpBoostUntil, Date.now());
   await ctx.db.insert("xpEvents", {
     studentId,
-    amount,
+    amount: final,
     reason,
     refId,
     createdAt: Date.now(),
   });
-  const student = await ctx.db.get(studentId);
-  const newXp = (student?.xp ?? 0) + amount;
+  const newXp = (student?.xp ?? 0) + final;
   await ctx.db.patch(studentId, { xp: newXp });
   return newXp;
 }

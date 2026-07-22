@@ -26,6 +26,21 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
 import DailyExperiment from "../components/DailyExperiment";
 import FaradayTour from "../components/FaradayTour";
+import { computeAchievements } from "../lib/achievements";
+
+/* ── Shop theme key → learning-map backdrop ──
+   The value on a `theme` shop row is looked up here; "night" additionally
+   layers the starfield. An unknown key falls back to the default field, so a
+   newly seeded theme is a catalogue row plus one line in this map. */
+const THEME_VARIANT = {
+  electric: "circuit",
+  night: "linesOfForce",
+  constellation: "constellation",
+  atom: "atom",
+  induction: "induction",
+  cage: "cage",
+  effect: "effect",
+} as const;
 
 /* ── Serpentine path geometry (per the "Learning Map" design spec) ──
    x is a percentage (0-100) of the path container's width, y is px. The wave
@@ -614,8 +629,19 @@ export default function StudentHome() {
   const totalAttempts = stats?.totalAttempts ?? 0;
   const correctTotal = topics.reduce((s, t) => s + (stats?.byTopic?.[t._id]?.correct || 0), 0);
   const overallAcc = totalAttempts > 0 ? Math.round((correctTotal / totalAttempts) * 100) : 0;
-  const totalXP = (student.streak * 100) + (totalAttempts * 25) + (correctTotal * 50);
+  // Lifetime XP straight from the ledger — the same number the shop spends
+  // from, so the header and the shop can never disagree.
+  const totalXP = xpSummary?.earned ?? 0;
   const completedTopics = topics.filter(t => getProgress(t._id) >= 80).length;
+  const achievements = computeAchievements({
+    xp: totalXP,
+    streak: student.streak,
+    attempts: totalAttempts,
+    correct: correctTotal,
+    topicsCompleted: completedTopics,
+  });
+  // Hours left on an active XP boost (shop consumable); 0 when none is running.
+  const boostLeftH = Math.max(0, Math.ceil(((student.xpBoostUntil ?? 0) - Date.now()) / 3_600_000));
 
   // Level charge-up — 500 XP per level; the sidebar bar fills toward the next.
   const XP_PER_LEVEL = 500;
@@ -623,7 +649,7 @@ export default function StudentHome() {
   const xpIntoLevel = totalXP % XP_PER_LEVEL;
   const levelPct = Math.round((xpIntoLevel / XP_PER_LEVEL) * 100);
 
-  const xpBalance = xpSummary?.balance ?? totalXP;
+  const xpBalance = xpSummary?.balance ?? 0;
   const reviewCount = reviewDeck?.length ?? 0;
   const streakInDanger = !!streakStatus?.inDanger;
   const freezesAvailable = streakStatus?.freezesAvailable ?? 0;
@@ -669,21 +695,14 @@ export default function StudentHome() {
   return (
     <div className="relative min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
 
-      {/* ── Full-bleed backdrop — swaps with the equipped shop theme ──
-          "electric" → an intensified circuit field; "night" → the default
-          field plus a low-opacity starfield; default → lines-of-force. All
-          layers sit at zIndex 0 behind the z-10 content, low-opacity for
-          readability in both light and dark mode. */}
-      {student.equippedTheme === "electric" ? (
-        <FaradayCanvas variant="circuit" style={{ zIndex: 0 }} />
-      ) : student.equippedTheme === "night" ? (
-        <>
-          <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0, opacity: 0.5 }} />
-          <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />
-        </>
-      ) : (
-        <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
-      )}
+      {/* ── Full-bleed backdrop — swaps with the equipped shop theme (see
+          THEME_VARIANT). Layers sit at zIndex 0 behind the z-10 content,
+          low-opacity for readability in both light and dark mode. */}
+      <FaradayCanvas
+        variant={THEME_VARIANT[student.equippedTheme as keyof typeof THEME_VARIANT] ?? "linesOfForce"}
+        style={{ zIndex: 0, opacity: student.equippedTheme === "night" ? 0.5 : undefined }}
+      />
+      {student.equippedTheme === "night" && <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />}
 
       {/* ── Top Navigation ── */}
       <motion.header
@@ -720,6 +739,10 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
+              {/* Equipped shop title — the whole point of buying one is being seen */}
+              {student.equippedTitle && (
+                <div className="font-semibold text-secondary text-[10px] leading-tight">{student.equippedTitle}</div>
+              )}
               {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
               {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
@@ -745,6 +768,15 @@ export default function StudentHome() {
             <StreakBolt days={student.streak} size={15} atRisk={streakInDanger} />
             <span className="font-bold">{student.streak} ימים</span>
           </div>
+          {boostLeftH > 0 && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)"
+              title="מגבר אנרגיה פעיל — כל הנקודות שתרוויח נכפלות"
+            >
+              <Battery size={16} tone="spark" glow={0.6} />
+              <span className="num font-bold text-sm text-tertiary">×2 · {boostLeftH}ש׳</span>
+            </div>
+          )}
         </div>
 
         {/* Right: actions */}
@@ -1106,6 +1138,32 @@ export default function StudentHome() {
                     {xpIntoLevel.toLocaleString()} / {XP_PER_LEVEL} לרמה הבאה
                   </div>
                 </div>
+
+                {/* Achievements — derived milestones, full grid lives in the shop */}
+                <button
+                  onClick={() => navigate(`/student/${studentId}/shop`)}
+                  className="w-full text-right pt-3 border-t-2 border-outline cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-on-surface-variant text-sm flex items-center gap-1.5">
+                      <Trophy size={14} className="text-tertiary" /> הישגים
+                    </span>
+                    <span className="font-bold text-tertiary group-hover:underline">
+                      {achievements.earnedCount} / {achievements.total}
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="h-full rounded-full bg-tertiary transition-all duration-700"
+                      style={{ width: `${(achievements.earnedCount / achievements.total) * 100}%` }}
+                    />
+                  </div>
+                  {achievements.next && (
+                    <div className="text-[11px] font-medium text-on-surface-variant mt-1.5">
+                      הבא: {achievements.next.name} · <span className="num">{achievements.next.value.toLocaleString()}/{achievements.next.goal.toLocaleString()}</span>
+                    </div>
+                  )}
+                </button>
               </div>
             </motion.div>
 

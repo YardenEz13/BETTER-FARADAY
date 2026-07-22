@@ -19,6 +19,7 @@ type Row = {
   studentId: string;
   name: string;
   avatarColor: string;
+  title: string | null;
   weeklyXp: number;
   isMe: boolean;
 };
@@ -81,6 +82,7 @@ function PodiumCard({ row, place, reducedMotion }: { row: Row; place: number; re
       </div>
       <div className="text-center max-w-full px-1 mb-2">
         <div className="font-bold text-sm text-on-surface truncate">{row.name}</div>
+        {row.title && <div className="font-semibold text-[10px] truncate" style={{ color: p.color }}>{row.title}</div>}
         <div className="num font-extrabold flex items-center justify-center gap-1 text-sm" style={{ color: p.color }}>
           <Zap size={13} /> <CountUpXp value={row.weeklyXp} />
         </div>
@@ -116,9 +118,12 @@ function RankRow({ row, reducedMotion }: { row: Row; reducedMotion: boolean }) {
         {row.rank}
       </span>
       <CyberAvatar name={row.name} size={38} color={row.avatarColor} />
-      <span className="font-bold text-on-surface flex-1 truncate">
-        {row.name}
-        {row.isMe && <span className="text-primary font-semibold text-xs me-2">· את/ה</span>}
+      <span className="flex-1 min-w-0">
+        <span className="font-bold text-on-surface block truncate">
+          {row.name}
+          {row.isMe && <span className="text-primary font-semibold text-xs me-2">· את/ה</span>}
+        </span>
+        {row.title && <span className="block font-semibold text-[11px] text-secondary truncate">{row.title}</span>}
       </span>
       <span className="num font-extrabold flex items-center gap-1 text-on-surface flex-shrink-0">
         <Zap size={15} className="text-primary" />
