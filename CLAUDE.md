@@ -3,6 +3,7 @@
 ## Claude Behavior Preferences
 - Always use graphify for visualizations/diagrams in this project.
 - Default to `/caveman` communication mode unless the user asks otherwise.
+- Every session, work on the `green-torch` branch — check it out (or create it from `origin/green-torch` if it's missing locally) before making changes, rather than starting a fresh `claude/*` branch or committing to `master` directly. Merge `green-torch` into `master` only when explicitly asked.
 
 ## Project Overview
 Faraday Project (formerly Cobalt Apollo) is a next-generation adaptive learning platform for students, featuring dynamic math practice, an AI-driven math tutor (Michael Faraday), and real-time conceptual heatmap tracking for educators. The project is specifically tailored for the Israeli educational system (high school curriculum math).
