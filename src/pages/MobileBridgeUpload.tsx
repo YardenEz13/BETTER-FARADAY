@@ -7,6 +7,7 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { api } from "../../convex/_generated/api";
 import { prepareImageForUpload } from "../services/imageUpload";
 import { log } from "../lib/logger";
+import { errorMessage } from "../lib/errors";
 
 export default function MobileBridgeUpload() {
   const { token } = useParams<{ token: string }>();
@@ -32,7 +33,7 @@ export default function MobileBridgeUpload() {
       setStatus("done");
     } catch (err) {
       log.bridge("upload failed", { token, error: String(err) });
-      setErrorMsg(err instanceof Error ? err.message : "ההעלאה נכשלה. נסה שוב.");
+      setErrorMsg(errorMessage(err, "ההעלאה נכשלה. נסה שוב."));
       setStatus("error");
     }
   };

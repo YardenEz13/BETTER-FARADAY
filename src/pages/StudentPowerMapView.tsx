@@ -9,6 +9,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import { ElectricBolt } from "../components/electric";
 import MathText from "../components/MathText";
 import { useCountUp } from "../lib/gsapUtils";
+import { formatDateHe as formatDate, formatDurationHe as formatDuration } from "../lib/dates";
 
 export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"students"> | null; onBack: () => void }) {
   const powerMap = useQuery(
@@ -60,14 +61,6 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
       </div>
     );
   }
-
-  const formatDuration = (ms: number) => {
-    const mins = Math.round(ms / 60000);
-    return mins < 60 ? `${mins} דק'` : `${Math.floor(mins / 60)} שע' ${mins % 60} דק'`;
-  };
-
-  const formatDate = (ts: number) =>
-    new Date(ts).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   // First chat is open by default; "__none__" means the user explicitly collapsed it.
   const effectiveOpen =

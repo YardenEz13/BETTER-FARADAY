@@ -8,6 +8,7 @@ import { ElectricLoader } from "./electric/ElectricLoader";
 import MathText from "./MathText";
 import { prepareMediaForUpload, type PreparedMedia } from "../services/imageUpload";
 import { extractQuestionFromMedia, type ExtractedQuestionDraft } from "../services/localAI";
+import { errorMessage } from "../lib/errors";
 
 type EditableDraft = ExtractedQuestionDraft & { topicId?: Id<"topics"> };
 
@@ -44,7 +45,7 @@ export default function QuestionImportModal({ classroomId, onClose, onApproved }
       setStep("review");
     } catch (err) {
       console.error("[QuestionImport] extraction failed:", err);
-      setError(err instanceof Error ? err.message : "חילוץ השאלה נכשל. נסה קובץ ברור יותר.");
+      setError(errorMessage(err, "חילוץ השאלה נכשל. נסה קובץ ברור יותר."));
       setStep("upload");
       setMedia(null);
     }
@@ -56,7 +57,7 @@ export default function QuestionImportModal({ classroomId, onClose, onApproved }
     try {
       prepared = await prepareMediaForUpload(file);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "טעינת הקובץ נכשלה.");
+      setError(errorMessage(err, "טעינת הקובץ נכשלה."));
       return;
     }
     setMedia(prepared);
@@ -114,7 +115,7 @@ export default function QuestionImportModal({ classroomId, onClose, onApproved }
       onClose();
     } catch (err) {
       console.error("[QuestionImport] approve failed:", err);
-      setError(err instanceof Error ? err.message : "אישור השאלה נכשל.");
+      setError(errorMessage(err, "אישור השאלה נכשל."));
     } finally {
       setBusy(false);
     }

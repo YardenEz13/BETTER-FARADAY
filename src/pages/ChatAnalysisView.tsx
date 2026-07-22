@@ -7,6 +7,7 @@ import {
   ArrowLeft, MessageSquare, Clock, User, Bot, AlertTriangle, CheckCircle,
   Target, Sparkles, Frown, Smile, Meh,
 } from "../components/electric";
+import { formatDateLongHe as formatDate } from "../lib/dates";
 
 const AGENT_LABEL: Record<string, string> = { practice: "שיחת תרגול", homework: "שיעורי בית" };
 
@@ -31,11 +32,6 @@ function formatDuration(startedAt: number, endedAt?: number) {
   if (!endedAt) return "בשיחה כעת";
   const mins = Math.max(1, Math.round((endedAt - startedAt) / 60000));
   return `${mins} דק׳`;
-}
-
-function formatDate(ts: number) {
-  const d = new Date(ts);
-  return `${d.toLocaleDateString("he-IL", { day: "numeric", month: "long" })}, ${d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 // Rough per-message mood trace, used only to sketch the emotional-arc sparkline.

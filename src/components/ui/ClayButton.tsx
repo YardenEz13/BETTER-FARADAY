@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, PointerEvent, ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader as Loader2 } from "../electric";
 import { click as playClick } from "../../lib/sfx";
 
 export type ClayButtonVariant = "primary" | "secondary" | "ghost" | "icon";

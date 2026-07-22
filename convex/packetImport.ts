@@ -710,39 +710,6 @@ export const bulkApprove = mutation({
   },
 });
 
-export const pinToHomework = mutation({
-  args: {
-    homeworkId: v.id("homework"),
-    questionIds: v.array(v.id("packetImportQuestions")),
-  },
-  handler: async (ctx, { homeworkId, questionIds }) => {
-    const homework = await ctx.db.get(homeworkId);
-    if (!homework) throw new Error("שיעורי הבית לא נמצאו");
-    const qIds = new Set<Id<"questions">>(homework.pinnedQuestionIds ?? []);
-    const cIds = new Set<Id<"compoundQuestions">>(homework.pinnedCompoundIds ?? []);
-    const errors: { id: Id<"packetImportQuestions">; message: string }[] = [];
-    for (const id of questionIds) {
-      const row = await ctx.db.get(id);
-      if (!row) {
-        errors.push({ id, message: "שאלה לא נמצאה" });
-        continue;
-      }
-      try {
-        const ref = await publishRow(ctx, row);
-        if (ref.questionId) qIds.add(ref.questionId);
-        if (ref.compoundId) cIds.add(ref.compoundId);
-      } catch (e) {
-        errors.push({ id, message: e instanceof Error ? e.message : "פרסום נכשל" });
-      }
-    }
-    await ctx.db.patch(homeworkId, {
-      pinnedQuestionIds: Array.from(qIds),
-      pinnedCompoundIds: Array.from(cIds),
-    });
-    return { pinnedQuestions: qIds.size, pinnedCompounds: cIds.size, errors };
-  },
-});
-
 export const createHomeworkFromPacket = mutation({
   args: {
     packetId: v.id("packetImports"),

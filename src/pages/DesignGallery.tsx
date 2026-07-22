@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Plus, Zap, Inbox, Settings } from "lucide-react";
+import { Trash2, Plus, Zap, Inbox, Settings } from "../components/electric";
 import {
   ClayButton,
   ClayCard,

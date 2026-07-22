@@ -13,6 +13,7 @@ import { SegTabs, ProgressBar, ToastStack, Modal } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import { errorMessage } from "../lib/errors";
+import { formatDateHe as formatDate } from "../lib/dates";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -24,9 +25,6 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 type Bucket = "draft" | "active" | "closed";
 type Filter = "all" | "draft" | "active" | "closed";
 type Selection = { kind: "hw"; id: Id<"homework"> } | { kind: "pdf"; id: Id<"pdfAssignments"> } | null;
-
-const formatDate = (ts: number) =>
-  new Date(ts).toLocaleDateString("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function HomeworkManagementView({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
   const navigate = useNavigate();

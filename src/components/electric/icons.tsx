@@ -491,35 +491,6 @@ export function Pendulum({ size = 64, animated = true, glow = 1, tone = "spark",
   );
 }
 
-/* ---------------------------------------------------------------- Vector */
-
-export function Vector({ size = 64, animated = true, glow = 1, tone = "spark", className = "", title }: ElectricIconProps) {
-  const grad = useId();
-  const filter = useId();
-  const [c0, c1] = TONES[tone];
-  return (
-    <svg {...svgProps(size, className, title)}>
-      <Defs grad={grad} filter={filter} glow={glow} c0={c0} c1={c1} />
-      <path d="M10 54 L46 18" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
-        filter={glow > 0 ? `url(#${filter})` : undefined} />
-      {/* magnitude pulse travelling up the vector */}
-      {animated && (
-        <circle r="2.6" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined}>
-          <animateMotion path="M10 54 L46 18" dur="1.5s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0;1;1;0" dur="1.5s" repeatCount="indefinite" />
-        </circle>
-      )}
-      <path d="M34 16 L48 16 L48 30" stroke={`url(#${grad})`} strokeWidth={2.6} strokeLinecap="round"
-        strokeLinejoin="round" fill="none" filter={glow > 0 ? `url(#${filter})` : undefined} />
-      <g stroke={c0} strokeWidth={1.6} strokeDasharray="3 4" strokeLinecap="round" opacity={0.75}>
-        <path d="M10 54 H46" />
-        <path d="M46 54 V18" />
-      </g>
-      <circle cx="10" cy="54" r="2.8" fill={c0} filter={glow > 0 ? `url(#${filter})` : undefined} />
-    </svg>
-  );
-}
-
 /* ====================================================================== *
  *  Functional UI icon set — electric line-art
  *
@@ -603,7 +574,6 @@ export const CircleIcon = makeIcon({ rings: [[32, 32, 22]] });
 export const X = makeIcon({ paths: ["M18 18 L46 46", "M46 18 L18 46"], sw: 3 });
 export const XCircle = makeIcon({ rings: [[32, 32, 23]], paths: ["M25 25 L39 39", "M39 25 L25 39"] });
 export const AlertTriangle = makeIcon({ paths: [{ d: "M32 10 L57 52 A2 2 0 0 1 55 55 H9 A2 2 0 0 1 7 52 Z", soft: true }, { d: "M32 26 V40", accent: true }], dots: [[32, 47, 2.4]] });
-export const Flag = makeIcon({ paths: ["M16 10 V56", { d: "M16 14 H48 L40 24 L48 34 H16", soft: true }] });
 
 /* — energy & emphasis — */
 export const Zap = makeIcon({ paths: [{ d: "M37 5 L17 35 H30 L25 59 L49 27 H35 Z", soft: true }], join: "round" });
@@ -617,6 +587,8 @@ export const Users = makeIcon({ rings: [[24, 23, 9], [45, 21, 7]], paths: ["M8 5
 export const UserPlus = makeIcon({ rings: [[25, 22, 10]], paths: ["M8 53 C8 41 17 37 25 37 C29 37 33 38 37 40", { d: "M50 36 V52", accent: true }, { d: "M42 44 H58", accent: true }] });
 export const GraduationCap = makeIcon({ paths: [{ d: "M8 26 L32 16 L56 26 L32 36 Z", soft: true }, "M18 31 V44 C18 49 26 51 32 51 C38 51 46 49 46 44 V31", { d: "M56 26 V41", accent: true }] });
 export const Shield = makeIcon({ paths: [{ d: "M32 8 L52 16 V32 C52 44 43 52 32 56 C21 52 12 44 12 32 V16 Z", soft: true }] });
+// Shield struck through — "protections off" (exam mode: no tutor, no hints).
+export const ShieldOff = makeIcon({ paths: [{ d: "M32 8 L52 16 V32 C52 44 43 52 32 56 C21 52 12 44 12 32 V16 Z", soft: true }, { d: "M14 12 L50 52", accent: true }] });
 export const Bot = makeIcon({ paths: [{ d: "M18 24 H46 A5 5 0 0 1 51 29 V46 A5 5 0 0 1 46 51 H18 A5 5 0 0 1 13 46 V29 A5 5 0 0 1 18 24 Z", soft: true }, "M32 24 V14", "M25 44 H39"], dots: [[24, 36, 2.6], [40, 36, 2.6], [32, 12, 2.6]] });
 
 /* — communication — */
@@ -637,6 +609,8 @@ export const RefreshCw = makeIcon({ paths: ["M50 24 A18 18 0 0 0 18 18", "M50 12
 export const History = makeIcon({ rings: [[34, 32, 21]], paths: ["M34 20 V32 L44 38", "M13 24 A21 21 0 0 1 18 17", "M8 18 L13 24 L19 19"] });
 export const Loader = makeIcon({ paths: ["M32 8 A24 24 0 0 1 56 32"], dots: [[32, 8, 2.4]] });
 export const Clock = makeIcon({ rings: [[32, 32, 22]], paths: ["M32 18 V32 L43 39"] });
+// Clock with a stopwatch crown/stem — the exam runner needs "countdown", not "time of day".
+export const Timer = makeIcon({ rings: [[32, 35, 20]], paths: ["M32 24 V35 L41 41", { d: "M25 8 H39", accent: true }, { d: "M32 8 V15", accent: true }] });
 
 /* — edit & tools — */
 export const Edit = makeIcon({ paths: ["M38 12 L52 26 L24 54 L10 54 L10 40 Z", "M34 16 L48 30"] });
@@ -647,7 +621,6 @@ export const Plus = makeIcon({ paths: ["M32 12 V52", "M12 32 H52"], sw: 3 });
 export const Settings = makeIcon({ rings: [[32, 32, 9]], paths: [{ d: "M32 6 V14", accent: true }, { d: "M32 50 V58", accent: true }, { d: "M6 32 H14", accent: true }, { d: "M50 32 H58", accent: true }, { d: "M13 13 L19 19", accent: true }, { d: "M45 45 L51 51", accent: true }, { d: "M45 19 L51 13", accent: true }, { d: "M13 51 L19 45", accent: true }], dots: [[32, 32, 2.6]] });
 export const Sigma = makeIcon({ paths: ["M46 14 H20 L36 32 L20 50 H46"] });
 export const Calculator = makeIcon({ paths: ["M16 8 H48 A4 4 0 0 1 52 12 V52 A4 4 0 0 1 48 56 H16 A4 4 0 0 1 12 52 V12 A4 4 0 0 1 16 8 Z", "M18 18 H46 V26 H18 Z"], dots: [[22, 36], [32, 36], [42, 36], [22, 46], [32, 46], [42, 46]] });
-export const Terminal = makeIcon({ paths: ["M8 14 H56 A2 2 0 0 1 58 16 V48 A2 2 0 0 1 56 50 H8 A2 2 0 0 1 6 48 V16 A2 2 0 0 1 8 14 Z", "M16 26 L24 32 L16 38", { d: "M30 40 H44", accent: true }] });
 export const Search = makeIcon({ rings: [[28, 28, 16]], paths: ["M40 40 L54 54"] });
 
 /* — view — */
@@ -660,6 +633,8 @@ export const BookOpen = makeIcon({ paths: ["M32 16 C26 12 16 12 10 14 V48 C16 46
 export const FileText = makeIcon({ paths: ["M18 8 H38 L48 18 V52 A2 2 0 0 1 46 54 H18 A2 2 0 0 1 16 52 V10 A2 2 0 0 1 18 8 Z", { d: "M38 8 V18 H48", accent: true }, { d: "M24 30 H40", accent: true }, { d: "M24 38 H40", accent: true }, { d: "M24 46 H34", accent: true }] });
 export const Calendar = makeIcon({ paths: ["M12 16 H52 A2 2 0 0 1 54 18 V50 A2 2 0 0 1 52 52 H12 A2 2 0 0 1 10 50 V18 A2 2 0 0 1 12 16 Z", "M10 26 H54", { d: "M20 10 V20", accent: true }, { d: "M44 10 V20", accent: true }] });
 export const Package = makeIcon({ paths: ["M32 8 L54 20 V44 L32 56 L10 44 V20 Z", "M10 20 L32 32 L54 20", { d: "M32 32 V56", accent: true }] });
+// Tray with an open mouth — the empty-state glyph ("nothing here yet").
+export const Inbox = makeIcon({ paths: [{ d: "M10 34 H22 L26 42 H38 L42 34 H54 V50 A2 2 0 0 1 52 52 H12 A2 2 0 0 1 10 50 Z", soft: true }, "M10 34 L18 14 H46 L54 34"] });
 export const Palette = makeIcon({ paths: ["M32 8 C18 8 8 19 8 32 C8 44 17 52 28 52 C32 52 33 48 31 45 C29 42 31 38 35 38 H44 C51 38 56 32 56 26 C56 15 45 8 32 8 Z"], dots: [[22, 24], [32, 18], [44, 24], [49, 34]] });
 export const LogOut = makeIcon({ paths: ["M26 12 H16 A4 4 0 0 0 12 16 V48 A4 4 0 0 0 16 52 H26", "M36 22 L48 32 L36 42", "M24 32 H48"] });
 export const Upload = makeIcon({ paths: ["M32 40 V12", "M20 24 L32 12 L44 24", "M12 44 V50 A2 2 0 0 0 14 52 H50 A2 2 0 0 0 52 50 V44"] });
@@ -679,7 +654,6 @@ export const Frown = makeIcon({ rings: [[32, 32, 23]], paths: ["M22 43 C26 37 38
 export const Meh = makeIcon({ rings: [[32, 32, 23]], paths: ["M23 40 H41"], dots: [[24, 27, 2.4], [40, 27, 2.4]] });
 export const Lock = makeIcon({ paths: ["M18 30 H46 A2 2 0 0 1 48 32 V50 A2 2 0 0 1 46 52 H18 A2 2 0 0 1 16 50 V32 A2 2 0 0 1 18 30 Z", "M22 30 V22 A10 10 0 0 1 42 22 V30"], dots: [[32, 41, 2.6]] });
 export const Unlock = makeIcon({ paths: ["M18 30 H46 A2 2 0 0 1 48 32 V50 A2 2 0 0 1 46 52 H18 A2 2 0 0 1 16 50 V32 A2 2 0 0 1 18 30 Z", "M22 30 V22 A10 10 0 0 1 42 18"], dots: [[32, 41, 2.6]] });
-export const Radio = makeIcon({ rings: [[32, 32, 14], [32, 32, 22]], dots: [[32, 32, 4]] });
 export const Trophy = makeIcon({ paths: ["M20 12 H44 V26 A12 12 0 0 1 20 26 Z", "M20 16 H12 A2 2 0 0 0 10 18 C10 26 16 30 22 30", "M44 16 H52 A2 2 0 0 1 54 18 C54 26 48 30 42 30", "M32 38 V46", "M24 54 H40", "M26 46 H38 V54 H26 Z"] });
 export const Activity = makeIcon({ paths: ["M6 32 H20 L26 16 L34 48 L40 32 H58"] });
 export const TrendingUp = makeIcon({ paths: ["M8 44 L26 26 L36 36 L56 16", "M44 16 H56 V28"] });
@@ -701,7 +675,6 @@ export const ELECTRIC_ICONS = {
   magnet: Magnet,
   lens: Lens,
   pendulum: Pendulum,
-  vector: Vector,
   // functional UI set
   arrowRight: ArrowRight,
   arrowLeft: ArrowLeft,
@@ -718,7 +691,6 @@ export const ELECTRIC_ICONS = {
   x: X,
   xCircle: XCircle,
   alertTriangle: AlertTriangle,
-  flag: Flag,
   zap: Zap,
   flame: Flame,
   sparkles: Sparkles,
@@ -728,6 +700,7 @@ export const ELECTRIC_ICONS = {
   userPlus: UserPlus,
   graduationCap: GraduationCap,
   shield: Shield,
+  shieldOff: ShieldOff,
   bot: Bot,
   send: Send,
   message: MessageSquare,
@@ -744,6 +717,7 @@ export const ELECTRIC_ICONS = {
   history: History,
   loader: Loader,
   clock: Clock,
+  timer: Timer,
   edit: Edit,
   pencilLine: PencilLine,
   trash: Trash2,
@@ -752,7 +726,6 @@ export const ELECTRIC_ICONS = {
   settings: Settings,
   sigma: Sigma,
   calculator: Calculator,
-  terminal: Terminal,
   search: Search,
   eye: Eye,
   eyeOff: EyeOff,
@@ -763,6 +736,7 @@ export const ELECTRIC_ICONS = {
   fileText: FileText,
   calendar: Calendar,
   package: Package,
+  inbox: Inbox,
   palette: Palette,
   logOut: LogOut,
   upload: Upload,
@@ -776,7 +750,6 @@ export const ELECTRIC_ICONS = {
   meh: Meh,
   lock: Lock,
   unlock: Unlock,
-  radio: Radio,
   trophy: Trophy,
   activity: Activity,
   trendingUp: TrendingUp,

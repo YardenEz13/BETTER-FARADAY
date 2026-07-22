@@ -9,6 +9,7 @@ import {
 } from "./electric";
 import * as pdfjsLib from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { errorMessage } from "../lib/errors";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -235,7 +236,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
       setStudentId(id);
       setNewStudentName("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "הוספת התלמיד נכשלה.");
+      setError(errorMessage(err, "הוספת התלמיד נכשלה."));
     } finally {
       setAddingStudent(false);
     }
@@ -288,7 +289,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
       onClose();
     } catch (err) {
       console.error("[PdfBuilder] publish failed:", err);
-      setError(err instanceof Error ? err.message : "פרסום המטלה נכשל.");
+      setError(errorMessage(err, "פרסום המטלה נכשל."));
     } finally {
       setPublishing(false);
     }

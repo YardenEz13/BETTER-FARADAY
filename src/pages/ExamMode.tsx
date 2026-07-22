@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   FileText, Clock, ChevronLeft, Check, X, AlertTriangle,
   Trophy, RotateCcw, Timer, ShieldOff, Sparkles,
-} from "lucide-react";
+} from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
 

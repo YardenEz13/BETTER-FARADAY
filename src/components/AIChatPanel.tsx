@@ -38,6 +38,7 @@ import FaradayAvatar from "./FaradayAvatar";
 import FaradayMoodAvatar, { type FaradayMood } from "./FaradayMoodAvatar";
 import QRBridgeModal from "./QRBridgeModal";
 import FaradayConsole from "./chat/FaradayConsole";
+import { errorMessage } from "../lib/errors";
 
 // Adaptive-help stages, mirrored from the tutor's escalation levels (localAI.ts).
 const HELP_STAGES = [
@@ -539,7 +540,7 @@ export default function AIChatPanel({
       setAttachedImage(prepared);
     } catch (err) {
       console.error("[AIChatPanel] Image prepare failed:", err);
-      setImageError(err instanceof Error ? err.message : "לא ניתן לטעון את התמונה.");
+      setImageError(errorMessage(err, "לא ניתן לטעון את התמונה."));
       setTimeout(() => setImageError(null), 5000);
     }
   };

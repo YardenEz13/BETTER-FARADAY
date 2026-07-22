@@ -7,6 +7,7 @@ import { Doc, Id } from "../../convex/_generated/dataModel";
 import MathText from "../components/MathText";
 import { Check, X, AlertTriangle, Loader as Loader2, RefreshCw, Sparkles } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
+import { errorMessage } from "../lib/errors";
 
 type PacketQuestion = Doc<"packetImportQuestions">;
 type PacketDraft = NonNullable<PacketQuestion["draft"]>;
@@ -383,7 +384,7 @@ function QuestionEditor({
       if (topicId && topicId !== question.topicId) await setTopic({ questionId: question._id, topicId });
       if (hasProof && proofReviewed && !question.proofReviewedAt) await confirmProof({ questionId: question._id });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "שמירה נכשלה");
+      setError(errorMessage(e, "שמירה נכשלה"));
       throw e;
     } finally {
       setBusy(false);
@@ -408,7 +409,7 @@ function QuestionEditor({
       onBanner("השאלה פורסמה.");
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "פרסום נכשל");
+      setError(errorMessage(e, "פרסום נכשל"));
     }
   };
 

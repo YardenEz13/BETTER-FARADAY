@@ -3,6 +3,7 @@ import { useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { errorMessage } from "../lib/errors";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -47,7 +48,7 @@ export function usePacketIngest(classroomId: Id<"classrooms"> | null) {
       });
       navigate(`/teacher/packet/${packetId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "העלאה נכשלה.");
+      setError(errorMessage(e, "העלאה נכשלה."));
       setBusy(false);
     }
   };

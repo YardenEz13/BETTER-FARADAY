@@ -9,6 +9,7 @@ import {
 } from "./electric";
 import * as pdfjsLib from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { errorMessage } from "../lib/errors";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -258,7 +259,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
       await submitCropPacket({ packetId });
       navigate(`/teacher/packet/${packetId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "שליחה נכשלה.");
+      setError(errorMessage(e, "שליחה נכשלה."));
       setSubmitting(false);
       setProgress(null);
     }
