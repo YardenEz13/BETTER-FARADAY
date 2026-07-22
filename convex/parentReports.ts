@@ -13,6 +13,20 @@ import { israelDate } from "./streaks";
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
+// How long a parent link stays valid before the teacher must re-issue it.
+const LINK_TTL_MS = 90 * DAY;
+
+/** A link is usable only while it is neither revoked nor past its expiry.
+ *  Single source of truth — every caller (create/view/report) routes here, so
+ *  expiry can never be enforced on one path and missed on another. */
+export function isLinkActive(
+  link: { revokedAt?: number; expiresAt?: number },
+  now: number = Date.now(),
+): boolean {
+  if (link.revokedAt !== undefined) return false;
+  // Links created before expiry existed have no expiresAt — keep them active.
+  return link.expiresAt === undefined || link.expiresAt > now;
+}
 
 const LEVEL_NAMES = ["מתחיל", "חוקר", "מתקדם", "מומחה", "מאסטר"] as const;
 function levelName(level: number | undefined): string {
@@ -42,17 +56,19 @@ export const createParentLink = mutation({
       .withIndex("by_student", (q) => q.eq("studentId", studentId))
       .order("desc")
       .take(20);
-    const active = existing.find((l) => l.revokedAt === undefined);
+    const active = existing.find((l) => isLinkActive(l));
     if (active) {
       return { token: active.token, path: `/parent/${active.token}` };
     }
 
     // Random, unguessable token (>=24 chars). Two UUIDs, hyphens stripped = 64.
     const token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "");
+    const now = Date.now();
     await ctx.db.insert("parentLinks", {
       studentId,
       token,
-      createdAt: Date.now(),
+      createdAt: now,
+      expiresAt: now + LINK_TTL_MS,
     });
     return { token, path: `/parent/${token}` };
   },
@@ -86,7 +102,7 @@ export const markParentView = mutation({
       .query("parentLinks")
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
-    if (!link || link.revokedAt !== undefined) return { ok: false };
+    if (!link || !isLinkActive(link)) return { ok: false };
     await ctx.db.patch(link._id, { lastViewedAt: Date.now() });
     return { ok: true };
   },
@@ -120,7 +136,7 @@ export const getParentReport = query({
       .query("parentLinks")
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
-    if (!link || link.revokedAt !== undefined) return null;
+    if (!link || !isLinkActive(link)) return null;
 
     const student = await ctx.db.get(link.studentId);
     if (!student) return null;

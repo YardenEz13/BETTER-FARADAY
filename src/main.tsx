@@ -13,11 +13,11 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   enabled: !!import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
-  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+  // Session Replay is deliberately OFF: it screen-records minors' work and
+  // ships it to a third-party processor. Stack traces are enough to debug.
+  integrations: [Sentry.browserTracingIntegration()],
   tracesSampleRate: 0.1,
   tracePropagationTargets: ["localhost", /^https:\/\/.*\.convex\.cloud/],
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
   enableLogs: true,
 });
 if (import.meta.env.DEV) (window as any).__sentryDebug = Sentry;

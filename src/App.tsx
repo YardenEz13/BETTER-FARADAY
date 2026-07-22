@@ -28,6 +28,7 @@ const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
 const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
 const HomeworkCreateWizard = lazy(() => import("./pages/HomeworkCreateWizard"));
+const Legal              = lazy(() => import("./pages/Legal"));
 
 function RouteFallback() {
   return <ElectricLoader label="טוען…" />;
@@ -61,6 +62,7 @@ function AnimatedRoutes() {
       <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
             <Route path="/" element={<RolePage />} />
+            <Route path="/legal" element={<Legal />} />
             <Route path="/student/:studentId" element={<StudentHome />} />
             <Route path="/student/:studentId/welcome" element={<Onboarding />} />
             <Route path="/student/:studentId/practice/:topicId" element={<PracticeSession />} />

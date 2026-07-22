@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Users, Shield } from "../components/electric";
 import { log } from "../lib/logger";
 import { motion } from "framer-motion";
@@ -219,6 +219,15 @@ export default function RolePage() {
                 </span>
               </div>
             </button>
+
+            {/* Legal disclosure — the only entry point to /legal, so it stays
+                visible on the pre-login screen rather than behind a menu. */}
+            <Link
+              to="/legal"
+              className="text-center text-xs font-semibold text-on-surface-variant underline decoration-dotted underline-offset-4 hover:text-primary"
+            >
+              מדיניות פרטיות ותנאי שימוש
+            </Link>
           </motion.div>
         </div>
       </div>

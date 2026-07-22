@@ -633,6 +633,10 @@ export default defineSchema({
     studentId: v.id("students"),
     token: v.string(),                 // random, unguessable — in the /parent URL
     createdAt: v.number(),
+    // Bearer links get forwarded (class WhatsApp groups, email) and then live
+    // forever. Auto-expire so a leaked link stops being a permanent key.
+    // Optional: pre-existing rows have no expiry and are treated as active.
+    expiresAt: v.optional(v.number()),
     revokedAt: v.optional(v.number()), // set on revoke; absent = active
     lastViewedAt: v.optional(v.number()),
   }).index("by_token", ["token"])
