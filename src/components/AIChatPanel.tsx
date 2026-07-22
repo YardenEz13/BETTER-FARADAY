@@ -1309,6 +1309,12 @@ export default function AIChatPanel({
               onOpenQRBridge={() => setShowQRBridge(true)}
               onOpenPlayground={onOpenPlayground}
             />
+
+            {/* AI output is model-generated and can be wrong — say so where the
+                student is actually reading it, not only in the terms page. */}
+            <p className="px-4 pb-2 text-center text-[11px] font-medium text-on-surface-variant opacity-70">
+              פאראדיי הוא AI ויכול לטעות — כדאי לבדוק, ובמקרה של ספק לשאול את המורה.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
