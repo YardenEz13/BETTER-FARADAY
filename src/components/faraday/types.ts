@@ -16,12 +16,15 @@ export type Palette = {
   spark: string;
   violet: string;
   amber: string;
+  // Additive white-hot core, used by the reward variants for nuclei, induced
+  // current, spectral spines — the "charged to the point of glowing" accent.
+  hot: string;
   glow: boolean;
 };
 
 export const PALETTES: Record<"light" | "dark", Palette> = {
-  light: { green: "#17C964", spark: "#10b981", violet: "#7B61FF", amber: "#FFB02E", glow: false },
-  dark: { green: "#22D86B", spark: "#5BFF9F", violet: "#9A85FF", amber: "#FFBE52", glow: true },
+  light: { green: "#17C964", spark: "#10b981", violet: "#7B61FF", amber: "#FFB02E", hot: "#059669", glow: false },
+  dark: { green: "#22D86B", spark: "#5BFF9F", violet: "#9A85FF", amber: "#FFBE52", hot: "#EAFFF4", glow: true },
 };
 
 /** hex + alpha → rgba() string (rgb triple memoized — called thousands of times per frame) */
@@ -37,6 +40,49 @@ export function ha(hex: string, a: number): string {
 }
 
 export const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/**
+ * Big, smoothly-scaled radial bloom — one sprite per colour, stamped at any
+ * radius with a single drawImage. Companion to glowDot (small quantized halos):
+ * this is for the large parallax/nebula/safe-glow washes the reward variants
+ * paint, where a per-frame createRadialGradient would show up in the profile.
+ */
+const radialCache = new Map<string, HTMLCanvasElement>();
+function radialSprite(color: string): HTMLCanvasElement {
+  let s = radialCache.get(color);
+  if (!s) {
+    const SZ = 128;
+    s = document.createElement("canvas");
+    s.width = s.height = SZ;
+    const g = s.getContext("2d");
+    if (g) {
+      const grad = g.createRadialGradient(SZ / 2, SZ / 2, 0, SZ / 2, SZ / 2, SZ / 2);
+      grad.addColorStop(0, ha(color, 1));
+      grad.addColorStop(0.5, ha(color, 0.35));
+      grad.addColorStop(1, ha(color, 0));
+      g.fillStyle = grad;
+      g.fillRect(0, 0, SZ, SZ);
+    }
+    radialCache.set(color, s);
+  }
+  return s;
+}
+export function stampGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  R: number,
+  color: string,
+  alpha: number,
+) {
+  const s = radialSprite(color);
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(s, x - R, y - R, R * 2, R * 2);
+  ctx.globalAlpha = prev;
+}
 
 /**
  * Sprite-cached glow dot. `ctx.shadowBlur` re-runs a Gaussian blur on every
