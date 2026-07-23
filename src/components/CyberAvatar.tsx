@@ -51,10 +51,16 @@ export default function CyberAvatar({ name, size = 48, showText = true, color: c
   const hueBase = explicit ? explicit.h : ((nameHue(name) % 160) + 60) % 360;
   const sat = explicit ? Math.max(explicit.s, 45) : 55;
 
-  const bg     = `hsl(${hueBase}, ${sat}%, 88%)`;
-  const border = `hsl(${hueBase}, ${sat - 5}%, 70%)`;
+  // A radial gradient (bright highlight top-left → deeper tint bottom-right)
+  // turns the flat disc into a clay sphere. Lightness stays high so the dark
+  // initial keeps its contrast everywhere this avatar is used.
+  const hi     = `hsl(${hueBase}, ${sat}%, 94%)`;
+  const mid    = `hsl(${hueBase}, ${sat}%, 86%)`;
+  const deep   = `hsl(${hueBase}, ${sat}%, 77%)`;
+  const bg     = `radial-gradient(circle at 32% 26%, ${hi}, ${mid} 55%, ${deep} 100%)`;
+  const border = `hsl(${hueBase}, ${sat - 5}%, 68%)`;
   const color  = `hsl(${hueBase}, ${sat + 5}%, 30%)`;
-  const glow   = `hsla(${hueBase}, ${sat + 5}%, 50%, 0.30)`;
+  const glow   = `hsla(${hueBase}, ${sat + 5}%, 50%, 0.34)`;
   const ring   = `hsla(${hueBase}, 40%, 100%, 0.50)`;
 
   return (
@@ -66,7 +72,7 @@ export default function CyberAvatar({ name, size = 48, showText = true, color: c
         background: bg,
         border: `2.5px solid ${border}`,
         borderRadius: '50%',
-        boxShadow: `0 4px 12px ${glow}, 0 0 0 3px ${ring}, inset 0 1px 0 rgba(255,255,255,0.5)`,
+        boxShadow: `0 4px 12px ${glow}, 0 0 0 3px ${ring}, inset 0 2px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.12)`,
         fontFamily: "'Assistant', sans-serif",
         fontWeight: 700,
         fontSize,

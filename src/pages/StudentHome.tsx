@@ -27,6 +27,7 @@ import NightSkyCanvas from "../components/NightSkyCanvas";
 import DailyExperiment from "../components/DailyExperiment";
 import FaradayTour from "../components/FaradayTour";
 import { computeAchievements } from "../lib/achievements";
+import { tierForPrice, TIER_STYLE, iconPath } from "../lib/rewardTier";
 
 /* ── Shop theme key → learning-map backdrop ──
    The value on a `theme` shop row is looked up here; "night" additionally
@@ -470,28 +471,76 @@ function StudentHomeSkeleton() {
   );
 }
 
-/* ── Owned-badge showcase — small clay medal chips (max 4) ── */
-function badgeIcon(icon: string) {
-  const key = icon?.toLowerCase?.() ?? "";
-  if (key === "flame") return <Flame size={13} className="text-tertiary" />;
-  if (key === "award" || key === "trophy") return <Trophy size={13} className="text-tertiary" />;
-  return <Star size={13} className="text-tertiary" />;
+/* ── Owned-badge showcase — clay rarity medals (max 4) ──
+   Each badge's price picks a tier (common→legendary); the medal wears a metal
+   fill, tier edge + clay shadow, and a rarity aura (legendary spins). See
+   src/lib/rewardTier.ts. */
+function BadgeMedal({ icon, price, name }: { icon: string; price: number; name: string }) {
+  const style = TIER_STYLE[tierForPrice(price)];
+  return (
+    <span title={`${name} · ${style.label}`} className="relative inline-flex h-6 w-6 items-center justify-center">
+      {style.ring && (
+        <span
+          aria-hidden
+          className={`absolute rounded-full ${style.spin ? "motion-safe:animate-spin" : ""}`}
+          style={{ inset: -2, background: style.ring, animationDuration: style.spin ? "4.5s" : undefined }}
+        />
+      )}
+      <span
+        className="relative flex h-6 w-6 items-center justify-center rounded-full"
+        style={{
+          background: style.metal,
+          border: `2px solid ${style.edge}`,
+          boxShadow: `0 3px 0 0 ${style.clay}, inset 0 1px 2px rgba(255,255,255,.5), inset 0 -2px 3px rgba(0,0,0,.18)`,
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke={style.glyph} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d={iconPath(icon)} />
+        </svg>
+      </span>
+    </span>
+  );
 }
 
-function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; icon: string }> }) {
+function BadgeChips({ badges }: { badges: Array<{ _id: string; name: string; icon: string; price: number }> }) {
   if (badges.length === 0) return null;
   return (
-    <div className="flex items-center gap-1 mt-1" aria-label="תגים">
+    <div className="flex items-center gap-1.5 mt-1" aria-label="תגים">
       {badges.slice(0, 4).map((b) => (
-        <span
-          key={b._id}
-          title={b.name}
-          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)"
-        >
-          {badgeIcon(b.icon)}
-        </span>
+        <BadgeMedal key={b._id} icon={b.icon} price={b.price} name={b.name} />
       ))}
     </div>
+  );
+}
+
+/* ── Equipped title — a rarity pill next to the name (was plain text) ──
+   Legendary titles get a gold gradient text; others a solid tier colour. */
+function TitlePill({ title }: { title: { text: string; icon: string; price: number } }) {
+  const tier = tierForPrice(title.price);
+  const style = TIER_STYLE[tier];
+  const isLegendary = tier === "legendary";
+  return (
+    <span
+      className="inline-flex items-center gap-1 self-start rounded-full ps-1.5 pe-2 py-0.5"
+      style={{
+        background: `color-mix(in srgb, ${style.accent} 14%, transparent)`,
+        border: `1.5px solid color-mix(in srgb, ${style.accent} 42%, transparent)`,
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke={style.accent} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+        <path d={iconPath(isLegendary ? "crown" : title.icon)} />
+      </svg>
+      <span
+        className="text-[10px] font-extrabold leading-tight"
+        style={
+          isLegendary
+            ? { background: "linear-gradient(90deg,#E0821A,#FFD27A,#FF8A3D)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+            : { color: style.accent }
+        }
+      >
+        {title.text}
+      </span>
+    </span>
   );
 }
 
@@ -513,6 +562,7 @@ export default function StudentHome() {
   const reviewDeck = useQuery(api.review.getReviewDeck, { studentId: studentId as Id<"students"> });
   const topicCharges = useQuery(api.retention.getTopicCharges, { studentId: studentId as Id<"students"> });
   const ownedBadges = useQuery(api.shop.getOwnedBadges, { studentId: studentId as Id<"students"> });
+  const equippedTitle = useQuery(api.shop.getEquippedTitle, { studentId: studentId as Id<"students"> });
   const leaderboard = useQuery(
     api.leaderboard.getWeeklyLeaderboard,
     student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
@@ -739,10 +789,8 @@ export default function StudentHome() {
             </div>
             <div>
               <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
-              {/* Equipped shop title — the whole point of buying one is being seen */}
-              {student.equippedTitle && (
-                <div className="font-semibold text-secondary text-[10px] leading-tight">{student.equippedTitle}</div>
-              )}
+              {/* Equipped shop title — a rarity pill; the whole point of buying one is being seen */}
+              {equippedTitle && <div className="mt-0.5"><TitlePill title={equippedTitle} /></div>}
               {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
               {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}

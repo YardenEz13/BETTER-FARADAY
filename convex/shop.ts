@@ -93,14 +93,34 @@ export const getOwnedBadges = query({
       .query("purchases")
       .withIndex("by_student", (q) => q.eq("studentId", studentId))
       .collect();
-    const badges: Array<{ _id: string; name: string; icon: string }> = [];
+    const badges: Array<{ _id: string; name: string; icon: string; price: number }> = [];
     for (const p of purchases) {
       const item = await ctx.db.get(p.itemId);
       if (item && item.category === "badge") {
-        badges.push({ _id: item._id, name: item.name, icon: item.icon });
+        // price drives the client-side rarity tier (see src/lib/rewardTier.ts)
+        badges.push({ _id: item._id, name: item.name, icon: item.icon, price: item.price });
       }
     }
     return badges;
+  },
+});
+
+// ── The equipped title, resolved to its shop-item metadata (icon + price) ──
+// students.equippedTitle stores only the display text; the header needs the
+// item's price to pick a rarity tier and its icon for the pill glyph.
+export const getEquippedTitle = query({
+  args: { studentId: v.id("students") },
+  handler: async (ctx, { studentId }) => {
+    const student = await ctx.db.get(studentId);
+    const text = student?.equippedTitle;
+    if (!text) return null;
+    // Titles are a small catalogue; match the active item by its `value`.
+    const items = await ctx.db
+      .query("shopItems")
+      .withIndex("by_active", (q) => q.eq("active", true))
+      .collect();
+    const item = items.find((it) => it.category === "title" && it.value === text);
+    return { text, icon: item?.icon ?? "star", price: item?.price ?? 0 };
   },
 });
 
