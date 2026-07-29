@@ -218,6 +218,24 @@ describe("localAI service", () => {
       expect(analysis.confusionScore).toBe(80);
     });
 
+    // "בבקשה" contains the substring "קשה" — plain includes() marked every
+    // polite student as frustrated at 80%.
+    it("does not read a polite request as frustration", () => {
+      const analysis = heuristicAnalysis([
+        { role: "user" as const, content: "בבקשה תראה לי איך פותרים את זה" },
+      ]);
+      expect(analysis.sentiment).not.toBe("frustrated");
+      expect(analysis.confusionScore).toBeLessThan(50);
+    });
+
+    it("scales confusion with how often the student says it", () => {
+      const once = heuristicAnalysis([{ role: "user" as const, content: "זה קשה" }]);
+      const lots = heuristicAnalysis([
+        { role: "user" as const, content: "לא מבין, נתקעתי, מבולבל" },
+      ]);
+      expect(once.confusionScore).toBeLessThan(lots.confusionScore);
+    });
+
     it("should identify missing knowledge", () => {
       const history = [
         { role: "user" as const, content: "מה זה נוסחה של סכום סדרה חשבונית?" },
@@ -303,12 +321,44 @@ describe("localAI service", () => {
           { sessionIndex: 0, messageCount: 8, durationMs: 60_000, summary: "סבב ראשון", triggerReason: "message_count" },
         ],
         [{ role: "user", content: "ניסיתי לפתור" }],
-        "הרגשתי טוב"
+        "הרגשתי טוב",
+        30_000
       );
       expect(brief.partialBriefs).toHaveLength(2);
       expect(brief.totalCycles).toBe(2);
+      // The final round's own wall-clock has to land in the totals, or a chat
+      // that never cycled reports 0 דק׳.
+      expect(brief.partialBriefs[1].durationMs).toBe(30_000);
+      expect(brief.totalDurationMs).toBe(90_000);
       expect(brief.partialBriefs[1].autonomyLevel).toBeGreaterThanOrEqual(1);
       expect(brief.partialBriefs[1].autonomyLevel).toBeLessThanOrEqual(5);
+    });
+
+    // A round is ONE EXCHANGE. Cycling fires every 8 messages, so reading a
+    // cycle as a round collapsed a whole conversation into a single row.
+    it("splits the live session into one round per exchange", async () => {
+      createSession("practice");
+      const brief = await generateCompositeBrief(
+        [],
+        [
+          { role: "system", content: "ברוך הבא" },
+          { role: "user", content: "ניסיתי והגעתי ל x=3" },
+          { role: "model", content: "יפה, ומה עכשיו?" },
+          { role: "user", content: "לא מבין מה עושים הלאה" },
+          { role: "model", content: "בוא נפרק" },
+        ],
+        "היה בסדר",
+        60_000
+      );
+      expect(brief.partialBriefs).toHaveLength(2);
+      expect(brief.totalCycles).toBe(2);
+      // Own work reads higher than stuck-with-no-attempt, and neither extreme
+      // is claimed off one message.
+      expect(brief.partialBriefs[0].autonomyLevel).toBe(4);
+      expect(brief.partialBriefs[1].autonomyLevel).toBe(2);
+      // Student message + the reply it drew.
+      expect(brief.partialBriefs.map((p) => p.messageCount)).toEqual([2, 2]);
+      expect(brief.totalDurationMs).toBe(60_000);
     });
   });
 

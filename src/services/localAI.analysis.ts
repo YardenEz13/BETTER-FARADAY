@@ -79,6 +79,18 @@ const BRIEF_SCHEMA = {
 } as const;
 
 // ── Analysis ──
+
+/**
+ * Frustration signals, shared by both analysers so a fix lands in one place.
+ * Hebrew words are not \w, so \b never matches — each token is guarded by a
+ * lookbehind instead. Without it "קשה" matches inside "בבקשה" and every polite
+ * student reads as frustrated. "עזרה" is deliberately absent: asking for help
+ * is what the tutor is for, not a complaint.
+ */
+const FRUSTRATION_RE = /(?<![א-ת])(לא מבין|לא הבנתי|קשה|בלבול|מבולבל|נתקעתי|תסכול|אוף)/g;
+const frustrationHits = (msgs: Message[]) =>
+  msgs.reduce((n, m) => n + (m.content.match(FRUSTRATION_RE)?.length ?? 0), 0);
+
 export function heuristicAnalysis(messages: Message[]): ChatMetrics {
   const userMessages = messages.filter((m) => m.role === "user");
   const questionsAsked = userMessages.filter((m) => m.content.includes("?")).length;
@@ -95,12 +107,9 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
   const showedSuccess = userMessages.some((m) => SUCCESS_RE.test(m.content));
   const endedPositively = SUCCESS_RE.test(lastUserMsg);
 
-  const frustrationKeywords = ["לא מבין", "קשה", "בלבול", "אוף", "תסכול", "נתקעתי", "לא הבנתי", "מבולבל", "עזרה"];
-  const rawFrustration = userMessages.some((m) =>
-    frustrationKeywords.some((k) => m.content.includes(k))
-  );
+  const frustration = frustrationHits(userMessages);
   // Confusion that was resolved by the end is not lingering frustration.
-  const isFrustrated = rawFrustration && !endedPositively && !showedSuccess;
+  const isFrustrated = frustration > 0 && !endedPositively && !showedSuccess;
 
   const independenceKeywords = ["ניסיתי", "חשבתי", "לפי דעתי", "אולי", "אני חושב", "הגעתי ל", "נראה לי", "חישבתי"];
   const independenceRatio =
@@ -191,7 +200,13 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
       : "neutral";
 
   return {
-    confusionScore: endedPositively ? Math.min(25, questionsAsked * 8) : isFrustrated ? 80 : Math.max(20, questionsAsked * 10),
+    // One stray "קשה" is mild confusion, not an 80% crisis — scale with how
+    // many times the student actually said it.
+    confusionScore: endedPositively
+      ? Math.min(25, questionsAsked * 8)
+      : isFrustrated
+        ? Math.min(80, 20 + frustration * 30)
+        : Math.max(20, questionsAsked * 10),
     topicsCovered: detectedTopics,
     questionsAsked: userMessages.length,
     avgResponseLength: Math.round(
@@ -217,7 +232,15 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
  * score even when the composite brief later averages them away.
  */
 export function roundAutonomy(messages: Message[]): number {
-  const ratio = heuristicAnalysis(messages).independenceRatio ?? 0;
+  const a = heuristicAnalysis(messages);
+  const ratio = a.independenceRatio ?? 0;
+  // A single-exchange round is one message of evidence: too thin to earn a 1 or
+  // a 5, but "tried something" / "just asked" / "stuck" is a real difference.
+  // Without this every question-only exchange would score 1 and the whole
+  // rounds column would read as one long break point.
+  if (messages.filter((m) => m.role === "user").length === 1) {
+    return ratio > 0 ? 4 : a.sentiment === "frustrated" ? 2 : 3;
+  }
   return clampInt(Math.round(ratio * 4) + 1);
 }
 const clampInt = (n: number) => Math.max(1, Math.min(5, n));
@@ -291,10 +314,55 @@ function heuristicRoundSummary(messages: Message[]): string {
   return last.length > 120 ? `${last.slice(0, 120)}…` : last;
 }
 
+/**
+ * The rounds the teacher reads: ONE EXCHANGE each — the student's message plus
+ * Faraday's reply to it. Session cycling is a token-budget mechanism (it fires
+ * every 8 messages / 15 min), so a cycle is not what "סבב" means on the
+ * analysis screen; using it there collapsed a whole conversation into one row.
+ */
+function exchangeRounds(
+  messages: Message[],
+  startIndex: number,
+  durationMs: number
+): PartialBrief[] {
+  const convo = messages.filter((m) => m.role !== "system");
+  const rounds: PartialBrief[] = [];
+  for (const m of convo) {
+    if (m.role === "user") {
+      rounds.push({
+        sessionIndex: startIndex + rounds.length,
+        messageCount: 1,
+        durationMs: 0,
+        summary: heuristicRoundSummary([m]),
+        triggerReason: "question_change",
+        autonomyLevel: roundAutonomy([m]),
+      });
+    } else if (rounds.length) {
+      rounds[rounds.length - 1].messageCount++; // the reply belongs to the round it answers
+    }
+  }
+  if (rounds.length === 0) {
+    return [{
+      sessionIndex: startIndex,
+      messageCount: convo.length,
+      durationMs,
+      summary: heuristicRoundSummary(messages),
+      triggerReason: "question_change",
+      autonomyLevel: roundAutonomy(messages),
+    }];
+  }
+  // ponytail: no per-message timestamps, so the session's wall-clock is split
+  // evenly across its exchanges. Persist message timestamps if a teacher ever
+  // needs the real window of a single round.
+  const each = Math.round(durationMs / rounds.length);
+  return rounds.map((r) => ({ ...r, durationMs: each }));
+}
+
 function heuristicBrief(
   messages: Message[],
   partialBriefs: PartialBrief[],
-  selfAssessment: string
+  selfAssessment: string,
+  finalRoundDurationMs = 0
 ): CompositeBrief {
   const userMsgs = messages.filter((m) => m.role === "user");
   const looksLikeAnswer = (c: string) =>
@@ -304,10 +372,8 @@ function heuristicBrief(
   const showedSuccess = userMsgs.some((m) => SUCCESS_RE.test(m.content));
   const endedPositively = SUCCESS_RE.test(userMsgs[userMsgs.length - 1]?.content ?? "");
   // Confusion resolved by the end is not a lingering friction point.
-  const hasFrustration = userMsgs.some((m) => /לא מבין|קשה|נתקעתי|בלבול|לא הבנתי/.test(m.content)) && !endedPositively && !showedSuccess;
+  const hasFrustration = frustrationHits(userMsgs) > 0 && !endedPositively && !showedSuccess;
   const hasQuestions = userMsgs.filter((m) => m.content.includes("?")).length;
-  const totalMessages = partialBriefs.reduce((s, b) => s + b.messageCount, 0) + messages.length;
-  const totalDuration = partialBriefs.reduce((s, b) => s + b.durationMs, 0);
 
   const revealingPatterns = [
     /לא מבין|לא הבנתי|מבולבל|נתקעתי|קשה לי/,
@@ -343,20 +409,18 @@ function heuristicBrief(
   if (hasQuestions > 3) nextSteps.push("לבדוק הבנה של המושגים הבסיסיים לפני המשך");
 
   // The final (still-active) session never went through a cycle, so it has no
-  // partial brief of its own — yet it is a round the teacher needs to see, and
-  // usually the most telling one. Append it so `partialBriefs` is the complete
-  // round list rather than "every round but the last".
+  // partial brief of its own — yet its exchanges are the rounds the teacher
+  // needs to see, and usually the most telling ones. Earlier cycles keep their
+  // one-row-per-block shape: their raw messages are gone by then, only summaries
+  // survive, so they cannot be split into exchanges after the fact.
   const allRounds: PartialBrief[] = [
     ...partialBriefs,
-    {
-      sessionIndex: partialBriefs.length,
-      messageCount: messages.filter((m) => m.role !== "system").length,
-      durationMs: 0,
-      summary: heuristicRoundSummary(messages),
-      triggerReason: "question_change",
-      autonomyLevel: roundAutonomy(messages),
-    },
+    ...exchangeRounds(messages, partialBriefs.length, finalRoundDurationMs),
   ];
+  // Totals are the sum over ALL rounds, final one included — otherwise a chat
+  // that never cycled reports 0 דק׳ and the teacher's round windows read 0:00.
+  const totalMessages = allRounds.reduce((s, b) => s + b.messageCount, 0);
+  const totalDuration = allRounds.reduce((s, b) => s + b.durationMs, 0);
 
   return {
     totalCycles: allRounds.length,
@@ -367,7 +431,7 @@ function heuristicBrief(
     frictionPoints: hasFrustration ? ["ביטא תסכול או בלבול"] : [],
     autonomyLevel: hasOwnWork ? 4 : hasQuestions > 3 ? 2 : 3,
     solutionAccuracy: endedPositively ? 4 : showedSuccess ? 4 : 3,
-    keyInsight: `${totalMessages} הודעות, ${hasQuestions} שאלות, ${partialBriefs.length} סבבים`,
+    keyInsight: `${totalMessages} הודעות, ${hasQuestions} שאלות, ${allRounds.length} סבבים`,
     selfAssessment,
     studentQuotes: studentQuotes.length > 0 ? studentQuotes : undefined,
     missingConcepts: missingConcepts.length > 0 ? missingConcepts : undefined,
@@ -379,9 +443,11 @@ function heuristicBrief(
 export async function generateCompositeBrief(
   partialBriefs: PartialBrief[],
   finalSessionMessages: Message[],
-  selfAssessment: string
+  selfAssessment: string,
+  /** Wall-clock of the still-active round; only the caller knows when it started. */
+  finalRoundDurationMs = 0
 ): Promise<CompositeBrief> {
-  const fallback = heuristicBrief(finalSessionMessages, partialBriefs, selfAssessment);
+  const fallback = heuristicBrief(finalSessionMessages, partialBriefs, selfAssessment, finalRoundDurationMs);
 
   const partialSummaries = partialBriefs.map((b, i) => `סבב ${i + 1}: ${b.summary}`).join("\n");
   const finalConvo = finalSessionMessages

@@ -221,12 +221,13 @@ export const getTeacherChatAnalytics = query({
         const rounds = (brief?.partialBriefs ?? []).map(
           (p) => p.autonomyLevel ?? brief?.autonomyLevel ?? 3,
         );
-        // "Worth a look" is earned by a round the student could barely work in
-        // — the same rule the analysis screen uses for its header flag. Briefs
-        // written before rounds existed have none, so they fall back to the
-        // conversation-wide level rather than reading as un-analysed.
+        // "Worth a look" is earned by a PATTERN of rounds the student could
+        // barely work in — one stuck exchange is ordinary learning. Same rule as
+        // the analysis screen's header flag. Briefs written before rounds
+        // existed have none, so they fall back to the conversation-wide level
+        // rather than reading as un-analysed.
         const worthALook = rounds.length > 0
-          ? rounds.some((a) => a <= 2)
+          ? rounds.filter((a) => a <= 2).length >= 2
           : (brief?.autonomyLevel ?? 3) <= 2;
 
         allChats.push({

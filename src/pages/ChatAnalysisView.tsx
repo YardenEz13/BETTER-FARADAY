@@ -26,9 +26,9 @@ import { errorMessage } from "../lib/errors";
 
 const AGENT_LABEL: Record<string, string> = { practice: "שיחת תרגול", homework: "שיעורי בית" };
 
-/** A round the teacher reads: one cycle of the conversation with its own
- *  independence score. `partialBriefs` is the complete list (the final,
- *  never-cycled session is appended when the brief is built). */
+/** A round the teacher reads: one exchange — the student's message and Faraday's
+ *  reply — with its own independence score. `partialBriefs` is the complete
+ *  list (the brief builder splits the live session into exchanges). */
 interface Round {
   index: number;
   summary: string;
@@ -177,12 +177,10 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
 
   // Confidence is what licenses the verdict's tone. It is *evidence* volume,
   // not the AI's self-report: a two-message exchange cannot be high-confidence
-  // however sure the model sounds.
+  // however sure the model sounds. A round is one exchange, so round count and
+  // message count are the same evidence — counting both would double it.
   const userMessageCount = (messages ?? []).filter((m: any) => m.role === "user").length;
-  const confidence = Math.max(
-    0,
-    Math.min(100, Math.round((Math.min(rounds.length, 5) / 5) * 60 + (Math.min(userMessageCount, 10) / 10) * 40)),
-  );
+  const confidence = Math.round((Math.min(userMessageCount, 8) / 8) * 100);
   // "Thin" = nothing worth concluding from. "Hunch" = a read, but one round of
   // evidence behind it, so it ships labelled as a guess rather than a verdict.
   const state: "thin" | "hunch" | "full" =
@@ -190,7 +188,9 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
 
   const breakRound = rounds.length ? rounds.reduce((lo, r) => (r.autonomy < lo.autonomy ? r : lo)) : null;
   const peakRound = rounds.length ? rounds.reduce((hi, r) => (r.autonomy > hi.autonomy ? r : hi)) : null;
-  const worthALook = state === "full" && !!breakRound && breakRound.autonomy <= 2;
+  // One stuck exchange is ordinary learning; a pattern of them is worth a look.
+  // Same rule as the inbox triage in convex/aiChat.ts.
+  const worthALook = state === "full" && rounds.filter((r) => r.autonomy <= 2).length >= 2;
 
   // Evidence chips: each claim names the round it came from, and clicking it
   // scrolls that round into view. This is the "checkable, not just readable"

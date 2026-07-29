@@ -910,7 +910,8 @@ export default function AIChatPanel({
       const brief = await generateCompositeBrief(
         currentPartialBriefs,
         currentMessages,
-        selfAssessText
+        selfAssessText,
+        Date.now() - sessionStartedAt.current
       );
 
       // 2. Analyze conversation
