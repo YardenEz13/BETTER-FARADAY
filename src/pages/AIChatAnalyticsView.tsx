@@ -10,7 +10,29 @@ import CyberAvatar from "../components/CyberAvatar";
 import MathText from "../components/MathText";
 import { ChatAnalysisView } from "./ChatAnalysisView";
 
+/** Per-round independence as a colour strip — the shape of the conversation
+ *  before you open it. Grey when the chat was never analysed into rounds. */
+function RoundStrip({ rounds }: { rounds: number[] }) {
+  if (rounds.length === 0) return null;
+  const color = (a: number) =>
+    a <= 1 ? "var(--color-error)" : a <= 2 ? "var(--color-tertiary)" : "var(--color-primary)";
+  return (
+    <div className="flex gap-1 mt-3" aria-hidden>
+      {rounds.map((a, i) => (
+        <span key={i} className="flex-1 h-2 rounded-full" style={{ background: color(a) }} />
+      ))}
+    </div>
+  );
+}
+
+const TRIAGE_META: Record<string, { label: string; tone: string }> = {
+  watch: { label: "שווה מבט", tone: "var(--color-tertiary)" },
+  ok: { label: "תקין", tone: "var(--color-primary)" },
+  unrated: { label: "לא נותח", tone: "var(--color-outline)" },
+};
+
 export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
+  const [triageFilter, setTriageFilter] = useState<"all" | "watch" | "ok">("all");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [analysisChat, setAnalysisChat] = useState<any | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -25,6 +47,12 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
 
   const summary = analytics?.summary;
   const chats = analytics?.chats ?? [];
+  const watchCount = chats.filter((c: any) => c.triage === "watch").length;
+  // "תקין" is everything that isn't flagged, un-analysed chats included — the
+  // three chips must always add up to the total or the count reads as a bug.
+  const visibleChats = triageFilter === "all"
+    ? chats
+    : chats.filter((c: any) => (triageFilter === "watch" ? c.triage === "watch" : c.triage !== "watch"));
 
   // Sentiment maps to the brand palette: confident = Volt, neutral = Filament, frustrated = error
   const sentimentColor = (s: string) =>
@@ -129,20 +157,47 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
           <span className="num text-sm text-on-surface-variant">{chats.length} שיחות</span>
         </div>
 
+        {/* Triage filter — the inbox sorts itself so the teacher opens the two
+            conversations that need them, not all seven. */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {([
+            { id: "all", label: "הכל", n: chats.length },
+            { id: "watch", label: "שווה מבט", n: watchCount },
+            { id: "ok", label: "תקין", n: chats.length - watchCount },
+          ] as const).map((f) => {
+            const active = triageFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => setTriageFilter(f.id)}
+                aria-pressed={active}
+                className={`min-h-9 px-3.5 rounded-full text-sm font-extrabold border-2 transition-all cursor-pointer
+                  ${active
+                    ? "bg-on-surface text-background border-on-surface"
+                    : f.id === "watch"
+                      ? "bg-tertiary-container text-on-tertiary-container border-transparent"
+                      : "bg-surface border-outline text-on-surface-variant"}`}
+              >
+                {f.label} · {f.n}
+              </button>
+            );
+          })}
+        </div>
+
         <motion.div
           className="flex flex-col gap-4"
           initial="hidden"
           animate="visible"
           variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
         >
-          {chats.length === 0 ? (
+          {visibleChats.length === 0 ? (
             <div className="clay-card p-16 text-center border-dashed">
               <ElectricAtom size={56} glow={0.9} className="mx-auto mb-5 block opacity-80" />
               <div className="text-xl font-bold text-on-surface mb-2">עוד אין שיחות AI</div>
               <div className="text-sm text-on-surface-variant">כשתלמידים ישתמשו במורה AI, השיחות יופיעו כאן.</div>
             </div>
           ) : (
-            chats.map((chat: any, chatIdx: number) => {
+            visibleChats.map((chat: any, chatIdx: number) => {
               const isSelected = selectedChatId === chat._id;
               const isPractice = chat.agentType === 'practice';
               return (
@@ -168,6 +223,17 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full border-2 ${isPractice ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-tertiary/10 border-tertiary/30 text-tertiary'}`}>
                         {isPractice ? 'תרגול' : 'שיעורי בית'}
                       </span>
+                      {chat.triage && chat.triage !== 'unrated' && (
+                        <span
+                          className="text-xs font-extrabold px-3 py-1 rounded-full"
+                          style={{
+                            background: `color-mix(in srgb, ${TRIAGE_META[chat.triage].tone} 16%, transparent)`,
+                            color: TRIAGE_META[chat.triage].tone,
+                          }}
+                        >
+                          {TRIAGE_META[chat.triage].label}
+                        </span>
+                      )}
                       <div className="num text-sm text-on-surface-variant flex items-center gap-1.5">
                         <MessageSquare size={15} /> {chat.messageCount}
                       </div>
@@ -187,6 +253,13 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                       </button>
                     </div>
                   </div>
+
+                  {chat.verdict && (
+                    <div className="text-sm font-bold leading-snug text-on-surface mt-3 text-pretty">
+                      {chat.verdict}
+                    </div>
+                  )}
+                  <RoundStrip rounds={chat.rounds ?? []} />
 
                   {chat.metrics ? (
                     <div className="flex flex-col gap-3 mt-4 pt-4 border-t-2 border-outline">

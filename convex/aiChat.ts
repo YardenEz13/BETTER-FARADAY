@@ -210,6 +210,25 @@ export const getTeacherChatAnalytics = query({
         .take(20);
 
       for (const chat of chats) {
+        // The inbox triages before the teacher opens anything: the one-line
+        // verdict and the per-round independence strip come straight off the
+        // session brief, so a card shows the *shape* of the conversation, not
+        // just that it happened.
+        const brief = await ctx.db
+          .query("sessionBriefs")
+          .withIndex("by_chat", (q) => q.eq("chatId", chat._id))
+          .first();
+        const rounds = (brief?.partialBriefs ?? []).map(
+          (p) => p.autonomyLevel ?? brief?.autonomyLevel ?? 3,
+        );
+        // "Worth a look" is earned by a round the student could barely work in
+        // — the same rule the analysis screen uses for its header flag. Briefs
+        // written before rounds existed have none, so they fall back to the
+        // conversation-wide level rather than reading as un-analysed.
+        const worthALook = rounds.length > 0
+          ? rounds.some((a) => a <= 2)
+          : (brief?.autonomyLevel ?? 3) <= 2;
+
         allChats.push({
           ...chat,
           studentName: student.name,
@@ -218,6 +237,9 @@ export const getTeacherChatAnalytics = query({
           // The analysis view assigns targeted practice off this chat, which
           // needs the classroom the student belongs to.
           classroomId: student.classroomId,
+          verdict: brief?.keyInsight ?? chat.metrics?.gemmaAnalysisSummary ?? null,
+          rounds,
+          triage: !brief ? "unrated" : worthALook ? "watch" : "ok",
         });
       }
     }
