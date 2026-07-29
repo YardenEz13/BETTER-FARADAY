@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Component, useState, type ReactNode } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -77,6 +77,68 @@ function toneFor(autonomy: number): "primary" | "tertiary" | "error" {
   return "primary";
 }
 
+/**
+ * Renders nothing if its subtree throws. This app deploys its frontend
+ * (Vercel) and its backend (Convex) separately, so a build can reach users
+ * before the query it calls exists — and useQuery throws during render, which
+ * would take the whole analysis screen down over an optional panel.
+ */
+class OptionalPanel extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.warn("[ChatAnalysisView] class picture unavailable:", error);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/** Class picture: is this gap the student's, or the lesson's? Owns its own
+ *  query so a backend that predates it can only cost this one panel. */
+function ClassGapPanel({ chatId }: { chatId: string }) {
+  const picture = useQuery(api.sessionBriefs.getClassGapPicture, { chatId: chatId as Id<"aiChats"> });
+  if (!picture || picture.concepts.length === 0) return null;
+
+  return (
+    <ClayCard padding="lg" className="flex flex-col gap-3.5">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h3 className="font-extrabold text-base md:text-lg text-on-surface">תמונת כיתה — אותו מושג</h3>
+        <span className="text-xs md:text-sm text-on-surface-variant">מתוך השבוע האחרון</span>
+      </div>
+
+      <div
+        className="flex items-center gap-3.5 rounded-2xl px-4 py-3.5"
+        style={{ background: "var(--color-error-container)" }}
+      >
+        <div className="flex shrink-0">
+          {picture.classmates.slice(0, 4).map((name: string, i: number) => (
+            <span key={i} style={{ marginInlineStart: i === 0 ? 0 : -10 }}>
+              <CyberAvatar name={name} size={34} />
+            </span>
+          ))}
+        </div>
+        <p
+          className="text-sm md:text-base font-bold leading-snug text-pretty"
+          style={{ color: "var(--color-on-error-container)" }}
+        >
+          {picture.total} תלמידים נשברו על <b>{picture.concepts[0].concept}</b> — זה לא פער אישי, זה פער כיתתי.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {picture.concepts.slice(0, 4).map((c) => (
+          <span key={c.concept} className="stat-chip cursor-default">
+            <Users size={13} /> {c.concept} · {c.count} תלמידים
+          </span>
+        ))}
+      </div>
+    </ClayCard>
+  );
+}
+
 interface ChatAnalysisViewProps {
   chat: any;
   onBack: () => void;
@@ -85,7 +147,6 @@ interface ChatAnalysisViewProps {
 export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
   const messages = useQuery(api.aiChat.getChatMessages, { chatId: chat._id });
   const brief = useQuery(api.sessionBriefs.getBriefForChat, { chatId: chat._id });
-  const classPicture = useQuery(api.sessionBriefs.getClassGapPicture, { chatId: chat._id });
   const createHomework = useMutation(api.homework.createHomework);
 
   const [focusedRound, setFocusedRound] = useState<number | null>(null);
@@ -372,41 +433,10 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
     </ClayCard>
   );
 
-  const classPanel = classPicture && classPicture.concepts.length > 0 && (
-    <ClayCard padding="lg" className="flex flex-col gap-3.5">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h3 className="font-extrabold text-base md:text-lg text-on-surface">תמונת כיתה — אותו מושג</h3>
-        <span className="text-xs md:text-sm text-on-surface-variant">מתוך השבוע האחרון</span>
-      </div>
-
-      <div
-        className="flex items-center gap-3.5 rounded-2xl px-4 py-3.5"
-        style={{ background: "var(--color-error-container)" }}
-      >
-        <div className="flex shrink-0">
-          {classPicture.classmates.slice(0, 4).map((name: string, i: number) => (
-            <span key={i} style={{ marginInlineStart: i === 0 ? 0 : -10 }}>
-              <CyberAvatar name={name} size={34} />
-            </span>
-          ))}
-        </div>
-        <p
-          className="text-sm md:text-base font-bold leading-snug text-pretty"
-          style={{ color: "var(--color-on-error-container)" }}
-        >
-          {classPicture.total} תלמידים נשברו על <b>{classPicture.concepts[0].concept}</b> — זה לא פער אישי, זה
-          פער כיתתי.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {classPicture.concepts.slice(0, 4).map((c: any) => (
-          <span key={c.concept} className="stat-chip cursor-default">
-            <Users size={13} /> {c.concept} · {c.count} תלמידים
-          </span>
-        ))}
-      </div>
-    </ClayCard>
+  const classPanel = (
+    <OptionalPanel>
+      <ClassGapPanel chatId={chat._id} />
+    </OptionalPanel>
   );
 
   const prepPanel = (
@@ -467,16 +497,11 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
         <ClayCard padding="lg" className="flex flex-col gap-3">
           <h3 className="font-extrabold text-base text-on-surface">פערים חוזרים</h3>
           <div className="flex flex-wrap gap-2">
-            {knowledgeGaps.map((gap, i) => {
-              // A gap several classmates share is a class problem, and reads
-              // as the more urgent tone.
-              const shared = classPicture?.concepts?.find((c: any) => c.concept === gap);
-              return (
-                <Badge key={i} tone={shared ? "error" : "tertiary"}>
-                  {gap}{shared ? ` · ${shared.count} תלמידים` : ""}
-                </Badge>
-              );
-            })}
+            {/* Whether a gap is class-wide is the class panel's story to tell;
+                keeping it out of here is what lets that query fail alone. */}
+            {knowledgeGaps.map((gap, i) => (
+              <Badge key={i} tone="tertiary">{gap}</Badge>
+            ))}
           </div>
         </ClayCard>
       )}

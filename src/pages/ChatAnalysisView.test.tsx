@@ -18,7 +18,12 @@ let queryResults: Record<string, unknown> = {};
 
 vi.mock("convex/react", () => ({
   useMutation: () => mockCreateHomework,
-  useQuery: (name: string) => queryResults[name],
+  // "THROW" stands in for a query that does not exist on the deployment yet —
+  // Convex surfaces that as a throw during render.
+  useQuery: (name: string) => {
+    if (queryResults[name] === "THROW") throw new Error(`Could not find public function ${name}`);
+    return queryResults[name];
+  },
 }));
 
 vi.mock("../../convex/_generated/api", () => ({
@@ -122,6 +127,19 @@ describe("ChatAnalysisView", () => {
       studentIds: ["stu-1"],
       questionCount: 4,
     });
+  });
+
+  it("survives a class-picture query the backend does not have yet", () => {
+    // Frontend and backend deploy separately, so a build can reach users before
+    // its query exists. That must cost the one panel, not the whole screen.
+    queryResults.getClassGapPicture = "THROW";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    render(<ChatAnalysisView chat={chat} onBack={vi.fn()} />);
+
+    expect(screen.getAllByText(fullBrief.keyInsight).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/תמונת כיתה/)).toHaveLength(0);
+    vi.restoreAllMocks();
   });
 
   it("does not offer the assign CTA when the chat has no topic to draw from", () => {
