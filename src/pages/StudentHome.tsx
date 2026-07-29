@@ -534,7 +534,7 @@ function TitlePill({ title }: { title: { text: string; icon: string; price: numb
         className="text-[10px] font-extrabold leading-tight"
         style={
           isLegendary
-            ? { background: "linear-gradient(90deg,#E0821A,#FFD27A,#FF8A3D)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
+            ? { background: style.textGradient, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
             : { color: style.accent }
         }
       >

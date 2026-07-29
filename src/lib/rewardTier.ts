@@ -32,31 +32,35 @@ export interface TierStyle {
   accent: string;
   /** Hebrew tier name. */
   label: string;
+  /** Shimmering text-fill gradient for the legendary title pill; empty for
+   *  every other tier (they use a solid `accent` fill instead). */
+  textGradient: string;
 }
 
 export const TIER_STYLE: Record<Tier, TierStyle> = {
   common: {
     metal: "linear-gradient(150deg,#5BFF9F,#17C964)",
     edge: "#0F9E4E", clay: "#0B7A3B", glyph: "rgba(9,44,24,.72)",
-    ring: "", spin: false, accent: "#17C964", label: "רגיל",
+    ring: "", spin: false, accent: "#17C964", label: "רגיל", textGradient: "",
   },
   rare: {
     metal: "linear-gradient(150deg,#B9A8FF,#7B61FF)",
     edge: "#5E45E0", clay: "#43308F", glyph: "rgba(20,10,60,.72)",
     ring: "radial-gradient(circle,color-mix(in srgb,#7B61FF 45%,transparent),transparent 70%)",
-    spin: false, accent: "#7B61FF", label: "נדיר",
+    spin: false, accent: "#7B61FF", label: "נדיר", textGradient: "",
   },
   epic: {
     metal: "linear-gradient(150deg,#FFD27A,#FFB02E)",
     edge: "#E0921A", clay: "#A86A10", glyph: "rgba(60,34,0,.72)",
     ring: "radial-gradient(circle,color-mix(in srgb,#FFB02E 55%,transparent),transparent 70%)",
-    spin: false, accent: "#FFB02E", label: "אפי",
+    spin: false, accent: "#FFB02E", label: "אפי", textGradient: "",
   },
   legendary: {
     metal: "linear-gradient(150deg,#FFE9A8,#FFB02E 55%,#FF8A3D)",
     edge: "#E0821A", clay: "#A05610", glyph: "rgba(60,30,0,.8)",
     ring: "conic-gradient(from 0deg,#FFB02E,#FFF2C8,#FF8A3D,#FFE9A8,#FFB02E)",
     spin: true, accent: "#FF8A3D", label: "אגדי",
+    textGradient: "linear-gradient(90deg,#E0821A,#FFD27A,#FF8A3D)",
   },
 };
 
