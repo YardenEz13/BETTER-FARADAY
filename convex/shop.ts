@@ -10,7 +10,6 @@ const CONSUMABLE = new Set(["streak_freeze", "xp_boost"]);
 const XP_BOOST_DEFAULT_HOURS = 24;
 
 type EquipPatch =
-  | { avatarColor: string }
   | { equippedTheme: string | undefined }
   | { equippedTitle: string | undefined }
   | { equippedAvatarSkin: string | undefined };
@@ -20,9 +19,6 @@ type EquipPatch =
  *  for "can this be equipped" across getShop / equipItem / unequipItem. */
 function equipPatch(category: string, value: string | undefined): EquipPatch | null {
   switch (category) {
-    // avatarColor is a required field — there is always one active, so it can
-    // be swapped but never cleared.
-    case "avatar_color": return value ? { avatarColor: value } : null;
     case "avatar_skin": return { equippedAvatarSkin: value };
     case "theme": return { equippedTheme: value };
     case "title": return { equippedTitle: value };
@@ -53,7 +49,6 @@ export const getShop = query({
     // An equippable item reads as "equipped" when the student's active state
     // for that category matches its payload.
     const activeValue: Record<string, string | null | undefined> = {
-      avatar_color: student?.avatarColor,
       avatar_skin: student?.equippedAvatarSkin,
       theme: student?.equippedTheme,
       title: student?.equippedTitle,
@@ -254,17 +249,6 @@ const SHOP_ITEMS: Array<{
   sortOrder: number;
   value?: string;
 }> = [
-  // ── Avatar colours — the value is a CSS color matching AVATAR_COLORS in
-  // classroom.ts; it gets written straight into students.avatarColor.
-  { name: "אווטאר כחול חשמלי", description: "צבע אווטאר כחול זוהר", icon: "palette", category: "avatar_color", price: 100, sortOrder: 1, value: "#3b82f6" },
-  { name: "אווטאר סגול", description: "צבע אווטאר סגול מלכותי", icon: "palette", category: "avatar_color", price: 100, sortOrder: 2, value: "#8b5cf6" },
-  { name: "אווטאר ורוד", description: "צבע אווטאר ורוד נועז", icon: "palette", category: "avatar_color", price: 120, sortOrder: 3, value: "#ec4899" },
-  { name: "אווטאר טורקיז", description: "צבע אווטאר טורקיז רענן", icon: "palette", category: "avatar_color", price: 120, sortOrder: 4, value: "#06b6d4" },
-  { name: "אווטאר ירוק ניאון", description: "צבע אווטאר ירוק זורם", icon: "palette", category: "avatar_color", price: 150, sortOrder: 5, value: "#10b981" },
-  { name: "אווטאר כתום להבה", description: "צבע אווטאר כתום בוער", icon: "palette", category: "avatar_color", price: 150, sortOrder: 6, value: "#f97316" },
-  { name: "אווטאר אדום מגנטי", description: "צבע אווטאר אדום עז", icon: "palette", category: "avatar_color", price: 200, sortOrder: 7, value: "#ef4444" },
-  { name: "אווטאר זהב", description: "צבע אווטאר זהב נדיר", icon: "palette", category: "avatar_color", price: 250, sortOrder: 8, value: "#f59e0b" },
-
   // ── Avatar skins — value is an AvatarSkin key from
   // src/components/faraday/avatarVariants.ts. A skin is a *live* canvas motif
   // drawn inside the disc and it outranks avatarColor. Three elements (charge /

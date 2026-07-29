@@ -5,7 +5,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, Check, X, Lock, Palette, Star, Package, Flame, Trophy,
+  ChevronLeft, Check, X, Lock, Star, Package, Flame, Trophy,
   ElectricBolt, Battery, SparkBurst,
   ELECTRIC_ICONS, type ElectricIconName,
 } from "../components/electric";
@@ -59,7 +59,6 @@ function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotio
 
 /* ── Category metadata (Hebrew headers + icon) ── */
 const CATEGORY_META: Record<string, { label: string; icon: JSX.Element }> = {
-  avatar_color: { label: "צבעי דמות", icon: <Palette size={18} className="text-secondary" /> },
   avatar_skin:  { label: "דמויות חיות", icon: <Star size={18} className="text-tertiary" /> },
   theme:        { label: "ערכות נושא", icon: <Star size={18} className="text-primary" /> },
   title:        { label: "תארים", icon: <Trophy size={18} className="text-secondary" /> },
@@ -67,7 +66,7 @@ const CATEGORY_META: Record<string, { label: string; icon: JSX.Element }> = {
   xp_boost:     { label: "מגברי אנרגיה", icon: <Battery size={18} tone="spark" glow={0.5} /> },
   badge:        { label: "תגים", icon: <Package size={18} className="text-primary" /> },
 };
-const CATEGORY_ORDER = ["avatar_skin", "avatar_color", "theme", "title", "xp_boost", "streak_freeze", "badge"];
+const CATEGORY_ORDER = ["avatar_skin", "theme", "title", "xp_boost", "streak_freeze", "badge"];
 
 type ShopItem = {
   _id: string;
@@ -89,7 +88,6 @@ type ShopItem = {
 // resolved through the shared ELECTRIC_ICONS registry rather than a local map,
 // so a new seeded name works without touching this file.
 const ICON_TONE: Partial<Record<ElectricIconName, string>> = {
-  palette: "text-secondary",
   flame: "text-tertiary",
 };
 
@@ -156,9 +154,6 @@ function ShopCard({
     }
   };
 
-  // Avatar colours always have one active, so there is nothing to revert to —
-  // every other equippable (theme, title) can be taken back off.
-  const removable = item.category !== "avatar_color";
   const handleUnequip = async () => {
     if (busy || !item.equipped) return;
     setBusy(true);
@@ -230,25 +225,18 @@ function ShopCard({
 
         {item.owned && equippable ? (
           item.equipped ? (
-            removable ? (
-              <button
-                onClick={handleUnequip}
-                disabled={busy}
-                title="הסרה"
-                className="group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer"
-                style={{ boxShadow: "var(--shadow-clay-primary)" }}
-              >
-                <Check size={15} strokeWidth={3} className="group-hover:hidden" />
-                <X size={13} strokeWidth={3} className="hidden group-hover:inline" />
-                <span className="group-hover:hidden">{busy ? "מסיר…" : "בשימוש"}</span>
-                <span className="hidden group-hover:inline">הסר</span>
-              </button>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm"
-                style={{ boxShadow: "var(--shadow-clay-primary)" }}>
-                <Check size={15} strokeWidth={3} /> בשימוש
-              </span>
-            )
+            <button
+              onClick={handleUnequip}
+              disabled={busy}
+              title="הסרה"
+              className="group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-on-primary border-2 border-primary-dark font-semibold text-sm transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 cursor-pointer"
+              style={{ boxShadow: "var(--shadow-clay-primary)" }}
+            >
+              <Check size={15} strokeWidth={3} className="group-hover:hidden" />
+              <X size={13} strokeWidth={3} className="hidden group-hover:inline" />
+              <span className="group-hover:hidden">{busy ? "מסיר…" : "בשימוש"}</span>
+              <span className="hidden group-hover:inline">הסר</span>
+            </button>
           ) : (
             <button
               onClick={handleEquip}

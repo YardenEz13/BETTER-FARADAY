@@ -665,11 +665,11 @@ export default defineSchema({
     name: v.string(),        // Hebrew display name
     description: v.string(),
     icon: v.string(),        // lucide icon name or emoji
-    category: v.string(),    // "avatar_color" | "theme" | "title" | "streak_freeze" | "xp_boost" | "badge"
-    // Machine-usable payload. Equippables: avatar_color → the CSS color written
-    // to students.avatarColor (hex, matching AVATAR_COLORS); theme → the
-    // equippedTheme key; title → the Hebrew title text. Consumables: xp_boost →
-    // its duration in hours. Absent for badges.
+    category: v.string(),    // "avatar_skin" | "theme" | "title" | "streak_freeze" | "xp_boost" | "badge"
+    // Machine-usable payload. Equippables: avatar_skin → the AvatarSkin key
+    // written to students.equippedAvatarSkin; theme → the equippedTheme key;
+    // title → the Hebrew title text. Consumables: xp_boost → its duration in
+    // hours. Absent for badges.
     value: v.optional(v.string()),
     price: v.number(),
     sortOrder: v.number(),
