@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "./ThemeContext";
-import { type FaradayVariant, type Palette, PALETTES } from "./faraday/types";
+import { type FaradayVariant, type Palette, type DrawFn, PALETTES } from "./faraday/types";
 import { makeVariant } from "./faraday/variants";
+import { prefersReducedMotion } from "../lib/gsapUtils";
 
 /**
  * FaradayCanvas — the shared, mouse-reactive Canvas2D background engine.
@@ -32,15 +33,31 @@ export interface FaradayCanvasProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * The design lab renders every backdrop behind sample clay cards at this
+ * opacity and calls it the legibility check ("Behind UI"). Sites were setting
+ * it ad-hoc — 0.5, 0.55, or nothing at all, which meant full strength under
+ * body text — so the contract lives here and a caller's `style.opacity` still
+ * wins when a screen genuinely wants something else.
+ */
+const BEHIND_UI_OPACITY = 0.64;
+
 export default function FaradayCanvas({ variant, theme: themeProp, className, style }: FaradayCanvasProps) {
   const { theme: ctxTheme } = useTheme();
   const theme = themeProp ?? ctxTheme;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paletteRef = useRef<Palette>(PALETTES[theme]);
+  // The live draw fn, so a palette swap can repaint a *static* backdrop without
+  // tearing the loop down.
+  const drawRef = useRef<DrawFn | null>(null);
 
-  // Live theme swap — update the palette the loop reads, no teardown.
+  // Live theme swap — update the palette the loop reads, no teardown. Under
+  // reduced motion there is no loop to pick the new palette up, so the single
+  // frame is repainted by hand; without this a light/dark toggle left the
+  // backdrop stranded in the old palette until the next remount.
   useEffect(() => {
     paletteRef.current = PALETTES[theme];
+    if (prefersReducedMotion()) drawRef.current?.();
   }, [theme]);
 
   // Set up the canvas + RAF loop. Re-runs on variant change and on resize.
@@ -49,11 +66,8 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
     const parent = canvas?.parentElement;
     if (!canvas || !parent) return;
 
-    const reduce =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = prefersReducedMotion();
 
-    let raf = 0;
     let teardown: (() => void) | null = null;
 
     const start = () => {
@@ -93,18 +107,49 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       parent.addEventListener("pointerleave", onLeave);
 
       const draw = makeVariant(variant, ctx, w, h, mouse, () => paletteRef.current);
+      drawRef.current = draw;
+
+      let raf = 0;
+      let running = false;
+      const tick = () => {
+        draw();
+        raf = requestAnimationFrame(tick);
+      };
+      const play = () => {
+        if (running) return;
+        running = true;
+        raf = requestAnimationFrame(tick);
+      };
+      const pause = () => {
+        if (!running) return;
+        running = false;
+        cancelAnimationFrame(raf);
+      };
+
+      // A backdrop nobody can see should not cost a frame. Browsers throttle
+      // rAF in a fully hidden tab, but not for a full-screen canvas that is
+      // merely scrolled past or sitting under a routed-away view — and these
+      // run behind the learning map on phones, where it is battery.
+      let onScreen = true;
+      const sync = () => (!document.hidden && onScreen ? play() : pause());
+      const io = new IntersectionObserver((entries) => {
+        onScreen = entries[entries.length - 1].isIntersecting;
+        sync();
+      });
+
       if (reduce) {
         draw();
       } else {
-        const loop = () => {
-          draw();
-          raf = requestAnimationFrame(loop);
-        };
-        raf = requestAnimationFrame(loop);
+        io.observe(canvas);
+        document.addEventListener("visibilitychange", sync);
+        sync();
       }
 
       teardown = () => {
-        cancelAnimationFrame(raf);
+        pause();
+        io.disconnect();
+        document.removeEventListener("visibilitychange", sync);
+        drawRef.current = null;
         draw.dispose?.();
         parent.removeEventListener("pointermove", onMove);
         parent.removeEventListener("pointerdown", onMove);
@@ -143,7 +188,15 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       ref={canvasRef}
       aria-hidden
       className={className}
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", ...style }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        opacity: BEHIND_UI_OPACITY,
+        ...style,
+      }}
     />
   );
 }

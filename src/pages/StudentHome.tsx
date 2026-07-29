@@ -746,11 +746,14 @@ export default function StudentHome() {
     <div className="relative min-h-screen bg-background text-on-background overflow-x-hidden" dir="rtl">
 
       {/* ── Full-bleed backdrop — swaps with the equipped shop theme (see
-          THEME_VARIANT). Layers sit at zIndex 0 behind the z-10 content,
-          low-opacity for readability in both light and dark mode. */}
+          THEME_VARIANT). Sits at zIndex 0 behind the z-10 content; readability
+          opacity is FaradayCanvas's default. "night" goes lower still because
+          NightSkyCanvas stacks a second layer on top of it — and it is added as
+          a key or not at all, since spreading `opacity: undefined` would
+          clobber that default and paint the backdrop at full strength. */}
       <FaradayCanvas
         variant={THEME_VARIANT[student.equippedTheme as keyof typeof THEME_VARIANT] ?? "linesOfForce"}
-        style={{ zIndex: 0, opacity: student.equippedTheme === "night" ? 0.5 : undefined }}
+        style={{ zIndex: 0, ...(student.equippedTheme === "night" ? { opacity: 0.5 } : {}) }}
       />
       {student.equippedTheme === "night" && <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />}
 

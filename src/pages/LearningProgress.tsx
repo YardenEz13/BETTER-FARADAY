@@ -76,7 +76,7 @@ export default function LearningProgress() {
 
       {/* Atmospheric decoration — orbiting Bohr atoms behind the mastery rings,
           the closest visual metaphor the canvas has for "knowledge built up". */}
-      <FaradayCanvas variant="atom" style={{ position: "fixed", zIndex: 0, opacity: 0.55 }} />
+      <FaradayCanvas variant="atom" style={{ position: "fixed", zIndex: 0 }} />
       <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 blur-[130px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 

@@ -36,7 +36,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-6 bg-background overflow-hidden" dir="rtl">
       {/* Subtle mouse-reactive Faraday background lines */}
-      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0, opacity: 0.5 }} />
+      <FaradayCanvas variant="linesOfForce" style={{ zIndex: 0 }} />
 
       {/* Global theme switcher accessible on the gate page */}
       <div className="absolute top-6 left-6 z-20">
