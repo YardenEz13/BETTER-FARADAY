@@ -85,6 +85,24 @@ export function stampGlow(
 }
 
 /**
+ * Motif scale — the calibration knob for drawing a full-size backdrop motif
+ * inside a tiny avatar disc. The variants use absolute-px glow radii/blurs
+ * tuned against a ~64px disc; at 34px those blow the disc out to white and the
+ * particle counts turn to mush. `k` scales absolute glow radii with the disc;
+ * `lod` thins particle COUNT (golden-ratio stride, so the survivors stay evenly
+ * spread and don't shimmer frame to frame). Defaults are 1/1 — a no-op, so the
+ * full-screen backdrops are untouched. Set (and restored) per-disc by avatar
+ * disc(); drawing is synchronous per frame, so the global is safe.
+ */
+export const MOTIF = { k: 1, lod: 1, i: 0 };
+function lodSkip(): boolean {
+  if (MOTIF.lod >= 1) return false;
+  if (MOTIF.lod <= 0) return true;
+  MOTIF.i += 1;
+  return ((MOTIF.i * 0.6180339887) % 1) >= MOTIF.lod;
+}
+
+/**
  * Sprite-cached glow dot. `ctx.shadowBlur` re-runs a Gaussian blur on every
  * fill — with the dark palette's bigger blurs it was the single largest
  * per-frame cost. Each halo is rendered once to an offscreen canvas and then
@@ -100,6 +118,10 @@ export function glowDot(
   blur: number,
   alpha = 1,
 ) {
+  if (lodSkip()) return;
+  r *= MOTIF.k;
+  blur *= MOTIF.k;
+  if (r < 0.25) return;
   if (alpha < 1) ctx.globalAlpha = alpha;
   // quantize so continuously-varying radii/blurs reuse a small sprite set
   const b = Math.round(blur);

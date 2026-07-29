@@ -39,6 +39,11 @@ export interface PartialBrief {
   durationMs: number;
   summary: string;
   triggerReason: "message_count" | "time" | "token_saturation" | "question_change";
+  /** How independently the student worked in *this* round, 1-5. The composite
+      brief's autonomyLevel is a whole-conversation average, which hides the
+      shape teachers actually act on — where the student broke and where they
+      peaked. Optional so briefs written before this field stay valid. */
+  autonomyLevel?: number;
 }
 
 export interface CompositeBrief {

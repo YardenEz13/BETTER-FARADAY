@@ -89,6 +89,7 @@ import {
   streamMessage,
   analyzeConversation,
   generateCompositeBrief,
+  roundAutonomy,
 } from "./localAI";
 
 describe("localAI service", () => {
@@ -289,6 +290,47 @@ describe("localAI service", () => {
         "הרגשתי טוב"
       );
       expect(brief.autonomyLevel).toBe(3);
+    });
+
+    // The teacher analysis view reads partialBriefs as the COMPLETE round list.
+    // The final, never-cycled session has no partial brief of its own, so the
+    // brief builder appends it — without this the last (usually most telling)
+    // round silently vanishes from the rounds column.
+    it("appends the final session as a round of its own", async () => {
+      createSession("practice");
+      const brief = await generateCompositeBrief(
+        [
+          { sessionIndex: 0, messageCount: 8, durationMs: 60_000, summary: "סבב ראשון", triggerReason: "message_count" },
+        ],
+        [{ role: "user", content: "ניסיתי לפתור" }],
+        "הרגשתי טוב"
+      );
+      expect(brief.partialBriefs).toHaveLength(2);
+      expect(brief.totalCycles).toBe(2);
+      expect(brief.partialBriefs[1].autonomyLevel).toBeGreaterThanOrEqual(1);
+      expect(brief.partialBriefs[1].autonomyLevel).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe("roundAutonomy", () => {
+    it("scores own-work rounds above pure ask-for-the-answer rounds", () => {
+      const own = roundAutonomy([
+        { role: "user", content: "ניסיתי וחשבתי שהתשובה היא 5" },
+        { role: "user", content: "הגעתי ל x=3" },
+      ]);
+      const asked = roundAutonomy([
+        { role: "user", content: "מה זה בכלל אומר? אני לא מבין כלום" },
+        { role: "user", content: "תראה לי את כל הפתרון בבקשה?" },
+      ]);
+      expect(own).toBeGreaterThan(asked);
+    });
+
+    it("stays inside the 1-5 dot scale for any input", () => {
+      for (const msgs of [[], [{ role: "user" as const, content: "ניסיתי" }]]) {
+        const v = roundAutonomy(msgs);
+        expect(v).toBeGreaterThanOrEqual(1);
+        expect(v).toBeLessThanOrEqual(5);
+      }
     });
   });
 });

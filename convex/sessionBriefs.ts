@@ -17,6 +17,7 @@ export const createBrief = mutation({
       durationMs: v.number(),
       summary: v.string(),
       triggerReason: v.string(),
+      autonomyLevel: v.optional(v.number()),
     })),
     approach: v.string(),
     frictionPoints: v.array(v.string()),
@@ -72,6 +73,74 @@ export const getBriefsForStudentTopic = query({
       )
       .order("desc")
       .take(50);
+  },
+});
+
+/**
+ * Class picture for one conversation: which of this student's gaps are actually
+ * *classroom* gaps. Answers the teacher's real question — "is this Noa, or is
+ * this my lesson?" — which a single-student verdict can never settle.
+ *
+ * Bounded: one classroom (~30 students) × their 10 most recent briefs.
+ */
+export const getClassGapPicture = query({
+  args: { chatId: v.id("aiChats"), sinceDays: v.optional(v.number()) },
+  handler: async (ctx, { chatId, sinceDays }) => {
+    const chat = await ctx.db.get(chatId);
+    if (!chat) return null;
+    const student = await ctx.db.get(chat.studentId);
+    if (!student) return null;
+
+    const brief = await ctx.db
+      .query("sessionBriefs")
+      .withIndex("by_chat", (q) => q.eq("chatId", chatId))
+      .first();
+    const mine = new Set([
+      ...(brief?.missingConcepts ?? []),
+      ...(chat.metrics?.missingKnowledge ?? []),
+    ]);
+    if (mine.size === 0) return { classmates: [], concepts: [], total: 0 };
+
+    const cutoff = Date.now() - (sinceDays ?? 7) * 86_400_000;
+    const classmates = await ctx.db
+      .query("students")
+      .withIndex("by_classroom", (q) => q.eq("classroomId", student.classroomId))
+      .take(200);
+
+    // concept → the students who hit it (this student included, so the count
+    // the teacher reads is "N students", not "N others").
+    const byConcept = new Map<string, Map<string, string>>();
+    for (const s of classmates) {
+      const briefs = await ctx.db
+        .query("sessionBriefs")
+        .withIndex("by_student", (q) => q.eq("studentId", s._id))
+        .order("desc")
+        .take(10);
+      for (const b of briefs) {
+        if (b.createdAt < cutoff) continue;
+        for (const c of b.missingConcepts ?? []) {
+          if (!mine.has(c)) continue;
+          if (!byConcept.has(c)) byConcept.set(c, new Map());
+          byConcept.get(c)!.set(s._id, s.name);
+        }
+      }
+    }
+
+    const concepts = [...byConcept.entries()]
+      .map(([concept, who]) => ({
+        concept,
+        count: who.size,
+        names: [...who.values()].slice(0, 6),
+      }))
+      .filter((c) => c.count > 1) // a gap only one student has is not a class gap
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      concepts,
+      // The widest shared gap drives the headline; the avatar stack shows who.
+      classmates: concepts[0]?.names ?? [],
+      total: concepts[0]?.count ?? 0,
+    };
   },
 });
 

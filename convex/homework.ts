@@ -18,6 +18,7 @@ async function scheduleAssignment(
     questionCount: number;
     pinnedQuestionIds?: Id<"questions">[];
     pinnedCompoundIds?: Id<"compoundQuestions">[];
+    studentIds?: Id<"students">[];
   }
 ) {
   await ctx.scheduler.runAfter(0, internal.homework.assignToStudents, {
@@ -27,6 +28,7 @@ async function scheduleAssignment(
     questionCount: hw.questionCount,
     pinnedQuestionIds: hw.pinnedQuestionIds,
     pinnedCompoundIds: hw.pinnedCompoundIds,
+    studentIds: hw.studentIds,
   });
 }
 
@@ -48,6 +50,9 @@ export const createHomework = mutation({
     // Teacher-imported questions to pin to this homework (assigned to everyone).
     pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
     pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
+    // Targeted practice: assign to just these students instead of the whole
+    // class. Omitted = everyone, which is the normal homework path.
+    studentIds: v.optional(v.array(v.id("students"))),
   },
   handler: async (ctx, args) => {
     const scheduled = args.publishAt != null;
@@ -66,6 +71,7 @@ export const createHomework = mutation({
       publishAt: scheduled ? args.publishAt : undefined,
       pinnedQuestionIds: args.pinnedQuestionIds,
       pinnedCompoundIds: args.pinnedCompoundIds,
+      studentIds: args.studentIds,
     });
 
     if (scheduled) {
@@ -169,12 +175,19 @@ export const assignToStudents = internalMutation({
     questionCount: v.number(),
     pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
     pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
+    studentIds: v.optional(v.array(v.id("students"))),
   },
-  handler: async (ctx, { homeworkId, classroomId, topicIds, questionCount, pinnedQuestionIds, pinnedCompoundIds }) => {
-    const students = await ctx.db
+  handler: async (ctx, { homeworkId, classroomId, topicIds, questionCount, pinnedQuestionIds, pinnedCompoundIds, studentIds }) => {
+    const all = await ctx.db
       .query("students")
       .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
       .collect();
+    // Targeted practice narrows to the named students; the filter runs against
+    // the classroom list so a stale id can never assign outside the class.
+    const target = studentIds && studentIds.length > 0
+      ? new Set(studentIds.map((id) => id.toString()))
+      : null;
+    const students = target ? all.filter((s) => target.has(s._id.toString())) : all;
 
     const topicSet = new Set(topicIds.map((t) => t.toString()));
 

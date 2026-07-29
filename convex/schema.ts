@@ -24,6 +24,7 @@ export default defineSchema({
     streakFreezes: v.optional(v.number()), // available streak-freeze charges (from shop)
     equippedTheme: v.optional(v.string()), // shop theme key currently applied to the learning map (a FaradayCanvas variant, or "night"); absent = default backdrop
     equippedTitle: v.optional(v.string()), // shop title shown beside the student's name ("מהנדס זרם"); absent = none
+    equippedAvatarSkin: v.optional(v.string()), // shop avatar skin key (a live canvas motif, e.g. "aurora"); outranks avatarColor, absent = flat clay sphere
     xpBoostUntil: v.optional(v.number()),  // ms epoch; while in the future every XP award is doubled (shop consumable)
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
     dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
@@ -145,6 +146,10 @@ export default defineSchema({
       durationMs: v.number(),
       summary: v.string(),
       triggerReason: v.string(), // "message_count" | "time" | "token_saturation" | "question_change"
+      // Per-round independence 1-5. The teacher analysis view plots this across
+      // rounds to surface the break point and the peak; optional because briefs
+      // written before it exists must stay valid.
+      autonomyLevel: v.optional(v.number()),
     })),
 
     // Pedagogical Analysis
@@ -310,6 +315,9 @@ export default defineSchema({
     // student verbatim, before the mastery-based auto-fill runs.
     pinnedQuestionIds: v.optional(v.array(v.id("questions"))),
     pinnedCompoundIds: v.optional(v.array(v.id("compoundQuestions"))),
+    // Targeted practice (assigned straight off a chat analysis): restricts the
+    // assignment to these students. Absent = the whole classroom, the default.
+    studentIds: v.optional(v.array(v.id("students"))),
   }).index("by_classroom", ["classroomId"])
     .index("by_status", ["status"]),
 

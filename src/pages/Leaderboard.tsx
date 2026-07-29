@@ -19,6 +19,7 @@ type Row = {
   studentId: string;
   name: string;
   avatarColor: string;
+  avatarSkin?: string;
   title: string | null;
   weeklyXp: number;
   isMe: boolean;
@@ -72,7 +73,7 @@ function PodiumCard({ row, place, reducedMotion }: { row: Row; place: number; re
           <Star size={22} className="absolute -top-5 left-1/2 -translate-x-1/2 text-tertiary" style={{ filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--color-tertiary) 60%, transparent))" }} />
         )}
         <div className="rounded-full p-[3px]" style={{ background: p.color, boxShadow: `0 0 18px 2px color-mix(in srgb, ${p.color} 40%, transparent)` }}>
-          <CyberAvatar name={row.name} size={place === 0 ? 60 : 50} color={row.avatarColor} />
+          <CyberAvatar name={row.name} size={place === 0 ? 60 : 50} color={row.avatarColor} skin={row.avatarSkin} />
         </div>
         {place === 0 && !reducedMotion && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -117,7 +118,7 @@ function RankRow({ row, reducedMotion }: { row: Row; reducedMotion: boolean }) {
       <span className={`num font-extrabold text-lg w-7 text-center flex-shrink-0 ${row.isMe ? "text-primary" : "text-on-surface-variant"}`}>
         {row.rank}
       </span>
-      <CyberAvatar name={row.name} size={38} color={row.avatarColor} />
+      <CyberAvatar name={row.name} size={38} color={row.avatarColor} skin={row.avatarSkin} />
       <span className="flex-1 min-w-0">
         <span className="font-bold text-on-surface block truncate">
           {row.name}

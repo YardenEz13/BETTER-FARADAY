@@ -18,6 +18,7 @@ import {
   getMockResponse,
   estimateTokens,
   heuristicSummary,
+  roundAutonomy,
   type AgentType,
   type Message,
   type PartialBrief,
@@ -460,6 +461,7 @@ export default function AIChatPanel({
       durationMs,
       summary,
       triggerReason,
+      autonomyLevel: roundAutonomy(messages),
     };
     setPartialBriefs(prev => [...prev, partial]);
 

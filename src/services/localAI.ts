@@ -9,6 +9,7 @@ export type { AgentType, ChatMetrics, PartialBrief, CompositeBrief, Message };
 // import surface for the rest of the app.
 export {
   heuristicAnalysis,
+  roundAutonomy,
   analyzeConversation,
   generateCompositeBrief,
 } from "./localAI.analysis";

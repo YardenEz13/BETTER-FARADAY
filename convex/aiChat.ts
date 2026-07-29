@@ -214,6 +214,10 @@ export const getTeacherChatAnalytics = query({
           ...chat,
           studentName: student.name,
           studentAvatar: student.avatarColor,
+          studentSkin: student.equippedAvatarSkin,
+          // The analysis view assigns targeted practice off this chat, which
+          // needs the classroom the student belongs to.
+          classroomId: student.classroomId,
         });
       }
     }

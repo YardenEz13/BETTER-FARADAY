@@ -14,6 +14,7 @@ import { errorMessage } from "../lib/errors";
 import { ThemeToggle } from "../components/ThemeContext";
 import { ToastStack, useToasts } from "../components/ui/Toast";
 import FaradayCanvas from "../components/FaradayCanvas";
+import CyberAvatar from "../components/CyberAvatar";
 import { fireConfetti } from "../lib/celebrations";
 
 /* ── Animated count-up number that pops on change ── */
@@ -59,13 +60,14 @@ function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotio
 /* ── Category metadata (Hebrew headers + icon) ── */
 const CATEGORY_META: Record<string, { label: string; icon: JSX.Element }> = {
   avatar_color: { label: "צבעי דמות", icon: <Palette size={18} className="text-secondary" /> },
+  avatar_skin:  { label: "דמויות חיות", icon: <Star size={18} className="text-tertiary" /> },
   theme:        { label: "ערכות נושא", icon: <Star size={18} className="text-primary" /> },
   title:        { label: "תארים", icon: <Trophy size={18} className="text-secondary" /> },
   streak_freeze:{ label: "הקפאות רצף", icon: <Flame size={18} className="text-tertiary" /> },
   xp_boost:     { label: "מגברי אנרגיה", icon: <Battery size={18} tone="spark" glow={0.5} /> },
   badge:        { label: "תגים", icon: <Package size={18} className="text-primary" /> },
 };
-const CATEGORY_ORDER = ["avatar_color", "theme", "title", "xp_boost", "streak_freeze", "badge"];
+const CATEGORY_ORDER = ["avatar_skin", "avatar_color", "theme", "title", "xp_boost", "streak_freeze", "badge"];
 
 type ShopItem = {
   _id: string;
@@ -201,10 +203,18 @@ function ShopCard({
       {burst && !reducedMotion && <SparkBurst />}
 
       <div className="flex items-start gap-3">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 border-2
-          ${item.owned && !alwaysBuyable ? "bg-primary/15 border-primary/30" : "bg-surface-container border-outline"}`}>
-          <ItemIcon icon={item.icon} />
-        </div>
+        {item.category === "avatar_skin" && item.value ? (
+          // The whole point of the skin ladder is that you can see what the
+          // price buys, so the tile shows the live disc rather than a glyph.
+          <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
+            <CyberAvatar name="א" size={52} skin={item.value} />
+          </div>
+        ) : (
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 border-2
+            ${item.owned && !alwaysBuyable ? "bg-primary/15 border-primary/30" : "bg-surface-container border-outline"}`}>
+            <ItemIcon icon={item.icon} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-on-surface leading-tight">{item.name}</h3>
           <p className="text-sm text-on-surface-variant font-medium leading-snug mt-0.5">{item.description}</p>

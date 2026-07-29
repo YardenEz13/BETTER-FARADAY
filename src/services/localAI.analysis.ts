@@ -211,6 +211,17 @@ export function heuristicAnalysis(messages: Message[]): ChatMetrics {
   };
 }
 
+/**
+ * Independence for ONE round, 1-5, reused from the heuristic analyser's
+ * independenceRatio. Runs at cycle time (no network) so a round keeps its own
+ * score even when the composite brief later averages them away.
+ */
+export function roundAutonomy(messages: Message[]): number {
+  const ratio = heuristicAnalysis(messages).independenceRatio ?? 0;
+  return clampInt(Math.round(ratio * 4) + 1);
+}
+const clampInt = (n: number) => Math.max(1, Math.min(5, n));
+
 export async function analyzeConversation(messages: Message[]): Promise<ChatMetrics> {
   const fallback = heuristicAnalysis(messages);
 
@@ -270,6 +281,16 @@ ${conversationText}`
 }
 
 // ── Composite Brief Generation ──
+
+/** One-line gist of a round, from what the student actually wrote. Local (not
+ *  localAI.ts's heuristicSummary) to keep this module free of a cycle. */
+function heuristicRoundSummary(messages: Message[]): string {
+  const user = messages.filter((m) => m.role === "user");
+  const last = user[user.length - 1]?.content?.trim();
+  if (!last) return "הסבב האחרון — ללא הודעות מהתלמיד";
+  return last.length > 120 ? `${last.slice(0, 120)}…` : last;
+}
+
 function heuristicBrief(
   messages: Message[],
   partialBriefs: PartialBrief[],
@@ -321,11 +342,27 @@ function heuristicBrief(
   if (hasFrustration) nextSteps.push("לחזור על הנושא הבסיסי בשיעור");
   if (hasQuestions > 3) nextSteps.push("לבדוק הבנה של המושגים הבסיסיים לפני המשך");
 
+  // The final (still-active) session never went through a cycle, so it has no
+  // partial brief of its own — yet it is a round the teacher needs to see, and
+  // usually the most telling one. Append it so `partialBriefs` is the complete
+  // round list rather than "every round but the last".
+  const allRounds: PartialBrief[] = [
+    ...partialBriefs,
+    {
+      sessionIndex: partialBriefs.length,
+      messageCount: messages.filter((m) => m.role !== "system").length,
+      durationMs: 0,
+      summary: heuristicRoundSummary(messages),
+      triggerReason: "question_change",
+      autonomyLevel: roundAutonomy(messages),
+    },
+  ];
+
   return {
-    totalCycles: partialBriefs.length + 1,
+    totalCycles: allRounds.length,
     totalMessages,
     totalDurationMs: totalDuration,
-    partialBriefs,
+    partialBriefs: allRounds,
     approach: hasOwnWork ? "הציג עבודה עצמית" : "שאל שאלות ישירות",
     frictionPoints: hasFrustration ? ["ביטא תסכול או בלבול"] : [],
     autonomyLevel: hasOwnWork ? 4 : hasQuestions > 3 ? 2 : 3,
@@ -394,7 +431,8 @@ ${analysisText}`
     return {
       ...fallback,
       ...parsed,
-      partialBriefs,
+      // fallback's list, not the raw input — it carries the appended final round.
+      partialBriefs: fallback.partialBriefs,
       selfAssessment,
       autonomyLevel: Math.max(1, Math.min(5, parsed.autonomyLevel ?? fallback.autonomyLevel)),
       solutionAccuracy: Math.max(1, Math.min(5, parsed.solutionAccuracy ?? fallback.solutionAccuracy)),

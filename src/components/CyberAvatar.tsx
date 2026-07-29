@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { AVATAR_SKIN_META, isAvatarSkin, makeAvatarVariant, type AvatarSkin } from "./faraday/avatarVariants";
 
 interface AvatarProps {
   name: string;
@@ -7,6 +8,90 @@ interface AvatarProps {
   /** Optional explicit avatar color (e.g. students.avatarColor). Overrides the
       name-derived hue so shop avatar-color purchases actually take effect. */
   color?: string;
+  /** Optional equipped avatar *skin* (students.equippedAvatarSkin). A skin is a
+      live canvas motif and outranks `color`; anything unrecognised falls back
+      to the flat clay sphere, so an un-migrated row still renders. */
+  skin?: string | null;
+}
+
+/**
+ * The live-skin disc: a tiny RAF loop driving one avatar motif inside the clay
+ * circle. Separate from FaradayCanvas because a skin needs the learner's
+ * initial baked into the draw and no palette — it's ~40 lines of loop rather
+ * than a prop-widening of the full-screen backdrop harness.
+ */
+function SkinDisc({ skin, size, initial }: { skin: AvatarSkin; size: number; initial: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const meta = AVATAR_SKIN_META[skin];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    const mouse = { x: size / 2, y: size / 2, active: false };
+    const onEnter = () => { mouse.active = true; };
+    const onLeave = () => { mouse.active = false; };
+    canvas.addEventListener("pointerenter", onEnter);
+    canvas.addEventListener("pointerleave", onLeave);
+
+    const draw = makeAvatarVariant(skin, ctx, size, size, mouse, initial);
+    const reduce =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let raf = 0;
+    if (reduce) {
+      draw();
+    } else {
+      const loop = () => { draw(); raf = requestAnimationFrame(loop); };
+      raf = requestAnimationFrame(loop);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      draw.dispose?.();
+      canvas.removeEventListener("pointerenter", onEnter);
+      canvas.removeEventListener("pointerleave", onLeave);
+    };
+  }, [skin, size, initial]);
+
+  return (
+    <div
+      className="relative flex-shrink-0 select-none"
+      style={{ width: size, height: size }}
+    >
+      {meta.halo && (
+        <div
+          aria-hidden
+          className={`absolute rounded-full ${meta.spin ? "motion-safe:animate-spin" : ""}`}
+          style={{
+            inset: -Math.max(3, size * 0.07),
+            background: meta.halo,
+            animationDuration: meta.spin ? "4.5s" : undefined,
+          }}
+        />
+      )}
+      <canvas
+        ref={canvasRef}
+        aria-hidden
+        style={{
+          position: "relative",
+          width: size,
+          height: size,
+          display: "block",
+          borderRadius: "50%",
+          border: `2.5px solid ${meta.edge}`,
+          boxShadow: `0 4px 0 0 ${meta.clay}, 0 0 8px ${meta.glow}`,
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
 }
 
 /** Parse a #rrggbb (or #rgb) hex to an {h,s,l} so an explicit avatar color can
@@ -41,9 +126,15 @@ function nameHue(name: string): number {
   return Math.abs(h) % 360;
 }
 
-export default function CyberAvatar({ name, size = 48, showText = true, color: colorProp }: AvatarProps) {
+export default function CyberAvatar({ name, size = 48, showText = true, color: colorProp, skin }: AvatarProps) {
   const initial = name.slice(0, 1);
   const fontSize = Math.round(size * 0.38);
+
+  // An equipped skin replaces the whole disc — the motif draws its own body,
+  // sheen and initial, so the clay-sphere path below is skipped entirely.
+  if (isAvatarSkin(skin)) {
+    return <SkinDisc skin={skin} size={size} initial={showText ? initial : ""} />;
+  }
 
   // An explicit avatar color (shop purchase) drives the hue directly; otherwise
   // derive a stable hue from the name and lean it green-wards.

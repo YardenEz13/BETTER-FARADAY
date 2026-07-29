@@ -92,7 +92,7 @@ export function StudentPowerMapView({ studentId, onBack }: { studentId: Id<"stud
           <div className="absolute top-0 right-0 w-2 h-full bg-primary shadow-sm z-10"></div>
           {student && (
             <div className="relative z-10 w-20 h-20 rounded-full border-4 border-surface shadow-md overflow-hidden bg-primary-container">
-               <CyberAvatar name={student.name} size={80} />
+               <CyberAvatar name={student.name} size={80} color={student.avatarColor} skin={student.equippedAvatarSkin} />
             </div>
           )}
           <div className="relative z-10">

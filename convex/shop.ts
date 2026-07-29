@@ -12,7 +12,8 @@ const XP_BOOST_DEFAULT_HOURS = 24;
 type EquipPatch =
   | { avatarColor: string }
   | { equippedTheme: string | undefined }
-  | { equippedTitle: string | undefined };
+  | { equippedTitle: string | undefined }
+  | { equippedAvatarSkin: string | undefined };
 
 /** The student patch that equips (value) or unequips (undefined) a category,
  *  or null when the category isn't equippable at all. Single source of truth
@@ -22,6 +23,7 @@ function equipPatch(category: string, value: string | undefined): EquipPatch | n
     // avatarColor is a required field — there is always one active, so it can
     // be swapped but never cleared.
     case "avatar_color": return value ? { avatarColor: value } : null;
+    case "avatar_skin": return { equippedAvatarSkin: value };
     case "theme": return { equippedTheme: value };
     case "title": return { equippedTitle: value };
     default: return null;
@@ -52,6 +54,7 @@ export const getShop = query({
     // for that category matches its payload.
     const activeValue: Record<string, string | null | undefined> = {
       avatar_color: student?.avatarColor,
+      avatar_skin: student?.equippedAvatarSkin,
       theme: student?.equippedTheme,
       title: student?.equippedTitle,
     };
@@ -262,15 +265,34 @@ const SHOP_ITEMS: Array<{
   { name: "אווטאר אדום מגנטי", description: "צבע אווטאר אדום עז", icon: "palette", category: "avatar_color", price: 200, sortOrder: 7, value: "#ef4444" },
   { name: "אווטאר זהב", description: "צבע אווטאר זהב נדיר", icon: "palette", category: "avatar_color", price: 250, sortOrder: 8, value: "#f59e0b" },
 
+  // ── Avatar skins — value is an AvatarSkin key from
+  // src/components/faraday/avatarVariants.ts. A skin is a *live* canvas motif
+  // drawn inside the disc and it outranks avatarColor. Three elements (charge /
+  // fire / ice) at four price tiers: the price buys execution, not just a hue —
+  // 150 XP is one motion on a flat body, 2,000 XP is a full-disc multi-hue
+  // effect with a spinning prestige ring.
+  { name: "אווטאר חי: מתח", description: "מטען בודד רץ במסלול סגור", icon: "bolt", category: "avatar_skin", price: 150, sortOrder: 10, value: "volt" },
+  { name: "אווטאר חי: גחלת", description: "ניצוצות עולים מבסיס חמים", icon: "flame", category: "avatar_skin", price: 150, sortOrder: 11, value: "ember" },
+  { name: "אווטאר חי: כפור", description: "פתיתים נודדים לאט", icon: "snowflake", category: "avatar_skin", price: 150, sortOrder: 12, value: "frost" },
+  { name: "אווטאר חי: קשת חשמלית", description: "קליפות דו-קוטב סגולות עם מטענים נגדיים", icon: "zap", category: "avatar_skin", price: 400, sortOrder: 13, value: "arc" },
+  { name: "אווטאר חי: אש", description: "גוף להבה שכבתי עם כתר מלקק", icon: "flame", category: "avatar_skin", price: 400, sortOrder: 14, value: "fire" },
+  { name: "אווטאר חי: שלג", description: "גביש מסתובב בתוך שלג יורד", icon: "snowflake", category: "avatar_skin", price: 400, sortOrder: 15, value: "snow" },
+  { name: "אווטאר חי: טעון", description: "גרעין לוהט ושני מסלולים נגדיים", icon: "atom", category: "avatar_skin", price: 900, sortOrder: 16, value: "charged" },
+  { name: "אווטאר חי: מאגמה", description: "קרום סדוק נושם מעל ליבה מותכת", icon: "flame", category: "avatar_skin", price: 900, sortOrder: 17, value: "magma" },
+  { name: "אווטאר חי: קרחון", description: "רסיסים שוברי אור וגביש מסועף", icon: "snowflake", category: "avatar_skin", price: 900, sortOrder: 18, value: "glacier" },
+  { name: "אווטאר חי: מנסרה", description: "רוטור ספקטרלי — נדיר במיוחד", icon: "lens", category: "avatar_skin", price: 2000, sortOrder: 19, value: "prism" },
+  { name: "אווטאר חי: סופרנובה", description: "ליבה קורסת שיורה גלי הדף", icon: "star", category: "avatar_skin", price: 2000, sortOrder: 20, value: "supernova" },
+  { name: "אווטאר חי: זוהר קוטבי", description: "וילונות קוטביים מעל שמי לילה", icon: "sparkles", category: "avatar_skin", price: 2000, sortOrder: 21, value: "aurora" },
+
   // ── Map backdrops — value is the FaradayCanvas variant applied to the
   // learning map ("night" additionally layers the starfield).
-  { name: "ערכת נושא לילה", description: "רקע שמי לילה זרועי כוכבים למפת הלמידה", icon: "moon", category: "theme", price: 300, sortOrder: 20, value: "night" },
-  { name: "ערכת נושא חשמלית", description: "רקע קווי-שדה חשמליים מוגברים למפת הלמידה", icon: "zap", category: "theme", price: 400, sortOrder: 21, value: "electric" },
-  { name: "קונסטלציה", description: "רשת כוכבים מתחברת שנעה עם הסמן", icon: "sparkles", category: "theme", price: 450, sortOrder: 22, value: "constellation" },
-  { name: "מסלולי אלקטרונים", description: "אטומי בוהר מרחפים ברקע המפה", icon: "atom", category: "theme", price: 500, sortOrder: 23, value: "atom" },
-  { name: "השראה אלקטרומגנטית", description: "סליל וזרם מושרה — הניסוי של פאראדיי", icon: "inductor", category: "theme", price: 600, sortOrder: 24, value: "induction" },
-  { name: "כלוב פאראדיי", description: "כלוב מגן שסופג פריקות חשמל", icon: "shield", category: "theme", price: 750, sortOrder: 25, value: "cage" },
-  { name: "אפקט פאראדיי", description: "סרטי קיטוב מסתובבים — הנדיר בערכות", icon: "lens", category: "theme", price: 1000, sortOrder: 26, value: "effect" },
+  { name: "ערכת נושא לילה", description: "רקע שמי לילה זרועי כוכבים למפת הלמידה", icon: "moon", category: "theme", price: 300, sortOrder: 30, value: "night" },
+  { name: "ערכת נושא חשמלית", description: "רקע קווי-שדה חשמליים מוגברים למפת הלמידה", icon: "zap", category: "theme", price: 400, sortOrder: 31, value: "electric" },
+  { name: "קונסטלציה", description: "רשת כוכבים מתחברת שנעה עם הסמן", icon: "sparkles", category: "theme", price: 450, sortOrder: 32, value: "constellation" },
+  { name: "מסלולי אלקטרונים", description: "אטומי בוהר מרחפים ברקע המפה", icon: "atom", category: "theme", price: 500, sortOrder: 33, value: "atom" },
+  { name: "השראה אלקטרומגנטית", description: "סליל וזרם מושרה — הניסוי של פאראדיי", icon: "inductor", category: "theme", price: 600, sortOrder: 34, value: "induction" },
+  { name: "כלוב פאראדיי", description: "כלוב מגן שסופג פריקות חשמל", icon: "shield", category: "theme", price: 750, sortOrder: 35, value: "cage" },
+  { name: "אפקט פאראדיי", description: "סרטי קיטוב מסתובבים — הנדיר בערכות", icon: "lens", category: "theme", price: 1000, sortOrder: 36, value: "effect" },
 
   // ── Titles — value is the Hebrew text shown beside the student's name.
   { name: "תואר: מתחיל נמרץ", description: "תואר שמוצג ליד השם שלך", icon: "user", category: "title", price: 150, sortOrder: 40, value: "מתחיל נמרץ" },

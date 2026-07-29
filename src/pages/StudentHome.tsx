@@ -780,7 +780,7 @@ export default function StudentHome() {
             onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
-              <CyberAvatar name={student.name} size={32} color={student.avatarColor} />
+              <CyberAvatar name={student.name} size={32} color={student.avatarColor} skin={student.equippedAvatarSkin} />
               {student.homeworkTheme && (
                 <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center border-2 border-surface">
                   <Star size={7} className="text-white fill-white" />
