@@ -12,6 +12,28 @@ import { v } from "convex/values";
 import { components } from "./_generated/api";
 import { query, mutation, internalQuery } from "./_generated/server";
 
+/**
+ * Global Gemini calls/day allowed through the proxy.
+ *
+ * Modelled on a 35-student pilot class at their heaviest:
+ *   tutor chat 35 × ~25   ≈  875
+ *   notebook vision 35 × 5 ≈  175
+ *   chat analysis          ≈  175
+ *   themed precompute      ≈  290  (a batch every 5 min while backlogged)
+ *   proof grading          ≈  200
+ *   question authoring     =   12  (cron, every 2h)
+ *   ────────────────────────────
+ *   peak day               ≈ 1,730
+ *
+ * At the old 2000 that is a cap a normal busy lesson could trip, and tripping
+ * it shows every student "פאראדיי עמוס כרגע" at once — which reads as broken,
+ * not busy. This is a runaway guard, not a usage ceiling, so it sits ~3.5× the
+ * modelled peak. `aiUsage.checkDailyBudget` warns long before it is reached.
+ */
+export const GLOBAL_DAILY_CAP = 6000;
+/** Warn once the day's Gemini calls pass this share of the cap. */
+export const BUDGET_WARN_RATIO = 0.7;
+
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // Per-student: 20 tutor messages/hour, small burst allowance so a quick
   // back-and-forth doesn't get choppy.
@@ -20,7 +42,7 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // tighter cap.
   studentVision: { kind: "token bucket", rate: 10, period: HOUR, capacity: 3 },
   // Global daily cap across all students, shared bucket keyed by a constant.
-  globalDaily: { kind: "fixed window", rate: 2000, period: DAY },
+  globalDaily: { kind: "fixed window", rate: GLOBAL_DAILY_CAP, period: DAY },
   // Cheap circuit breaker against a single client hammering the endpoint —
   // caps burst request rate regardless of task.
   globalBurst: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 20 },

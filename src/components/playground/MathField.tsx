@@ -6,15 +6,17 @@ import {
 } from "react";
 import { MathfieldElement } from "mathlive";
 
-// MathLive's glyph fonts (the KaTeX woff2 set) and click sounds. We serve the
-// fonts from the version-pinned CDN so they don't have to be copied into
-// /public, and disable sounds. Configured once, before any field mounts.
+// MathLive's glyph fonts (the KaTeX woff2 set) and click sounds. The fonts are
+// self-hosted from /public/mathlive-fonts — school networks filter CDNs
+// routinely, and a blocked jsdelivr means an unreadable math keypad for the
+// whole class with nothing in the console to explain it. Refresh the copy with
+// `cp node_modules/mathlive/fonts/*.woff2 public/mathlive-fonts/` whenever
+// mathlive is upgraded. Sounds stay off. Configured once, before any mount.
 let configured = false;
 function configureMathlive() {
   if (configured) return;
   configured = true;
-  MathfieldElement.fontsDirectory =
-    "https://cdn.jsdelivr.net/npm/mathlive@0.110.0/fonts";
+  MathfieldElement.fontsDirectory = "/mathlive-fonts";
   MathfieldElement.soundsDirectory = null;
 }
 

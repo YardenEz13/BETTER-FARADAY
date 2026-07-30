@@ -15,6 +15,7 @@ import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
 import MathText from "../components/MathText";
+import ReportQuestionButton from "../components/ReportQuestionButton";
 import { Lightbulb as ElectricBulb, Battery, SparkBurst } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { log } from "../lib/logger";
@@ -571,6 +572,16 @@ export default function PracticeSession() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+
+                  {/* Bad-question report. Always available — a wrong answer key
+                      is usually only obvious once the student has submitted. */}
+                  <div className="mt-3">
+                    <ReportQuestionButton
+                      questionId={activeQuestion._id}
+                      studentId={studentId as Id<"students">}
+                      route="practice"
+                    />
+                  </div>
 
                   {/* ── Review Phase: Full Explanation Panel ── */}
                   <AnimatePresence>

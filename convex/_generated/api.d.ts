@@ -43,6 +43,8 @@ import type * as pdfAssignments from "../pdfAssignments.js";
 import type * as powerMap from "../powerMap.js";
 import type * as precompute from "../precompute.js";
 import type * as proofGrading from "../proofGrading.js";
+import type * as questionGen from "../questionGen.js";
+import type * as questionReports from "../questionReports.js";
 import type * as questions from "../questions.js";
 import type * as retention from "../retention.js";
 import type * as review from "../review.js";
@@ -103,6 +105,8 @@ declare const fullApi: ApiFromModules<{
   powerMap: typeof powerMap;
   precompute: typeof precompute;
   proofGrading: typeof proofGrading;
+  questionGen: typeof questionGen;
+  questionReports: typeof questionReports;
   questions: typeof questions;
   retention: typeof retention;
   review: typeof review;

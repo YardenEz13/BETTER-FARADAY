@@ -48,6 +48,10 @@ export default defineSchema({
     solutionSteps: v.array(v.string()),
     hint: v.string(),
     explanation: v.string(),
+    // Provenance: set by the questionGen cron, absent on hand-seeded rows.
+    // Machine-authored questions are unverified until a human clears them —
+    // this is how a reviewer tells the two apart.
+    generatedAt: v.optional(v.number()),
   }).index("by_topic", ["topicId"]).index("by_topic_difficulty", ["topicId", "difficulty"]),
 
   attempts: defineTable({
@@ -743,4 +747,21 @@ export default defineSchema({
   })
     .index("by_session", ["sessionId"])
     .index("by_session_student", ["sessionId", "studentId"]),
+
+  // ── Bad-question reports ──
+  // The content-correctness backstop. Every question in the bank is AI-authored
+  // (seeded, packet-imported, or questionGen cron) and no automated check can
+  // prove an answer key right — so the students and teachers looking at it are
+  // the detector. questionId is a string: it addresses both `questions` and
+  // `compoundQuestions` rows, same as precomputedThemedQuestions.
+  questionReports: defineTable({
+    questionId: v.string(),
+    studentId: v.optional(v.id("students")), // absent when a teacher reports
+    reason: v.string(),                      // one of REPORT_REASONS
+    note: v.optional(v.string()),            // free text, capped server-side
+    route: v.string(),                       // where it was seen ("practice" | "homework" | ...)
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),      // set when a teacher clears it
+  }).index("by_resolved", ["resolvedAt"])
+    .index("by_question", ["questionId"]),
 });
