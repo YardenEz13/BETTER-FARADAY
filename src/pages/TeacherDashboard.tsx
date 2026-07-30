@@ -19,6 +19,7 @@ import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
 import LiveClassPanel from "../components/LiveClassPanel";
 import AiReactorPanel from "../components/AiReactorPanel";
+import MathText from "../components/MathText";
 import { StudentPowerMapView } from "./StudentPowerMapView";
 import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
@@ -601,6 +602,81 @@ function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
   );
 }
 
+/* Questions students flagged as wrong or broken.
+ * The bank is entirely machine-authored and nothing proves an answer key
+ * right — this panel is where a bad question becomes a same-day fix instead
+ * of a term of quietly wrong marking. Top of the triage view on purpose:
+ * content the class doesn't trust outranks every other signal here. */
+const REPORT_REASON_LABEL: Record<string, string> = {
+  wrong_answer: "תשובה שגויה",
+  unclear: "לא ברור",
+  broken_math: "נוסחאות שבורות",
+  other: "אחר",
+};
+
+function ReportedQuestionsPanel({ fire }: { fire: (m: string) => void }) {
+  const reports = useQuery(api.questionReports.listOpen);
+  const resolve = useMutation(api.questionReports.resolve);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Nothing reported is the good case — stay out of the way entirely.
+  if (!reports || reports.length === 0) return null;
+
+  const clear = async (reportId: Id<"questionReports">) => {
+    if (busyId) return;
+    setBusyId(reportId);
+    setErr(null);
+    try {
+      await resolve({ reportId });
+      fire("הדיווח טופל");
+    } catch (e) {
+      setErr(errorMessage(e, "סגירת הדיווח נכשלה. נסו שוב."));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="clay-card mb-4.5 p-4">
+      <div className="flex items-center gap-2.5 mb-3">
+        <AlertTriangle size={18} className="text-error" />
+        <span className="font-display font-extrabold text-[15px] text-on-surface">שאלות שדווחו כבעייתיות</span>
+        <span className="num font-extrabold text-label-md rounded-full text-on-error px-2.5 py-[2px] bg-error">{reports.length}</span>
+      </div>
+
+      {err && (
+        <div role="alert" className="flex items-center gap-2 text-xs font-semibold px-3 py-2 mb-3 rounded-xl border-2"
+          style={{ borderColor: "var(--color-error)", color: "var(--color-error)", background: "color-mix(in srgb, var(--color-error) 8%, transparent)" }}>
+          <AlertTriangle size={14} /> {err}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {reports.map((r) => (
+          <div key={r._id} className="flex items-start gap-3 flex-wrap px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-outline">
+            <div className="flex-1 min-w-[200px] text-[13px] text-on-surface">
+              <div className="line-clamp-2"><MathText>{r.questionText}</MathText></div>
+              <div className="text-[12px] text-on-surface-variant mt-1">
+                <strong>{r.studentName}</strong> · {REPORT_REASON_LABEL[r.reason] ?? r.reason} · {r.route}
+                {r.note && <span> · &quot;{r.note}&quot;</span>}
+              </div>
+            </div>
+            <button
+              onClick={() => clear(r._id)}
+              disabled={busyId === r._id}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors disabled:opacity-50 flex-shrink-0"
+              style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}
+            >
+              <CheckCircle2 size={14} /> טופל
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* Pending level-ups awaiting teacher sign-off.
  * levels.evaluateStudentLevel writes a suggestion whenever a student's power
  * map clears the bar; the weekly digest only *mentions* them as a static chip.
@@ -744,6 +820,8 @@ function TriageView({ data, digest, classroomId, leaderboardEnabled, onSelect, o
   return (
     <div>
       <WeeklyDigest digest={digest} classroomId={classroomId} onSelectStudent={onSelectId} fire={fire} />
+
+      <ReportedQuestionsPanel fire={fire} />
 
       <PendingLevelsPanel classroomId={classroomId} fire={fire} />
 

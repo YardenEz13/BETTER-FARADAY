@@ -44,6 +44,7 @@ export default function AiReactorPanel() {
   };
 
   const today = usage?.today;
+  const budget = usage?.budget;
   const totalTokens = (today?.promptTokens ?? 0) + (today?.outputTokens ?? 0);
   // Only questions with a real sample behind them; a single wrong attempt is
   // a 100% failure rate and would crowd out genuinely hard questions.
@@ -97,6 +98,27 @@ export default function AiReactorPanel() {
         <p className="text-[12.5px] text-on-surface-variant mb-3.5">
           התלמידים מקבלים כרגע הודעת «פאראדיי נח» במקום תשובה. הדף עצמו ממשיך לעבוד כרגיל.
         </p>
+      )}
+
+      {/* Daily Gemini budget. The cap tripping mid-lesson shows every student
+          "פאראדיי עמוס כרגע" at once, which reads as broken rather than busy —
+          so the teacher gets to see it coming. aiUsage.checkDailyBudget logs
+          the same threshold half-hourly for whoever is on call. */}
+      {budget && budget.level !== "ok" && (
+        <div
+          role="status"
+          className="flex items-center gap-2 text-xs font-semibold px-3 py-2 mb-3 rounded-xl border-2"
+          style={{
+            borderColor: budget.level === "critical" ? "var(--color-error)" : "var(--color-tertiary)",
+            color: budget.level === "critical" ? "var(--color-error)" : "var(--color-tertiary)",
+            background: `color-mix(in srgb, ${budget.level === "critical" ? "var(--color-error)" : "var(--color-tertiary)"} 8%, transparent)`,
+          }}
+        >
+          <AlertTriangle size={14} />
+          {budget.level === "critical"
+            ? <span>מכסת ה-AI היומית נוצלה במלואה (<span className="num">{budget.used}</span>/<span className="num">{budget.cap}</span>). התרגול ממשיך לעבוד — המורה פאראדיי לא.</span>
+            : <span>נוצלו <span className="num">{budget.pct}%</span> ממכסת ה-AI היומית (<span className="num">{budget.used}</span>/<span className="num">{budget.cap}</span>).</span>}
+        </div>
       )}
 
       {/* today's meters */}

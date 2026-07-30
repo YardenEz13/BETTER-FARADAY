@@ -6,7 +6,9 @@
 // in a chain means more total free requests/day before we're fully rate
 // limited, not just a quality fallback.
 //
+//   gemini-3.6-flash       — newest; authoring new questions only
 //   gemini-3.5-flash       — balanced, multimodal, best default quality
+//   gemini-3.5-flash-lite  — newest lightweight; theme rewrites
 //   gemini-3.1-flash-lite  — high-frequency, lightweight/cheap
 //   gemini-3-flash         — general-purpose
 //   gemini-2.5-flash       — previous-gen balanced model, separate quota
@@ -28,11 +30,15 @@ export const GEMINI_MODELS = {
     "gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash",
     "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash",
   ],
-  // Background question rewriting/personalization: cheap model first, it's not user-blocking.
-  rewrite: [
-    "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
-    "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
-  ],
+  // Authoring brand-new bagrut-style questions (questionGen cron). Newest
+  // model first because a wrong question costs more than a skipped batch;
+  // one fallback so a 429 on 3.6 doesn't idle the run. Deliberately short —
+  // older models write weaker questions and the cron retries in 2h anyway.
+  authoring: ["gemini-3.6-flash", "gemini-3.5-flash"],
+  // Background question rewriting/theme personalization (precompute +
+  // homework). Lite models only: it's a rewrite with the math frozen, not
+  // reasoning, and it runs over the whole bank × 10 themes.
+  rewrite: ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   // Background conversation analysis: cheap model first, same reasoning as rewrite.
   analysis: [
     "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
