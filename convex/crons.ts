@@ -27,13 +27,14 @@ crons.interval(
 // arms packetImport.sweepStalePacket, which reschedules itself only while
 // the packet is still solving. No polling cron.
 
-// Grow the question bank. Every 2h Gemini authors a small batch into the
+// Grow the question bank. Every 1h15m Gemini authors a small batch into the
 // thinnest (topic, difficulty) band and the themed-precompute pipeline picks
 // the new rows up. Self-limiting: once every band hits target the run costs
 // one indexed count and stops, so this can stay on indefinitely.
+// (Convex's interval() takes one unit at a time — 75 minutes is 1h15m.)
 crons.interval(
   "generate-questions",
-  { hours: 2 },
+  { minutes: 75 },
   internal.questionGen.generateBatch,
   {},
 );
