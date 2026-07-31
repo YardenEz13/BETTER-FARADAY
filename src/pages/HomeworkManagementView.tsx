@@ -13,12 +13,12 @@ import { SegTabs, ProgressBar, ToastStack, Modal } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import { errorMessage } from "../lib/errors";
-import { formatDateHe as formatDate } from "../lib/dates";
+import { formatDateHe as formatDate, toDateTimeLocal } from "../lib/dates";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
   Loader as Loader2, Zap, Scissors, User, BarChart2,
-  Edit, Trash2, Send, Package, ChevronLeft, ArrowRight,
+  Edit, Trash2, Send, Package, ChevronLeft, ArrowRight, RotateCcw,
 } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
 
@@ -47,6 +47,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const deleteHomework = useMutation(api.homework.deleteHomework);
   const cancelScheduled = useMutation(api.homework.cancelScheduled);
   const deletePdfAssignment = useMutation(api.pdfAssignments.deleteAssignment);
+  const duplicateHomework = useMutation(api.homework.duplicateHomework);
 
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Selection>(null);
@@ -55,6 +56,9 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const [showCropBuilder, setShowCropBuilder] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; message: string; confirmLabel: string; tone: "danger" | "primary"; onConfirm: () => void } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // "שלח שוב" needs a new deadline, so it gets its own dialog rather than the
+  // yes/no confirm one. Holds the row being re-sent + the picked deadline.
+  const [resend, setResend] = useState<{ id: Id<"homework">; title: string; deadline: string } | null>(null);
 
   const packetInputRef = useRef<HTMLInputElement>(null);
   const { ingest: ingestPacket, busy: packetBusy, error: packetError } = usePacketIngest(classroomId);
@@ -163,6 +167,30 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       }, "מחיקת המטלה נכשלה. נסו שוב."),
     });
 
+  // Re-send a homework that already ran: same questions (a pinned חוברת comes
+  // along untouched), new deadline. Defaults to a week out — the common case is
+  // "nobody submitted, give them another go".
+  const handleResend = (id: Id<"homework">, title: string) =>
+    setResend({ id, title, deadline: toDateTimeLocal(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+
+  const submitResend = async () => {
+    if (!resend) return;
+    const deadline = new Date(resend.deadline).getTime();
+    if (!Number.isFinite(deadline)) {
+      setErrorMsg("תאריך לא תקין.");
+      setTimeout(() => setErrorMsg(null), 3500);
+      return;
+    }
+    try {
+      await duplicateHomework({ homeworkId: resend.id, deadline });
+    } catch (e) {
+      setErrorMsg(errorMessage(e, "שליחת המטלה מחדש נכשלה. נסו שוב."));
+      setTimeout(() => setErrorMsg(null), 3500);
+    } finally {
+      setResend(null);
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row w-full h-full gap-4 lg:gap-6 p-4 lg:p-6 overflow-y-auto lg:overflow-hidden" dir="rtl">
       {/* ══════════ LEFT: list ══════════ */}
@@ -187,7 +215,10 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                <div className="absolute z-40 mt-2 end-0 w-64 rounded-2xl border-2 border-outline bg-surface overflow-hidden shadow-(--shadow-clay)">
+                {/* start-0, not end-0: in RTL `end` is the left edge, which pinned
+                    the menu's left side to the button and let its 16rem width run
+                    off the right of a phone screen. */}
+                <div className="absolute z-40 mt-2 start-0 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border-2 border-outline bg-surface overflow-hidden shadow-(--shadow-clay)">
                   <MenuItem Icon={FileText} title="מטלה אדפטיבית" subtitle="שאלות מותאמות לכל תלמיד" onClick={() => { setMenuOpen(false); navigate("/teacher/homework/new"); }} />
                   <MenuItem Icon={Scissors} title="מטלת PDF אישית" subtitle="חיתוך שאלות לתלמיד יחיד" onClick={() => { setMenuOpen(false); setShowPdfBuilder(true); }} />
                   <MenuItem Icon={Package} title="ייבוא חוברת בחיתוך ידני" subtitle="חוברת שלמה, סימון שאלות בעצמכם" onClick={() => { setMenuOpen(false); setShowCropBuilder(true); }} />
@@ -248,6 +279,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
                 onDelete={it.kind === "hw" ? () => handleDelete(it.id) : it.kind === "pdf" ? () => handleDeletePdf(it.id) : undefined}
                 onClose={it.kind === "hw" ? () => handleClose(it.id) : undefined}
                 onCancelSchedule={it.kind === "hw" ? () => handleCancelSchedule(it.id) : undefined}
+                onResend={it.kind === "hw" ? () => handleResend(it.id, it.title) : undefined}
               />
             </motion.div>
           ))}
@@ -295,6 +327,37 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       {showCropBuilder && classroomId && (
         <PacketCropBuilder classroomId={classroomId} onClose={() => setShowCropBuilder(false)} />
       )}
+
+      {/* Re-send dialog — the one action that needs an input, not just a yes/no */}
+      <Modal
+        open={!!resend}
+        onClose={() => setResend(null)}
+        title="שליחת המטלה שוב"
+        tone="primary"
+        maxWidth={416}
+        footer={
+          <>
+            <button className="btn-clay-ghost flex-1 !py-2.5" onClick={() => setResend(null)}>ביטול</button>
+            <button className="btn-clay-primary flex-1 !py-2.5" onClick={submitResend}>
+              <RotateCcw size={16} /> שלח שוב
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-on-surface-variant mb-4">
+          ״{resend?.title}״ תישלח שוב לאותם תלמידים, עם אותן שאלות בדיוק. המטלה הקודמת נשארת כמו שהיא.
+        </p>
+        <label className="block text-sm font-semibold text-on-surface mb-1.5" htmlFor="resend-deadline">
+          מועד הגשה חדש
+        </label>
+        <input
+          id="resend-deadline"
+          type="datetime-local"
+          value={resend?.deadline ?? ""}
+          onChange={(e) => setResend((r) => (r ? { ...r, deadline: e.target.value } : r))}
+          className="w-full rounded-xl border-2 border-outline bg-surface px-3 py-2.5 text-sm text-on-surface"
+        />
+      </Modal>
 
       {/* Confirm dialog */}
       <Modal
@@ -369,10 +432,10 @@ function statusChip(it: RowItem): { label: string; color: string } {
   return { label: running ? "בעיבוד" : it.status, color: "var(--color-tertiary)" };
 }
 
-function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onClose, onCancelSchedule }: {
+function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onClose, onCancelSchedule, onResend }: {
   it: RowItem; selected: boolean; onOpen: () => void;
   onEdit?: () => void; onPublish?: () => void; onDelete?: () => void; onClose?: () => void;
-  onCancelSchedule?: () => void;
+  onCancelSchedule?: () => void; onResend?: () => void;
 }) {
   const chip = statusChip(it);
   const RowIcon = it.kind === "hw" ? FileText : it.kind === "pdf" ? Scissors : Package;
@@ -381,6 +444,9 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
   const isDraft = it.kind === "hw" && it.status === "draft";
   const isScheduled = it.kind === "hw" && it.status === "scheduled";
   const isActiveHw = it.kind === "hw" && it.status === "active";
+  // Re-send applies to any homework that actually went out — active or closed.
+  // Drafts/scheduled have never reached a student, so "שוב" makes no sense.
+  const canResend = it.kind === "hw" && (it.status === "active" || it.status === "closed");
   // PDF assignments have no draft stage — they go live on upload, so delete is
   // the only lifecycle action and it stays available for the whole life of the row.
   const isPdf = it.kind === "pdf";
@@ -416,7 +482,7 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
       </div>
 
       {/* Row actions */}
-      {(isDraft || isScheduled || isActiveHw || isPdf) && (
+      {(isDraft || isScheduled || isActiveHw || isPdf || canResend) && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t-2 border-outline">
           {isScheduled && (
             <button onClick={(e) => { e.stopPropagation(); onCancelSchedule?.(); }}
@@ -442,6 +508,13 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
                 <Trash2 size={14} /> מחק
               </button>
             </>
+          )}
+          {canResend && (
+            <button onClick={(e) => { e.stopPropagation(); onResend?.(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
+              style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}>
+              <RotateCcw size={14} /> שלח שוב
+            </button>
           )}
           {isActiveHw && (
             <button onClick={(e) => { e.stopPropagation(); onClose?.(); }}

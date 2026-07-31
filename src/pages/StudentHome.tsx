@@ -521,7 +521,7 @@ function TitlePill({ title }: { title: { text: string; icon: string; price: numb
   const isLegendary = tier === "legendary";
   return (
     <span
-      className="inline-flex items-center gap-1 self-start rounded-full ps-1.5 pe-2 py-0.5"
+      className="inline-flex items-center gap-1 self-start max-w-full min-w-0 rounded-full ps-1.5 pe-2 py-0.5"
       style={{
         background: `color-mix(in srgb, ${style.accent} 14%, transparent)`,
         border: `1.5px solid color-mix(in srgb, ${style.accent} 42%, transparent)`,
@@ -531,7 +531,7 @@ function TitlePill({ title }: { title: { text: string; icon: string; price: numb
         <path d={iconPath(isLegendary ? "crown" : title.icon)} />
       </svg>
       <span
-        className="text-[10px] font-extrabold leading-tight"
+        className="text-[10px] font-extrabold leading-tight truncate"
         style={
           isLegendary
             ? { background: style.textGradient, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }
@@ -779,7 +779,7 @@ export default function StudentHome() {
               entry is the "נושא" tab in the bottom nav, so tapping your profile no
               longer surprise-opens a sheet that blacks out the header. */}
           <button
-            className="flex items-center gap-2 md:gap-2.5 bg-surface-container px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
+            className="flex items-center gap-2 md:gap-2.5 min-w-0 bg-surface-container px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
             onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
@@ -790,10 +790,12 @@ export default function StudentHome() {
                 </div>
               )}
             </div>
-            <div>
-              <div className="font-semibold text-sm text-on-surface leading-tight">{student.name}</div>
+            {/* min-w-0 or the title pill can't shrink and spills out of the button,
+                landing on top of the streak chip beside it on a phone. */}
+            <div className="min-w-0">
+              <div className="font-semibold text-sm text-on-surface leading-tight truncate">{student.name}</div>
               {/* Equipped shop title — a rarity pill; the whole point of buying one is being seen */}
-              {equippedTitle && <div className="mt-0.5"><TitlePill title={equippedTitle} /></div>}
+              {equippedTitle && <div className="mt-0.5 min-w-0"><TitlePill title={equippedTitle} /></div>}
               {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
               {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
               {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
@@ -833,7 +835,7 @@ export default function StudentHome() {
         {/* Right: actions */}
         <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
           {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
-          <div className="flex md:hidden items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
+          <div className="flex md:hidden flex-shrink-0 items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
             <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>

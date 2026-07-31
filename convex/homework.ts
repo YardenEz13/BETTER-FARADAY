@@ -112,6 +112,40 @@ export const publishHomework = mutation({
   },
 });
 
+// ── Teacher: re-issue a homework that already ran (same content, new deadline) ──
+// Copies the row as-is — crucially including pinnedQuestionIds/pinnedCompoundIds,
+// so a חוברת the teacher built by hand is handed out again exactly as it was
+// rather than re-generated — then fans out a fresh set of assignedQuestions.
+// The original row is left untouched: it stays the record of the first round.
+// Drafts/scheduled rows are excluded — they haven't been given out yet, so
+// "again" is meaningless and publishHomework is the right call for those.
+export const duplicateHomework = mutation({
+  args: { homeworkId: v.id("homework"), deadline: v.number() },
+  handler: async (ctx, { homeworkId, deadline }) => {
+    const hw = await ctx.db.get(homeworkId);
+    if (!hw) throw new Error("Homework not found");
+    if (hw.status === "draft" || hw.status === "scheduled") {
+      throw new Error("מטלה שטרם פורסמה — יש לפרסם אותה, לא לשלוח שוב");
+    }
+
+    const newId = await ctx.db.insert("homework", {
+      classroomId: hw.classroomId,
+      title: hw.title,
+      topicIds: hw.topicIds,
+      teacherNotes: hw.teacherNotes,
+      questionCount: hw.questionCount,
+      createdAt: Date.now(),
+      deadline,
+      status: "active",
+      pinnedQuestionIds: hw.pinnedQuestionIds,
+      pinnedCompoundIds: hw.pinnedCompoundIds,
+      studentIds: hw.studentIds,
+    });
+    await scheduleAssignment(ctx, newId, hw);
+    return newId;
+  },
+});
+
 // ── Teacher: edit a draft (blocked once it's live) ──
 export const updateHomework = mutation({
   args: {

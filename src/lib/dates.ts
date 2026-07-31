@@ -23,6 +23,17 @@ export function formatDateLongHe(ts: number): string {
   return longDateTime.format(ts);
 }
 
+/**
+ * "2026-07-31T14:05" — the value format `<input type="datetime-local">` wants.
+ * Built from local getters on purpose: toISOString() would shift to UTC and the
+ * picker would show the wrong wall-clock hour.
+ */
+export function toDateTimeLocal(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Elapsed time in Hebrew: "45 דק'" under an hour, else "2 שע' 5 דק'". */
 export function formatDurationHe(ms: number): string {
   const mins = Math.round(ms / 60000);

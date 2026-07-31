@@ -96,7 +96,11 @@ export default function FaradayProvider({ children }: { children: React.ReactNod
             onBridgeRequestHandled={() => setBridgeRequested(false)}
             onOpenPlayground={() => setPlaygroundOpen(true)}
           />
-          <MathPlayground isOpen={playgroundOpen} onClose={() => setPlaygroundOpen(false)} />
+          <MathPlayground
+            isOpen={playgroundOpen}
+            onClose={() => setPlaygroundOpen(false)}
+            questionStem={ctx.questionStem}
+          />
         </Suspense>
       )}
     </Ctx.Provider>

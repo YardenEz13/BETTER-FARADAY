@@ -7,14 +7,12 @@ import {
   ArrowRight, ArrowLeft, Check, Calendar, Clock,
   Send, FileText, Loader as Loader2,
 } from "../components/electric";
+import { toDateTimeLocal } from "../lib/dates";
 
 const DAY = 24 * 60 * 60 * 1000;
 
 // datetime-local <-> Date helpers. The picker uses local wall-clock time.
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+const toLocalInput = (d: Date) => toDateTimeLocal(d.getTime());
 function atHour(base: Date, hour: number): Date {
   const d = new Date(base);
   d.setHours(hour, 0, 0, 0);

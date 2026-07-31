@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sigma, PencilLine, BookOpen } from "../electric";
+import { X, Sigma, PencilLine, BookOpen, ChevronDown } from "../electric";
 import FaradayCanvas from "../FaradayCanvas";
+import MathText from "../MathText";
 import Worksheet from "./Worksheet";
 import FormulaDrawer from "./FormulaDrawer";
 import type { MathFieldHandle } from "./MathField";
@@ -9,6 +10,9 @@ import type { MathFieldHandle } from "./MathField";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  /** The question the student is on. The playground covers 86vh of a phone, so
+   *  without this the question it exists to solve is off-screen behind it. */
+  questionStem?: string;
 }
 
 type MobileTab = "work" | "formulas";
@@ -19,9 +23,12 @@ type MobileTab = "work" | "formulas";
  * worksheet and the נוסחאות drawer sit side by side; on mobile a tab switches
  * between them. Lazily imported, so mathlive/nerdamer ride in this chunk only.
  */
-export default function MathPlayground({ isOpen, onClose }: Props) {
+export default function MathPlayground({ isOpen, onClose, questionStem }: Props) {
   const worksheetRef = useRef<MathFieldHandle>(null);
   const [tab, setTab] = useState<MobileTab>("work");
+  // Collapsed by default: the worksheet is what the student came for, and a long
+  // stem would eat the field. One tap re-reads the question without leaving.
+  const [stemOpen, setStemOpen] = useState(false);
 
   const insert = (latex: string) => {
     worksheetRef.current?.insertLatex(latex);
@@ -76,6 +83,33 @@ export default function MathPlayground({ isOpen, onClose }: Props) {
               <X size={20} />
             </button>
           </div>
+
+          {/* The question being solved — collapsible, so it costs one line when shut */}
+          {questionStem && (
+            <div className="px-4 pt-2 relative z-[2] flex-shrink-0">
+              <button
+                onClick={() => setStemOpen((v) => !v)}
+                aria-expanded={stemOpen}
+                className="w-full flex items-center gap-2 rounded-xl border-2 border-outline-variant/60 bg-surface-container-lowest/80 px-3 py-2 text-start"
+              >
+                <ChevronDown
+                  size={16}
+                  className={`text-primary flex-shrink-0 transition-transform ${stemOpen ? "" : "-rotate-90"}`}
+                />
+                <span className="font-label-md text-on-surface-variant flex-shrink-0" style={{ fontSize: "11px" }}>
+                  השאלה
+                </span>
+                {!stemOpen && (
+                  <span className="text-xs text-on-surface truncate min-w-0">{questionStem}</span>
+                )}
+              </button>
+              {stemOpen && (
+                <div className="mt-1.5 max-h-32 overflow-y-auto rounded-xl border-2 border-outline-variant/60 bg-surface-container-lowest/80 px-3 py-2.5 text-sm text-on-surface">
+                  <MathText>{questionStem}</MathText>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Mobile tab switch */}
           <div className="md:hidden px-4 pt-2 relative z-[2]">
