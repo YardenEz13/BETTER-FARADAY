@@ -2,14 +2,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
-import { Id, Doc } from "../../convex/_generated/dataModel";
-import QuestionImportModal from "../components/QuestionImportModal";
-import MathText from "../components/MathText";
+import { Id } from "../../convex/_generated/dataModel";
 import {
-  ArrowRight, ArrowLeft, Check, Sparkles, Calendar, Clock,
-  Send, FileText, Trash2, Loader as Loader2,
+  ArrowRight, ArrowLeft, Check, Calendar, Clock,
+  Send, FileText, Loader as Loader2,
 } from "../components/electric";
-import { errorMessage } from "../lib/errors";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -38,10 +35,6 @@ export default function HomeworkCreateWizard() {
   const classroom = useQuery(api.classroom.getFirstClassroom);
   const classroomId = classroom?._id ?? null;
   const topics = useQuery(api.topics.list);
-  const approvedImports = useQuery(
-    api.teacherImport.listImports,
-    classroomId ? { classroomId, status: "approved" } : "skip"
-  );
   const existing = useQuery(
     api.homework.getHomeworkById,
     homeworkId ? { homeworkId: homeworkId as Id<"homework"> } : "skip"
@@ -50,7 +43,6 @@ export default function HomeworkCreateWizard() {
   const createHomework = useMutation(api.homework.createHomework);
   const updateHomework = useMutation(api.homework.updateHomework);
   const publishHomework = useMutation(api.homework.publishHomework);
-  const discardImport = useMutation(api.teacherImport.discardImport);
 
   // ── Form state ──
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -64,11 +56,9 @@ export default function HomeworkCreateWizard() {
   const [publishAt, setPublishAt] = useState(""); // datetime-local string
   const [scheduleOn, setScheduleOn] = useState(false);
 
-  const [showImportModal, setShowImportModal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [discarding, setDiscarding] = useState<Id<"teacherImportedQuestions"> | null>(null);
 
   // Prefill from the draft once (edit mode).
   useEffect(() => {
@@ -85,42 +75,6 @@ export default function HomeworkCreateWizard() {
 
   const toggleTopic = (id: Id<"topics">) =>
     setSelectedTopics((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-
-  const isImportPinned = (imp: Doc<"teacherImportedQuestions">) =>
-    (!!imp.publishedQuestionId && pinnedQuestionIds.includes(imp.publishedQuestionId)) ||
-    (!!imp.publishedCompoundId && pinnedCompoundIds.includes(imp.publishedCompoundId));
-
-  const togglePinnedImport = (imp: Doc<"teacherImportedQuestions">) => {
-    const qid = imp.publishedQuestionId;
-    const cid = imp.publishedCompoundId;
-    if (qid) setPinnedQuestionIds((p) => (p.includes(qid) ? p.filter((id) => id !== qid) : [...p, qid]));
-    else if (cid) setPinnedCompoundIds((p) => (p.includes(cid) ? p.filter((id) => id !== cid) : [...p, cid]));
-  };
-
-  // Unpin first: leaving a discarded import pinned would publish a question the
-  // teacher just said they didn't want.
-  const discardApprovedImport = async (imp: Doc<"teacherImportedQuestions">) => {
-    if (discarding) return;
-    setDiscarding(imp._id);
-    setErrorMsg(null);
-    try {
-      if (isImportPinned(imp)) togglePinnedImport(imp);
-      await discardImport({ importId: imp._id });
-    } catch (e) {
-      setErrorMsg(errorMessage(e, "הסרת השאלה נכשלה. נסו שוב."));
-    } finally {
-      setDiscarding(null);
-    }
-  };
-
-  const handleImportApproved = (ref: {
-    questionId: Id<"questions"> | null;
-    compoundId: Id<"compoundQuestions"> | null;
-    label: string;
-  }) => {
-    if (ref.questionId) setPinnedQuestionIds((p) => (p.includes(ref.questionId!) ? p : [...p, ref.questionId!]));
-    else if (ref.compoundId) setPinnedCompoundIds((p) => (p.includes(ref.compoundId!) ? p : [...p, ref.compoundId!]));
-  };
 
   const pinnedCount = pinnedQuestionIds.length + pinnedCompoundIds.length;
   const topicNames = useMemo(
@@ -354,81 +308,16 @@ export default function HomeworkCreateWizard() {
               </div>
             </div>
 
-            <div className="border-t-2 border-outline pt-5">
-              <label className="block text-sm font-semibold text-on-surface mb-1">שאלות מהספר (נעיצה ידנית)</label>
-              <p className="text-xs text-on-surface-variant mb-3">
-                שאלות שתייבאו ותסמנו כאן יתווספו לכל תלמיד כמו שהן.
-              </p>
-              {/* Packet-level imports live in ניהול מטלות → "מטלה חדשה" — one entry per flow. */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setShowImportModal(true)}
-                  className="btn-clay-ghost !px-4 !py-2.5 !text-sm"
-                >
-                  <Sparkles size={16} /> ייבא שאלה מתמונה / PDF
-                </button>
-              </div>
-
-              {approvedImports && approvedImports.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {approvedImports.map((imp) => {
-                    const pinned = isImportPinned(imp);
-                    return (
-                      <div
-                        key={imp._id}
-                        className="flex items-center gap-1 rounded-xl border-2 transition-colors"
-                        style={{
-                          background: pinned ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "var(--color-surface)",
-                          borderColor: pinned ? "var(--color-primary)" : "var(--color-outline)",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => togglePinnedImport(imp)}
-                          className="flex flex-1 items-center gap-2.5 px-3 py-2.5 text-start min-w-0"
-                        >
-                          <span
-                            className="w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center"
-                            style={{
-                              background: pinned ? "var(--color-primary)" : "transparent",
-                              borderColor: pinned ? "var(--color-primary)" : "var(--color-outline)",
-                            }}
-                          >
-                            {pinned && <Check size={13} className="text-white" />}
-                          </span>
-                          <span className="flex-1 text-sm text-on-surface truncate min-w-0">
-                            <MathText>{imp.draft?.stem ?? "שאלה מיובאת"}</MathText>
-                          </span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant flex-shrink-0">
-                            {imp.draft?.format === "multiple_choice" ? "אמריקאית" : "השלמה"}
-                          </span>
-                        </button>
-                        {/* Discard hides the import from every future wizard run;
-                            it never deletes an already-published question. */}
-                        <button
-                          type="button"
-                          onClick={() => discardApprovedImport(imp)}
-                          disabled={discarding === imp._id}
-                          aria-label="הסר שאלה מיובאת מהרשימה"
-                          title="הסר מהרשימה"
-                          className="flex-shrink-0 grid place-items-center w-9 h-9 me-1.5 rounded-lg text-on-surface-variant hover:text-error transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-on-surface-variant">אין עדיין שאלות מיובאות מאושרות.</p>
-              )}
-              {pinnedCount > 0 && (
-                <div className="mt-3 text-sm font-semibold text-primary">
+            {pinnedCount > 0 && (
+              <div className="border-t-2 border-outline pt-5">
+                <div className="text-sm font-semibold text-primary">
                   {pinnedCount} שאלות נעוצות יתווספו לכל תלמיד
                 </div>
-              )}
-            </div>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  נעוצות מייבוא חוברת בניהול מטלות. הן נשמרות כמו שהן.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -582,14 +471,6 @@ export default function HomeworkCreateWizard() {
         </div>
       </div>
 
-      {/* Modals */}
-      {showImportModal && classroomId && (
-        <QuestionImportModal
-          classroomId={classroomId}
-          onClose={() => setShowImportModal(false)}
-          onApproved={handleImportApproved}
-        />
-      )}
     </div>
   );
 }

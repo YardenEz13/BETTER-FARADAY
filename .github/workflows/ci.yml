@@ -1,28 +1,27 @@
-# CI: lint, typecheck+build, unit tests.
-# No deploys from CI — Vercel builds the frontend on push; Convex prod deploys
-# stay manual (`npx convex deploy`) until a CONVEX_DEPLOY_KEY story is decided.
+# CI: lint, typecheck+build, unit tests — then deploy Convex on master.
+#
+# One `checks` job, not three: the old split ran `npm ci` three times for three
+# short steps, which cost more minutes than it saved in parallelism.
+#
+# e2e is deliberately NOT here. It needs a live Convex backend plus seeded
+# fixtures (see playwright.config.ts); running it per-PR means a deploy key and
+# concurrent writes to a shared deployment. Run `npm run test:e2e` locally.
 name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, green-torch]
   pull_request:
-    branches: [master]
+    branches: [master, green-torch]
+
+# A second push to the same branch cancels the first — no point burning
+# minutes on a commit that is already superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx eslint .
-      - run: node scripts/design-lint.mjs
-
-  build:
+  checks:
     runs-on: ubuntu-latest
     env:
       # Read at runtime by the client, but set a placeholder so bundle-time
@@ -35,10 +34,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint # eslint + design-lint
       - run: npm run build # tsc -b && vite build — covers typecheck
+      - run: npx vitest run --project unit
 
-  test-unit:
+  # The CD half. Convex prod deploys were manual, which meant a green master
+  # could sit undeployed for days — schema changes and cron edits silently not
+  # live. This closes that gap. Frontend still deploys via Vercel's own hook.
+  deploy-convex:
+    needs: checks
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,4 +53,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vitest run --project unit
+      - name: Deploy to Convex prod
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::warning::CONVEX_DEPLOY_KEY is not set — skipping deploy. Add it in Settings → Secrets and variables → Actions (generate one in the Convex dashboard → Settings → Deploy keys)."
+            exit 0
+          fi
+          npx convex deploy -y
