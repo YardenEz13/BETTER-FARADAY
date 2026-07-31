@@ -23,9 +23,7 @@ const XpShop             = lazy(() => import("./pages/XpShop"));
 const ReviewDeck         = lazy(() => import("./pages/ReviewDeck"));
 const Leaderboard        = lazy(() => import("./pages/Leaderboard"));
 const ExamMode           = lazy(() => import("./pages/ExamMode"));
-const DesignGallery      = import.meta.env.DEV ? lazy(() => import("./pages/DesignGallery")) : null; // dev-only styleguide
 const MobileBridgeUpload = lazy(() => import("./pages/MobileBridgeUpload"));
-const ParentReport       = lazy(() => import("./pages/ParentReport"));
 const PacketReviewPage   = lazy(() => import("./pages/PacketReviewPage"));
 const HomeworkCreateWizard = lazy(() => import("./pages/HomeworkCreateWizard"));
 const Legal              = lazy(() => import("./pages/Legal"));
@@ -79,9 +77,7 @@ function AnimatedRoutes() {
             <Route path="/teacher/homework/new" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/homework/:homeworkId/edit" element={<HomeworkCreateWizard />} />
             <Route path="/teacher/packet/:packetId" element={<PacketReviewPage />} />
-            {DesignGallery && <Route path="/design" element={<DesignGallery />} />}
             <Route path="/bridge/:token" element={<MobileBridgeUpload />} />
-            <Route path="/parent/:token" element={<ParentReport />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

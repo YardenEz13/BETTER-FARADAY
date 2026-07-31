@@ -72,8 +72,9 @@ export const seed = internalMutation({
 });
 
 // ── Load-test roster: N extra students in the E2E classroom ──
-// The k6 live-write scenario (loadtest/convex_live_write.js) answers as these
-// students. Idempotent by name. `npx convex run seedE2E:seedLoadStudents [--prod]`
+// Fixture roster for whatever load-test scenario gets written before the
+// pilot (the old k6 suite was deleted as unused — see docs/deploy.md).
+// Idempotent by name. `npx convex run seedE2E:seedLoadStudents [--prod]`
 export const LOAD_STUDENT_PREFIX = "לוד-טסט";
 const LOAD_STUDENT_COUNT = 50;
 

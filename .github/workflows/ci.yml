@@ -1,4 +1,4 @@
-# CI: lint, typecheck+build, unit tests, storybook browser tests.
+# CI: lint, typecheck+build, unit tests.
 # No deploys from CI — Vercel builds the frontend on push; Convex prod deploys
 # stay manual (`npx convex deploy`) until a CONVEX_DEPLOY_KEY story is decided.
 name: CI
@@ -47,16 +47,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx vitest run --project unit
-
-  # Separate job so a flaky browser run doesn't block the unit signal.
-  test-storybook:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx vitest run --project storybook
