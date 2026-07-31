@@ -116,7 +116,7 @@ export const purgeStudent = internalMutation({
 
     const purgeByStudentIndex = async (
       table: "attempts" | "hintRequests" | "sessions" | "sessionBriefs" | "studentPowerMap"
-        | "examAttempts" | "assignedQuestions" | "levelSuggestions" | "parentLinks"
+        | "examAttempts" | "assignedQuestions" | "levelSuggestions"
         | "xpEvents" | "notificationReads" | "purchases",
     ) => {
       const rows = await ctx.db
@@ -129,7 +129,7 @@ export const purgeStudent = internalMutation({
 
     for (const table of [
       "attempts", "hintRequests", "sessions", "sessionBriefs", "studentPowerMap",
-      "examAttempts", "assignedQuestions", "levelSuggestions", "parentLinks",
+      "examAttempts", "assignedQuestions", "levelSuggestions",
       "xpEvents", "notificationReads", "purchases",
     ] as const) {
       await purgeByStudentIndex(table);

@@ -36,12 +36,12 @@ npx convex deploy -y        # pushes convex/ to the prod deployment
 - Send a tutor message → teacher dashboard "קריאות Gemini היום" KPI increments
 - Uptime workflow: run manually via Actions → Uptime → Run workflow
 
-## Load testing (see loadtest/README.md)
+## Load testing
 
-Run reads + the live-write scenario against prod **before onboarding real
-users** (the write scenario refuses prod targets unless `I_KNOW_THIS_IS_PROD=1`).
-Seed the load-test fixtures first: `npx convex run seedE2E:seed --prod`,
-then clean up the "כיתת בדיקות E2E" classroom afterwards from the dashboard.
+The k6 suite was removed — it was 439 lines maintained for a single
+pre-pilot rehearsal. Write the scenario you actually need the week you need
+it. Fixtures still exist: `npx convex run seedE2E:seed --prod`, then clean up
+the "כיתת בדיקות E2E" classroom afterwards from the dashboard.
 
 ## Notes
 

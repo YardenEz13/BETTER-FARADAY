@@ -156,12 +156,14 @@ keep in week 1, the pilot does not get renewed.
 1. CSV roster import. `classroom.addStudent` adds one student at a time —
    unusable for a class of 35 on day one.
 2. Walk the full teacher path start to finish as a teacher would: roster →
-   assign homework → watch the command center → read a session brief → issue
-   a parent link. Fix whatever breaks the narrative.
+   assign homework → watch the command center → read a session brief. Fix
+   whatever breaks the narrative.
 3. Confirm the weekly digest cron (`digest.generateAllDigests`, Sundays
    04:00 UTC) produces something a teacher would actually read.
-4. Verify parent links behave: 90-day TTL, revocable, and
-   `getParentReport` leaks no other student's data.
+
+Parent reports were removed (they were blocked on consent anyway). If the
+pilot wants them back, they return as a capability-URL feature built on top
+of a signed consent record, not before one.
 
 ---
 
@@ -173,9 +175,9 @@ email, but there is no student purge anywhere — only
 committed in writing to a capability the code cannot perform.
 
 **Do:**
-1. Add a cascading `students.purgeStudent`: attempts, sessions, aiChats,
-   aiMessages, sessionBriefs, studentPowerMap, hintRequests, parentLinks,
-   xpEvents.
+1. ~~Add a cascading student purge~~ — done: `classroom.purgeStudent` cascades
+   attempts, sessions, aiChats/aiMessages, sessionBriefs, studentPowerMap,
+   hintRequests, xpEvents, PDF work and file storage.
 2. Confirm chat retention actually runs — abandoned chats close hourly via
    `ai.processAbandonedChats`, but transcripts persist indefinitely.
 3. **Start the parental consent paperwork now, in parallel with Step 1.**
@@ -191,10 +193,9 @@ committed in writing to a capability the code cannot perform.
 ## Step 9 — Dress rehearsal
 
 **Do:**
-1. Load-test the write path. `loadtest/README.md` deliberately excludes
-   mutations, but live-class writes are exactly what breaks when 30 students
-   answer simultaneously. Use `convex_live_write.js` against prod with the
-   documented guard, then clean up the E2E classroom.
+1. Load-test the write path. Live-class writes are what break when 30 students
+   answer simultaneously. The old k6 suite was deleted as unused — write the
+   one scenario you need against prod, then clean up the E2E classroom.
 2. Full rehearsal with 5–10 real students for one lesson, on school devices
    and school wifi, one to two weeks before the pilot. Every remaining
    assumption fails here rather than in front of the class.
