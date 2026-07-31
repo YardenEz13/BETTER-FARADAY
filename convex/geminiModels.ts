@@ -6,14 +6,22 @@
 // in a chain means more total free requests/day before we're fully rate
 // limited, not just a quality fallback.
 //
-//   gemini-3.6-flash       — newest; authoring new questions only
-//   gemini-3.5-flash       — balanced, multimodal, best default quality
-//   gemini-3.5-flash-lite  — newest lightweight; theme rewrites
-//   gemini-3.1-flash-lite  — high-frequency, lightweight/cheap
-//   gemini-3-flash         — general-purpose
-//   gemini-2.5-flash       — previous-gen balanced model, separate quota
-//   gemini-2.5-flash-lite  — previous-gen lightweight model, separate quota
-//   gemini-2.0-flash       — older-gen fallback, separate quota
+// Free-tier quota per model (RPM/RPD limits — Google AI Studio, checked
+// 2026-07-31). gemini-2.0-flash is gone from the account's model list, so it
+// was dropped from every chain below.
+//
+//   gemini-3.6-flash       — newest; RPM 5, RPD 20  — authoring new questions only
+//   gemini-3.5-flash       — balanced, multimodal, best default quality; RPM 5, RPD 20
+//   gemini-3.5-flash-lite  — newest lightweight; RPM 15, RPD 500 — theme rewrites
+//   gemini-3.1-flash-lite  — RPM 15, RPD 500 — high-frequency, lightweight/cheap
+//   gemini-3-flash         — general-purpose; RPM 5, RPD 20
+//   gemini-2.5-flash       — previous-gen balanced model; RPM 5, RPD 20, separate quota
+//   gemini-2.5-flash-lite  — previous-gen lightweight model; RPM 10, RPD 20, separate quota
+//
+// The two *-flash-lite models carry ~25x the daily quota of every other
+// model here, so any high-volume task (chat, rewrite, analysis) leads with
+// one of them for throughput; quality-first tasks (grading, vision) still
+// lead with a heavier model and fall back to the lite pair last.
 
 export const GEMINI_MODELS = {
   // User-facing tutor chat: highest request volume of any task (every student
@@ -23,12 +31,12 @@ export const GEMINI_MODELS = {
   // only, for when lite itself is rate-limited.
   chat: [
     "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
-    "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
+    "gemini-2.5-flash-lite", "gemini-2.5-flash",
   ],
   // Proof-step grading: correctness matters most, lite/older models last.
   grading: [
     "gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash",
-    "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+    "gemini-3.1-flash-lite", "gemini-2.5-flash-lite",
   ],
   // Authoring brand-new bagrut-style questions (questionGen cron). Newest
   // model first because a wrong question costs more than a skipped batch;
@@ -42,14 +50,14 @@ export const GEMINI_MODELS = {
   // Background conversation analysis: cheap model first, same reasoning as rewrite.
   analysis: [
     "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash",
-    "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash",
+    "gemini-2.5-flash-lite", "gemini-2.5-flash",
   ],
   // Notebook-photo / question-image reading: needs real multimodal reasoning to
   // read messy handwriting reliably, so quality first like grading. Lite models
   // are fallback only if the good ones are rate-limited.
   vision: [
     "gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash",
-    "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+    "gemini-3.1-flash-lite", "gemini-2.5-flash-lite",
   ],
 } as const;
 

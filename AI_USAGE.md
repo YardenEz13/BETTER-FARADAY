@@ -11,14 +11,27 @@ client that proxies every call through Convex to Gemini.
 
 ## Models (fallback order)
 
-Primary chain used across most features:
-1. `gemini-2.5-flash`
-2. `gemini-3.1-flash-lite`
-3. `gemini-2.5-flash-lite`
+Every model has its own free-tier quota bucket (Google AI Studio), so on a 429 a caller moves to
+the next model in its task's chain instead of failing — more models in a chain means more total
+free requests/day. `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite` carry ~25x the daily quota
+(RPD 500 vs. RPD 20) of every other model, so high-volume tasks lead with one of them; quality-
+sensitive tasks lead with a heavier model and only fall back to the lite pair last. Chains are
+defined once in `convex/geminiModels.ts` (`GEMINI_MODELS`):
 
-Proof grading additionally falls back to `gemini-2.0-flash` as a third-tier option. The allowed
-model list is enforced server-side in `convex/http.ts` (`ALLOWED_MODELS`) so the client can never
-request an arbitrary model.
+- **Chat** (tutor, highest volume): `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-3-flash`
+  → `gemini-2.5-flash-lite` → `gemini-2.5-flash`
+- **Grading** (proof steps, correctness-first): `gemini-3.5-flash` → `gemini-3-flash` →
+  `gemini-2.5-flash` → `gemini-3.1-flash-lite` → `gemini-2.5-flash-lite`
+- **Authoring** (new questions, quality over volume): `gemini-3.6-flash` → `gemini-3.5-flash`
+- **Rewrite** (theme personalization, lite-only): `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`
+- **Analysis** (abandoned-chat scoring): same chain as chat
+- **Vision** (notebook/question-image reading): same chain as grading
+
+`localAI.ts`'s client-side chat retry list is a duplicate of `GEMINI_MODELS.chat` and must be kept
+in sync by hand (see comment there). The allowed model list is enforced server-side in
+`convex/http.ts` (`ALLOWED_MODELS` = the union of every chain above), so the client can never
+request an arbitrary model. `gemini-2.0-flash` was dropped from every chain — no longer in the
+account's available models.
 
 ## Where AI is used
 
@@ -50,9 +63,16 @@ request an arbitrary model.
 - **Files:** `convex/ai.ts` → `processAbandonedChats`; `src/services/localAI.ts` → `analyzeConversation()`, `generateCompositeBrief()`
 - **What it does:** Analyzes idle tutor conversations for confusion score, sentiment, engagement, key struggle points, missing knowledge, and a teacher action item. Feeds the Teacher Dashboard (`AIChatAnalyticsView.tsx`, `ChatAnalysisView.tsx` — both are display-only, no direct Gemini calls).
 - **Trigger:** chats idle for one hour (`convex/aiChat.ts`) are auto-processed and closed.
-- **Config:** `gemini-2.5-flash` only, `temperature: 0.2–0.3`, JSON mode. Client-side fallback uses a local heuristic if Gemini fails or exceeds a 15s timeout.
+- **Config:** `GEMINI_MODELS.analysis` chain, `temperature: 0.2–0.3`, JSON mode. Client-side fallback uses a local heuristic if Gemini fails or exceeds a 15s timeout.
 
-### 6. Homework Personalization
+### 6. Question Authoring (questionGen cron)
+- **File:** `convex/questionGen.ts`
+- **What it does:** Writes new bagrut-style questions into the bank. Machine-authored and unreviewed — correctness review is a human job; students report bad ones via `questionReports`.
+- **Trigger:** `convex/crons.ts`, every 75 minutes, uncapped.
+- **Config:** `GEMINI_MODELS.authoring` chain (`gemini-3.6-flash` → `gemini-3.5-flash`, no further fallback), `temperature: 0.9` (variety over determinism), `maxOutputTokens: 8192`, `responseMimeType: application/json`.
+- **Why newest-model-first:** low volume (one run per 75min) and a wrong question costs more than a skipped batch, so it leads with `3.6-flash` despite its tight quota (RPM 5 / RPD 20) — the cron just retries next cycle on a 429 rather than needing a long fallback chain.
+
+### 7. Homework Personalization
 - **Files:** `convex/ai.ts` → `personalizeHomework`; `convex/precompute.ts` → `precomputeThemeBatch`
 - **What it does:** Rewrites question stems with a fun theme (football, Minecraft, Harry Potter, etc.) while preserving LaTeX/structure, in batches per theme.
 - **Config:** `temperature: 0.7`, `maxOutputTokens: 4096`, structured `responseSchema`.
