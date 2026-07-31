@@ -29,8 +29,8 @@ crons.interval(
 
 // Grow the question bank. Every 1h15m Gemini authors a small batch into the
 // thinnest (topic, difficulty) band and the themed-precompute pipeline picks
-// the new rows up. Self-limiting: once every band hits target the run costs
-// one indexed count and stops, so this can stay on indefinitely.
+// the new rows up. Uncapped — no target, it never stops on its own. The only
+// brake is the AI kill-switch and the daily Gemini budget cap (aiGate.ts).
 // (Convex's interval() takes one unit at a time — 75 minutes is 1h15m.)
 crons.interval(
   "generate-questions",
