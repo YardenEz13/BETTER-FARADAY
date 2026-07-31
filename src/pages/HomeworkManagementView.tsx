@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import PdfAssignmentBuilder from "../components/PdfAssignmentBuilder";
 import PacketCropBuilder from "../components/PacketCropBuilder";
@@ -14,6 +15,7 @@ import { useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import { errorMessage } from "../lib/errors";
 import { formatDateHe as formatDate, toDateTimeLocal } from "../lib/dates";
+import { menuLeftFor } from "../lib/menuPosition";
 import {
   FileText, Plus, Clock, XCircle, BookOpen,
   Users, AlertTriangle, CheckCircle as CheckCircle2, CircleIcon as Circle,
@@ -21,6 +23,8 @@ import {
   Edit, Trash2, Send, Package, ChevronLeft, ArrowRight, RotateCcw,
 } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
+
+const MENU_W = 256; // w-64, in px — needed to place the portalled menu by hand
 
 type Bucket = "draft" | "active" | "closed";
 type Filter = "all" | "draft" | "active" | "closed";
@@ -61,6 +65,32 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const [resend, setResend] = useState<{ id: Id<"homework">; title: string; deadline: string } | null>(null);
 
   const packetInputRef = useRef<HTMLInputElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  // Viewport coords for the portalled menu, measured off the button on open.
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+
+  const toggleMenu = () => {
+    if (menuOpen) { setMenuOpen(false); return; }
+    const r = menuBtnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setMenuPos({ top: r.bottom + 8, left: menuLeftFor(r.right, window.innerWidth, MENU_W) });
+    setMenuOpen(true);
+  };
+
+  // The measured position goes stale the moment anything scrolls or resizes, and
+  // a portalled menu has no parent to drift with — so close it rather than let it
+  // hang detached from its button. Capture phase: the scroll happens in an inner
+  // column, which does not bubble.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [menuOpen]);
   const { ingest: ingestPacket, busy: packetBusy, error: packetError } = usePacketIngest(classroomId);
 
   // Run a confirmed mutation: always close the dialog; surface failures. The
@@ -207,24 +237,34 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             </div>
           </div>
 
-          {/* Type picker */}
-          <div className="relative" data-tour="hw-create">
-            <button data-tour-click="hw-create" className="btn-clay-primary !px-5 !py-2.5 !text-sm" onClick={() => setMenuOpen((v) => !v)}>
+          {/* Type picker. The menu is portalled to <body> rather than positioned
+              inside this column: the column is `lg:overflow-y-auto`, and an
+              absolutely-positioned child cannot escape a scrolling ancestor —
+              it was getting sliced off at the column's edge on desktop. */}
+          <div data-tour="hw-create">
+            <button
+              ref={menuBtnRef}
+              data-tour-click="hw-create"
+              className="btn-clay-primary !px-5 !py-2.5 !text-sm"
+              onClick={toggleMenu}
+            >
               <Plus size={18} /> מטלה חדשה
             </button>
-            {menuOpen && (
+            {menuOpen && menuPos && createPortal(
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-                {/* start-0, not end-0: in RTL `end` is the left edge, which pinned
-                    the menu's left side to the button and let its 16rem width run
-                    off the right of a phone screen. */}
-                <div className="absolute z-40 mt-2 start-0 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border-2 border-outline bg-surface overflow-hidden shadow-(--shadow-clay)">
+                <div className="fixed inset-0 z-[120]" onClick={() => setMenuOpen(false)} />
+                <div
+                  className="fixed z-[121] w-64 rounded-2xl border-2 border-outline bg-surface overflow-hidden shadow-(--shadow-clay)"
+                  style={{ top: menuPos.top, left: menuPos.left }}
+                  dir="rtl"
+                >
                   <MenuItem Icon={FileText} title="מטלה אדפטיבית" subtitle="שאלות מותאמות לכל תלמיד" onClick={() => { setMenuOpen(false); navigate("/teacher/homework/new"); }} />
                   <MenuItem Icon={Scissors} title="מטלת PDF אישית" subtitle="חיתוך שאלות לתלמיד יחיד" onClick={() => { setMenuOpen(false); setShowPdfBuilder(true); }} />
                   <MenuItem Icon={Package} title="ייבוא חוברת בחיתוך ידני" subtitle="חוברת שלמה, סימון שאלות בעצמכם" onClick={() => { setMenuOpen(false); setShowCropBuilder(true); }} />
                   <MenuItem Icon={Zap} title="ייבוא חוברת אוטומטי" subtitle="חילוץ שאלות מ-PDF באמצעות AI" onClick={() => { setMenuOpen(false); packetInputRef.current?.click(); }} />
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
         </div>

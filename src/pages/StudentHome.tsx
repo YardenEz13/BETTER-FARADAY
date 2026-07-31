@@ -779,7 +779,11 @@ export default function StudentHome() {
               entry is the "נושא" tab in the bottom nav, so tapping your profile no
               longer surprise-opens a sheet that blacks out the header. */}
           <button
-            className="flex items-center gap-2 md:gap-2.5 min-w-0 bg-surface-container px-2.5 md:px-3 py-1 md:py-1.5 rounded-full border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
+            /* rounded-3xl, not rounded-full: this stacks up to four rows (name,
+               title pill, badges, theme label), and a pill radius is half the
+               height — the curve ate into the corners and the badge row spilled
+               outside the border. A fixed 24px radius clears the content. */
+            className="flex items-center gap-2 md:gap-2.5 min-w-0 bg-surface-container px-2.5 md:px-3 py-1.5 rounded-3xl border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
             onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
