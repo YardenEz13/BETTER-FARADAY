@@ -470,44 +470,6 @@ export default defineSchema({
   }).index("by_student", ["studentId"])
     .index("by_status", ["status"]),
 
-  // ── Feature 2: Teacher-imported questions (staging area for review) ──
-  // A teacher uploads a photo/PDF of a textbook question; Gemini extracts it
-  // into an editable draft. The teacher reviews/edits, then approves — which
-  // publishes a real `questions` (multiple-choice) or `compoundQuestions`
-  // (fill-in-the-blank) row that can be pinned to a homework assignment.
-  teacherImportedQuestions: defineTable({
-    classroomId: v.id("classrooms"),
-    createdAt: v.number(),
-    sourceType: v.string(),                 // "image" | "pdf"
-    sourceName: v.optional(v.string()),     // original filename / teacher label
-    status: v.string(),                     // "extracting" | "review" | "approved" | "failed" | "discarded"
-    errorMessage: v.optional(v.string()),
-
-    // Raw Gemini OCR/vision output, kept so the teacher can re-generate formats
-    // without re-uploading the source image.
-    rawExtractedText: v.optional(v.string()),
-
-    // The structured, teacher-editable question. Shape mirrors `questions` so
-    // publishing an approved multiple-choice draft is a direct insert.
-    draft: v.optional(v.object({
-      format: v.string(),                   // "multiple_choice" | "fill_blank"
-      topicId: v.optional(v.id("topics")),
-      difficulty: v.number(),               // 1-5
-      stem: v.string(),
-      choices: v.array(v.string()),         // MC only (empty array for fill_blank)
-      correctIndex: v.optional(v.number()), // MC
-      correctAnswer: v.optional(v.string()),// fill_blank
-      solutionSteps: v.array(v.string()),
-      hint: v.string(),
-      explanation: v.string(),
-    })),
-
-    // Set on approval so we never double-publish the same import.
-    publishedQuestionId: v.optional(v.id("questions")),
-    publishedCompoundId: v.optional(v.id("compoundQuestions")),
-  }).index("by_classroom", ["classroomId"])
-    .index("by_classroom_status", ["classroomId", "status"]),
-
   // ── PDF personal assignments (single-student, image-per-question) ──
   // A teacher uploads a multi-page PDF (e.g. a summer workbook), crops each
   // question out as an image, and types the correct answer. The whole PDF is

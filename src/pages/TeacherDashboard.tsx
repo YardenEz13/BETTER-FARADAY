@@ -11,7 +11,6 @@ import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
   Zap, GraduationCap, ElectricBolt, Trophy, Sparkles,
-  Inductor, TrendingUp, ArrowDown,
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
@@ -19,7 +18,6 @@ import { HomeworkManagementView } from "./HomeworkManagementView";
 import LiveClassPanel from "../components/LiveClassPanel";
 import AiReactorPanel from "../components/AiReactorPanel";
 import MathText from "../components/MathText";
-import { StudentPowerMapView } from "./StudentPowerMapView";
 import { ClayButton, ProgressBar, SegTabs, Skeleton, SkeletonCard, ToastStack, useToasts } from "../components/ui";
 import FaradayCanvas from "../components/FaradayCanvas";
 import FaradayTour, { type TourStep } from "../components/FaradayTour";
@@ -31,9 +29,9 @@ import {
   Avatar, Sparkline, Radar, Gauge, MiniRing,
 } from "../components/commandCenter";
 
-type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework" | "profile";
+type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework";
 type Sort = "risk" | "acc" | "name";
-type MasteryMode = "grid" | "radar" | "power";
+type MasteryMode = "grid" | "radar";
 
 const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
   { id: "triage", label: "לוח מיון", short: "מיון", Icon: Users },
@@ -130,7 +128,6 @@ export default function TeacherDashboard() {
   const [sort, setSort] = useState<Sort>("risk");
   const [onlyRisk, setOnlyRisk] = useState(false);
   const [sel, setSel] = useState<CCStudent | null>(null);
-  const [profileId, setProfileId] = useState<Id<"students"> | null>(null);
   const { toasts, push, dismiss } = useToasts(2600);
   const [liveOpen, setLiveOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -223,7 +220,7 @@ export default function TeacherDashboard() {
           <SegTabs
             label="ניווט לוח המורה"
             tabs={NAV.map((tab) => ({ id: tab.id, icon: <tab.Icon size={16} />, label: tab.label }))}
-            value={view === "profile" ? "triage" : view}
+            value={view}
             onChange={setView}
           />
         </nav>
@@ -268,7 +265,6 @@ export default function TeacherDashboard() {
               {view === "mastery" && (
                 <MasteryView
                   data={data}
-                  classroomId={classroom?._id ?? null}
                   masteryView={masteryView} setMasteryView={setMasteryView}
                   sort={sort} setSort={setSort}
                   onlyRisk={onlyRisk} setOnlyRisk={setOnlyRisk}
@@ -278,11 +274,6 @@ export default function TeacherDashboard() {
               {view === "pulse" && <PulseView data={data} onSelect={setSel} />}
               {view === "aiChats" && <div className="-mx-4 md:-mx-6"><AIChatAnalyticsView analytics={aiAnalytics} /></div>}
               {view === "homework" && <div className="-mx-4 md:-mx-6"><HomeworkManagementView classroomId={classroom?._id ?? null} /></div>}
-              {view === "profile" && profileId && (
-                <div className="-mx-4 md:-mx-6">
-                  <StudentPowerMapView studentId={profileId} onBack={() => { setProfileId(null); setView("triage"); }} />
-                </div>
-              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -296,7 +287,6 @@ export default function TeacherDashboard() {
             topics={data.topics}
             isMobile={isMobile}
             onClose={() => setSel(null)}
-            onProfile={() => { setProfileId(selLive.id as Id<"students">); setSel(null); setView("profile"); }}
             fire={fire}
           />
         )}
@@ -319,11 +309,11 @@ export default function TeacherDashboard() {
         style={{ background: "color-mix(in srgb, var(--color-surface) 92%, transparent)", backdropFilter: "blur(14px)", paddingBottom: "calc(6px + env(safe-area-inset-bottom))", boxShadow: "0 -4px 0 0 var(--color-outline)" }}
       >
         {NAV.map((tab) => {
-          const active = view === tab.id || (tab.id === "triage" && view === "profile");
+          const active = view === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => { setProfileId(null); setView(tab.id); }}
+              onClick={() => setView(tab.id)}
               className={`flex flex-col items-center justify-center gap-1 min-w-[56px] flex-1 py-1.5 rounded-xl transition-colors ${active ? "text-primary bg-primary/10" : "text-on-surface-variant"}`}
             >
               <tab.Icon size={21} />
@@ -932,8 +922,8 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
 }
 
 /* ───────────────────────── MASTERY ───────────────────────── */
-function MasteryView({ data, classroomId, masteryView, setMasteryView, sort, setSort, onlyRisk, setOnlyRisk, onSelect }: {
-  data: CommandCenterData; classroomId: Id<"classrooms"> | null;
+function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRisk, setOnlyRisk, onSelect }: {
+  data: CommandCenterData;
   masteryView: MasteryMode; setMasteryView: (v: MasteryMode) => void;
   sort: Sort; setSort: (s: Sort) => void; onlyRisk: boolean; setOnlyRisk: (b: boolean) => void; onSelect: (s: CCStudent) => void;
 }) {
@@ -950,7 +940,6 @@ function MasteryView({ data, classroomId, masteryView, setMasteryView, sort, set
           tabs={[
             { id: "grid", icon: <LayoutGrid size={14} />, label: "מפת חום" },
             { id: "radar", icon: <GraduationCap size={14} />, label: "רדאר" },
-            { id: "power", icon: <Inductor size={14} />, label: "מפת עוצמה" },
           ]}
           value={masteryView}
           onChange={setMasteryView}
@@ -987,9 +976,7 @@ function MasteryView({ data, classroomId, masteryView, setMasteryView, sort, set
         })}
       </div>
 
-      {masteryView === "power" ? (
-        <ClassPowerMap classroomId={classroomId} />
-      ) : masteryView === "grid" ? (
+      {masteryView === "grid" ? (
         <MasteryGrid data={data} students={students} onSelect={onSelect} />
       ) : (
         <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(208px, 1fr))" }}>
@@ -1008,82 +995,6 @@ function MasteryView({ data, classroomId, masteryView, setMasteryView, sort, set
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ───────────────────────── CLASS POWER MAP ─────────────────────────
- * Mastery as the AI tutor sees it. The heat-map/radar modes score students on
- * answer accuracy; this one reads studentPowerMap, which is recomputed from
- * Faraday session briefs — so a student who answers correctly but leans on
- * hints shows up weak here and strong there. Only students who have actually
- * talked to Faraday have a row.
- */
-function ClassPowerMap({ classroomId }: { classroomId: Id<"classrooms"> | null }) {
-  const maps = useQuery(api.powerMap.getClassroomPowerMaps, classroomId ? { classroomId } : "skip");
-
-  if (maps === undefined) {
-    return (
-      <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-        {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} variant="student-card" />)}
-      </div>
-    );
-  }
-  if (maps.length === 0) {
-    return (
-      <div className="clay-card p-8 text-center">
-        <Inductor size={40} glow={0.6} className="mx-auto mb-3 text-on-surface-variant" />
-        <div className="font-display font-extrabold text-[16px] text-on-surface mb-1">אין עדיין מפות עוצמה</div>
-        <p className="text-[13px] text-on-surface-variant m-0">מפת העוצמה נבנית משיחות עם פאראדיי. ברגע שתלמידים יתחילו לשוחח, הנתונים יופיעו כאן.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-      {maps.map((m) => {
-        const ranked = [...m.topicMastery].sort((a, b) => b.masteryScore - a.masteryScore);
-        const best = ranked[0];
-        const worst = ranked.length > 1 ? ranked[ranked.length - 1] : null;
-        const avg = ranked.length
-          ? Math.round(ranked.reduce((s, t) => s + t.masteryScore, 0) / ranked.length)
-          : 0;
-        const col = avg >= 70 ? "var(--color-primary)" : avg >= 40 ? "var(--color-tertiary)" : "var(--color-error)";
-        return (
-          <div key={m._id} className="clay-card p-3.5">
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-[13px] flex-shrink-0"
-                style={{ background: `color-mix(in srgb, ${m.avatarColor ?? col} 20%, var(--color-surface))`, border: `2px solid ${m.avatarColor ?? col}` }}>
-                {m.studentName.charAt(0)}
-              </span>
-              <span className="font-extrabold text-[14px] text-on-surface truncate flex-1 min-w-0">{m.studentName}</span>
-              <span className="num font-extrabold text-[17px] flex-shrink-0" style={{ color: col }}>{avg}%</span>
-            </div>
-            <ProgressBar value={avg} color={col} label={`עוצמה ממוצעת של ${m.studentName}`} className="h-[7px] mb-3" />
-            <div className="flex flex-col gap-1.5 text-[12px]">
-              {best && (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <TrendingUp size={13} className="flex-shrink-0" style={{ color: "var(--color-primary)" }} />
-                  <span className="text-on-surface-variant flex-shrink-0">חזק ב־</span>
-                  <span className="text-on-surface font-bold truncate">{best.topicName}</span>
-                  <span className="num text-on-surface-variant flex-shrink-0">{best.masteryScore}%</span>
-                </div>
-              )}
-              {worst && (
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <ArrowDown size={13} className="flex-shrink-0" style={{ color: "var(--color-error)" }} />
-                  <span className="text-on-surface-variant flex-shrink-0">חלש ב־</span>
-                  <span className="text-on-surface font-bold truncate">{worst.topicName}</span>
-                  <span className="num text-on-surface-variant flex-shrink-0">{worst.masteryScore}%</span>
-                </div>
-              )}
-              <div className="num text-[11px] text-on-surface-variant mt-1">
-                {m.engagement.totalSessions} שיחות · {m.progressVelocity.overall} בשבוע
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -1234,7 +1145,7 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
 }
 
 /* ───────────────────────── DRAWER ───────────────────────── */
-function StudentDrawer({ s, topics, isMobile, onClose, onProfile, fire }: { s: CCStudent; topics: CommandCenterData["topics"]; isMobile: boolean; onClose: () => void; onProfile: () => void; fire: (m: string) => void }) {
+function StudentDrawer({ s, topics, isMobile, onClose, fire }: { s: CCStudent; topics: CommandCenterData["topics"]; isMobile: boolean; onClose: () => void; fire: (m: string) => void }) {
   const c = STATUS[s.status].color;
   return (
     <div className="fixed inset-0 z-[60]">
@@ -1284,7 +1195,6 @@ function StudentDrawer({ s, topics, isMobile, onClose, onProfile, fire }: { s: C
         <div className="flex gap-2 mt-3.5">
           <ClayButton variant="secondary" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`רמז נשלח אל ${s.name}`)}>שלח רמז</ClayButton>
           <ClayButton variant="ghost" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`הודעה נשלחה אל ${s.name}`)}>הודעה</ClayButton>
-          <ClayButton className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={onProfile}>פרופיל מלא</ClayButton>
         </div>
       </motion.div>
     </div>
