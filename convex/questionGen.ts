@@ -28,7 +28,8 @@ const TARGET_PER_BAND = 15;
 const BANDS = [1, 2, 3, 4];
 /** Questions requested per run. Small on purpose: every generated question is
  *  unreviewed until a human reads it, so a trickle keeps the review queue
- *  human-sized. 4/run × 12 runs/day fills the whole bank in about a week. */
+ *  human-sized. 4/run × ~19 runs/day (75-min cron) fills the whole bank in
+ *  under two days. */
 const BATCH_SIZE = 4;
 /** Existing questions shown to the model as style exemplars. */
 const EXEMPLAR_COUNT = 4;
