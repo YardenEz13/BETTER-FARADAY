@@ -58,7 +58,6 @@ import type * as seedTopics from "../seedTopics.js";
 import type * as sessionBriefs from "../sessionBriefs.js";
 import type * as shop from "../shop.js";
 import type * as streaks from "../streaks.js";
-import type * as teacherImport from "../teacherImport.js";
 import type * as topics from "../topics.js";
 import type * as xp from "../xp.js";
 
@@ -119,7 +118,6 @@ declare const fullApi: ApiFromModules<{
   sessionBriefs: typeof sessionBriefs;
   shop: typeof shop;
   streaks: typeof streaks;
-  teacherImport: typeof teacherImport;
   topics: typeof topics;
   xp: typeof xp;
 }>;

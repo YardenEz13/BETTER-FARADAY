@@ -1,4 +1,4 @@
-import { query, internalMutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -181,39 +181,11 @@ export const recomputePowerMap = internalMutation({
   },
 });
 
-// ── Get power map for a single student ──
-export const getStudentPowerMap = query({
-  args: { studentId: v.id("students") },
-  handler: async (ctx, { studentId }) => {
-    return await ctx.db
-      .query("studentPowerMap")
-      .withIndex("by_student", (q) => q.eq("studentId", studentId))
-      .first();
-  },
-});
-
-// ── Get power maps for all students in a classroom ──
-export const getClassroomPowerMaps = query({
-  args: { classroomId: v.id("classrooms") },
-  handler: async (ctx, { classroomId }) => {
-    const students = await ctx.db
-      .query("students")
-      .withIndex("by_classroom", (q) => q.eq("classroomId", classroomId))
-      .collect();
-
-    const maps = [];
-    for (const student of students) {
-      const map = await ctx.db
-        .query("studentPowerMap")
-        .withIndex("by_student", (q) => q.eq("studentId", student._id))
-        .first();
-      if (map) {
-        maps.push({ ...map, studentName: student.name, avatarColor: student.avatarColor });
-      }
-    }
-    return maps;
-  },
-});
+// The read-side queries (getStudentPowerMap / getClassroomPowerMaps) were
+// removed with the power-map views. What remains is the write side: the map
+// is an ENGINE, not a screen — levels.evaluateStudentLevel reads
+// studentPowerMap to decide level-ups and homework.ts reads it to pick
+// mastery-appropriate questions. Add a query back if a screen needs one.
 
 // ── Event-driven recompute (replaces the old 5-minute cron) ──
 // Called after every sessionBrief insert. Debounced per student via the
