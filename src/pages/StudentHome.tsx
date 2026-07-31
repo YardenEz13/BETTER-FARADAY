@@ -777,14 +777,20 @@ export default function StudentHome() {
           {/* Avatar + name. Desktop: opens the homework-theme picker (the pill hints
               "בחר נושא"). Mobile: identity display only — the picker's single mobile
               entry is the "נושא" tab in the bottom nav, so tapping your profile no
-              longer surprise-opens a sheet that blacks out the header. */}
+              longer surprise-opens a sheet that blacks out the header.
+
+              The "desktop extras" below (badges, theme label, center stats) all
+              gate on lg, not md: at md (768px) they used to switch on together
+              and the header didn't have room for them until ~1024px — a 768–900px
+              band where everything wrapped and overlapped. Below lg this stays
+              the identical compact layout it already is below md, just wider. */}
           <button
             /* rounded-3xl, not rounded-full: this stacks up to four rows (name,
                title pill, badges, theme label), and a pill radius is half the
                height — the curve ate into the corners and the badge row spilled
                outside the border. A fixed 24px radius clears the content. */
-            className="flex items-center gap-2 md:gap-2.5 min-w-0 bg-surface-container px-2.5 md:px-3 py-1.5 rounded-3xl border-2 border-outline md:hover:border-primary/50 transition-all md:active:scale-95 md:cursor-pointer cursor-default shadow-(--shadow-clay)"
-            onClick={() => { if (window.matchMedia("(min-width: 768px)").matches) setThemePickerOpen(true); }}
+            className="flex items-center gap-2 lg:gap-2.5 min-w-0 bg-surface-container px-2.5 lg:px-3 py-1.5 rounded-3xl border-2 border-outline lg:hover:border-primary/50 transition-all lg:active:scale-95 lg:cursor-pointer cursor-default shadow-(--shadow-clay)"
+            onClick={() => { if (window.matchMedia("(min-width: 1024px)").matches) setThemePickerOpen(true); }}
           >
             <div className="relative">
               <CyberAvatar name={student.name} size={32} color={student.avatarColor} skin={student.equippedAvatarSkin} />
@@ -800,11 +806,11 @@ export default function StudentHome() {
               <div className="font-semibold text-sm text-on-surface leading-tight truncate">{student.name}</div>
               {/* Equipped shop title — a rarity pill; the whole point of buying one is being seen */}
               {equippedTitle && <div className="mt-0.5 min-w-0"><TitlePill title={equippedTitle} /></div>}
-              {/* Badges stay a desktop detail — on the phone they stacked the pill into a tower */}
-              {ownedBadges && ownedBadges.length > 0 && <div className="hidden md:block"><BadgeChips badges={ownedBadges} /></div>}
-              {/* Mobile shows XP under the name (matches the phone design); desktop keeps the theme label */}
-              <div className="num font-bold text-primary text-[10px] md:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
-              <div className="hidden md:block">
+              {/* Badges stay a desktop detail — below lg they stacked the pill into a tower */}
+              {ownedBadges && ownedBadges.length > 0 && <div className="hidden lg:block"><BadgeChips badges={ownedBadges} /></div>}
+              {/* Compact layout shows XP under the name; full desktop keeps the theme label */}
+              <div className="num font-bold text-primary text-[10px] lg:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
+              <div className="hidden lg:block">
                 {student.homeworkTheme ? (
                   <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
                 ) : (
@@ -816,7 +822,7 @@ export default function StudentHome() {
         </div>
 
         {/* Center: stats */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           <div className="stat-chip">
             <ElectricBolt tone="spark" size={18} glow={0.55} animated={false} />
             <span><CountUpNum value={totalXP} suffix=" XP" /></span>
@@ -837,9 +843,10 @@ export default function StudentHome() {
         </div>
 
         {/* Right: actions */}
-        <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-          {/* Mobile streak chip (matches the phone design — desktop has the center stats) */}
-          <div className="flex md:hidden flex-shrink-0 items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
+        <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
+          {/* Compact streak chip — stands in for the center stats block below lg,
+              same threshold as that block so there's no gap where neither shows. */}
+          <div className="flex lg:hidden flex-shrink-0 items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
             <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
             <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
           </div>
