@@ -1,5 +1,5 @@
 // ── Autonomous question-bank growth ──────────────────────────────────────
-// A cron (every 2h, convex/crons.ts) asks Gemini for new bagrut-style
+// A cron (every 75min, convex/crons.ts) asks Gemini for new bagrut-style
 // questions written in the style of the ones already in the bank, inserts
 // whatever survives validation, then kicks the themed-precompute pipeline so
 // the new rows get personalized variants like every other question.
@@ -8,6 +8,12 @@
 // `questions.getNextQuestion` falls back to repeats once a topic's pool is
 // dry, so a student practising daily sees repeats inside week one. Growth has
 // to happen without a human authoring each question.
+//
+// No target, no stopping point: every run tops up whichever (topic,
+// difficulty) band is currently thinnest, forever. Uncapped by design — the
+// bank should keep growing for as long as the cron runs, not park at a
+// pilot-sized number. The only ceiling is Gemini spend, and that is bounded
+// separately by the AI kill-switch and the daily budget cap (aiGate.ts).
 //
 // What this deliberately does NOT do: prove the answer key is right. Nothing
 // automated can. Generated rows carry `generatedAt` so a reviewer can find
@@ -19,10 +25,6 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
-/** Per (topic, difficulty) target. 15 × 4 bands ≈ 60 per topic — the volume a
- *  daily-practising student can't exhaust in a pilot month. Once every band is
- *  full the cron costs one indexed count and returns. */
-const TARGET_PER_BAND = 15;
 /** Difficulty bands the adaptive engine actually walks. The seeded bank uses
  *  1-4; band 5 exists in the schema but no question or session ever reaches it. */
 const BANDS = [1, 2, 3, 4];
@@ -52,14 +54,13 @@ export type Gap = {
   topicHe: string;
   difficulty: number;
   have: number;
-  want: number;
   exemplars: GeneratedQuestion[];
   existingStems: string[];
 };
 
 type BatchResult = {
   inserted: number;
-  reason: "ok" | "no-api-key" | "ai-disabled" | "bank-full" | "gemini-error"
+  reason: "ok" | "no-api-key" | "ai-disabled" | "no-topics" | "gemini-error"
     | "empty-response" | "bad-json" | "all-rejected";
 };
 
@@ -113,9 +114,11 @@ export function validateGenerated(
 }
 
 /**
- * The emptiest (topic, difficulty) band still under target, plus the style
- * exemplars and the topic's existing stems for dedup. Null once the bank is
- * full — the cron then does nothing but this one read.
+ * The emptiest (topic, difficulty) band across the whole bank, plus the style
+ * exemplars and the topic's existing stems for dedup. No target — this always
+ * returns a band to fill, so the bank keeps growing and stays balanced across
+ * topics/difficulties instead of piling onto whichever one Gemini favors.
+ * Null only when there are no topics yet (a fresh, unseeded deployment).
  */
 export const pickGap = internalQuery({
   args: {},
@@ -131,7 +134,6 @@ export const pickGap = internalQuery({
           .query("questions")
           .withIndex("by_topic_difficulty", (q) => q.eq("topicId", topic._id).eq("difficulty", difficulty))
           .collect();
-        if (rows.length >= TARGET_PER_BAND) continue;
         if (!gap || rows.length < gap.count) {
           gap = { topicId: topic._id, topicHe: topic.nameHe, difficulty, count: rows.length };
         }
@@ -164,7 +166,6 @@ export const pickGap = internalQuery({
       topicHe: gap.topicHe,
       difficulty: gap.difficulty,
       have: gap.count,
-      want: TARGET_PER_BAND,
       exemplars,
       existingStems: topicQuestions.map((q) => q.stem),
     };
@@ -224,9 +225,9 @@ const SYSTEM_PROMPT = `אתה מחבר שאלות מתמטיקה לבגרות י
 
 /**
  * One generation run: find the thinnest band, ask Gemini to fill it, validate,
- * insert. Every exit path is a no-op rather than a throw — this runs on a
- * schedule with nobody watching, and a failed batch just means the next run
- * in two hours tries again.
+ * insert. Runs forever — no target, no stopping point. Every exit path is a
+ * no-op rather than a throw: this runs on a schedule with nobody watching, and
+ * a failed batch just means the next run 75 minutes from now tries again.
  */
 export const generateBatch = internalAction({
   args: {},
@@ -244,8 +245,8 @@ export const generateBatch = internalAction({
 
     const gap: Gap | null = await ctx.runQuery(internal.questionGen.pickGap, {});
     if (!gap) {
-      console.log("[questionGen] Bank is at target for every topic/difficulty. Nothing to do.");
-      return { inserted: 0, reason: "bank-full" };
+      console.log("[questionGen] No topics seeded yet. Nothing to do.");
+      return { inserted: 0, reason: "no-topics" };
     }
 
     const userPrompt = `נושא: ${gap.topicHe}
@@ -318,7 +319,7 @@ ${JSON.stringify(gap.exemplars, null, 2)}
     });
 
     console.log(
-      `[questionGen] ${gap.topicHe} d${gap.difficulty} (${gap.have}/${gap.want}) — ` +
+      `[questionGen] ${gap.topicHe} d${gap.difficulty} (had ${gap.have}) — ` +
       `model ${result.model}, +${inserted} question(s).`,
     );
     return { inserted, reason: "ok" };
