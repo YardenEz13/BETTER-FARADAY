@@ -93,13 +93,27 @@ export const savePrecomputedBatch = internalMutation({
   },
   handler: async (ctx, { results }) => {
     let count = 0;
+    let rejected = 0;
     for (const res of results) {
+      // `res.id` is echoed back by Gemini, so it is model output, not trusted
+      // input: prod contains a row keyed by a 33-character id the model garbled.
+      // Such a row can never match a question, so the pair reads as missing
+      // forever — the pipeline re-requests it every sweep and burns quota on a
+      // rewrite that can never land. Reject anything that does not decode to a
+      // real question rather than writing another unreachable row.
+      const id = ctx.db.normalizeId("questions", res.id)
+        ?? ctx.db.normalizeId("compoundQuestions", res.id);
+      if (!id || !(await ctx.db.get(id))) {
+        rejected++;
+        continue;
+      }
+
       // Ensure we don't insert duplicates if somehow it ran twice
       const existing = await ctx.db
         .query("precomputedThemedQuestions")
         .withIndex("by_question_theme", q => q.eq("questionId", res.id).eq("theme", res.theme))
         .first();
-        
+
       if (!existing) {
         await ctx.db.insert("precomputedThemedQuestions", {
           questionId: res.id,
@@ -108,6 +122,9 @@ export const savePrecomputedBatch = internalMutation({
         });
         count++;
       }
+    }
+    if (rejected > 0) {
+      console.warn(`[savePrecomputedBatch] Dropped ${rejected} result(s) whose id did not resolve to a question.`);
     }
     return count;
   }
@@ -278,12 +295,26 @@ export const purgeOrphanPrecomputations = internalMutation({
       .paginate({ numItems: PURGE_PAGE, cursor });
 
     let orphans = 0;
+    let malformed = 0;
     for (const row of page) {
-      // db.get is the authority here rather than a prefetched id set: ids are
-      // table-scoped, it resolves rows from BOTH question tables, and it cannot
-      // be fooled by an id-formatting mismatch — which matters when the check
-      // is what decides whether to delete.
-      const stillExists = await ctx.db.get(row.questionId as Id<"questions">);
+      // normalizeId, not a bare db.get: questionId is an unvalidated string, and
+      // prod really does contain a 33-char id that Gemini garbled. db.get throws
+      // on an undecodable id ("Invalid ID length 33") rather than returning null,
+      // which would abort the whole purge partway through. normalizeId returns
+      // null instead, and a string that decodes for neither table can never match
+      // a question — so it is an orphan by definition.
+      const asLegacy = ctx.db.normalizeId("questions", row.questionId);
+      const asCompound = ctx.db.normalizeId("compoundQuestions", row.questionId);
+      if (!asLegacy && !asCompound) {
+        malformed++;
+        orphans++;
+        if (!dryRun) await ctx.db.delete(row._id);
+        continue;
+      }
+
+      const stillExists = asLegacy
+        ? await ctx.db.get(asLegacy)
+        : await ctx.db.get(asCompound as Id<"compoundQuestions">);
       if (stillExists) continue;
       orphans++;
       if (!dryRun) await ctx.db.delete(row._id);
@@ -292,6 +323,7 @@ export const purgeOrphanPrecomputations = internalMutation({
     return {
       scanned: page.length,
       orphans,
+      malformed,
       deleted: dryRun ? 0 : orphans,
       dryRun,
       next: isDone ? null : continueCursor,
