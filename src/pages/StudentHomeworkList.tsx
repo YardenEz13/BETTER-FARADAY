@@ -215,12 +215,15 @@ export default function StudentHomeworkList() {
                     <div className="flex-1 p-5 flex flex-col gap-3">
                       {/* Title + badges row */}
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="font-bold text-base text-on-surface group-hover:text-primary transition-colors">
+                        {/* min-w-0 + flex-wrap, matching the PDF card above: the
+                            card is overflow-hidden, so without them a long title
+                            or a wide meta row gets sliced off instead of wrapping. */}
+                        <div className="min-w-0">
+                          <div className="font-bold text-base text-on-surface group-hover:text-primary transition-colors truncate">
                             {hw.title}
                           </div>
                           {/* Meta row */}
-                          <div className="flex gap-4 mt-1.5">
+                          <div className="flex gap-4 mt-1.5 flex-wrap">
                             <span className="text-xs text-on-surface-variant flex items-center gap-1.5">
                               <Zap size={13} className={
                                 isGraded ? 'text-primary'
