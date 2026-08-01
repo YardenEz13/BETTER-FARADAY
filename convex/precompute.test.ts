@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { getMissingPrecomputations } from "./precompute";
+import { getMissingPrecomputations, purgeOrphanPrecomputations } from "./precompute";
 
 // This query used to scan every question x every theme on each run — ~3400
 // document reads against Convex's 4096 ceiling, growing with the bank. It now
@@ -106,5 +106,64 @@ describe("getMissingPrecomputations", () => {
     const ctx = mockCtx({ page: [{ _id: "q1" }, { _id: "q2", stem: "" }], isDone: false });
     const { missing } = await run(ctx);
     expect(missing).toEqual([]);
+  });
+});
+
+// This one deletes rows, so the thing worth pinning down is the blast radius:
+// it must delete exactly the rows whose question is gone, and nothing else.
+describe("purgeOrphanPrecomputations", () => {
+  function mockCtx(rows: Array<{ _id: string; questionId: string }>, liveIds: Set<string>) {
+    const deleted: string[] = [];
+    return {
+      deleted,
+      ctx: {
+        db: {
+          query: vi.fn().mockReturnValue({
+            paginate: vi.fn().mockResolvedValue({ page: rows, isDone: true, continueCursor: "C" }),
+          }),
+          get: vi.fn().mockImplementation(async (id: string) => (liveIds.has(id) ? { _id: id } : null)),
+          delete: vi.fn().mockImplementation(async (id: string) => { deleted.push(id); }),
+        },
+      },
+    };
+  }
+
+  const rows = [
+    { _id: "row-live-1", questionId: "q-live" },
+    { _id: "row-dead-1", questionId: "q-dead" },
+    { _id: "row-live-2", questionId: "cq-live" },
+    { _id: "row-dead-2", questionId: "cq-dead" },
+  ];
+  const live = new Set(["q-live", "cq-live"]);
+
+  it("deletes only rows whose question no longer resolves", async () => {
+    const { ctx, deleted } = mockCtx(rows, live);
+    const res = await (purgeOrphanPrecomputations as any)._handler(ctx, {});
+    expect(deleted).toEqual(["row-dead-1", "row-dead-2"]);
+    expect(res.deleted).toBe(2);
+    expect(res.scanned).toBe(4);
+  });
+
+  it("dryRun reports what it would remove without deleting anything", async () => {
+    const { ctx, deleted } = mockCtx(rows, live);
+    const res = await (purgeOrphanPrecomputations as any)._handler(ctx, { dryRun: true });
+    expect(deleted).toEqual([]);
+    expect(ctx.db.delete).not.toHaveBeenCalled();
+    expect(res.orphans).toBe(2);
+    expect(res.deleted).toBe(0);
+  });
+
+  it("deletes nothing when every question is still live", async () => {
+    const allLive = new Set(["q-live", "q-dead", "cq-live", "cq-dead"]);
+    const { ctx, deleted } = mockCtx(rows, allLive);
+    const res = await (purgeOrphanPrecomputations as any)._handler(ctx, {});
+    expect(deleted).toEqual([]);
+    expect(res.deleted).toBe(0);
+  });
+
+  it("signals completion with a null cursor so the caller stops", async () => {
+    const { ctx } = mockCtx(rows, live);
+    const res = await (purgeOrphanPrecomputations as any)._handler(ctx, {});
+    expect(res.next).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
 
@@ -245,5 +246,55 @@ export const startPrecomputePipeline = internalMutation({
     // No cursor: start the sweep from the first page of `questions`.
     await ctx.scheduler.runAfter(0, internal.precompute.precomputeThemeBatch, {});
     return "Pipeline started!";
+  }
+});
+
+const PURGE_PAGE = 200;
+
+/**
+ * Deletes precomputed rows whose question no longer exists.
+ *
+ * `precomputedThemedQuestions.questionId` is a plain string pointing at either
+ * `questions` or `compoundQuestions`, with no foreign key and no cascade — and
+ * nothing in this codebase deletes questions, so these are leftovers from
+ * deletions done outside the app (dashboard/one-off scripts). They are inert
+ * (getNextQuestion only ever looks a row up BY question id, so an orphan is
+ * never read) but they inflate the table the paged scan above walks.
+ *
+ * Deliberately not a cron: there is no recurring source of orphans to chase.
+ * Run on demand and check the result:
+ *   npx convex run precompute:purgeOrphanPrecomputations '{"dryRun":true}'
+ *   npx convex run precompute:purgeOrphanPrecomputations '{}'
+ * Re-run while `next` is non-null; paged so one call stays under the limits.
+ */
+export const purgeOrphanPrecomputations = internalMutation({
+  args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { cursor = null, dryRun = false }) => {
+    const { page, isDone, continueCursor } = await ctx.db
+      .query("precomputedThemedQuestions")
+      .paginate({ numItems: PURGE_PAGE, cursor });
+
+    let orphans = 0;
+    for (const row of page) {
+      // db.get is the authority here rather than a prefetched id set: ids are
+      // table-scoped, it resolves rows from BOTH question tables, and it cannot
+      // be fooled by an id-formatting mismatch — which matters when the check
+      // is what decides whether to delete.
+      const stillExists = await ctx.db.get(row.questionId as Id<"questions">);
+      if (stillExists) continue;
+      orphans++;
+      if (!dryRun) await ctx.db.delete(row._id);
+    }
+
+    return {
+      scanned: page.length,
+      orphans,
+      deleted: dryRun ? 0 : orphans,
+      dryRun,
+      next: isDone ? null : continueCursor,
+    };
   }
 });
