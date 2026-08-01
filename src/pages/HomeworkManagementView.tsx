@@ -26,6 +26,24 @@ import { ElectricLoader } from "../components/electric/ElectricLoader";
 
 const MENU_W = 256; // w-64, in px — needed to place the portalled menu by hand
 
+/**
+ * A packet is finished when every extracted question has been either approved
+ * (published) or discarded — there is nothing left for the teacher to act on.
+ *
+ * The packet row's own `status` never says this: "review" is a terminal state
+ * in the pipeline (see the transitions in convex/packetImport.ts — nothing ever
+ * moves a packet out of it), so a fully-published packet sat in the list
+ * forever labelled "מוכן לבדיקה" with 12/12 approved. Derived here rather than
+ * added as a new status + backfill, so already-finished packets read correctly
+ * with no migration.
+ */
+function packetDone(it: { approved: number; discarded?: number; total: number }): boolean {
+  // `discarded` is defaulted, not assumed: during a deploy window the frontend
+  // can be newer than the Convex functions, and `approved + undefined` is NaN —
+  // which compares false and would silently keep every packet "open".
+  return it.total > 0 && it.approved + (it.discarded ?? 0) >= it.total;
+}
+
 type Bucket = "draft" | "active" | "closed";
 type Filter = "all" | "draft" | "active" | "closed";
 type Selection = { kind: "hw"; id: Id<"homework"> } | { kind: "pdf"; id: Id<"pdfAssignments"> } | null;
@@ -111,7 +129,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   type Item =
     | { kind: "hw"; id: Id<"homework">; title: string; status: string; dateMs: number; submitted: number; total: number; questionCount: number }
     | { kind: "pdf"; id: Id<"pdfAssignments">; title: string; status: string; dateMs: number; studentName: string; answeredCount: number; partCount: number }
-    | { kind: "packet"; id: Id<"packetImports">; title: string; status: string; dateMs: number; approved: number; total: number };
+    | { kind: "packet"; id: Id<"packetImports">; title: string; status: string; dateMs: number; approved: number; discarded?: number; total: number };
 
   const items: Item[] = [];
   for (const hw of homeworkList ?? []) {
@@ -122,7 +140,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   }
   for (const p of packets ?? []) {
     if (p.status === "cancelled") continue;
-    items.push({ kind: "packet", id: p._id, title: p.sourceName, status: p.status, dateMs: p.createdAt, approved: p.approved, total: p.total });
+    items.push({ kind: "packet", id: p._id, title: p.sourceName, status: p.status, dateMs: p.createdAt, approved: p.approved, discarded: p.discarded, total: p.total });
   }
   items.sort((a, b) => b.dateMs - a.dateMs);
 
@@ -133,7 +151,10 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
       return "closed";
     }
     if (it.kind === "pdf") return it.status === "active" ? "active" : "closed";
-    return "active"; // packets in progress
+    // A packet with every question approved/discarded is done — it belongs in
+    // "סגורות", not sitting in the active list asking to be reviewed again.
+    if (it.status === "failed") return "closed";
+    return packetDone(it) ? "closed" : "active";
   };
 
   const filtered = filter === "all" ? items : items.filter((it) => bucketOf(it) === filter);
@@ -450,7 +471,7 @@ function MenuItem({ Icon, title, subtitle, onClick }: { Icon: typeof FileText; t
 type RowItem =
   | { kind: "hw"; id: Id<"homework">; title: string; status: string; dateMs: number; submitted: number; total: number; questionCount: number }
   | { kind: "pdf"; id: Id<"pdfAssignments">; title: string; status: string; dateMs: number; studentName: string; answeredCount: number; partCount: number }
-  | { kind: "packet"; id: Id<"packetImports">; title: string; status: string; dateMs: number; approved: number; total: number };
+  | { kind: "packet"; id: Id<"packetImports">; title: string; status: string; dateMs: number; approved: number; discarded?: number; total: number };
 
 function statusChip(it: RowItem): { label: string; color: string } {
   if (it.kind === "hw") {
@@ -467,8 +488,11 @@ function statusChip(it: RowItem): { label: string; color: string } {
     : { label: "הושלם", color: "var(--color-on-surface-variant)" };
   // packet
   const running = ["cropping", "inventory", "solving", "verifying"].includes(it.status);
-  if (it.status === "review") return { label: "מוכן לבדיקה", color: "var(--color-primary)" };
   if (it.status === "failed") return { label: "נכשל", color: "var(--color-error)" };
+  // Checked before the "review" case: the pipeline leaves a finished packet in
+  // "review" forever, so status alone would keep calling this ready-to-review.
+  if (packetDone(it)) return { label: "פורסם", color: "var(--color-on-surface-variant)" };
+  if (it.status === "review") return { label: "מוכן לבדיקה", color: "var(--color-primary)" };
   return { label: running ? "בעיבוד" : it.status, color: "var(--color-tertiary)" };
 }
 

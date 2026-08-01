@@ -4,22 +4,76 @@ Target: a real classroom pilot one month out. This plan is ordered by
 execution sequence, not by severity. Each step lists what to do, why it
 matters for the pilot specifically, and where the work lands in the code.
 
-Current baseline (verified 2026-07-25): `npm run build` green, `npm run test`
-green at 162/162, prod Convex deployment `befitting-panther-27` exists,
-rate limiter + AI kill-switch + Sentry + uptime probe + `/legal` all present.
-The gap is content volume, content trust, and operational headroom.
+Current baseline (verified 2026-08-01): `tsc -b` green, `npm run test` green
+at 198/198, prod Convex deployment `befitting-panther-27` exists, rate
+limiter + AI kill-switch + Sentry + uptime probe + `/legal` all present.
+
+Question bank is now **226 legacy questions + 22 compoundQuestions**, up from
+the 100 this plan was written against — but the growth did not come from
+Step 1's recommended engine. Live count against the dev deployment:
+
+| Topic | Q count | Difficulty 1–4 | Difficulty 5 |
+|---|---|---|---|
+| Sequences & Series | 54 | 13/13/13/13 | 2 |
+| Probability | 42 | 10/12/9/9 | 2 |
+| Rational Functions | 42 | 10/10/10/10 | 2 |
+| Trig Functions | 46 | 9/12/12/11 | 2 |
+| Geometry | 42 | 10/11/9/10 | 2 |
+
+Provenance: 150 hand-seeded (`seedBagrut.ts` + `seedGeometry.ts`), 76 from the
+`questionGen` cron (75-minute cadence, unreviewed). Difficulty coverage is
+solid at bands 1–4 (9–13 per topic) but thin everywhere at band 5 (flat
+2/topic, clearly seed-only). `questionReports` is empty — 0 total, which given
+no review discipline has run yet (Step 2) reads as "unused," not "clean."
+
+**The packet pipeline works.** Three runs exist, all of the same PDF
+(`dimutWeb.pdf`): one `failed` at PDF load ("טעינת ה-PDF נכשלה", 39 questions
+inventoried), one `cancelled`, and one crop-mode run that **successfully
+published all 12 of its questions into `compoundQuestions`** — those 12 are
+the bulk of the 22 compound questions in the bank. An earlier revision of this
+doc recorded the pipeline as "0-for-3, never published anything"; that was
+wrong, and the reason it looked that way is itself a bug, now fixed: `review`
+is a terminal status in `packetImport.ts` (nothing ever transitions a packet
+out of it), so a fully-published packet sat in the teacher's list forever
+labelled "מוכן לבדיקה" at 12/12 approved. The UI now derives completion from
+the row statuses and shows "פורסם" / files it under סגורות.
+
+So the honest read is: crop mode is proven end to end, auto mode has one PDF-
+load failure worth diagnosing, and the real gap is **throughput** — only one
+paper has ever been carried to publish.
+
+The gap is now content *trust* and pipeline throughput, not volume — Step 3's
+selection-logic item is also done (see below). Original gap description
+(volume/trust/operational headroom) is superseded by this baseline.
 
 ---
 
 ## Step 1 — Scale the question bank through the packet pipeline
 
-**The problem.** The bank is 100 bagrut-style questions: exactly 20 per topic
-across 5 topics, spread over difficulty 1–4, so roughly 5 per difficulty
-band. `questions.getNextQuestion` excludes recently-attempted IDs but falls
-back to repeats once the pool is dry (`convex/questions.ts:50`). With a
-default daily goal of 5–30 questions, a student exhausts a topic in one or
-two sessions and starts seeing repeats inside week 1. This is the single
-thing most likely to end the pilot early.
+**Status 2026-08-01: still open, and now the top priority.** The bank did
+grow (100 → 226) but via the `questionGen` cron and hand-seeding, not this
+step's engine — see the baseline table above.
+
+The pipeline itself is **not** broken: crop mode carried one paper end to end
+and published 12 questions into `compoundQuestions`. What's missing is
+throughput — exactly one paper has ever reached publish, against this step's
+target of 8–12. The blocker was partly perceptual: a finished packet still
+reads as "מוכן לבדיקה" forever (fixed 2026-08-01), so it was not obvious that
+the run had actually succeeded.
+
+Concrete next actions, in order:
+1. Run the remaining papers through **crop mode**, which is the proven path.
+2. Diagnose the one auto-mode failure ("טעינת ה-PDF נכשלה" on a 24-page PDF
+   after inventorying 39 questions) before relying on auto mode for volume.
+3. Only then judge yield per paper as item 1 below describes.
+
+**The problem (original).** The bank is 100 bagrut-style questions: exactly
+20 per topic across 5 topics, spread over difficulty 1–4, so roughly 5 per
+difficulty band. `questions.getNextQuestion` excludes recently-attempted IDs
+but falls back to repeats once the pool is dry (`convex/questions.ts:50`).
+With a default daily goal of 5–30 questions, a student exhausts a topic in
+one or two sessions and starts seeing repeats inside week 1. This is the
+single thing most likely to end the pilot early.
 
 **The leverage.** Do not hand-author. The packet import pipeline already
 built for this is the scaling engine: `packetImport.ts` (mutations/queries)
@@ -75,11 +129,17 @@ Once the bank is 5–10x larger, the selection logic becomes the constraint
 instead of the inventory.
 
 **Do:**
-1. Widen the no-repeat window in `getNextQuestion` — the current recent-attempt
-   exclusion was tuned against a 20-question topic.
-2. Verify difficulty coverage per topic after import. A topic with 60
-   questions all at difficulty 2 is still a broken adaptive experience; the
-   engine needs real candidates at each band it can escalate to.
+1. ~~Widen the no-repeat window in `getNextQuestion`~~ — done 2026-08-01.
+   Replaced the last-10-attempts window with a permanent per-topic exclusion
+   of every correctly-answered question (wrong answers stay eligible); random
+   selection now widens through difficulty bands before ever repeating a
+   solved question. `convex/questions.test.ts`, 6 cases. Verified live
+   against the dev backend.
+2. Verify difficulty coverage per topic after import. **Partially answered by
+   the baseline table above** — bands 1–4 are solid (9–13/topic), band 5 is
+   thin everywhere (flat 2/topic, seed-only). Fine for now since default
+   escalation starts at difficulty 1, but band 5 needs real content before a
+   strong student can be pushed there for a full session.
 3. Check that the adaptive step actually moves through the enlarged range
    rather than parking students mid-scale.
 4. Confirm exam mode (`exams.startExam`) and the review deck draw from the
@@ -114,6 +174,13 @@ because it looks like the product is broken rather than busy.
 **The problem.** Students will be on phones, on school wifi, behind school
 content filters. Current e2e coverage is one desktop happy-path spec
 (`e2e/student-loop.spec.ts`).
+
+**Early signal.** Real phone screenshots already surfaced and got fixed
+without a formal pass: the teacher "מטלה חדשה" menu was clipped by a
+scrolling ancestor, and the student header had a 768–900px breakpoint cliff
+where desktop-only chrome switched on before there was room for it. Both were
+real, both shipped to prod — this is exactly the class of bug item 2 below is
+meant to catch systematically instead of one screenshot at a time.
 
 **Do:**
 1. Self-host the mathlive fonts. `MathField.tsx:17` pulls them from

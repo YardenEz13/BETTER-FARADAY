@@ -84,6 +84,7 @@ export const listPackets = query({
           createdAt: p.createdAt,
           total: rows.length,
           approved: counts.approved ?? 0,
+          discarded: counts.discarded ?? 0,
           counts,
         };
       }),
