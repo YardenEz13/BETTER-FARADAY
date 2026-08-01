@@ -8,46 +8,76 @@ const THEMES = [
   "הארי פוטר", "מרוצים", "בישול", "ריקוד", "חלל"
 ];
 
-// Returns a batch of up to 10 question-theme pairs that need precomputation
-export const getMissingPrecomputations = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const missing: { questionId: string; theme: string; originalText: string }[] = [];
-    
-    // Fetch all questions
-    const legacyQs = await ctx.db.query("questions").collect();
-    const compoundQs = await ctx.db.query("compoundQuestions").collect();
-    
-    // Check missing themes
-    for (const theme of THEMES) {
-      for (const q of legacyQs) {
-        if (!q.stem) continue;
-        const existing = await ctx.db
-          .query("precomputedThemedQuestions")
-          .withIndex("by_question_theme", qb => qb.eq("questionId", q._id).eq("theme", theme))
-          .first();
-        
-        if (!existing) {
-          missing.push({ questionId: q._id, theme, originalText: q.stem });
-          if (missing.length >= 10) return missing;
-        }
-      }
+// How many questions one run examines. Reads per run are bounded by
+// PAGE * (THEMES.length + 1) — 440 here — regardless of how big the bank gets.
+const PAGE = 40;
+const BATCH = 10; // question-theme pairs handed to Gemini per run
 
-      for (const q of compoundQs) {
-        if (!q.preamble) continue;
+/**
+ * Returns up to BATCH question-theme pairs that still need precomputation,
+ * plus the cursor for where the next run should resume.
+ *
+ * This used to scan the ENTIRE cross-product every run: all questions x all 10
+ * themes, one indexed point lookup per pair. Once the backlog was drained that
+ * was ~3400 document reads to conclude there was nothing to do, against
+ * Convex's 4096-read ceiling — i.e. it was ~300 eligible questions away from
+ * failing outright, and questionGen adds questions uncapped. Now it walks one
+ * bounded page per run and threads a cursor forward through the scheduler, so
+ * cost per run is flat as the bank grows.
+ *
+ * Only the single largest theme group is returned, so the caller still makes
+ * one Gemini call per run rather than up to BATCH one-question calls.
+ */
+export const getMissingPrecomputations = internalQuery({
+  args: {
+    table: v.optional(v.string()),                        // "questions" | "compoundQuestions"
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const onCompound = args.table === "compoundQuestions";
+    const cursor = args.cursor ?? null;
+
+    const result = onCompound
+      ? await ctx.db.query("compoundQuestions").paginate({ numItems: PAGE, cursor })
+      : await ctx.db.query("questions").paginate({ numItems: PAGE, cursor });
+
+    // Group this page's gaps by theme so one run == one theme == one API call.
+    const byTheme = new Map<string, { questionId: string; theme: string; originalText: string }[]>();
+    for (const q of result.page) {
+      const originalText = onCompound
+        ? (q as { preamble?: string }).preamble
+        : (q as { stem?: string }).stem;
+      if (!originalText) continue;
+
+      for (const theme of THEMES) {
         const existing = await ctx.db
           .query("precomputedThemedQuestions")
           .withIndex("by_question_theme", qb => qb.eq("questionId", q._id).eq("theme", theme))
           .first();
-        
-        if (!existing) {
-          missing.push({ questionId: q._id, theme, originalText: q.preamble });
-          if (missing.length >= 10) return missing;
-        }
+        if (existing) continue;
+        const bucket = byTheme.get(theme) ?? [];
+        bucket.push({ questionId: q._id, theme, originalText });
+        byTheme.set(theme, bucket);
       }
     }
-    
-    return missing;
+
+    let missing: { questionId: string; theme: string; originalText: string }[] = [];
+    for (const bucket of byTheme.values()) {
+      if (bucket.length > missing.length) missing = bucket;
+    }
+    missing = missing.slice(0, BATCH);
+
+    // Stay on this page while it still has gaps — the next run re-reads it with
+    // fewer left. Only advance once the page is fully precomputed, so a page is
+    // never half-done and abandoned. questions exhausted -> compoundQuestions;
+    // both exhausted -> next=null, which tells the caller the sweep is complete.
+    const next = missing.length > 0
+      ? { table: onCompound ? "compoundQuestions" : "questions", cursor }
+      : result.isDone
+        ? (onCompound ? null : { table: "compoundQuestions", cursor: null })
+        : { table: onCompound ? "compoundQuestions" : "questions", cursor: result.continueCursor };
+
+    return { missing, next };
   }
 });
 
@@ -84,17 +114,31 @@ export const savePrecomputedBatch = internalMutation({
 
 // The main action that fetches missing pairs, calls Gemini, and schedules the next batch
 export const precomputeThemeBatch = internalAction({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    table: v.optional(v.string()),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn("[precomputeThemeBatch] GEMINI_API_KEY not set. Skipping.");
       return;
     }
 
-    const missing = await ctx.runQuery(internal.precompute.getMissingPrecomputations);
+    const { missing, next } = await ctx.runQuery(
+      internal.precompute.getMissingPrecomputations,
+      { table: args.table, cursor: args.cursor },
+    );
+
+    // Nothing on this page. `next` is what distinguishes "this slice was already
+    // done" from "the whole sweep is done" — only the latter stops the pipeline.
+    // No Gemini call happened, so skip the rate-limit delay and walk on quickly.
     if (missing.length === 0) {
-      console.log("[precomputeThemeBatch] All questions and themes are precomputed!");
+      if (next) {
+        await ctx.scheduler.runAfter(1000, internal.precompute.precomputeThemeBatch, next);
+      } else {
+        console.log("[precomputeThemeBatch] All questions and themes are precomputed!");
+      }
       return;
     }
 
@@ -179,11 +223,12 @@ ${JSON.stringify(inputs, null, 2)}
       console.log(`[precomputeThemeBatch] Saved ${savedCount} precomputed variations.`);
     }
 
-    // A full batch (10) means there may be more work — continue in 5 minutes
-    // (heavy delay to respect rate limits). A short batch means the backlog
-    // drained: stop, and let the next question-creation event re-trigger us.
-    if (missing.length >= 10) {
-      await ctx.scheduler.runAfter(300000, internal.precompute.precomputeThemeBatch);
+    // We just called Gemini, so take the full 5-minute delay to respect rate
+    // limits. Batch size is no longer the continue/stop signal — with a paged
+    // scan a short batch just means a sparse page, not a drained backlog; only
+    // `next === null` (both tables walked to the end) ends the pipeline.
+    if (next) {
+      await ctx.scheduler.runAfter(300000, internal.precompute.precomputeThemeBatch, next);
     } else {
       console.log("[precomputeThemeBatch] Backlog drained; pipeline stopped.");
     }
@@ -197,7 +242,8 @@ ${JSON.stringify(inputs, null, 2)}
 export const startPrecomputePipeline = internalMutation({
   args: {},
   handler: async (ctx) => {
-    await ctx.scheduler.runAfter(0, internal.precompute.precomputeThemeBatch);
+    // No cursor: start the sweep from the first page of `questions`.
+    await ctx.scheduler.runAfter(0, internal.precompute.precomputeThemeBatch, {});
     return "Pipeline started!";
   }
 });
