@@ -21,13 +21,26 @@ Step 1's recommended engine. Live count against the dev deployment:
 | Geometry | 42 | 10/11/9/10 | 2 |
 
 Provenance: 150 hand-seeded (`seedBagrut.ts` + `seedGeometry.ts`), 76 from the
-`questionGen` cron (75-minute cadence, unreviewed). **The packet pipeline —
-Step 1's actual scaling engine — has been attempted 3 times and has not
-successfully published anything**: 1 `failed`, 1 `cancelled`, 1 still sitting
-in `review` (extracted but never approved). Difficulty coverage is solid at
-bands 1–4 (9–13 per topic) but thin everywhere at band 5 (flat 2/topic,
-clearly seed-only). `questionReports` is empty — 0 total, which given no
-review discipline has run yet (Step 2) reads as "unused," not "clean."
+`questionGen` cron (75-minute cadence, unreviewed). Difficulty coverage is
+solid at bands 1–4 (9–13 per topic) but thin everywhere at band 5 (flat
+2/topic, clearly seed-only). `questionReports` is empty — 0 total, which given
+no review discipline has run yet (Step 2) reads as "unused," not "clean."
+
+**The packet pipeline works.** Three runs exist, all of the same PDF
+(`dimutWeb.pdf`): one `failed` at PDF load ("טעינת ה-PDF נכשלה", 39 questions
+inventoried), one `cancelled`, and one crop-mode run that **successfully
+published all 12 of its questions into `compoundQuestions`** — those 12 are
+the bulk of the 22 compound questions in the bank. An earlier revision of this
+doc recorded the pipeline as "0-for-3, never published anything"; that was
+wrong, and the reason it looked that way is itself a bug, now fixed: `review`
+is a terminal status in `packetImport.ts` (nothing ever transitions a packet
+out of it), so a fully-published packet sat in the teacher's list forever
+labelled "מוכן לבדיקה" at 12/12 approved. The UI now derives completion from
+the row statuses and shows "פורסם" / files it under סגורות.
+
+So the honest read is: crop mode is proven end to end, auto mode has one PDF-
+load failure worth diagnosing, and the real gap is **throughput** — only one
+paper has ever been carried to publish.
 
 The gap is now content *trust* and pipeline throughput, not volume — Step 3's
 selection-logic item is also done (see below). Original gap description
@@ -39,12 +52,20 @@ selection-logic item is also done (see below). Original gap description
 
 **Status 2026-08-01: still open, and now the top priority.** The bank did
 grow (100 → 226) but via the `questionGen` cron and hand-seeding, not this
-step's engine — see the baseline table above. The packet pipeline itself is
-0-for-3: one `failed` import, one `cancelled`, one sitting `review`d-but-
-never-published. Diagnosing why those three didn't reach publish, and
-clearing or re-running the stuck `review` one, is now the concrete next
-action — not "run more papers through it" until the existing three are
-understood.
+step's engine — see the baseline table above.
+
+The pipeline itself is **not** broken: crop mode carried one paper end to end
+and published 12 questions into `compoundQuestions`. What's missing is
+throughput — exactly one paper has ever reached publish, against this step's
+target of 8–12. The blocker was partly perceptual: a finished packet still
+reads as "מוכן לבדיקה" forever (fixed 2026-08-01), so it was not obvious that
+the run had actually succeeded.
+
+Concrete next actions, in order:
+1. Run the remaining papers through **crop mode**, which is the proven path.
+2. Diagnose the one auto-mode failure ("טעינת ה-PDF נכשלה" on a 24-page PDF
+   after inventorying 39 questions) before relying on auto mode for volume.
+3. Only then judge yield per paper as item 1 below describes.
 
 **The problem (original).** The bank is 100 bagrut-style questions: exactly
 20 per topic across 5 topics, spread over difficulty 1–4, so roughly 5 per
