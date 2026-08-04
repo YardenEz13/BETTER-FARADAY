@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 // https://vite.dev/config/
@@ -29,6 +30,25 @@ export default defineConfig(({ command, mode }) => {
         project: process.env.SENTRY_PROJECT,
         authToken: process.env.SENTRY_AUTH_TOKEN,
         disable: !process.env.SENTRY_AUTH_TOKEN,
+      }),
+      // Installable PWA for student phones. registerType: 'autoUpdate' so a
+      // redeploy doesn't strand a student on stale JS mid-pilot. No runtime
+      // caching of Convex traffic — only the static app shell is precached.
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg'],
+        manifest: {
+          name: 'FARADAY Logic',
+          short_name: 'FARADAY',
+          description: 'פלטפורמת למידה אדפטיבית למתמטיקה 581',
+          lang: 'he',
+          dir: 'rtl',
+          start_url: '/',
+          display: 'standalone',
+          background_color: '#0E1B12',
+          theme_color: '#17C964',
+          icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
+        },
       }),
     ],
     build: {
