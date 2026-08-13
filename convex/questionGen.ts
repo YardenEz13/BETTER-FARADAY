@@ -24,6 +24,7 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
+import { arabicSample, findArabicField } from "./hebrewGuard";
 
 /** Difficulty bands the adaptive engine actually walks. The seeded bank uses
  *  1-4; band 5 exists in the schema but no question or session ever reaches it. */
@@ -102,6 +103,17 @@ export function validateGenerated(
     if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) { rejected.push(`${label}: correctIndex out of range`); continue; }
     if (steps.length === 0 || steps.some((s) => s === "")) { rejected.push(`${label}: empty solution steps`); continue; }
     if (hint === "" || explanation === "") { rejected.push(`${label}: missing hint/explanation`); continue; }
+
+    // Hebrew letters occasionally come back in their Arabic cognate — see
+    // hebrewGuard.ts. Drop the whole question: the slip lands mid-word, so a
+    // bad hint means the rest of the row was generated the same way.
+    const all = { stem, choices, solutionSteps: steps, hint, explanation };
+    const arabicIn = findArabicField(all);
+    if (arabicIn) {
+      const word = arabicSample([stem, ...choices, ...steps, hint, explanation].join(" "));
+      rejected.push(`${label}: Arabic script in ${arabicIn} ("${word}")`);
+      continue;
+    }
 
     const key = stemKey(stem);
     if (seen.has(key)) { rejected.push(`${label}: duplicate of an existing question`); continue; }
@@ -323,5 +335,43 @@ ${JSON.stringify(gap.exemplars, null, 2)}
       `model ${result.model}, +${inserted} question(s).`,
     );
     return { inserted, reason: "ok" };
+  },
+});
+
+/**
+ * Lists questions in the bank carrying Arabic script. Reports; never deletes.
+ *
+ * The themed-variant purge can delete freely because a missing variant falls
+ * back to the original stem. A question has no fallback — deleting one throws
+ * away a row whose math is usually fine (the single dev hit had one bad word
+ * in `hint` and a correct stem, choices, steps and explanation). So this hands
+ * back ids and the offending word, and a human decides.
+ *
+ *   npx convex run questionGen:findNonHebrewQuestions '{}'
+ * Re-run while `next` is non-null.
+ */
+export const findNonHebrewQuestions = internalQuery({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { cursor = null }) => {
+    const { page, isDone, continueCursor } = await ctx.db
+      .query("questions")
+      .paginate({ numItems: 200, cursor });
+
+    const hits = page
+      .map((q) => {
+        const field = findArabicField({
+          stem: q.stem,
+          choices: q.choices,
+          solutionSteps: q.solutionSteps ?? [],
+          hint: q.hint ?? "",
+          explanation: q.explanation ?? "",
+        });
+        if (!field) return null;
+        const joined = [q.stem, ...q.choices, ...(q.solutionSteps ?? []), q.hint ?? "", q.explanation ?? ""].join(" ");
+        return { id: q._id, field, word: arabicSample(joined), generated: q.generatedAt != null };
+      })
+      .filter((h): h is NonNullable<typeof h> => h !== null);
+
+    return { scanned: page.length, hits, next: isDone ? null : continueCursor };
   },
 });
