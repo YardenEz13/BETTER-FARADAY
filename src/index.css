@@ -500,6 +500,90 @@ body {
     outline-offset: 2px;
   }
   .field:focus-visible { @apply border-primary; outline: none; }
+
+  /* ═════════════ MATH PLAYGROUND — one board, everything aims at it ═════════
+     A drag-and-drop algebra surface for one thumb on a bus. `.lego` builds the
+     line, `.op-brick` transforms it, and both land on `.worksheet-drop`. The
+     bricks are clay with studs on top, so they read as droppable. ── */
+
+  /* Any element made draggable by usePointerDrag. `touch-action: none` is the
+     load-bearing bit — without it the browser scrolls the sheet mid-drag. */
+  .drag-source {
+    touch-action: none;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .drag-source--lifted {
+    cursor: grabbing;
+    z-index: 40;
+    position: relative;
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 10px 22px rgb(0 0 0 / 0.22);
+    scale: 1.06;
+  }
+
+  /* ── the board: the one drop zone everything aims at ── */
+  .worksheet-drop.drop-target--hot {
+    @apply border-primary;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  }
+
+  /* ── lego: the pieces the line is built from ── */
+  .lego {
+    @apply flex flex-col items-center justify-center gap-0.5 flex-shrink-0 rounded-2xl border-2 border-outline bg-surface;
+    min-width: 3.5rem;
+    padding: 0.375rem 0.625rem;
+    box-shadow: var(--shadow-clay);
+    transition: transform 120ms ease-out, border-color 120ms;
+  }
+  /* Digits and signs. Square and dense — a whole number row has to fit a phone. */
+  .lego--atom {
+    min-width: 2.35rem;
+    padding: 0.3rem 0.4rem;
+  }
+  .lego:hover { @apply border-primary; transform: translateY(-2px); }
+  .lego:active { transform: translateY(2px); box-shadow: none; }
+
+  /* The operand a balance brick carries: one field for all four operators. */
+  .operand-field {
+    @apply rounded-xl border-2 border-outline bg-surface text-on-surface text-center font-bold;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    width: 4.5rem;
+    min-height: 2.5rem;
+    padding: 0 0.4rem;
+    box-shadow: 0 3px 0 0 var(--color-outline);
+  }
+  .operand-field:focus { @apply border-primary; outline: none; }
+
+  /* ── operation bricks: what the student drags ── */
+  .op-brick {
+    @apply relative inline-flex items-center justify-center rounded-xl border-none font-bold leading-none;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    padding: 0.68rem 1rem 0.6rem;
+    color: var(--color-inverse-on-surface);
+    background: var(--color-inverse-surface);
+    box-shadow: 0 4px 0 0 color-mix(in srgb, var(--color-inverse-surface) 55%, black);
+    transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .op-brick::before, .op-brick::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    width: 13px;
+    height: 8px;
+    border-radius: 5px 5px 3px 3px;
+    background: inherit;
+    filter: brightness(1.7);
+  }
+  .op-brick::before { left: 10px; }
+  .op-brick::after  { right: 10px; }
+  .op-brick:hover:not(.drag-source--lifted) { transform: translateY(-3px); }
+  .op-brick--he { font-family: var(--font-body); font-size: 0.9rem; padding: 0.6rem 0.8rem 0.54rem; }
+  .op-brick--busy { @apply opacity-60; }
 }
 
 @keyframes pop-bump {

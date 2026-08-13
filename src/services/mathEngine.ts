@@ -72,6 +72,31 @@ function latexToExpr(N: Nerdamer, latex: string): string {
   return N.convertFromLaTeX(sanitizeLatex(latex)).toString();
 }
 
+/**
+ * Split `lhs = rhs` on its single `=`. Null when the input isn't an equation.
+ * MathLive writes relations as macros (`\ne`, `\geq`), so a bare `=` is
+ * unambiguous — no need to walk the string.
+ */
+function splitEquation(latex: string): [string, string] | null {
+  const parts = latex.split("=");
+  return parts.length === 2 && parts[0].trim() && parts[1].trim()
+    ? [parts[0], parts[1]]
+    : null;
+}
+
+/** The bare result, without the d/dx(…)= or ∫…dx= presentation wrapper. */
+const bare = (r: MathResult) => r.reuseLatex ?? r.latex;
+
+/** Ops that mean "do this to each side" when the board holds an equation. */
+const SIDEWISE: ReadonlySet<MathOp> = new Set<MathOp>([
+  "evaluate",
+  "simplify",
+  "factor",
+  "expand",
+  "derivative",
+  "integral",
+]);
+
 /** Pick the variable to operate on: prefer x, else the first symbol, else x. */
 function pickVariable(N: Nerdamer, exprStr: string, explicit?: string): string {
   if (explicit) return explicit;
@@ -84,8 +109,23 @@ function pickVariable(N: Nerdamer, exprStr: string, explicit?: string): string {
   }
 }
 
+/**
+ * nerdamer writes every product with an explicit `\cdot`, so a coefficient
+ * comes back as `3 \cdot x`. No student writes that, and it makes a solved
+ * line unrecognisable next to the one they typed. Drop the dot only where
+ * juxtaposition is unambiguous — after a number, before a symbol or a group.
+ */
+function tidyTeX(tex: string): string {
+  return tex
+    .replace(/(\d)\s*\\cdot\s*(?=[a-zA-Z\\(])/g, "$1")
+    // …and between groups: (x−2)(x−3) is how the factored form is written.
+    .replace(/\s*\\cdot\s*(?=\\left\()/g, "");
+}
+
+const toTeX = (expr: Nerdamer): string => tidyTeX(expr.toTeX());
+
 const ok = (expr: any): MathResult => ({
-  latex: expr.toTeX(),
+  latex: toTeX(expr),
   plain: expr.toString(),
   error: null,
 });
@@ -109,6 +149,10 @@ function approxOf(N: Nerdamer, expr: any): string | undefined {
 /**
  * Run one CAS operation on a LaTeX expression and get LaTeX back.
  * `variable` is only used by derivative / integral / solve (defaults to x).
+ *
+ * When the board holds an equation, everything except `solve` distributes over
+ * it: the student asked to simplify *the line they are working on*, and half a
+ * simplified equation is not a line anyone can keep solving.
  */
 export async function compute(
   op: MathOp,
@@ -124,6 +168,23 @@ export async function compute(
     return fail("מנוע החישוב לא נטען. בדקו את החיבור לאינטרנט ורעננו.");
   }
 
+  const sides = SIDEWISE.has(op) ? splitEquation(latex) : null;
+  if (sides) {
+    const left = computeExpr(N, op, sides[0], variable);
+    if (left.error) return left;
+    const right = computeExpr(N, op, sides[1], variable);
+    if (right.error) return right;
+    return {
+      latex: `${bare(left)}=${bare(right)}${op === "integral" ? "+C" : ""}`,
+      plain: `${left.plain}=${right.plain}`,
+      error: null,
+    };
+  }
+
+  return computeExpr(N, op, latex, variable);
+}
+
+function computeExpr(N: Nerdamer, op: MathOp, latex: string, variable?: string): MathResult {
   try {
     switch (op) {
       case "solve": {
@@ -140,21 +201,26 @@ export async function compute(
         // x_1 = …, x_2 = … — the reusable fragment is the first solution.
         const parts = arr.map((s, i) => {
           const e = N(s.toString());
-          return `${v}_{${i + 1}}=${e.toTeX()}`;
+          return `${v}_{${i + 1}}=${toTeX(e)}`;
         });
         const first = N(arr[0].toString());
         return {
           latex: parts.join(",\\;\\;"),
           plain: arr.map((s) => s.toString()).join(", "),
-          reuseLatex: first.toTeX(),
+          reuseLatex: toTeX(first),
           approx: arr.length === 1 ? approxOf(N, first) : undefined,
           error: null,
         };
       }
       case "simplify":
         return ok(N(`simplify(${latexToExpr(N, latex)})`));
-      case "factor":
-        return ok(N(`factor(${latexToExpr(N, latex)})`));
+      case "factor": {
+        // A constant has nothing to factor, and nerdamer answers `0` with
+        // `0^1` — which then lands on the board as the student's next line.
+        const exprStr = latexToExpr(N, latex);
+        const expr = N(exprStr);
+        return ok(expr.variables().length === 0 ? expr : N(`factor(${exprStr})`));
+      }
       case "expand":
         return ok(N(`expand(${latexToExpr(N, latex)})`));
       case "derivative": {
@@ -163,9 +229,9 @@ export async function compute(
         const src = N(exprStr);
         const out = N(`diff(${exprStr}, ${v})`);
         return {
-          latex: `\\frac{d}{d${v}}\\left(${src.toTeX()}\\right)=${out.toTeX()}`,
+          latex: `\\frac{d}{d${v}}\\left(${toTeX(src)}\\right)=${toTeX(out)}`,
           plain: out.toString(),
-          reuseLatex: out.toTeX(),
+          reuseLatex: toTeX(out),
           error: null,
         };
       }
@@ -175,9 +241,9 @@ export async function compute(
         const src = N(exprStr);
         const out = N(`integrate(${exprStr}, ${v})`);
         return {
-          latex: `\\int ${src.toTeX()}\\,d${v}=${out.toTeX()}+C`,
+          latex: `\\int ${toTeX(src)}\\,d${v}=${toTeX(out)}+C`,
           plain: out.toString(),
-          reuseLatex: out.toTeX(),
+          reuseLatex: toTeX(out),
           error: null,
         };
       }
@@ -188,6 +254,61 @@ export async function compute(
         return { ...ok(exact), approx: approxOf(N, exact) };
       }
     }
+  } catch {
+    return fail();
+  }
+}
+
+/* ─────────────────────── operating on both sides ─────────────────────── */
+
+/** The four balance operations. `−` and `÷` are the ones that get x alone. */
+export type SideOp = "+" | "-" | "*" | "/";
+
+/** Symbol printed on the brick. Kept out of the components so the two agree. */
+export const SIDE_OP_SIGNS: Record<SideOp, string> = {
+  "+": "+",
+  "-": "−",
+  "*": "×",
+  "/": "÷",
+};
+
+const NOT_AN_EQUATION = "צריך משוואה עם סימן = כדי להפעיל פעולה על שני הצדדים.";
+const NO_OPERAND = "כתבו מספר או ביטוי לפעולה.";
+
+/**
+ * Apply `op operand` to both sides of the equation at once — the balance move.
+ * The student never does the arithmetic: each side comes back simplified, so
+ * `3x + 7 = 31` minus `7` reads `3x = 24`, not `3x + 7 - 7 = 31 - 7`.
+ */
+export async function applyBothSides(
+  latex: string,
+  op: SideOp,
+  operand: string,
+): Promise<MathResult> {
+  if (!latex || !latex.trim()) return fail(EMPTY_ERROR);
+  if (!operand || !operand.trim()) return fail(NO_OPERAND);
+
+  let N: Nerdamer;
+  try {
+    N = await getNerdamer();
+  } catch {
+    return fail("מנוע החישוב לא נטען. בדקו את החיבור לאינטרנט ורעננו.");
+  }
+
+  const sides = splitEquation(latex);
+  if (!sides) return fail(NOT_AN_EQUATION);
+
+  try {
+    const rhs = latexToExpr(N, operand);
+    if (op === "/" && N(rhs).toString() === "0") return fail("אי אפשר לחלק באפס.");
+    const moved = sides.map((side) =>
+      N(`simplify((${latexToExpr(N, side)}) ${op} (${rhs}))`),
+    );
+    return {
+      latex: `${toTeX(moved[0])}=${toTeX(moved[1])}`,
+      plain: `${moved[0].toString()}=${moved[1].toString()}`,
+      error: null,
+    };
   } catch {
     return fail();
   }

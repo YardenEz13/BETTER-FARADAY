@@ -2,18 +2,21 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown } from "../electric";
 import MathText from "../MathText";
 import { FORMULA_BANK } from "../../data/formulaBank";
-import { dragLatex } from "./dragLatex";
+import { usePointerDrag } from "./usePointerDrag";
 
 interface Props {
   /** Insert a formula's LaTeX into the active math field. */
   onInsert: (latex: string) => void;
+  /** The worksheet field card, so a row can be dragged onto it (touch included). */
+  dropRef: React.RefObject<HTMLElement | null>;
 }
 
 /**
  * Collapsible, searchable נוסחאות sheet. Each row renders the formula with KaTeX
  * (via MathText) and inserts it on click.
  */
-export default function FormulaDrawer({ onInsert }: Props) {
+export default function FormulaDrawer({ onInsert, dropRef }: Props) {
+  const bind = usePointerDrag<string>({ targetRef: dropRef, onActivate: onInsert });
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(FORMULA_BANK[0]?.id ?? null);
 
@@ -67,11 +70,9 @@ export default function FormulaDrawer({ onInsert }: Props) {
                 {cat.items.map((it) => (
                   <button
                     key={it.id}
-                    draggable
-                    onDragStart={dragLatex(it.insertLatex ?? it.latex)}
-                    onClick={() => onInsert(it.insertLatex ?? it.latex)}
+                    {...bind(it.insertLatex ?? it.latex)}
                     title="הוסף לדף העבודה — לחיצה או גרירה"
-                    className="flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start hover:bg-primary/10 active:scale-[0.99] transition-all cursor-grab active:cursor-grabbing"
+                    className="drag-source flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start hover:bg-primary/10 active:scale-[0.99] transition-all"
                   >
                     <span className="font-label-md text-on-surface-variant">{it.nameHe}</span>
                     <span dir="ltr" className="text-on-surface">

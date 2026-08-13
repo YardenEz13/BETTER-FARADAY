@@ -15,17 +15,25 @@ interface Props {
   questionStem?: string;
 }
 
-type MobileTab = "work" | "formulas";
+type Tab = "work" | "formulas";
 
 /**
- * Math Playground — the slide-up "no pen & paper" workspace. Reuses the
- * AIChatPanel slide-up motion + a FaradayCanvas backdrop. On desktop the
- * worksheet and the נוסחאות drawer sit side by side; on mobile a tab switches
- * between them. Lazily imported, so mathlive/nerdamer ride in this chunk only.
+ * Math Playground — the slide-up "no pen & paper" workspace.
+ *
+ * One board, and everything aims at it: lego blocks and formula rows build the
+ * line, operation bricks transform it (both sides at once for + − × ÷, the CAS
+ * for the heavy lifting), and each result stacks into a readable path.
+ *
+ * Reuses the AIChatPanel slide-up motion + a FaradayCanvas backdrop. On desktop
+ * the worksheet and the נוסחאות drawer sit side by side; on mobile a tab
+ * switches. Lazily imported, so mathlive/nerdamer ride in this chunk only.
  */
 export default function MathPlayground({ isOpen, onClose, questionStem }: Props) {
   const worksheetRef = useRef<MathFieldHandle>(null);
-  const [tab, setTab] = useState<MobileTab>("work");
+  // The worksheet's field card. Owned here because the formula drawer, which
+  // lives outside the worksheet, drops onto it too.
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<Tab>("work");
   // Collapsed by default: the worksheet is what the student came for, and a long
   // stem would eat the field. One tap re-reads the question without leaving.
   const [stemOpen, setStemOpen] = useState(false);
@@ -111,7 +119,7 @@ export default function MathPlayground({ isOpen, onClose, questionStem }: Props)
             </div>
           )}
 
-          {/* Mobile tab switch */}
+          {/* Mobile tab switch — on desktop the drawer sits beside the board. */}
           <div className="md:hidden px-4 pt-2 relative z-[2]">
             <div className="seg-track">
               {([
@@ -129,17 +137,18 @@ export default function MathPlayground({ isOpen, onClose, questionStem }: Props)
             </div>
           </div>
 
-          {/* Body */}
+          {/* Body. Both panes stay mounted: flipping to נוסחאות and back must
+              not wipe the board or the path. */}
           <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3 p-4 relative z-[2]">
             <div className={`flex-1 min-h-0 flex-col ${tab === "formulas" ? "hidden md:flex" : "flex"}`}>
-              <Worksheet ref={worksheetRef} />
+              <Worksheet ref={worksheetRef} dropRef={dropRef} />
             </div>
             <div
               className={`md:w-72 lg:w-80 min-h-0 flex-col md:border-s md:border-outline-variant/50 md:ps-3 ${
                 tab === "work" ? "hidden md:flex" : "flex"
               }`}
             >
-              <FormulaDrawer onInsert={insert} />
+              <FormulaDrawer onInsert={insert} dropRef={dropRef} />
             </div>
           </div>
         </motion.div>

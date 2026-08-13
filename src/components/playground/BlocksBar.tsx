@@ -1,11 +1,11 @@
 import MathText from "../MathText";
-import { dragLatex } from "./dragLatex";
+import { usePointerDrag } from "./usePointerDrag";
 
 /**
- * "Math lego" — one row of big tappable building blocks that insert LaTeX
- * skeletons (with MathLive placeholders) into the worksheet field. Built for
- * thumbs: solving on the bus should be tap-tap-tap, not LaTeX typing. Scrolls
- * horizontally on phones, wraps on desktop.
+ * "Math lego" — the pieces the line on the board is built from. Two rows:
+ * numbers and signs on top, structures below. Tap to insert at the caret, or
+ * drag onto the board; both work with one thumb, which is the point — solving
+ * on the bus should never need a LaTeX keyboard.
  */
 interface Block {
   id: string;
@@ -13,39 +13,61 @@ interface Block {
   insert: string;
   /** KaTeX preview shown on the chip (□ marks the holes). */
   show: string;
-  labelHe: string;
+  labelHe?: string;
 }
 
-const BLOCKS: Block[] = [
+/** Digits and signs — the literal "drag a number onto it" row. */
+const ATOMS: Block[] = [
+  ...Array.from({ length: 10 }, (_, n) => ({ id: `d${n}`, insert: `${n}`, show: `${n}` })),
+  { id: "plus",  insert: "+",        show: "+" },
+  { id: "minus", insert: "-",        show: "-" },
+  { id: "times", insert: "\\cdot ",  show: "\\cdot" },
+  { id: "over",  insert: "/",        show: "\\div" },
+  { id: "eq",    insert: "=",        show: "=" },
+  { id: "x",     insert: "x",        show: "x" },
+  { id: "y",     insert: "y",        show: "y" },
+];
+
+/** Structures — the pieces with holes in them. */
+const SHAPES: Block[] = [
   { id: "frac",  insert: "\\frac{\\placeholder{}}{\\placeholder{}}", show: "\\frac{\\square}{\\square}", labelHe: "שבר" },
   { id: "sqrt",  insert: "\\sqrt{\\placeholder{}}",                  show: "\\sqrt{\\square}",           labelHe: "שורש" },
   { id: "pow",   insert: "^{\\placeholder{}}",                       show: "\\square^{n}",               labelHe: "חזקה" },
   { id: "paren", insert: "\\left(\\placeholder{}\\right)",           show: "(\\square)",                 labelHe: "סוגריים" },
-  { id: "x",     insert: "x",                                        show: "x",                          labelHe: "נעלם" },
-  { id: "eq",    insert: "=",                                        show: "=",                          labelHe: "שוויון" },
   { id: "pi",    insert: "\\pi",                                     show: "\\pi",                       labelHe: "פאי" },
   { id: "sin",   insert: "\\sin\\left(\\placeholder{}\\right)",      show: "\\sin",                      labelHe: "סינוס" },
   { id: "cos",   insert: "\\cos\\left(\\placeholder{}\\right)",      show: "\\cos",                      labelHe: "קוסינוס" },
   { id: "ln",    insert: "\\ln\\left(\\placeholder{}\\right)",       show: "\\ln",                       labelHe: "לוגריתם" },
 ];
 
-export default function BlocksBar({ onInsert }: { onInsert: (latex: string) => void }) {
+interface Props {
+  onInsert: (latex: string) => void;
+  /** The board blocks are dropped onto. */
+  dropRef: React.RefObject<HTMLElement | null>;
+}
+
+export default function BlocksBar({ onInsert, dropRef }: Props) {
+  const bind = usePointerDrag<string>({ targetRef: dropRef, onActivate: onInsert });
+
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible pb-1.5 px-0.5" dir="ltr">
-      {BLOCKS.map((b) => (
-        <button
-          key={b.id}
-          draggable
-          onDragStart={dragLatex(b.insert)}
-          onClick={() => onInsert(b.insert)}
-          title={b.labelHe}
-          className="flex flex-col items-center justify-center gap-0.5 flex-shrink-0 min-w-[3.5rem] px-2.5 py-1.5 rounded-2xl border-2 border-outline bg-surface cursor-grab active:cursor-grabbing hover:-translate-y-0.5 hover:border-primary active:translate-y-0.5 active:shadow-none transition-all"
-          style={{ boxShadow: "var(--shadow-clay)", touchAction: "manipulation" }}
-        >
-          <MathText>{`$${b.show}$`}</MathText>
-          <span className="font-label-md text-on-surface-variant" style={{ fontSize: "10px" }}>{b.labelHe}</span>
-        </button>
-      ))}
+    <div className="flex flex-col gap-1.5" dir="ltr">
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible px-0.5">
+        {ATOMS.map((b) => (
+          <button key={b.id} {...bind(b.insert)} className="lego lego--atom drag-source">
+            <MathText>{`$${b.show}$`}</MathText>
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar md:flex-wrap md:overflow-visible pb-1.5 px-0.5">
+        {SHAPES.map((b) => (
+          <button key={b.id} {...bind(b.insert)} title={b.labelHe} className="lego drag-source">
+            <MathText>{`$${b.show}$`}</MathText>
+            <span className="font-label-md text-on-surface-variant" style={{ fontSize: "10px" }}>
+              {b.labelHe}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
