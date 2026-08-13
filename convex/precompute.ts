@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { GEMINI_MODELS, generateWithFallback } from "./geminiModels";
+import { arabicSample, hasArabicScript } from "./hebrewGuard";
 
 const THEMES = [
   "כדורגל", "חברים", "מינקראפט", "מוזיקה פופ", "כדורסל",
@@ -229,6 +230,19 @@ ${JSON.stringify(inputs, null, 2)}
 
         const results: { id: string; rewritten: string }[] = JSON.parse(responseText);
         for (const res of results) {
+          // Injecting player names and TV characters is this prompt's whole
+          // job, and foreign proper nouns are exactly where Hebrew letters come
+          // back in their Arabic cognate (see hebrewGuard.ts). Drop the variant
+          // rather than store it: getNextQuestion falls back to the original
+          // Hebrew stem when no themed row exists, so a miss costs the student
+          // the theme, not the question.
+          if (hasArabicScript(res.rewritten)) {
+            console.warn(
+              `[precomputeThemeBatch] Dropped ${theme} variant of ${res.id} — ` +
+              `Arabic script ("${arabicSample(res.rewritten)}").`,
+            );
+            continue;
+          }
           allResults.push({ id: res.id, rewritten: res.rewritten, theme });
         }
       } catch (err) {
@@ -267,6 +281,51 @@ export const startPrecomputePipeline = internalMutation({
 });
 
 const PURGE_PAGE = 200;
+
+/**
+ * Deletes themed variants that came back with Arabic letters in them.
+ *
+ * These are the rows written before `precomputeThemeBatch` grew its script
+ * guard — 443 of 10,578 on dev (4.2%), concentrated in the themes that need
+ * foreign proper nouns: חברים 9.4%, כדורגל 9.2%, ריקוד 0.9%. Deleting is the
+ * whole repair: `getNextQuestion` only swaps in a themed stem when a row
+ * exists, so a purged question simply reads in its original Hebrew until the
+ * pipeline regenerates a clean variant.
+ *
+ * Run on demand and check the result:
+ *   npx convex run precompute:purgeNonHebrewPrecomputations '{"dryRun":true}'
+ *   npx convex run precompute:purgeNonHebrewPrecomputations '{}'
+ * Re-run while `next` is non-null; paged so one call stays under the limits.
+ */
+export const purgeNonHebrewPrecomputations = internalMutation({
+  args: {
+    cursor: v.optional(v.union(v.string(), v.null())),
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { cursor = null, dryRun = false }) => {
+    const { page, isDone, continueCursor } = await ctx.db
+      .query("precomputedThemedQuestions")
+      .paginate({ numItems: PURGE_PAGE, cursor });
+
+    let found = 0;
+    const samples: string[] = [];
+    for (const row of page) {
+      if (!hasArabicScript(row.personalizedText)) continue;
+      found++;
+      if (samples.length < 5) samples.push(`${row.theme}: ${arabicSample(row.personalizedText)}`);
+      if (!dryRun) await ctx.db.delete(row._id);
+    }
+
+    return {
+      scanned: page.length,
+      found,
+      deleted: dryRun ? 0 : found,
+      samples,
+      dryRun,
+      next: isDone ? null : continueCursor,
+    };
+  },
+});
 
 /**
  * Deletes precomputed rows whose question no longer exists.

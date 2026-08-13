@@ -34,6 +34,30 @@ describe("validateGenerated", () => {
     expect(rejected).toHaveLength(bad.length);
   });
 
+
+  // The bank is Hebrew-only, and Gemini slips into the Arabic cognate of a
+  // Hebrew letter mid-word (see hebrewGuard.ts). One dev row reached the bank
+  // with `סכום الזוויות הנגדיות` in its hint before this gate existed.
+  it("drops a question with Arabic script in any field", () => {
+    const cases = [
+      { ...good, stem: `${good.stem} מيسي` },
+      { ...good, hint: "סכום الזוויות הנגדיות" },
+      { ...good, choices: ["23", "25", "21", "מيسي"] },
+      { ...good, solutionSteps: [...good.solutionSteps, "מيسي"] },
+      { ...good, explanation: "מيسي" },
+    ];
+    const { accepted, rejected } = validateGenerated(cases, []);
+    expect(accepted).toHaveLength(0);
+    expect(rejected).toHaveLength(cases.length);
+    expect(rejected[1]).toContain("hint");
+    expect(rejected[2]).toContain("choices[3]");
+  });
+
+  it("keeps Latin letters and digits, which are not a script slip", () => {
+    const withLatin = { ...good, stem: `${good.stem} (LeBron, 2024)` };
+    expect(validateGenerated([withLatin], []).accepted).toHaveLength(1);
+  });
+
   it("rejects a question already in the bank, ignoring whitespace", () => {
     const { accepted } = validateGenerated([good], [`  ${good.stem.replace(" ", "   ")}  `]);
     expect(accepted).toHaveLength(0);

@@ -23,6 +23,7 @@ import type * as exams from "../exams.js";
 import type * as geminiModels from "../geminiModels.js";
 import type * as geminiServer from "../geminiServer.js";
 import type * as goals from "../goals.js";
+import type * as hebrewGuard from "../hebrewGuard.js";
 import type * as homework from "../homework.js";
 import type * as homeworkRundown from "../homeworkRundown.js";
 import type * as http from "../http.js";
@@ -83,6 +84,7 @@ declare const fullApi: ApiFromModules<{
   geminiModels: typeof geminiModels;
   geminiServer: typeof geminiServer;
   goals: typeof goals;
+  hebrewGuard: typeof hebrewGuard;
   homework: typeof homework;
   homeworkRundown: typeof homeworkRundown;
   http: typeof http;
