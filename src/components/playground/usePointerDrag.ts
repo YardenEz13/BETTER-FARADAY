@@ -46,6 +46,85 @@ export interface DragBindings {
  * onto `targetRef`. Pair it with the `.drag-source` class, which supplies the
  * `touch-action: none` that keeps a drag from scrolling the sheet instead.
  */
+/**
+ * Same gesture, many targets: an expression tree has a hole everywhere a piece
+ * could go, so there is no single ref to aim at. Drop zones mark themselves
+ * with `data-drop="<id>"` and the pointer is hit-tested against whatever is
+ * under it. `.drag-source--lifted` sets `pointer-events: none`, without which
+ * elementFromPoint only ever finds the brick being dragged.
+ */
+export function useDropZoneDrag<T>({
+  onDrop,
+  onTap,
+}: {
+  onDrop: (dropId: string, payload: T) => void;
+  /** Fired when the press never became a drag. */
+  onTap?: (payload: T) => void;
+}) {
+  const session = useRef<Session | null>(null);
+  const litRef = useRef<Element | null>(null);
+
+  const zoneAt = (e: React.PointerEvent) => {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    return el?.closest("[data-drop]") ?? null;
+  };
+
+  const light = (zone: Element | null) => {
+    if (litRef.current === zone) return;
+    litRef.current?.classList.remove(HOT_CLASS);
+    zone?.classList.add(HOT_CLASS);
+    litRef.current = zone;
+  };
+
+  const end = (el: HTMLElement) => {
+    session.current = null;
+    el.classList.remove("drag-source--lifted");
+    el.style.transform = "";
+    light(null);
+  };
+
+  return (payload: T) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture is an optimisation; the drag works without it */
+      }
+      session.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const d = session.current;
+      if (!d || d.id !== e.pointerId) return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      if (!d.moved && Math.abs(dx) + Math.abs(dy) > DRAG_SLOP) {
+        d.moved = true;
+        e.currentTarget.classList.add("drag-source--lifted");
+      }
+      if (!d.moved) return;
+      e.currentTarget.style.transform = `translate(${dx}px, ${dy}px)`;
+      light(zoneAt(e));
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+      const d = session.current;
+      if (!d || d.id !== e.pointerId) return;
+      const zone = d.moved ? zoneAt(e) : null;
+      const wasDrag = d.moved;
+      end(e.currentTarget);
+      const dropId = zone?.getAttribute("data-drop");
+      if (wasDrag) {
+        if (dropId) onDrop(dropId, payload);
+      } else {
+        onTap?.(payload);
+      }
+    },
+    onLostPointerCapture: (e: React.PointerEvent<HTMLElement>) => {
+      if (session.current) end(e.currentTarget);
+    },
+  });
+}
+
 export function usePointerDrag<T>({ targetRef, onActivate }: Options<T>) {
   const session = useRef<Session | null>(null);
   // A drag that landed already fired onActivate; swallow the click that follows.

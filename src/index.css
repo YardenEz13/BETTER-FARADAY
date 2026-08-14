@@ -693,6 +693,114 @@ body {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.4rem;
+
+  /* ═══════════ EXPRESSION BRICKS — build it, then collapse it ═══════════
+     A drag-assembled expression tree. Holes are the drop targets; a
+     sub-expression whose operands are all numbers lights up and can be
+     collapsed with a tap. Nested, so a 5 can go inside a square inside a
+     root — which is what the real questions ask for. ── */
+  .xb-board {
+    @apply flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 bg-surface-container-lowest;
+    border-color: var(--color-outline-variant);
+    padding: 1.75rem 0.75rem;
+    min-height: 8rem;
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    transition: border-color 220ms, background-color 220ms;
+  }
+  .xb-board--done {
+    @apply border-primary;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+
+  /* Every node is a brick; nesting is shown by nesting, not by parentheses. */
+  .xb-node {
+    @apply relative inline-flex items-center rounded-lg;
+    gap: 0.2rem;
+    padding: 0.12rem 0.22rem;
+    border: 2px solid transparent;
+    transition: border-color 140ms, background-color 140ms, transform 140ms;
+  }
+  .xb-node--leaf {
+    @apply font-bold text-on-primary;
+    background: var(--color-primary);
+    border-color: var(--color-primary-dark);
+    box-shadow: 0 3px 0 0 var(--color-primary-dark);
+    padding: 0.35rem 0.55rem 0.3rem;
+    min-width: 2.1rem;
+    justify-content: center;
+  }
+  .xb-lit--var { font-style: italic; }
+  /* A sub-expression that is all numbers: one tap away from a smaller board. */
+  .xb-node--ready {
+    border-color: var(--color-tertiary);
+    background: color-mix(in srgb, var(--color-tertiary) 16%, transparent);
+    animation: xb-ready 1.8s ease-in-out infinite;
+    cursor: pointer;
+  }
+  @keyframes xb-ready {
+    50% { border-color: color-mix(in srgb, var(--color-tertiary) 55%, transparent); }
+  }
+  .xb-node:hover:not(.drag-source--lifted) { border-color: var(--color-outline); }
+
+  /* The socket. Big enough to hit with a thumb, obviously empty. */
+  .xb-hole {
+    @apply inline-flex items-center justify-center rounded-lg text-on-surface-variant;
+    width: 2.2rem;
+    height: 2.4rem;
+    border: 2px dashed var(--color-outline);
+    background: var(--color-surface-container);
+    font-size: 1.1rem;
+  }
+  .xb-hole.drop-target--hot,
+  .xb-node.drop-target--hot,
+  .xb-side.drop-target--hot {
+    border-color: var(--color-primary);
+    border-style: solid;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  .xb-op { @apply px-1 text-on-surface-variant font-bold; }
+  .xb-paren { @apply text-on-surface-variant; }
+  .xb-equals { @apply px-1.5 font-bold text-on-surface-variant; font-size: 1.6rem; }
+  .xb-side { @apply inline-flex items-center rounded-lg; padding: 0.15rem; border: 2px solid transparent; }
+  .xb-sup { font-size: 0.62em; align-self: flex-start; margin-top: -0.15em; }
+  .xb-radical { @apply text-on-surface-variant; font-size: 1.35em; }
+  /* The bar over a radicand, so √(5²+12²) reads as one thing. */
+  .xb-under {
+    border-top: 2px solid var(--color-on-surface-variant);
+    padding-top: 0.12rem;
+    margin-top: 0.1rem;
+  }
+
+  /* ── the parts bin ── */
+  .xb-palette {
+    @apply rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-2 mt-2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  /* `no-scrollbar` is a plain class further down this file, not a Tailwind
+     utility, so it cannot be reached through @apply. Inline it. */
+  .xb-palette__row {
+    @apply flex gap-1.5 overflow-x-auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .xb-palette__row::-webkit-scrollbar { display: none; }
+  .xb-piece {
+    @apply inline-flex items-center justify-center flex-shrink-0 rounded-xl border-2 border-outline bg-surface text-on-surface font-bold;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.25rem 0.45rem;
+    box-shadow: 0 3px 0 0 var(--color-outline-variant);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
+  }
+  .xb-piece--wide { min-width: 3.6rem; }
+  .xb-piece:hover { @apply border-primary; transform: translateY(-2px); }
+  .xb-piece:active { transform: translateY(2px); box-shadow: none; }
   }
 }
 

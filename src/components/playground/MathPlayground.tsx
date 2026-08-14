@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Sigma, ChevronDown, BookOpen } from "../electric";
 import FaradayCanvas from "../FaradayCanvas";
 import MathText from "../MathText";
-import BrickBoard from "./BrickBoard";
+import ExprBoard from "./ExprBoard";
 import FormulaDrawer from "./FormulaDrawer";
 
 interface Props {
@@ -127,7 +127,7 @@ export default function MathPlayground({ isOpen, onClose, questionStem }: Props)
               reference must never cost a student the equation they were on. */}
           <div className="flex-1 min-h-0 p-4 relative z-[2]">
             <div className={`h-full ${formulasOpen ? "hidden" : "block"}`}>
-              <BrickBoard />
+              <ExprBoard />
             </div>
             {formulasOpen && <FormulaDrawer />}
           </div>
