@@ -1,4 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* ── Fonts: self-hosted, never a CDN ──
+   These used to come from fonts.googleapis.com, and every Assistant face was
+   arriving `status: "error"` — which meant every Hebrew word in the app fell
+   back to the browser's generic sans-serif. That is the failure mode the
+   no-CDN rule exists to prevent (school networks filter Google Fonts), and it
+   was reaching us too. @fontsource ships the same families as npm packages, so
+   the woff2 files are bundled and served from our own origin like Yarden
+   already was. Subsets carry unicode-range, so a browser still only downloads
+   the Hebrew it needs. */
+@import "@fontsource/assistant/400.css";
+@import "@fontsource/assistant/500.css";
+@import "@fontsource/assistant/600.css";
+@import "@fontsource/assistant/700.css";
+@import "@fontsource/assistant/800.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
 @import "tailwindcss";
 
 /* ── Local font: Yarden (used for display/hero headings only) ── */
