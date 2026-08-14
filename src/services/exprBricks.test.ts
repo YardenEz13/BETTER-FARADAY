@@ -11,6 +11,7 @@ import {
   fill,
   find,
   hasHole,
+  group,
   hole,
   holes,
   isDone,
@@ -19,6 +20,7 @@ import {
   moveAcross,
   num,
   pow,
+  replace,
   root,
   text,
   value,
@@ -211,5 +213,62 @@ describe("moving across the equals sign", () => {
   it("does nothing when the board is not an equation", () => {
     const t = bin("+", num(1), num(2));
     expect(text(moveAcross(t, t.id))).toBe("1 + 2");
+  });
+});
+
+describe("wrapping something already built", () => {
+  /** What ExprBoard does when a palette piece lands on a filled brick. */
+  const wrap = (tree: Node, targetId: string, piece: Node) => {
+    const target = find(tree, targetId)!;
+    const [socket] = holes(piece);
+    return replace(tree, targetId, replace(piece, socket, target));
+  };
+
+  /** 10 ÷ 7, collapsed to the single brick `10/7`. */
+  const tenSevenths = () => {
+    const t = bin("÷", num(10), num(7));
+    return collapse(t, t.id);
+  };
+
+  // The board could only grow into holes that already existed, so once 10 ÷ 7
+  // had collapsed to one brick there was no way to reach 10/7 + 3 — the only
+  // way forward was to clear the board and start over.
+  it("adds to a collapsed fraction", () => {
+    const frac = tenSevenths();
+    expect(text(frac)).toBe("10/7");
+
+    const plus = wrap(frac, frac.id, bin("+"));
+    expect(text(plus)).toBe("10/7 + □");
+
+    const [socket] = holes(plus);
+    expect(text(fill(plus, socket, num(3)))).toBe("10/7 + 3");
+  });
+
+  it.each([
+    ["a root", () => root(), "√(10/7)"],
+    ["a square", () => pow(hole(), num(2)), "(10/7)^2"],
+    ["parentheses", () => group(), "(10/7)"],
+    ["a subtraction", () => bin("−"), "10/7 − □"],
+    ["an equals", () => eq(), "10/7 = □"],
+  ])("wraps it in %s", (_name, piece, expected) => {
+    const frac = tenSevenths();
+    expect(text(wrap(frac, frac.id, piece()))).toBe(expected);
+  });
+
+  it("wraps a brick nested deep inside, not just the whole board", () => {
+    const t = root(bin("+", num(5), num(9)));
+    const five = ((t as Extract<Node, { kind: "root" }>).of as Extract<Node, { kind: "bin" }>).a;
+    expect(text(wrap(t, five.id, pow(hole(), num(2))))).toBe("√(5^2 + 9)");
+  });
+
+  it("keeps the wrapped subtree's own identity", () => {
+    const t = bin("+", num(5), num(9));
+    const five = (t as Extract<Node, { kind: "bin" }>).a;
+    expect(find(wrap(t, five.id, root()), five.id)).not.toBeNull();
+  });
+
+  it("parenthesises a fraction under a root, which would otherwise be ambiguous", () => {
+    expect(text(root(num(10, 7)))).toBe("√(10/7)");
+    expect(text(bin("+", num(10, 7), num(3)))).toBe("10/7 + 3");
   });
 });

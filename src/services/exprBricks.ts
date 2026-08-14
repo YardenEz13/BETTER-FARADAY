@@ -267,7 +267,10 @@ const PRECEDENCE: Record<BinOp, number> = { "+": 1, "−": 1, "×": 2, "÷": 2 }
 export function text(n: Node, parentPrec = 0): string {
   switch (n.kind) {
     case "hole": return "□";
-    case "num": return ratText(n.value);
+    case "num":
+      // A fraction is a division wearing a compact coat, so it needs the same
+      // guard: `√10/7` could be read as (√10)/7, which is a different number.
+      return n.value.d !== 1 && parentPrec >= 3 ? `(${ratText(n.value)})` : ratText(n.value);
     case "var": return n.name;
     case "group": return `(${text(n.of)})`;
     case "root": return `√${text(n.of, 3)}`;

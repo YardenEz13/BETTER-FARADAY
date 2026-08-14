@@ -12,9 +12,11 @@ import {
   find,
   hasHole,
   hole,
+  holes,
   isDone,
   moveAcross,
   num,
+  replace,
   text,
   type Node,
 } from "../../services/exprBricks";
@@ -76,12 +78,29 @@ export default function ExprBoard() {
 
     if (cargo.from === "palette") {
       const piece = cargo.piece.make();
+
+      // A digit onto a whole number grows it: 1 then 2 is 12.
       if (target.kind === "num" && piece.kind === "num" && piece.value.d === 1 && target.value.d === 1) {
         const grown = Number(`${target.value.n}${piece.value.n}`);
         if (Number.isSafeInteger(grown)) commit(fill(tree, targetId, num(grown)));
         return;
       }
-      if (target.kind === "hole") commit(fill(tree, targetId, piece));
+
+      // An empty socket just takes the piece.
+      if (target.kind === "hole") {
+        commit(fill(tree, targetId, piece));
+        return;
+      }
+
+      // Onto something already built: wrap it. The brick you dropped on slides
+      // into the new piece's first socket, so `10/7` with a `□+□` dropped on it
+      // becomes `10/7 + □`, and a `√□` makes it `√(10/7)`.
+      //
+      // Without this the board could only ever grow into holes that already
+      // existed, so the moment you finished a sub-expression you could never
+      // attach anything to it — you had to clear the board and start again.
+      const [socket] = holes(piece);
+      if (socket) commit(replace(tree, targetId, replace(piece, socket, target)));
       return;
     }
 
