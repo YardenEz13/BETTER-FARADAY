@@ -524,66 +524,160 @@ body {
     scale: 1.06;
   }
 
-  /* ── the board: the one drop zone everything aims at ── */
-  .worksheet-drop.drop-target--hot {
+  /* ── the board: two landing pads with an equals between them ── */
+  .brick-board {
+    @apply flex flex-wrap items-center justify-center gap-2 rounded-2xl border-2 bg-surface-container-lowest;
+    border-color: var(--color-outline-variant);
+    padding: 1.5rem 0.75rem;
+    min-height: 8rem;
+    direction: ltr;
+    transition: border-color 220ms, background-color 220ms;
+  }
+  .brick-board--solved {
     @apply border-primary;
-    box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 32%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
   }
-
-  /* ── lego: the pieces the line is built from ── */
-  .lego {
-    @apply flex flex-col items-center justify-center gap-0.5 flex-shrink-0 rounded-2xl border-2 border-outline bg-surface;
-    min-width: 3.5rem;
-    padding: 0.375rem 0.625rem;
-    box-shadow: var(--shadow-clay);
-    transition: transform 120ms ease-out, border-color 120ms;
+  .brick-side {
+    @apply flex flex-wrap items-center justify-center gap-1.5 rounded-xl;
+    border: 2px dashed transparent;
+    padding: 0.5rem 0.6rem;
+    min-width: 4.5rem;
+    min-height: 4rem;
+    transition: border-color 160ms, background-color 160ms, transform 160ms;
   }
-  /* Digits and signs. Square and dense — a whole number row has to fit a phone. */
-  .lego--atom {
-    min-width: 2.35rem;
-    padding: 0.3rem 0.4rem;
+  /* The other side lights up as a landing pad the moment a brick is in hand. */
+  .brick-side.drop-target--hot {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    transform: scale(1.03);
   }
-  .lego:hover { @apply border-primary; transform: translateY(-2px); }
-  .lego:active { transform: translateY(2px); box-shadow: none; }
-
-  /* The operand a balance brick carries: one field for all four operators. */
-  .operand-field {
-    @apply rounded-xl border-2 border-outline bg-surface text-on-surface text-center font-bold;
+  .brick-equals {
     font-family: var(--font-mono);
-    font-size: 0.95rem;
-    width: 4.5rem;
-    min-height: 2.5rem;
-    padding: 0 0.4rem;
-    box-shadow: 0 3px 0 0 var(--color-outline);
+    @apply font-bold text-on-surface-variant;
+    font-size: 2rem;
+    padding: 0 0.15rem;
   }
-  .operand-field:focus { @apply border-primary; outline: none; }
-
-  /* ── operation bricks: what the student drags ── */
-  .op-brick {
-    @apply relative inline-flex items-center justify-center rounded-xl border-none font-bold leading-none;
+  .brick-group { @apply inline-flex items-center gap-1.5; }
+  .brick-sign {
     font-family: var(--font-mono);
-    font-size: 1rem;
-    padding: 0.68rem 1rem 0.6rem;
-    color: var(--color-inverse-on-surface);
-    background: var(--color-inverse-surface);
-    box-shadow: 0 4px 0 0 color-mix(in srgb, var(--color-inverse-surface) 55%, black);
-    transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+    @apply font-bold text-on-surface-variant;
+    font-size: 1.5rem;
   }
-  .op-brick::before, .op-brick::after {
+  .brick-split { @apply inline-flex items-center; gap: 3px; }
+
+  /* ── the bricks ── */
+  .brick {
+    @apply relative inline-flex items-center justify-center border-none font-bold leading-none;
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    min-width: 3rem;
+    padding: 0.85rem 0.8rem 0.75rem;
+    border-radius: 10px;
+    color: var(--color-on-primary);
+    /* The bottom face of the plastic. This is what makes it read as a solid
+       object rather than a coloured rectangle. */
+    box-shadow: 0 5px 0 0 var(--brick-side, var(--color-outline));
+    transition: transform 130ms ease-out, box-shadow 130ms ease-out;
+  }
+  /* Two studs on top, so a brick looks like something you could pick up. */
+  .brick::before, .brick::after {
     content: "";
     position: absolute;
-    top: -4px;
-    width: 13px;
-    height: 8px;
-    border-radius: 5px 5px 3px 3px;
+    top: -5px;
+    width: 15px;
+    height: 9px;
+    border-radius: 5px 5px 2px 2px;
     background: inherit;
-    filter: brightness(1.7);
+    filter: brightness(0.88);
   }
-  .op-brick::before { left: 10px; }
-  .op-brick::after  { right: 10px; }
-  .op-brick:hover:not(.drag-source--lifted) { transform: translateY(-3px); }
-  .op-brick--he { font-family: var(--font-body); font-size: 0.9rem; padding: 0.6rem 0.8rem 0.54rem; }
-  .op-brick--busy { @apply opacity-60; }
+  .brick::before { left: 11px; }
+  .brick::after  { right: 11px; }
+
+  .brick--x    { --brick-side: var(--color-primary-dark);   background: var(--color-primary); }
+  .brick--num  { --brick-side: var(--color-tertiary-dark);  background: var(--color-tertiary);  color: var(--color-on-tertiary); }
+  .brick--coef { --brick-side: var(--color-secondary-dark); background: var(--color-secondary); }
+
+  /* The x left behind after its coefficient is pulled off: not draggable, so
+     it must not look draggable — flat, no studs, no lift. */
+  .brick--locked {
+    @apply bg-surface text-on-surface border-2 border-outline;
+    box-shadow: 0 5px 0 0 var(--color-outline-variant);
+    cursor: default;
+  }
+  .brick--locked::before, .brick--locked::after { display: none; }
+
+  button.brick:hover:not(.drag-source--lifted) { transform: translateY(-3px); }
+  button.brick:active:not(.drag-source--lifted) {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 0 var(--brick-side, var(--color-outline));
+  }
+  /* A brick that just landed settles into place. */
+  .brick--landed { animation: brick-land 420ms cubic-bezier(0.22, 1.3, 0.36, 1); }
+  @keyframes brick-land {
+    0%   { transform: translateY(-18px) rotate(-4deg); opacity: 0.65; }
+    60%  { transform: translateY(3px) rotate(1deg); }
+    100% { transform: none; }
+  }
+
+  .brick-hint {
+    @apply text-center text-on-surface-variant font-body-md px-3;
+    margin-top: 0.75rem;
+    text-wrap: pretty;
+  }
+
+  /* ── the path: the lines they have written, oldest first ── */
+  .brick-path { @apply flex flex-col gap-1 mt-4 px-0.5; }
+  .brick-line {
+    @apply flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-on-surface-variant;
+    background: var(--color-surface-container-low);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+  .brick-line--now {
+    @apply text-on-surface border-2 border-primary;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+  .brick-line__n { @apply opacity-50; font-size: 0.72rem; }
+
+  /* ── lego keys: the build-your-own keypad ── */
+  .lego {
+    @apply inline-flex items-center justify-center flex-shrink-0 rounded-xl border-2 border-outline bg-surface text-on-surface font-bold;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.3rem 0.5rem;
+    box-shadow: 0 4px 0 0 var(--color-outline-variant);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
+  }
+  .lego--atom { min-width: 2.75rem; }
+  .lego--key { @apply text-primary-dark border-primary; box-shadow: 0 4px 0 0 var(--color-primary-dark); }
+  .lego:hover:not(:disabled) { @apply border-primary; transform: translateY(-2px); }
+  .lego:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 var(--color-outline-variant); }
+  .lego:disabled { @apply opacity-40 cursor-not-allowed; }
+
+  .keypad {
+    @apply rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-3 mt-3;
+  }
+  .keypad__preview {
+    @apply flex flex-wrap items-center justify-center gap-2 rounded-xl bg-surface px-3 py-2.5 mb-2.5 text-on-surface-variant;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    min-height: 3rem;
+  }
+  .keypad__active { @apply text-on-surface font-bold; }
+  .keypad__eq { @apply opacity-60; }
+  .keypad__held {
+    @apply rounded-lg px-2 py-0.5 text-on-primary;
+    background: var(--color-primary);
+    animation: keypad-blink 1s steps(2, jump-none) infinite;
+  }
+  @keyframes keypad-blink { 50% { opacity: 0.55; } }
+  .keypad__grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
 }
 
 @keyframes pop-bump {

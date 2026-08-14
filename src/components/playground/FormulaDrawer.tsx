@@ -2,21 +2,16 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown } from "../electric";
 import MathText from "../MathText";
 import { FORMULA_BANK } from "../../data/formulaBank";
-import { usePointerDrag } from "./usePointerDrag";
-
-interface Props {
-  /** Insert a formula's LaTeX into the active math field. */
-  onInsert: (latex: string) => void;
-  /** The worksheet field card, so a row can be dragged onto it (touch included). */
-  dropRef: React.RefObject<HTMLElement | null>;
-}
 
 /**
- * Collapsible, searchable נוסחאות sheet. Each row renders the formula with KaTeX
- * (via MathText) and inserts it on click.
+ * Collapsible, searchable נוסחאות sheet — reference only.
+ *
+ * There is no LaTeX field to insert into any more: the board is bricks. So a
+ * formula here is something to look up and read, which is what a student wants
+ * from a formula sheet mid-question anyway. It stays behind a toggle so the
+ * board is never sharing the screen with it uninvited.
  */
-export default function FormulaDrawer({ onInsert, dropRef }: Props) {
-  const bind = usePointerDrag<string>({ targetRef: dropRef, onActivate: onInsert });
+export default function FormulaDrawer() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(FORMULA_BANK[0]?.id ?? null);
 
@@ -68,17 +63,15 @@ export default function FormulaDrawer({ onInsert, dropRef }: Props) {
             {isOpen(cat.id) && (
               <div className="flex flex-col">
                 {cat.items.map((it) => (
-                  <button
+                  <div
                     key={it.id}
-                    {...bind(it.insertLatex ?? it.latex)}
-                    title="הוסף לדף העבודה — לחיצה או גרירה"
-                    className="drag-source flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start hover:bg-primary/10 active:scale-[0.99] transition-all"
+                    className="flex flex-col items-start gap-1 px-3 py-2.5 border-t border-outline-variant/50 text-start"
                   >
                     <span className="font-label-md text-on-surface-variant">{it.nameHe}</span>
                     <span dir="ltr" className="text-on-surface">
                       <MathText>{`$${it.latex}$`}</MathText>
                     </span>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
