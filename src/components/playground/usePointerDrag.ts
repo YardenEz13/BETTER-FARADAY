@@ -85,6 +85,14 @@ export function useDropZoneDrag<T>({
 
   return (payload: T) => ({
     onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      // The innermost brick under the finger is the one you grabbed.
+      //
+      // These handlers sit on every node of a nested tree, so without this the
+      // press bubbles and `pow`, `bin` and `root` all open a session too — and
+      // on release the outermost one answers. Tapping a socket inside √(5² + 9)
+      // would act on the whole root instead, which reads as "the big square got
+      // touched when I aimed at the small one".
+      e.stopPropagation();
       const el = e.currentTarget;
       try {
         el.setPointerCapture(e.pointerId);
@@ -96,6 +104,7 @@ export function useDropZoneDrag<T>({
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
       const d = session.current;
       if (!d || d.id !== e.pointerId) return;
+      e.stopPropagation();
       const dx = e.clientX - d.x;
       const dy = e.clientY - d.y;
       if (!d.moved && Math.abs(dx) + Math.abs(dy) > DRAG_SLOP) {
@@ -109,6 +118,7 @@ export function useDropZoneDrag<T>({
     onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
       const d = session.current;
       if (!d || d.id !== e.pointerId) return;
+      e.stopPropagation();
       const zone = d.moved ? zoneAt(e) : null;
       const wasDrag = d.moved;
       end(e.currentTarget);

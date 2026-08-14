@@ -139,6 +139,10 @@ export default function ExprBoard() {
       return;
     }
 
+    // An empty socket is tappable but not draggable — there is nothing in it
+    // to carry anywhere.
+    if (find(tree, cargo.id)?.kind === "hole") return;
+
     // A brick already on the board, dragged onto the other side of an equals.
     if (canMoveAcross(tree, cargo.id)) {
       const eqNode = tree as Extract<Node, { kind: "eq" }>;
@@ -200,11 +204,14 @@ export default function ExprBoard() {
 
   const render = (n: Node): React.ReactNode => {
     if (n.kind === "hole") {
+      // Bound the same way as a brick, not with onClick: a click listener does
+      // not stop the *press* from bubbling, so the parent node would still open
+      // a drag session and answer the tap first.
       return (
         <button
           key={n.id}
+          {...bindDrag({ from: "board", id: n.id })}
           data-drop={n.id}
-          onClick={() => tapNode(n.id)}
           className="xb-hole"
           aria-label="ריבוע ריק"
         >
