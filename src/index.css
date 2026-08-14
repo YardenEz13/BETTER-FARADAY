@@ -807,6 +807,38 @@ body {
   .xb-piece--wide { min-width: 3.6rem; }
   .xb-piece:hover { @apply border-primary; transform: translateY(-2px); }
   .xb-piece:active { transform: translateY(2px); box-shadow: none; }
+  /* Tapped, and waiting for somewhere to go. Lifted off the bin so it reads as
+     "in your hand" rather than "selected in a list". */
+  .xb-piece--held {
+    @apply text-on-primary border-primary;
+    background: var(--color-primary);
+    box-shadow: 0 5px 0 0 var(--color-primary-dark);
+    transform: translateY(-3px);
+  }
+
+  /* While a piece is held, the sockets are what matter — make them obvious. */
+  .xb-board--placing .xb-hole {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    animation: xb-socket-call 1.5s ease-in-out infinite;
+  }
+  @keyframes xb-socket-call {
+    50% { background: color-mix(in srgb, var(--color-primary) 28%, transparent); }
+  }
+
+  /* A refusal. Amber, not red: nothing broke, it just cannot go there. */
+  .brick-hint--nudge {
+    @apply font-semibold;
+    color: var(--color-on-tertiary-container);
+    background: var(--color-tertiary-container);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 0.75rem;
+    margin-inline: 0.5rem;
+    animation: xb-nudge 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes xb-nudge {
+    from { opacity: 0; transform: translateY(-5px); }
+  }
 }
 
 @keyframes pop-bump {

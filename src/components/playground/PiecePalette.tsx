@@ -43,6 +43,8 @@ const SHAPES: Piece[] = [
 interface Props {
   /** The board's drag binding — pieces are dropped onto its holes. */
   bind: (cargo: { from: "palette"; piece: Piece }) => Record<string, unknown>;
+  /** The piece picked up by tapping, so it can show as being held. */
+  heldId: string | null;
 }
 
 /**
@@ -53,12 +55,15 @@ interface Props {
  * reaches for most, structures below because they are bigger targets and get
  * dragged less often.
  */
-export default function PiecePalette({ bind }: Props) {
+export default function PiecePalette({ bind, heldId }: Props) {
   const chip = (p: Piece) => (
     <button
       key={p.id}
       {...bind({ from: "palette", piece: p })}
-      className={`xb-piece drag-source ${p.wide ? "xb-piece--wide" : ""}`}
+      aria-pressed={heldId === p.id}
+      className={`xb-piece drag-source ${p.wide ? "xb-piece--wide" : ""} ${
+        heldId === p.id ? "xb-piece--held" : ""
+      }`}
     >
       {p.label}
     </button>
