@@ -538,6 +538,11 @@ body {
       0 0 0 5px color-mix(in srgb, var(--color-primary) 30%, transparent),
       0 10px 22px rgb(0 0 0 / 0.22);
     scale: 1.06;
+    /* Load-bearing for useDropZoneDrag: the brick follows the pointer, so
+       without this elementFromPoint only ever finds the brick itself and no
+       drop zone is ever detected. Pointer capture keeps the drag's own events
+       flowing to it regardless. */
+    pointer-events: none;
   }
 
   /* ── the board: two landing pads with an equals between them ── */
@@ -693,6 +698,7 @@ body {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.4rem;
+  }
 
   /* ═══════════ EXPRESSION BRICKS — build it, then collapse it ═══════════
      A drag-assembled expression tree. Holes are the drop targets; a
@@ -801,7 +807,6 @@ body {
   .xb-piece--wide { min-width: 3.6rem; }
   .xb-piece:hover { @apply border-primary; transform: translateY(-2px); }
   .xb-piece:active { transform: translateY(2px); box-shadow: none; }
-  }
 }
 
 @keyframes pop-bump {
