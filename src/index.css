@@ -1,4 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* ── Fonts: self-hosted, never a CDN ──
+   These used to come from fonts.googleapis.com, and every Assistant face was
+   arriving `status: "error"` — which meant every Hebrew word in the app fell
+   back to the browser's generic sans-serif. That is the failure mode the
+   no-CDN rule exists to prevent (school networks filter Google Fonts), and it
+   was reaching us too. @fontsource ships the same families as npm packages, so
+   the woff2 files are bundled and served from our own origin like Yarden
+   already was. Subsets carry unicode-range, so a browser still only downloads
+   the Hebrew it needs. */
+@import "@fontsource/assistant/400.css";
+@import "@fontsource/assistant/500.css";
+@import "@fontsource/assistant/600.css";
+@import "@fontsource/assistant/700.css";
+@import "@fontsource/assistant/800.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
 @import "tailwindcss";
 
 /* ── Local font: Yarden (used for display/hero headings only) ── */
@@ -500,6 +516,329 @@ body {
     outline-offset: 2px;
   }
   .field:focus-visible { @apply border-primary; outline: none; }
+
+  /* ═════════════ MATH PLAYGROUND — one board, everything aims at it ═════════
+     A drag-and-drop algebra surface for one thumb on a bus. `.lego` builds the
+     line, `.op-brick` transforms it, and both land on `.worksheet-drop`. The
+     bricks are clay with studs on top, so they read as droppable. ── */
+
+  /* Any element made draggable by usePointerDrag. `touch-action: none` is the
+     load-bearing bit — without it the browser scrolls the sheet mid-drag. */
+  .drag-source {
+    touch-action: none;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .drag-source--lifted {
+    cursor: grabbing;
+    z-index: 40;
+    position: relative;
+    box-shadow:
+      0 0 0 5px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 10px 22px rgb(0 0 0 / 0.22);
+    scale: 1.06;
+    /* Load-bearing for useDropZoneDrag: the brick follows the pointer, so
+       without this elementFromPoint only ever finds the brick itself and no
+       drop zone is ever detected. Pointer capture keeps the drag's own events
+       flowing to it regardless. */
+    pointer-events: none;
+  }
+
+  /* ── the board: two landing pads with an equals between them ── */
+  .brick-board {
+    @apply flex flex-wrap items-center justify-center gap-2 rounded-2xl border-2 bg-surface-container-lowest;
+    border-color: var(--color-outline-variant);
+    padding: 1.5rem 0.75rem;
+    min-height: 8rem;
+    direction: ltr;
+    transition: border-color 220ms, background-color 220ms;
+  }
+  .brick-board--solved {
+    @apply border-primary;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+  .brick-side {
+    @apply flex flex-wrap items-center justify-center gap-1.5 rounded-xl;
+    border: 2px dashed transparent;
+    padding: 0.5rem 0.6rem;
+    min-width: 4.5rem;
+    min-height: 4rem;
+    transition: border-color 160ms, background-color 160ms, transform 160ms;
+  }
+  /* The other side lights up as a landing pad the moment a brick is in hand. */
+  .brick-side.drop-target--hot {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    transform: scale(1.03);
+  }
+  .brick-equals {
+    font-family: var(--font-mono);
+    @apply font-bold text-on-surface-variant;
+    font-size: 2rem;
+    padding: 0 0.15rem;
+  }
+  .brick-group { @apply inline-flex items-center gap-1.5; }
+  .brick-sign {
+    font-family: var(--font-mono);
+    @apply font-bold text-on-surface-variant;
+    font-size: 1.5rem;
+  }
+  .brick-split { @apply inline-flex items-center; gap: 3px; }
+
+  /* ── the bricks ── */
+  .brick {
+    @apply relative inline-flex items-center justify-center border-none font-bold leading-none;
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    min-width: 3rem;
+    padding: 0.85rem 0.8rem 0.75rem;
+    border-radius: 10px;
+    color: var(--color-on-primary);
+    /* The bottom face of the plastic. This is what makes it read as a solid
+       object rather than a coloured rectangle. */
+    box-shadow: 0 5px 0 0 var(--brick-side, var(--color-outline));
+    transition: transform 130ms ease-out, box-shadow 130ms ease-out;
+  }
+  /* Two studs on top, so a brick looks like something you could pick up. */
+  .brick::before, .brick::after {
+    content: "";
+    position: absolute;
+    top: -5px;
+    width: 15px;
+    height: 9px;
+    border-radius: 5px 5px 2px 2px;
+    background: inherit;
+    filter: brightness(0.88);
+  }
+  .brick::before { left: 11px; }
+  .brick::after  { right: 11px; }
+
+  .brick--x    { --brick-side: var(--color-primary-dark);   background: var(--color-primary); }
+  .brick--num  { --brick-side: var(--color-tertiary-dark);  background: var(--color-tertiary);  color: var(--color-on-tertiary); }
+  .brick--coef { --brick-side: var(--color-secondary-dark); background: var(--color-secondary); }
+
+  /* The x left behind after its coefficient is pulled off: not draggable, so
+     it must not look draggable — flat, no studs, no lift. */
+  .brick--locked {
+    @apply bg-surface text-on-surface border-2 border-outline;
+    box-shadow: 0 5px 0 0 var(--color-outline-variant);
+    cursor: default;
+  }
+  .brick--locked::before, .brick--locked::after { display: none; }
+
+  button.brick:hover:not(.drag-source--lifted) { transform: translateY(-3px); }
+  button.brick:active:not(.drag-source--lifted) {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 0 var(--brick-side, var(--color-outline));
+  }
+  /* A brick that just landed settles into place. */
+  .brick--landed { animation: brick-land 420ms cubic-bezier(0.22, 1.3, 0.36, 1); }
+  @keyframes brick-land {
+    0%   { transform: translateY(-18px) rotate(-4deg); opacity: 0.65; }
+    60%  { transform: translateY(3px) rotate(1deg); }
+    100% { transform: none; }
+  }
+
+  .brick-hint {
+    @apply text-center text-on-surface-variant font-body-md px-3;
+    margin-top: 0.75rem;
+    text-wrap: pretty;
+  }
+
+  /* ── the path: the lines they have written, oldest first ── */
+  .brick-path { @apply flex flex-col gap-1 mt-4 px-0.5; }
+  .brick-line {
+    @apply flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-on-surface-variant;
+    background: var(--color-surface-container-low);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+  .brick-line--now {
+    @apply text-on-surface border-2 border-primary;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+  .brick-line__n { @apply opacity-50; font-size: 0.72rem; }
+
+  /* ── lego keys: the build-your-own keypad ── */
+  .lego {
+    @apply inline-flex items-center justify-center flex-shrink-0 rounded-xl border-2 border-outline bg-surface text-on-surface font-bold;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.3rem 0.5rem;
+    box-shadow: 0 4px 0 0 var(--color-outline-variant);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
+  }
+  .lego--atom { min-width: 2.75rem; }
+  .lego--key { @apply text-primary-dark border-primary; box-shadow: 0 4px 0 0 var(--color-primary-dark); }
+  .lego:hover:not(:disabled) { @apply border-primary; transform: translateY(-2px); }
+  .lego:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 var(--color-outline-variant); }
+  .lego:disabled { @apply opacity-40 cursor-not-allowed; }
+
+  .keypad {
+    @apply rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-3 mt-3;
+  }
+  .keypad__preview {
+    @apply flex flex-wrap items-center justify-center gap-2 rounded-xl bg-surface px-3 py-2.5 mb-2.5 text-on-surface-variant;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    min-height: 3rem;
+  }
+  .keypad__active { @apply text-on-surface font-bold; }
+  .keypad__eq { @apply opacity-60; }
+  .keypad__held {
+    @apply rounded-lg px-2 py-0.5 text-on-primary;
+    background: var(--color-primary);
+    animation: keypad-blink 1s steps(2, jump-none) infinite;
+  }
+  @keyframes keypad-blink { 50% { opacity: 0.55; } }
+  .keypad__grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  /* ═══════════ EXPRESSION BRICKS — build it, then collapse it ═══════════
+     A drag-assembled expression tree. Holes are the drop targets; a
+     sub-expression whose operands are all numbers lights up and can be
+     collapsed with a tap. Nested, so a 5 can go inside a square inside a
+     root — which is what the real questions ask for. ── */
+  .xb-board {
+    @apply flex flex-wrap items-center justify-center gap-1 rounded-2xl border-2 bg-surface-container-lowest;
+    border-color: var(--color-outline-variant);
+    padding: 1.75rem 0.75rem;
+    min-height: 8rem;
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    transition: border-color 220ms, background-color 220ms;
+  }
+  .xb-board--done {
+    @apply border-primary;
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+
+  /* Every node is a brick; nesting is shown by nesting, not by parentheses. */
+  .xb-node {
+    @apply relative inline-flex items-center rounded-lg;
+    gap: 0.2rem;
+    padding: 0.12rem 0.22rem;
+    border: 2px solid transparent;
+    transition: border-color 140ms, background-color 140ms, transform 140ms;
+  }
+  .xb-node--leaf {
+    @apply font-bold text-on-primary;
+    background: var(--color-primary);
+    border-color: var(--color-primary-dark);
+    box-shadow: 0 3px 0 0 var(--color-primary-dark);
+    padding: 0.35rem 0.55rem 0.3rem;
+    min-width: 2.1rem;
+    justify-content: center;
+  }
+  .xb-lit--var { font-style: italic; }
+  /* A sub-expression that is all numbers: one tap away from a smaller board. */
+  .xb-node--ready {
+    border-color: var(--color-tertiary);
+    background: color-mix(in srgb, var(--color-tertiary) 16%, transparent);
+    animation: xb-ready 1.8s ease-in-out infinite;
+    cursor: pointer;
+  }
+  @keyframes xb-ready {
+    50% { border-color: color-mix(in srgb, var(--color-tertiary) 55%, transparent); }
+  }
+  .xb-node:hover:not(.drag-source--lifted) { border-color: var(--color-outline); }
+
+  /* The socket. Big enough to hit with a thumb, obviously empty. */
+  .xb-hole {
+    @apply inline-flex items-center justify-center rounded-lg text-on-surface-variant;
+    width: 2.2rem;
+    height: 2.4rem;
+    border: 2px dashed var(--color-outline);
+    background: var(--color-surface-container);
+    font-size: 1.1rem;
+  }
+  .xb-hole.drop-target--hot,
+  .xb-node.drop-target--hot,
+  .xb-side.drop-target--hot {
+    border-color: var(--color-primary);
+    border-style: solid;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  .xb-op { @apply px-1 text-on-surface-variant font-bold; }
+  .xb-paren { @apply text-on-surface-variant; }
+  .xb-equals { @apply px-1.5 font-bold text-on-surface-variant; font-size: 1.6rem; }
+  .xb-side { @apply inline-flex items-center rounded-lg; padding: 0.15rem; border: 2px solid transparent; }
+  .xb-sup { font-size: 0.62em; align-self: flex-start; margin-top: -0.15em; }
+  .xb-radical { @apply text-on-surface-variant; font-size: 1.35em; }
+  /* The bar over a radicand, so √(5²+12²) reads as one thing. */
+  .xb-under {
+    border-top: 2px solid var(--color-on-surface-variant);
+    padding-top: 0.12rem;
+    margin-top: 0.1rem;
+  }
+
+  /* ── the parts bin ── */
+  .xb-palette {
+    @apply rounded-2xl border-2 border-outline-variant bg-surface-container-lowest p-2 mt-2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  /* `no-scrollbar` is a plain class further down this file, not a Tailwind
+     utility, so it cannot be reached through @apply. Inline it. */
+  .xb-palette__row {
+    @apply flex gap-1.5 overflow-x-auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .xb-palette__row::-webkit-scrollbar { display: none; }
+  .xb-piece {
+    @apply inline-flex items-center justify-center flex-shrink-0 rounded-xl border-2 border-outline bg-surface text-on-surface font-bold;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.25rem 0.45rem;
+    box-shadow: 0 3px 0 0 var(--color-outline-variant);
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
+  }
+  .xb-piece--wide { min-width: 3.6rem; }
+  .xb-piece:hover { @apply border-primary; transform: translateY(-2px); }
+  .xb-piece:active { transform: translateY(2px); box-shadow: none; }
+  /* Tapped, and waiting for somewhere to go. Lifted off the bin so it reads as
+     "in your hand" rather than "selected in a list". */
+  .xb-piece--held {
+    @apply text-on-primary border-primary;
+    background: var(--color-primary);
+    box-shadow: 0 5px 0 0 var(--color-primary-dark);
+    transform: translateY(-3px);
+  }
+
+  /* While a piece is held, the sockets are what matter — make them obvious. */
+  .xb-board--placing .xb-hole {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    animation: xb-socket-call 1.5s ease-in-out infinite;
+  }
+  @keyframes xb-socket-call {
+    50% { background: color-mix(in srgb, var(--color-primary) 28%, transparent); }
+  }
+
+  /* A refusal. Amber, not red: nothing broke, it just cannot go there. */
+  .brick-hint--nudge {
+    @apply font-semibold;
+    color: var(--color-on-tertiary-container);
+    background: var(--color-tertiary-container);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem 0.75rem;
+    margin-inline: 0.5rem;
+    animation: xb-nudge 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes xb-nudge {
+    from { opacity: 0; transform: translateY(-5px); }
+  }
 }
 
 @keyframes pop-bump {

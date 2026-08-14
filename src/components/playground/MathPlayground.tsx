@@ -1,11 +1,10 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Sigma, PencilLine, BookOpen, ChevronDown } from "../electric";
+import { X, Sigma, ChevronDown, BookOpen } from "../electric";
 import FaradayCanvas from "../FaradayCanvas";
 import MathText from "../MathText";
-import Worksheet from "./Worksheet";
+import ExprBoard from "./ExprBoard";
 import FormulaDrawer from "./FormulaDrawer";
-import type { MathFieldHandle } from "./MathField";
 
 interface Props {
   isOpen: boolean;
@@ -15,25 +14,24 @@ interface Props {
   questionStem?: string;
 }
 
-type MobileTab = "work" | "formulas";
-
 /**
- * Math Playground — the slide-up "no pen & paper" workspace. Reuses the
- * AIChatPanel slide-up motion + a FaradayCanvas backdrop. On desktop the
- * worksheet and the נוסחאות drawer sit side by side; on mobile a tab switches
- * between them. Lazily imported, so mathlive/nerdamer ride in this chunk only.
+ * Math Playground — the slide-up "no pen & paper" workspace.
+ *
+ * One board, and the board is lego: every term of the equation is a brick you
+ * pick up and drop on the other side of the equals, where it lands inverted and
+ * already merged. No operation tray, no keyboard, no tool to choose — the whole
+ * interface is "move a brick", which is what makes it work one-handed on a bus.
+ *
+ * Reuses the AIChatPanel slide-up motion + a FaradayCanvas backdrop. Lazily
+ * imported, so nothing here rides in the main bundle.
  */
 export default function MathPlayground({ isOpen, onClose, questionStem }: Props) {
-  const worksheetRef = useRef<MathFieldHandle>(null);
-  const [tab, setTab] = useState<MobileTab>("work");
-  // Collapsed by default: the worksheet is what the student came for, and a long
-  // stem would eat the field. One tap re-reads the question without leaving.
+  // Collapsed by default: the board is what the student came for, and a long
+  // stem would eat it. One tap re-reads the question without leaving.
   const [stemOpen, setStemOpen] = useState(false);
-
-  const insert = (latex: string) => {
-    worksheetRef.current?.insertLatex(latex);
-    setTab("work"); // on mobile, jump back to the field so the insert is visible
-  };
+  // The formula sheet is reference, not part of the flow — it stays shut until
+  // asked for, so the board never shares the screen with it uninvited.
+  const [formulasOpen, setFormulasOpen] = useState(false);
 
   return (
     <AnimatePresence>
@@ -71,17 +69,31 @@ export default function MathPlayground({ isOpen, onClose, questionStem }: Props)
               <div>
                 <div className="font-headline-md text-on-surface">מגרש המתמטיקה</div>
                 <div className="font-label-md text-on-surface-variant" style={{ fontSize: "11px" }}>
-                  פתרו, גזרו ואנטגרלו — בלי דף ועיפרון
+                  הרימו לבנה, העבירו לצד השני
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
-              title="סגור"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setFormulasOpen((v) => !v)}
+                aria-pressed={formulasOpen}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                  formulasOpen
+                    ? "bg-primary-container text-on-primary-container"
+                    : "text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary"
+                }`}
+                title="נוסחאות"
+              >
+                <BookOpen size={19} />
+              </button>
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 hover:text-primary transition-colors"
+                title="סגור"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* The question being solved — collapsible, so it costs one line when shut */}
@@ -111,36 +123,13 @@ export default function MathPlayground({ isOpen, onClose, questionStem }: Props)
             </div>
           )}
 
-          {/* Mobile tab switch */}
-          <div className="md:hidden px-4 pt-2 relative z-[2]">
-            <div className="seg-track">
-              {([
-                { id: "work", he: "דף עבודה", Icon: PencilLine },
-                { id: "formulas", he: "נוסחאות", Icon: BookOpen },
-              ] as const).map(({ id, he, Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => setTab(id)}
-                  className={`seg-tab ${tab === id ? "seg-tab--active" : ""}`}
-                >
-                  <Icon size={15} /> {he}
-                </button>
-              ))}
+          {/* The board stays mounted behind the formula sheet — opening a
+              reference must never cost a student the equation they were on. */}
+          <div className="flex-1 min-h-0 p-4 relative z-[2]">
+            <div className={`h-full ${formulasOpen ? "hidden" : "block"}`}>
+              <ExprBoard />
             </div>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3 p-4 relative z-[2]">
-            <div className={`flex-1 min-h-0 flex-col ${tab === "formulas" ? "hidden md:flex" : "flex"}`}>
-              <Worksheet ref={worksheetRef} />
-            </div>
-            <div
-              className={`md:w-72 lg:w-80 min-h-0 flex-col md:border-s md:border-outline-variant/50 md:ps-3 ${
-                tab === "work" ? "hidden md:flex" : "flex"
-              }`}
-            >
-              <FormulaDrawer onInsert={insert} />
-            </div>
+            {formulasOpen && <FormulaDrawer />}
           </div>
         </motion.div>
       )}
