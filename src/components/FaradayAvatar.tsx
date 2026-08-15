@@ -12,10 +12,25 @@ import { Bot } from "./electric";
  *   public/faraday-streak.png    amber lightning
  *   public/faraday-blink.png     eyes closed — registers against `idle`
  *
+ * Plus two full-body gesture poses, cut from generated video by
+ * scripts/extract-poses.mjs:
+ *
+ *   public/faraday-point.png     raised finger, explaining
+ *   public/faraday-thumbsup.png  thumbs up, delighted
+ *
+ * Those two frame the whole torso, so the head lands much smaller. Use them at
+ * 64px and up — in a 44px avatar circle the face turns to mush. `isLargePose`
+ * marks them so callers do not have to remember.
+ *
  * One size for all of them: 192px covers 3x on the largest site (64px), and a
  * resolution ladder for a ~40KB asset costs more in files than it saves in bytes.
  */
-export type FaradayPose = "idle" | "thinking" | "happy" | "wrong" | "streak";
+export type FaradayPose =
+  | "idle" | "thinking" | "happy" | "wrong" | "streak"
+  | "point" | "thumbsup";
+
+/** Full-body poses — legible at 64px and up, not in a small avatar circle. */
+export const isLargePose = (pose: FaradayPose) => pose === "point" || pose === "thumbsup";
 
 export interface FaradayAvatarProps {
   /** which pose to show */

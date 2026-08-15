@@ -171,7 +171,7 @@ export default function StudentHomeworkList() {
               className="bg-surface rounded-3xl p-16 flex flex-col items-center justify-center border-2 border-outline text-center"
               style={{ boxShadow: 'var(--shadow-clay)' }}
             >
-              <FaradayAvatar pose="idle" px={80} className="mb-4" />
+              <FaradayAvatar pose="point" px={96} className="mb-4" />
               <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
                 אין משימות פתוחות כרגע. ברגע שהמורה ישלח אחת — היא תופיע כאן.

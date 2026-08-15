@@ -94,7 +94,7 @@ export default function SessionRecap({
         {/* Faraday reacts to how the round actually went — the encouraging pose
             when it was rough, so a weak round is not met with a grin. */}
         <div className="flex justify-center -mt-2 mb-1">
-          <FaradayAvatar pose={accuracy >= 50 ? "happy" : "wrong"} px={72} />
+          <FaradayAvatar pose={accuracy >= 50 ? "thumbsup" : "wrong"} px={84} />
         </div>
 
         <div className="text-center mb-1">
