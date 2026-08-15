@@ -222,10 +222,12 @@ export default function PracticeSession() {
       }
       if (newCombo >= 3) fireStreak(newCombo);
       setWrongStreak(0);
-      // Faraday reacts: streak milestone always, otherwise ~1-in-3 on plain correct
+      // Faraday reacts to every correct answer — streak milestones get the
+      // louder line. (This was throttled to ~1-in-3; students read the silence
+      // as him missing the answer, especially right after a wrong one.)
       if (newCombo === 3 || newCombo === 5 || newCombo === 10) {
         setReaction({ kind: "streak", count: newCombo });
-      } else if (Math.random() < 1 / 3) {
+      } else {
         setReaction({ kind: "correct" });
       }
     } else {
