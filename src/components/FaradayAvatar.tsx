@@ -35,6 +35,27 @@ const LARGE_POSES: FaradayPose[] = ["point", "thumbsup", "wave"];
 /** Full-body poses — legible at 64px and up, not in a small avatar circle. */
 export const isLargePose = (pose: FaradayPose) => LARGE_POSES.includes(pose);
 
+/**
+ * Dev-only guard against the one mistake this component invites: dropping a
+ * full-body pose into a small avatar circle, where the face turns to mush. It
+ * is invisible in code review and only shows up when someone looks at a phone.
+ *
+ * Warns once per pose+size so a re-rendering list cannot flood the console.
+ * `fill` is skipped: the parent decides the size there, and guessing it would
+ * cost a ref and a layout read to catch a mistake that is rarer than this one.
+ */
+const warnedPoses = new Set<string>();
+function warnIfTooSmall(pose: FaradayPose, px: number, fill: boolean) {
+  if (!import.meta.env.DEV || fill || !isLargePose(pose) || px >= 64) return;
+  const key = `${pose}@${px}`;
+  if (warnedPoses.has(key)) return;
+  warnedPoses.add(key);
+  console.warn(
+    `FaradayAvatar: "${pose}" is a full-body pose — at ${px}px his face is unreadable. ` +
+      `Render it at 64px or more, or use a head-and-shoulders pose (idle, thinking, happy, wrong, streak).`,
+  );
+}
+
 export interface FaradayAvatarProps {
   /** which pose to show */
   pose?: FaradayPose;
@@ -64,6 +85,7 @@ export default function FaradayAvatar({
   alt = "פרופסור פאראדיי",
 }: FaradayAvatarProps) {
   const [failed, setFailed] = useState(false);
+  warnIfTooSmall(pose, px, fill);
 
   if (failed) {
     return <Bot size={Math.round(px * 0.6)} className={`text-primary ${className}`} />;
