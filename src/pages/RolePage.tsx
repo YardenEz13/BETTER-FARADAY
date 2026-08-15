@@ -101,12 +101,17 @@ export default function RolePage() {
           className="flex items-center justify-between px-6 py-5 lg:px-12"
         >
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-primary-dark bg-primary text-white"
+            {/* The generated mark itself, so the header, the browser tab and the
+                installed home-screen icon can never drift apart. The radius
+                matches the badge drawn inside the SVG (rx 15 of 64). */}
+            <img
+              src="/favicon.svg"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-10 w-10 rounded-[23%] select-none"
               style={{ boxShadow: "var(--shadow-clay-primary)" }}
-            >
-              <ElectricBolt size={22} tone="ghost" glow={0.6} />
-            </div>
+            />
             <span className="text-xl font-extrabold tracking-tight text-on-surface" style={{ fontFamily: "'Assistant', sans-serif" }}>
               FARADAY <span className="text-primary">Logic</span>
             </span>

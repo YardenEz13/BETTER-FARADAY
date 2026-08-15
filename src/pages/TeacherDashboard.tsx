@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, ElectricBolt, Trophy, Sparkles,
+  Zap, GraduationCap, Trophy, Sparkles,
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
@@ -191,9 +191,13 @@ export default function TeacherDashboard() {
         {/* brand + health ring */}
         <div className="flex items-center gap-3 flex-1 min-w-[220px]">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-primary/10 border-2 border-primary/25 text-primary glow-primary flex-shrink-0">
-              <ElectricBolt size={22} tone="spark" glow={1} />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="w-10 h-10 rounded-[23%] glow-primary flex-shrink-0 select-none"
+            />
             <div>
               <div className="font-display font-extrabold text-headline-sm leading-none text-on-surface">מה מצבנו?</div>
               <div className="text-label-md text-on-surface-variant mt-0.5">
