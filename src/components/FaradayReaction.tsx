@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import FaradayAvatar from "./FaradayAvatar";
+import { spark as playSpark } from "../lib/sfx";
 
 /**
  * Professor Faraday pops into the bottom-start corner with a clay speech
@@ -88,6 +89,9 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
 
   useEffect(() => {
     if (!visible) return;
+    // Sound on milestones only — a chime on every correct answer is a chime
+    // every ten seconds. sfx is a no-op when muted or WebAudio is unavailable.
+    if (kind === "levelup" || kind === "homework") playSpark();
     // Milestones earn a longer beat than a per-answer reaction.
     const ms = kind === "levelup" || kind === "homework" ? 4500 : 3000;
     const t = setTimeout(onDone, ms);

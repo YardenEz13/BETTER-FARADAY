@@ -17,6 +17,7 @@ import { Bot } from "./electric";
  *
  *   public/faraday-point.png     raised finger, explaining
  *   public/faraday-thumbsup.png  thumbs up, delighted
+ *   public/faraday-wave.png      open-palm wave, greeting
  *
  * Those two frame the whole torso, so the head lands much smaller. Use them at
  * 64px and up — in a 44px avatar circle the face turns to mush. `isLargePose`
@@ -27,10 +28,12 @@ import { Bot } from "./electric";
  */
 export type FaradayPose =
   | "idle" | "thinking" | "happy" | "wrong" | "streak"
-  | "point" | "thumbsup";
+  | "point" | "thumbsup" | "wave";
+
+const LARGE_POSES: FaradayPose[] = ["point", "thumbsup", "wave"];
 
 /** Full-body poses — legible at 64px and up, not in a small avatar circle. */
-export const isLargePose = (pose: FaradayPose) => pose === "point" || pose === "thumbsup";
+export const isLargePose = (pose: FaradayPose) => LARGE_POSES.includes(pose);
 
 export interface FaradayAvatarProps {
   /** which pose to show */

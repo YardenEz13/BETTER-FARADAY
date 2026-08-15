@@ -12,7 +12,7 @@ import FaradayReaction, { type FaradayReactionKind } from "../components/Faraday
  * approve a promotion; the homework bubble needs a finished set).
  */
 
-const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak", "point", "thumbsup"];
+const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak", "point", "thumbsup", "wave"];
 const KINDS: FaradayReactionKind[] = ["correct", "wrong", "streak", "levelup", "homework"];
 const MOODS: FaradayMood[] = ["idle", "thinking", "happy"];
 

@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Sparkles, ArrowLeft } from "../components/electric";
 import { SparkBurst } from "../components/electric";
 import MathText from "../components/MathText";
+import FaradayAvatar from "../components/FaradayAvatar";
 import { ElectricLoader } from "../components/electric";
 import { HOMEWORK_THEMES } from "../components/ThemeSelector";
 
@@ -122,6 +123,9 @@ export default function Onboarding() {
           >
             {initial}
           </div>
+          <div className="flex justify-center mb-3">
+            <FaradayAvatar pose="thumbsup" px={96} />
+          </div>
           <h1 className="font-extrabold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
             הכל מוכן, {state.name}! 🎉
           </h1>
@@ -186,6 +190,10 @@ export default function Onboarding() {
             {/* ── Step 1: welcome + avatar color ── */}
             {step === 0 && (
               <div>
+                {/* First screen a new student sees — he should be the one saying hello */}
+                <div className="flex justify-center mb-2">
+                  <FaradayAvatar pose="wave" px={104} />
+                </div>
                 <h1 className="font-extrabold text-2xl text-on-surface mb-1.5" style={{ fontFamily: "'Assistant', sans-serif" }}>
                   ברוכים הבאים, {state.name}! ⚡
                 </h1>
