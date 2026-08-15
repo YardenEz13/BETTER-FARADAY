@@ -124,11 +124,18 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
             className={`w-12 h-12 rounded-full bg-surface flex items-center justify-center flex-shrink-0 ${reduced ? "" : "faraday-land"}`}
             style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
           >
-            <FaradayAvatar
-              pose={kind === "wrong" ? "wrong" : kind === "streak" || kind === "levelup" ? "streak" : "happy"}
-              px={44}
-              fill
-            />
+            {/* Level-up gets the 12-frame celebration; everything else is a
+                still. Reduced motion falls back to the static pose, since a
+                sprite frozen on frame one reads as a mistake, not a moment. */}
+            {kind === "levelup" && !reduced ? (
+              <span className="faraday-sprite" role="img" aria-label="פרופסור פאראדיי חוגג" />
+            ) : (
+              <FaradayAvatar
+                pose={kind === "wrong" ? "wrong" : kind === "streak" || kind === "levelup" ? "streak" : "happy"}
+                px={44}
+                fill
+              />
+            )}
           </div>
 
           {/* Speech bubble — clay card with a tail pointing toward the avatar */}
