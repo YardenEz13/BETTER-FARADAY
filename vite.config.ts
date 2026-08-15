@@ -45,7 +45,7 @@ export default defineConfig(({ command, mode }) => {
           dir: 'rtl',
           start_url: '/',
           display: 'standalone',
-          background_color: '#0E1B12',
+          background_color: '#F3F6F2',
           theme_color: '#17C964',
           icons: [
             { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
