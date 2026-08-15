@@ -23,23 +23,26 @@ $bmp = New-Object System.Drawing.Bitmap $img.Width, $img.Height, ([System.Drawin
 $bmp.Save("$p.tmp", [System.Drawing.Imaging.ImageFormat]::Png)
 ```
 
-## Video clips
+## Video clips — `video/`
 
-Three 720x1280 clips were generated to source poses and the celebration
-animation. They are **not committed** — 7.5MB of MP4 to produce ~140KB of
-shipped PNG is a bad trade for a repo, and every frame worth keeping is already
-extracted. Keep the originals off-repo; this table is the record of what came
-from where.
+Source clips for the poses and the celebration animation, kept so the frames
+can be re-cut without re-generating. Re-encoded at CRF 30, no audio, original
+720x1280 (resolution is kept deliberately: downscaling would soften the
+outlines the background key relies on).
 
 | Clip | Purpose | Used from it |
 |---|---|---|
-| `Using_the_attached_character_a.mp4` | first pose attempt, grey backdrop | nothing — superseded |
-| `..._a (1).mp4` | pose library, magenta backdrop, 2s holds | holds at 3.35s, 5.35s, 7.2s, 9.0s → `point`, `thumbsup` |
-| `..._a (2).mp4` | celebration | 12 frames, 4.90s–6.00s at 0.1s → `faraday-celebrate.png` |
+| `poses-v1-grey.mp4` | first pose attempt, grey backdrop | nothing — superseded, kept as the counter-example |
+| `poses-v2-magenta.mp4` | pose library, magenta backdrop, 2s holds | holds at 3.35s, 5.35s, 7.2s, 9.0s → `point`, `thumbsup` |
+| `celebration.mp4` | celebration | 12 frames, 4.90s–6.00s at 0.1s → `faraday-celebrate.png` |
 
-Rebuild from frames with `scripts/extract-poses.mjs` (stills) or
-`scripts/make-sprite.mjs` (strips). Both document the PowerShell frame-grab in
-their headers — Windows scrubs and renders PNGs, so no ffmpeg install.
+7.5MB of original MP4 compressed to 1.7MB. Verified fit for purpose: the sprite
+re-cut from the compressed `celebration.mp4` matches the one built from the
+original to within 0.6% transparent area, with zero magenta fringe either way.
+
+Rebuild with `scripts/extract-poses.mjs` (stills) or `scripts/make-sprite.mjs`
+(strips); both document their ffmpeg frame-grab. ffmpeg is a dev-machine tool
+here, not a project dependency — nothing in `npm run build` needs it.
 
 ## Prompt notes for the next generation
 

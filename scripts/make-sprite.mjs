@@ -5,9 +5,11 @@
  *   reads <frames-dir>/f-01.png, f-02.png, … in filename order
  *   writes public/faraday-<out-name>.png as a 1-row strip
  *
- * Grab the frames with the PowerShell scrubber documented in extract-poses.mjs,
- * at a constant interval — the CSS runs them at a fixed rate, so uneven spacing
- * shows up as stuttering.
+ * Grab the frames at a constant interval — the CSS runs them at a fixed rate,
+ * so uneven spacing shows up as stuttering:
+ *
+ *   ffmpeg -ss 4.9 -i assets-src/video/celebration.mp4 -frames:v 1 f-01.png
+ *   ffmpeg -ss 5.0 -i assets-src/video/celebration.mp4 -frames:v 1 f-02.png   …
  *
  * Pair with the .faraday-sprite class in index.css, which assumes a 12-cell
  * strip. Change the cell count in both or neither.

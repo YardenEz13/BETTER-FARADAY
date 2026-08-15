@@ -7,27 +7,13 @@
  *   reads <frames-dir>/hold-1.png, hold-2.png, … in order
  *   writes public/faraday-<name>.png for each
  *
- * Getting the frames out of an .mp4 without installing anything — Windows'
- * own media stack will scrub to a timestamp and render to a PNG:
+ * Grab the frames first (ffmpeg, installed via `winget install Gyan.FFmpeg`):
  *
- *   Add-Type -AssemblyName PresentationCore, WindowsBase
- *   $p = New-Object System.Windows.Media.MediaPlayer
- *   $p.ScrubbingEnabled = $true
- *   $p.Open((New-Object System.Uri("<clip>.mp4")))
- *   $p.Play(); Start-Sleep -Milliseconds 800; $p.Pause()
- *   $p.Position = [TimeSpan]::FromSeconds(<t>)
- *   Start-Sleep -Milliseconds 1200
- *   $dv = New-Object System.Windows.Media.DrawingVisual
- *   $dc = $dv.RenderOpen()
- *   $dc.DrawVideo($p, (New-Object System.Windows.Rect(0,0,720,1280)))
- *   $dc.Close()
- *   $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap(720,1280,96,96,[System.Windows.Media.PixelFormats]::Pbgra32)
- *   $rtb.Render($dv)
- *   … PngBitmapEncoder → hold-N.png
+ *   ffmpeg -ss <seconds> -i assets-src/video/<clip>.mp4 -frames:v 1 hold-1.png
  *
- * Pick the timestamps by looking for the *holds*: a generated clip that was
- * prompted for "hold each pose 2 seconds" goes nearly static there, and a
- * static stretch is a free, fully-drawn pose.
+ * Pick the timestamps by looking for the *holds*: a clip prompted for "hold
+ * each pose 2 seconds" goes nearly static there, and a static stretch is a
+ * free, fully-drawn pose.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
