@@ -1147,6 +1147,32 @@ body {
   to   { background-position: calc(var(--cell) * -12) 0; }
 }
 
+/* Typing loop: 12 frames cut from a clip that actually returns to its start, so
+   this one repeats forever instead of firing once. 0.833s is the measured loop
+   length — the interval where the first and last frames match. */
+.faraday-typing {
+  /* 32px is the chat avatar's inner box (w-9 minus its 2px border each side).
+     flex-shrink is pinned because a squashed element keeps the cell-sized
+     background and silently renders every frame clipped. */
+  --cell: 32px;
+  width: var(--cell);
+  height: var(--cell);
+  flex-shrink: 0;
+  background-image: url("/faraday-typing.png");
+  background-size: calc(var(--cell) * 12) var(--cell);
+  background-repeat: no-repeat;
+  animation: faraday-typing 0.833s steps(12) infinite;
+}
+@keyframes faraday-typing {
+  from { background-position: 0 0; }
+  to   { background-position: calc(var(--cell) * -12) 0; }
+}
+/* The global reduced-motion rule only crushes duration, which would spin a
+   12-frame loop into a flicker. Stop it outright and hold frame one. */
+@media (prefers-reduced-motion: reduce) {
+  .faraday-typing { animation: none; background-position: 0 0; }
+}
+
 /* Squash-on-land: the mascot compresses on impact and rebounds. Replays on each
    mount, which is exactly when AnimatePresence brings the reaction bubble in. */
 .faraday-land {

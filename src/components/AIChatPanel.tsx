@@ -1269,7 +1269,9 @@ export default function AIChatPanel({
                 {isTyping && (
                   <div className="flex gap-3 w-full max-w-4xl mr-auto">
                     <div className="w-9 h-9 rounded-full bg-surface-bright border-2 border-primary glow-primary flex-shrink-0 flex items-center justify-center overflow-hidden">
-                      <FaradayAvatar px={36} fill />
+                      {/* He is actually alive while the answer is being written,
+                          rather than a still portrait beside bouncing dots. */}
+                      <span className="faraday-typing" role="img" aria-label="פאראדיי מקליד" />
                     </div>
                     <div
                       className="flex items-center gap-2.5 px-4 py-3"

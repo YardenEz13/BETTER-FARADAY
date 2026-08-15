@@ -35,6 +35,7 @@ outlines the background key relies on).
 | `poses-v1-grey.mp4` | first pose attempt, grey backdrop | nothing — superseded, kept as the counter-example |
 | `poses-v2-magenta.mp4` | pose library, magenta backdrop, 2s holds | holds at 3.35s, 5.35s, 7.2s, 9.0s → `point`, `thumbsup` |
 | `celebration.mp4` | celebration | 12 frames, 4.90s–6.00s at 0.1s → `faraday-celebrate.png` |
+| `typing-loop.mp4` | chat typing indicator | 12 frames, 2.617s–3.45s → `faraday-typing.png`, head-cropped |
 
 7.5MB of original MP4 compressed to 1.7MB. Verified fit for purpose: the sprite
 re-cut from the compressed `celebration.mp4` matches the one built from the
@@ -60,11 +61,15 @@ What worked, and what to keep saying:
 
 What did *not* take, and needs saying harder:
 
-- **Framing.** Both clips came back full-body despite asking for head and
-  shoulders, which pushes the head small. Try: "the character fills the frame
-  from the top of his hair to mid-chest; never show the waist."
-- **Clip length.** A 1.5s loop was requested; both came back 10s. Ask for a
-  single cycle and expect to find the usable window yourself.
-- **Seamless loops.** Neither clip contained one — the celebration is a
-  continuous performance, which is why it ships as a one-shot rather than a
-  looping idle.
+- **Framing.** Asking for "head and shoulders" was ignored twice and gave
+  full-body poses, usable only at 84px and up. Phrasing it as a negative —
+  "do NOT show his waist, belt or full torso" — got the typing clip noticeably
+  closer, though he still reaches the bottom of frame. Assume you will crop:
+  `make-sprite.mjs … head` anchors a square to the top of the character.
+- **Clip length.** Every clip comes back 10s no matter what length is asked
+  for. Expect to find the usable window yourself.
+- **Seamless loops.** Asking twice, in two forms ("return to the starting
+  position" *and* "final frame pixel-identical to the first") is what produced
+  one. Measured: the typing clip's best loop pair scores 0.78, against 3.5 for
+  the celebration clip, which had no loop anywhere and so ships as a one-shot.
+  Find the window by scanning every frame pair for the lowest difference.

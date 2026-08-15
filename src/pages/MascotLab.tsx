@@ -63,11 +63,21 @@ export default function MascotLab() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="label-mono text-primary">Celebration sprite — 12 frames, steps()</h2>
+        <h2 className="label-mono text-primary">Celebration sprite — 12 frames, steps(), one shot</h2>
         <div className="flex items-center gap-6">
           <span key={spriteKey} className="faraday-sprite" style={{ ["--cell" as string]: "120px" }} />
           <span key={`s${spriteKey}`} className="faraday-sprite" style={{ ["--cell" as string]: "44px" }} />
           <button className="btn-clay-ghost" onClick={() => setSpriteKey((k) => k + 1)}>replay</button>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="label-mono text-primary">Typing loop — 12 frames, seamless, at chat size (36px)</h2>
+        <div className="flex items-center gap-6">
+          <span className="faraday-typing" style={{ ["--cell" as string]: "120px" }} />
+          <div className="w-9 h-9 rounded-full bg-surface-bright border-2 border-primary flex items-center justify-center overflow-hidden">
+            <span className="faraday-typing" />
+          </div>
         </div>
       </section>
 

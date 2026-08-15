@@ -1,9 +1,11 @@
 /**
  * Build a sprite strip from video frames grabbed at even intervals.
  *
- * Usage:  node scripts/make-sprite.mjs <frames-dir> <out-name> [cell-px]
+ * Usage:  node scripts/make-sprite.mjs <frames-dir> <out-name> [cell-px] [head]
  *   reads <frames-dir>/f-01.png, f-02.png, … in filename order
  *   writes public/faraday-<out-name>.png as a 1-row strip
+ *   `head` crops to his head instead of the whole character — the generated
+ *   clips frame the full torso, which is unreadable at avatar sizes
  *
  * Grab the frames at a constant interval — the CSS runs them at a fixed rate,
  * so uneven spacing shows up as stuttering:
@@ -17,8 +19,9 @@
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
 
-const [dir, name, cellArg] = process.argv.slice(2);
+const [dir, name, cellArg, mode] = process.argv.slice(2);
 const CELL = +(cellArg || 96);
+const HEAD_CROP = mode === "head";
 if (!dir || !name) {
   console.error("usage: node scripts/make-sprite.mjs <frames-dir> <out-name> [cell-px]");
   process.exit(1);
@@ -77,8 +80,12 @@ for (const { w, h, px } of frames) {
   }
 }
 const bw = maxX - minX + 1, bh = maxY - minY + 1;
-const side = Math.max(bw, bh) * 1.06;
-const sx = minX + bw / 2 - side / 2, sy = minY + bh / 2 - side / 2;
+// Head crop anchors a square to the top of the character instead of centring on
+// the whole body: at 36px an indicator needs a face, and his shoulders are not
+// the part that moves.
+const side = HEAD_CROP ? bw * 0.86 : Math.max(bw, bh) * 1.06;
+const sx = minX + bw / 2 - side / 2;
+const sy = HEAD_CROP ? minY - side * 0.04 : minY + bh / 2 - side / 2;
 
 const sheetW = CELL * frames.length;
 const sheet = new Uint8ClampedArray(sheetW * CELL * 4);
