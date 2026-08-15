@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Clock, CheckCircle as CheckCircle2, CircleIcon as Circle, ChevronRight
@@ -10,6 +10,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import CompoundQuestionRenderer from "../components/CompoundQuestionRenderer";
 import LegacyHomeworkRenderer from "../components/LegacyHomeworkRenderer";
+import FaradayReaction from "../components/FaradayReaction";
 import { useFaraday } from "../components/chat/FaradayProvider";
 import { Sparkles, Eye, EyeOff } from "../components/electric";
 import { ElectricAtom, ElectricBolt } from "../components/electric";
@@ -47,6 +48,19 @@ export default function StudentHomework() {
   useEffect(() => {
     updateContext({ questionStem: ctxStem, questionId: ctxQuestionId });
   }, [ctxStem, ctxQuestionId, updateContext]);
+
+  // Faraday congratulates on the *transition* to a finished assignment. Holding
+  // the previous count in a ref is what keeps him quiet when a student merely
+  // reopens homework they already finished.
+  const [showDone, setShowDone] = useState(false);
+  const prevSubmitted = useRef<number | null>(null);
+  useEffect(() => {
+    if (!homework || homework.length === 0) return;
+    const done = homework.filter((q) => q.status === "submitted").length;
+    const prev = prevSubmitted.current;
+    prevSubmitted.current = done;
+    if (prev !== null && prev < homework.length && done === homework.length) setShowDone(true);
+  }, [homework]);
 
   const openChat = (requestBridge = false) => faraday.open({
     studentId: studentId!,
@@ -371,6 +385,8 @@ export default function StudentHomework() {
 
         </div>
       </div>
+
+      <FaradayReaction kind="homework" visible={showDone} onDone={() => setShowDone(false)} />
 
     </div>
   );

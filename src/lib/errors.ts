@@ -20,5 +20,10 @@ export function errorMessage(e: unknown, fallback = "משהו השתבש. נסו
 export const ERROR_EVENT = "faraday:error";
 
 export function reportToUser(e: unknown) {
-  window.dispatchEvent(new CustomEvent(ERROR_EVENT, { detail: errorMessage(e) }));
+  // Deferred: main.tsx's window.onerror can fire *during* a React render (a
+  // query that throws on the render path), and dispatching synchronously then
+  // makes ErrorToaster setState mid-render — "Cannot update a component while
+  // rendering a different component". A microtask lands after the sync render.
+  const detail = errorMessage(e);
+  queueMicrotask(() => window.dispatchEvent(new CustomEvent(ERROR_EVENT, { detail })));
 }

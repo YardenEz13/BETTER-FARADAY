@@ -1078,6 +1078,69 @@ body {
 .cc-marquee { animation: cc-marquee 32s linear infinite; will-change: transform; }
 @keyframes cc-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
+/* Faraday mascot idle: a slow breath with a hint of sway, so the portrait is
+   never a dead sticker. Transform-only (compositor), origin at the feet so he
+   settles rather than floats. Killed by the reduced-motion block below. */
+.faraday-idle {
+  animation: faraday-breathe 4.2s ease-in-out infinite;
+  transform-origin: 50% 92%;
+  will-change: transform;
+}
+@keyframes faraday-breathe {
+  0%, 100% { transform: scale(1) translateY(0) rotate(0deg); }
+  30%      { transform: scale(1.035) translateY(-1.5%) rotate(-0.8deg); }
+  65%      { transform: scale(1.01) translateY(-0.4%) rotate(0.7deg); }
+}
+
+/* Blink: a second copy of the portrait, clipped to the eye band and pulled down
+   a hair, flashed on for ~90ms. Using the same image as the lid means the skin
+   tone always matches — no per-asset lid art. */
+/* Blink: the open-eyed pose sits over the closed-eye frame and drops out for
+   ~90ms, revealing it. Two real drawings, so no eyelid is faked in CSS. */
+.faraday-blinker {
+  animation: faraday-blink 6.4s ease-in-out infinite;
+}
+@keyframes faraday-blink {
+  0%, 95.5%, 100% { opacity: 1; }
+  96.6%, 98.2%    { opacity: 0; }
+}
+
+/* Pose change: React remounts the pose layer on a new key, so this fires as a
+   one-shot. Without it a mood swap is a hard cut between two drawings. */
+.faraday-swap {
+  animation: faraday-swap 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  transform-origin: 50% 90%;
+}
+@keyframes faraday-swap {
+  0%   { opacity: 0; transform: scale(0.82) rotate(-4deg); }
+  60%  { opacity: 1; transform: scale(1.05) rotate(1.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Thinking: a slow considering sway, off-tempo from the breath so the two
+   never sync into a single mechanical bob. */
+.faraday-ponder {
+  animation: faraday-ponder 3.6s ease-in-out infinite;
+  transform-origin: 50% 88%;
+}
+@keyframes faraday-ponder {
+  0%, 100% { transform: rotate(-2.4deg) translateY(0); }
+  50%      { transform: rotate(2.2deg) translateY(-1.2%); }
+}
+
+/* Squash-on-land: the mascot compresses on impact and rebounds. Replays on each
+   mount, which is exactly when AnimatePresence brings the reaction bubble in. */
+.faraday-land {
+  animation: faraday-land 0.52s cubic-bezier(0.22, 1, 0.36, 1) 1;
+  transform-origin: 50% 100%;
+}
+@keyframes faraday-land {
+  0%   { transform: scale(1.18, 0.8); }
+  40%  { transform: scale(0.92, 1.1); }
+  70%  { transform: scale(1.04, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+
 /* Hide scrollbars on horizontally-scrolling rails (tab bar, KPI strip) */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }

@@ -26,6 +26,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
 import DailyExperiment from "../components/DailyExperiment";
 import FaradayTour from "../components/FaradayTour";
+import FaradayReaction from "../components/FaradayReaction";
 import { computeAchievements } from "../lib/achievements";
 import { tierForPrice, TIER_STYLE, iconPath } from "../lib/rewardTier";
 
@@ -579,6 +580,20 @@ export default function StudentHome() {
   };
   const [liveSheetOpen, setLiveSheetOpen] = useState(false);
   const reducedMotion = !!useReducedMotion();
+
+  // Level-up celebration. A teacher approves the promotion (levels.resolveSuggestion)
+  // while the student is away, so the "what did they last see" marker has to
+  // survive a reload — a ref would never fire. First visit only records a
+  // baseline, so an existing student is not congratulated for standing still.
+  const [levelUp, setLevelUp] = useState<number | null>(null);
+  useEffect(() => {
+    const level = student?.level;
+    if (typeof level !== "number" || !studentId) return;
+    const key = `faraday:level:${studentId}`;
+    const seen = Number(localStorage.getItem(key) ?? 0);
+    localStorage.setItem(key, String(level));
+    if (seen > 0 && level > seen) setLevelUp(level);
+  }, [student?.level, studentId]);
 
   // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
   // so content padding is measured live instead of a guessed pt-[Npx] — a fixed
@@ -1355,6 +1370,13 @@ export default function StudentHome() {
 
       {/* Faraday onboarding tour — first visit, or replayed via the header "?" */}
       <FaradayTour open={tourOpen} onClose={closeTour} />
+
+      <FaradayReaction
+        kind="levelup"
+        level={levelUp ?? 2}
+        visible={levelUp !== null}
+        onDone={() => setLevelUp(null)}
+      />
 
     </div>
   );

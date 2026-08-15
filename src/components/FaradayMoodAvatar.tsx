@@ -24,7 +24,7 @@ export default function FaradayMoodAvatar({ mood = "idle", px = 40, fill, ...ava
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
-      <FaradayAvatar px={px} fill={fill} {...avatarProps} />
+      <FaradayAvatar pose={mood} px={px} fill={fill} {...avatarProps} />
 
       {/* thinking — pulsing violet ring + orbiting electron */}
       <AnimatePresence>

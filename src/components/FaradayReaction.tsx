@@ -11,7 +11,7 @@ import FaradayAvatar from "./FaradayAvatar";
  * beyond the auto-dismiss timer. Springs in via framer-motion; falls back to
  * a plain fade when the user prefers reduced motion.
  */
-export type FaradayReactionKind = "correct" | "wrong" | "streak";
+export type FaradayReactionKind = "correct" | "wrong" | "streak" | "levelup" | "homework";
 
 export interface FaradayReactionProps {
   kind: FaradayReactionKind;
@@ -19,7 +19,12 @@ export interface FaradayReactionProps {
   onDone: () => void;
   /** current consecutive-correct count — woven into the streak line */
   streakCount?: number;
+  /** new level 1–5 — woven into the level-up line */
+  level?: number;
 }
+
+/** Level names as the schema documents them (students.level, 1–5). */
+const LEVEL_NAMES = ["מתחיל", "חוקר", "מתקדם", "מומחה", "מאסטר"];
 
 const CORRECT_LINES = [
   "מצוין! הזרם זורם!",
@@ -48,30 +53,51 @@ function streakLine(count: number): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function pickLine(kind: FaradayReactionKind, streakCount?: number): string {
-  if (kind === "streak") return streakLine(streakCount ?? 3);
-  const pool = kind === "correct" ? CORRECT_LINES : WRONG_LINES;
+const HOMEWORK_LINES = [
+  "סיימת את כל שיעורי הבית — מעגל סגור!",
+  "כל המשימות הושלמו. עבודה מדויקת!",
+  "שיעורי הבית מאחוריך. אפשר לנשום ⚡",
+];
+
+/** level-up lines name the tier the student just reached */
+function levelUpLine(level: number): string {
+  const name = LEVEL_NAMES[Math.min(Math.max(level, 1), 5) - 1];
+  const pool = [
+    `עלית רמה! מהיום אתה ${name} ⚡`,
+    `רמה חדשה נפתחה — ${name}!`,
+    `הפוטנציאל עלה: ${name}. כל הכבוד!`,
+  ];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export default function FaradayReaction({ kind, visible, onDone, streakCount }: FaradayReactionProps) {
+function pickLine(kind: FaradayReactionKind, streakCount?: number, level?: number): string {
+  if (kind === "streak") return streakLine(streakCount ?? 3);
+  if (kind === "levelup") return levelUpLine(level ?? 2);
+  const pool =
+    kind === "homework" ? HOMEWORK_LINES : kind === "correct" ? CORRECT_LINES : WRONG_LINES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+export default function FaradayReaction({ kind, visible, onDone, streakCount, level }: FaradayReactionProps) {
   const reduced = !!useReducedMotion();
   // Freeze the chosen line for the lifetime of a single appearance so it doesn't
   // re-randomize on unrelated re-renders while the bubble is on screen.
   // `visible` is a deliberate dep: it re-rolls the line on each new appearance.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const line = useMemo(() => pickLine(kind, streakCount), [kind, streakCount, visible]);
+  const line = useMemo(() => pickLine(kind, streakCount, level), [kind, streakCount, level, visible]);
 
   useEffect(() => {
     if (!visible) return;
-    const t = setTimeout(onDone, 3000);
+    // Milestones earn a longer beat than a per-answer reaction.
+    const ms = kind === "levelup" || kind === "homework" ? 4500 : 3000;
+    const t = setTimeout(onDone, ms);
     return () => clearTimeout(t);
-  }, [visible, kind, streakCount, onDone]);
+  }, [visible, kind, streakCount, level, onDone]);
 
   const accent =
     kind === "wrong"
       ? "var(--color-secondary)"
-      : kind === "streak"
+      : kind === "streak" || kind === "levelup"
       ? "var(--color-tertiary)"
       : "var(--color-primary)";
 
@@ -91,12 +117,18 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount }: 
           role="status"
           aria-live="polite"
         >
-          {/* Avatar */}
+          {/* Avatar. Deliberately not overflow-hidden: the celebrate and streak
+              poses throw arms and sparks past the ring, and clipping them to the
+              circle flattens the pose. */}
           <div
-            className="w-12 h-12 rounded-full bg-surface flex items-center justify-center flex-shrink-0 overflow-hidden"
+            className={`w-12 h-12 rounded-full bg-surface flex items-center justify-center flex-shrink-0 ${reduced ? "" : "faraday-land"}`}
             style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
           >
-            <FaradayAvatar px={44} fill />
+            <FaradayAvatar
+              pose={kind === "wrong" ? "wrong" : kind === "streak" || kind === "levelup" ? "streak" : "happy"}
+              px={44}
+              fill
+            />
           </div>
 
           {/* Speech bubble — clay card with a tail pointing toward the avatar */}

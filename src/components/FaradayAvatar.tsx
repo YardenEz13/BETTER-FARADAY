@@ -2,69 +2,95 @@ import { useState } from "react";
 import { Bot } from "./electric";
 
 /**
- * Full-color Faraday tutor portraits, served from /public.
- * These are level-of-detail / resolution steps — each PNG is ~2x its intended
- * display size, so it stays crisp on retina. We pick by rendered size.
+ * Professor Faraday, the app mascot. One transparent 192px PNG per pose, cut
+ * from the generated character sheet by `scripts/slice-mascot.mjs`:
  *
- * Expected files:
- *   public/faraday32.png   (67x76)
- *   public/faraday45.png   (67x76)
- *   public/faraday64.png   (102x112)
- *   public/faraday128.png  (281x334)
+ *   public/faraday-idle.png      neutral, eyes open
+ *   public/faraday-thinking.png  hand at chin
+ *   public/faraday-happy.png     arms up, green sparks
+ *   public/faraday-wrong.png     open hand, encouraging
+ *   public/faraday-streak.png    amber lightning
+ *   public/faraday-blink.png     eyes closed — registers against `idle`
+ *
+ * One size for all of them: 192px covers 3x on the largest site (64px), and a
+ * resolution ladder for a ~40KB asset costs more in files than it saves in bytes.
  */
-const LOD = [32, 45, 64, 128] as const;
-
-/** nearest pre-optimized asset >= the rendered size */
-function pickAsset(px: number) {
-  return LOD.find((v) => v >= px) ?? 128;
-}
+export type FaradayPose = "idle" | "thinking" | "happy" | "wrong" | "streak";
 
 export interface FaradayAvatarProps {
-  /** intended render size in px — drives both the box and which optimized PNG loads */
+  /** which pose to show */
+  pose?: FaradayPose;
+  /** rendered size in px */
   px?: number;
-  /** fill the parent box instead of rendering a fixed-size box (use inside an existing circle) */
+  /** fill the parent box instead of a fixed-size box (use inside an existing circle) */
   fill?: boolean;
   /** spark-green halo */
   glow?: boolean;
-  /** "cover" fills the circle (slight crop); "contain" shows the whole portrait */
+  /** "cover" fills the box (slight crop); "contain" shows the whole pose */
   fit?: "cover" | "contain";
   className?: string;
   alt?: string;
 }
 
 /**
- * Michael Faraday tutor portrait. Drop-in for the lucide <Bot> avatar.
- * Gracefully falls back to <Bot> if a source file is missing, so the app
- * never shows a broken image.
+ * Drop-in for the lucide <Bot> avatar; falls back to it if a file is missing,
+ * so the app never shows a broken image.
  */
 export default function FaradayAvatar({
+  pose = "idle",
   px = 40,
   fill = false,
   glow = false,
-  fit = "cover",
+  fit = "contain",
   className = "",
   alt = "פרופסור פאראדיי",
 }: FaradayAvatarProps) {
   const [failed, setFailed] = useState(false);
-  const asset = pickAsset(px);
 
   if (failed) {
     return <Bot size={Math.round(px * 0.6)} className={`text-primary ${className}`} />;
   }
 
+  const imgClass = `w-full h-full ${className}`;
+  const imgStyle = { objectFit: fit } as const;
+
   return (
-    <img
-      src={`/faraday${asset}.png`}
-      alt={alt}
-      width={fill ? undefined : px}
-      height={fill ? undefined : px}
-      draggable={false}
-      onError={() => setFailed(true)}
-      className={`rounded-full select-none pointer-events-none ${fill ? "w-full h-full" : ""} ${className}`}
+    <span
+      className={`relative block select-none pointer-events-none faraday-idle ${fill ? "w-full h-full" : ""}`}
       style={{
-        objectFit: fit,
+        width: fill ? undefined : px,
+        height: fill ? undefined : px,
         filter: glow ? "drop-shadow(0 0 8px var(--color-inverse-primary))" : undefined,
       }}
-    />
+    >
+      {/* `key` remounts this group on every pose change, which is what replays
+          the swap animation. Each layer owns one animation — they cannot share
+          an element, since a second `animation` would replace the first. */}
+      <span key={pose} className="faraday-swap relative block w-full h-full">
+        {/* Blink only on idle: the closed-eye frame was cut to register against
+            that pose, and the others either move the head or already close his
+            eyes. Underneath, so the open-eyed pose fading out reveals it. */}
+        {pose === "idle" && (
+          <img
+            src="/faraday-blink.png"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className={`absolute inset-0 ${imgClass}`}
+            style={imgStyle}
+          />
+        )}
+        <img
+          src={`/faraday-${pose}.png`}
+          alt={alt}
+          draggable={false}
+          onError={() => setFailed(true)}
+          className={`relative ${pose === "idle" ? "faraday-blinker" : ""} ${
+            pose === "thinking" ? "faraday-ponder" : ""
+          } ${imgClass}`}
+          style={imgStyle}
+        />
+      </span>
+    </span>
   );
 }
