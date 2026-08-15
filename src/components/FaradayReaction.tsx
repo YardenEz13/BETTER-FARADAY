@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import FaradayAvatar from "./FaradayAvatar";
 import { spark as playSpark } from "../lib/sfx";
@@ -87,6 +87,14 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const line = useMemo(() => pickLine(kind, streakCount, level), [kind, streakCount, level, visible]);
 
+  // The dismiss timer must not depend on `onDone`'s identity. Callers pass an
+  // inline arrow, so it is a new function on every parent render — and
+  // PracticeSession re-renders once a second for its elapsed-time clock. With
+  // `onDone` in the dep list the effect tore down and restarted the timer every
+  // second, so it never fired and the bubble stayed on screen forever.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
+
   useEffect(() => {
     if (!visible) return;
     // Sound on milestones only — a chime on every correct answer is a chime
@@ -94,9 +102,9 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
     if (kind === "levelup" || kind === "homework") playSpark();
     // Milestones earn a longer beat than a per-answer reaction.
     const ms = kind === "levelup" || kind === "homework" ? 4500 : 3000;
-    const t = setTimeout(onDone, ms);
+    const t = setTimeout(() => onDoneRef.current(), ms);
     return () => clearTimeout(t);
-  }, [visible, kind, streakCount, level, onDone]);
+  }, [visible, kind, streakCount, level]);
 
   const accent =
     kind === "wrong"
@@ -109,6 +117,12 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
     <AnimatePresence>
       {visible && (
         <motion.div
+          // Keyed by what is being announced, so a reaction arriving while
+          // another is still on screen exits and re-enters instead of silently
+          // swapping its text. Without this, wrong -> correct just mutates the
+          // bubble in place: no spring, no squash, and it reads as "nothing
+          // happened" to the student who just recovered.
+          key={`${kind}-${streakCount ?? ""}-${level ?? ""}`}
           initial={reduced ? { opacity: 0 } : { opacity: 0, y: 60, scale: 0.7 }}
           animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
           exit={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.85 }}
