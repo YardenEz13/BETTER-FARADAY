@@ -10,6 +10,11 @@ import ErrorToaster from "./components/ErrorToaster";
 
 // Route-level code splitting — each page ships as its own chunk, so a student
 // never downloads the teacher dashboard (and vice versa).
+// Dev-only mascot lab. import.meta.env.DEV is replaced with `false` in a
+// production build, so the ternary collapses and the dynamic import becomes
+// dead code — the chunk is never emitted, not merely never fetched.
+const MascotLab = import.meta.env.DEV ? lazy(() => import("./pages/MascotLab")) : null;
+
 const RolePage           = lazy(() => import("./pages/RolePage"));
 const StudentHome        = lazy(() => import("./pages/StudentHome"));
 const Onboarding         = lazy(() => import("./pages/Onboarding"));
@@ -59,6 +64,7 @@ function AnimatedRoutes() {
     <PageTransition key={location.pathname}>
       <Suspense fallback={<RouteFallback />}>
         <Routes location={location}>
+            {MascotLab ? <Route path="/mascot" element={<MascotLab />} /> : null}
             <Route path="/" element={<RolePage />} />
             <Route path="/legal" element={<Legal />} />
             <Route path="/student/:studentId" element={<StudentHome />} />
