@@ -11,6 +11,7 @@ import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 import { useCountUp } from "../lib/gsapUtils";
 import { Skeleton as SkeletonBlock, SkeletonCircle } from "../components/ui";
+import FaradayAvatar from "../components/FaradayAvatar";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -170,9 +171,7 @@ export default function StudentHomeworkList() {
               className="bg-surface rounded-3xl p-16 flex flex-col items-center justify-center border-2 border-outline text-center"
               style={{ boxShadow: 'var(--shadow-clay)' }}
             >
-              <div className="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-6 border-2 border-outline">
-                <FileText size={36} className="text-on-surface-variant" />
-              </div>
+              <FaradayAvatar pose="idle" px={80} className="mb-4" />
               <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
                 אין משימות פתוחות כרגע. ברגע שהמורה ישלח אחת — היא תופיע כאן.

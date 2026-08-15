@@ -5,12 +5,13 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ChevronLeft, Check, CheckCircle as CheckCircle2, XCircle, ArrowRight, Sparkles,
+  ChevronLeft, CheckCircle as CheckCircle2, XCircle, ArrowRight,
   Lightbulb as ElectricBulb, SparkBurst,
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
 import FaradayCanvas from "../components/FaradayCanvas";
 import MathText from "../components/MathText";
+import FaradayAvatar from "../components/FaradayAvatar";
 import { fireStreak } from "../lib/celebrations";
 
 type Card = {
@@ -28,10 +29,7 @@ type Card = {
 function CheerfulEmpty({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-      <div className="w-20 h-20 rounded-3xl bg-primary/12 border-2 border-primary/30 flex items-center justify-center mb-6"
-        style={{ boxShadow: "var(--shadow-clay-primary)" }}>
-        <Sparkles size={36} className="text-primary" />
-      </div>
+      <FaradayAvatar pose="happy" px={84} className="mb-4" />
       <h2 className="font-bold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
         אין טעויות לחזור עליהן! ✨
       </h2>
@@ -158,10 +156,7 @@ export default function ReviewDeck() {
           >
             {!reducedMotion && <SparkBurst />}
             <div className="relative">
-              <div className="w-20 h-20 rounded-3xl bg-primary border-2 border-primary-dark flex items-center justify-center mx-auto mb-6"
-                style={{ boxShadow: "var(--shadow-clay-primary)" }}>
-                <Check size={40} strokeWidth={3} className="text-white" />
-              </div>
+              <FaradayAvatar pose="streak" px={88} glow className="mx-auto mb-4" />
               <h2 className="font-bold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>סיימת את החזרה! ⚡</h2>
               <p className="text-on-surface-variant font-medium mb-8">
                 {correctCount} מתוך {total} נכונות. כל חזרה מחזקת את החומר.
