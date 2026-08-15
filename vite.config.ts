@@ -36,7 +36,7 @@ export default defineConfig(({ command, mode }) => {
       // caching of Convex traffic — only the static app shell is precached.
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
         manifest: {
           name: 'FARADAY Logic',
           short_name: 'FARADAY',
@@ -47,7 +47,10 @@ export default defineConfig(({ command, mode }) => {
           display: 'standalone',
           background_color: '#0E1B12',
           theme_color: '#17C964',
-          icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
+          icons: [
+            { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+            { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+          ],
         },
       }),
     ],
