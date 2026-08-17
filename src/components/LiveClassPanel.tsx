@@ -97,7 +97,7 @@ function QuestionPicker({ classroomId, onStarted }: {
 
       {topicId && (
         <div>
-          <div className="text-sm font-bold text-on-surface mb-2">בחרו שאלה לשידור</div>
+          <div className="text-sm font-bold text-on-surface mb-2">בחירת שאלה לשידור</div>
           {questions === undefined ? (
             <div className="flex items-center justify-center py-8 text-on-surface-variant"><Loader2 size={18} className="animate-spin ms-2" /> טוען…</div>
           ) : questions.length === 0 ? (

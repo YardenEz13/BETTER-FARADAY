@@ -4,6 +4,7 @@
 // pass (JSON mode). If Gemini fails or times out, the heuristic result stands.
 import type { Message, ChatMetrics, PartialBrief, CompositeBrief } from "./localAI.types";
 import { geminiGenerateContent, getActiveStudentId } from "./localAI.gemini";
+import { countOf, questionCount } from "../lib/hebrew";
 
 // Gemini's JSON mode still occasionally emits invalid JSON: literal newlines
 // inside string values (→ "Unterminated string"), trailing commas, code fences,
@@ -431,7 +432,11 @@ function heuristicBrief(
     frictionPoints: hasFrustration ? ["ביטא תסכול או בלבול"] : [],
     autonomyLevel: hasOwnWork ? 4 : hasQuestions > 3 ? 2 : 3,
     solutionAccuracy: endedPositively ? 4 : showedSuccess ? 4 : 3,
-    keyInsight: `${totalMessages} הודעות, ${hasQuestions} שאלות, ${allRounds.length} סבבים`,
+    keyInsight: [
+      countOf(totalMessages, "הודעה אחת", "שתי הודעות", "הודעות"),
+      questionCount(hasQuestions),
+      countOf(allRounds.length, "סבב אחד", "שני סבבים", "סבבים"),
+    ].join(", "),
     selfAssessment,
     studentQuotes: studentQuotes.length > 0 ? studentQuotes : undefined,
     missingConcepts: missingConcepts.length > 0 ? missingConcepts : undefined,

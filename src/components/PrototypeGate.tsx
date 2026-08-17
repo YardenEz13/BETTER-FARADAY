@@ -92,7 +92,7 @@ export default function PrototypeGate({ children }: { children: React.ReactNode 
 
           {error && (
             <div className="text-error label-mono border-2 border-error/30 bg-error/10 p-3 text-center rounded-2xl">
-              מה קרה לך החלקת על השכל?
+              אופס — סיסמה שגויה. אפשר לנסות שוב.
             </div>
           )}
 

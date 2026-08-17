@@ -146,8 +146,8 @@ describe("CompoundQuestionRenderer Component", () => {
 
     // "coordinates" is a math answer type → the MathField editor (mocked to a
     // textarea) with its own placeholder. Lazy-loaded, so query async.
-    const textarea = await screen.findByPlaceholderText("הקלד את התשובה…");
-    const submitBtn = screen.getByRole("button", { name: /בדוק תשובה/ });
+    const textarea = await screen.findByPlaceholderText("התשובה כאן…");
+    const submitBtn = screen.getByRole("button", { name: /בדיקת תשובה/ });
 
     // Type and submit answer
     fireEvent.change(textarea, { target: { value: "(1,0) וגם (3,0)" } });

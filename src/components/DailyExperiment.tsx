@@ -103,7 +103,7 @@ export default function DailyExperiment({ topics, onStart }: DailyExperimentProp
         <div className="flex-1 min-w-0">
           {eyebrow}
           <p className="font-medium text-on-surface-variant text-sm leading-snug">
-            פרופסור פאראדיי מזמין אותך לניסוי של היום
+            פרופסור פאראדיי מזמין לניסוי של היום
           </p>
           <h3 className="font-bold text-xl text-on-surface mt-1 flex items-center gap-2">
             <ElectricBolt tone="spark" size={18} glow={0.5} animated={false} />

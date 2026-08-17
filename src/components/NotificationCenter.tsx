@@ -8,6 +8,7 @@ import {
   Bell, BookOpen, FileText, Flame, Trophy, Sparkles, Target, Check,
 } from "./electric";
 import { SparkBurst } from "./electric";
+import { dayCount, hourCount, minuteCount, weekCount } from "../lib/hebrew";
 
 type Urgency = "urgent" | "info" | "celebration";
 interface NotificationItem {
@@ -27,14 +28,13 @@ function relativeTime(ts: number): string {
   const diff = Date.now() - ts;
   if (diff < 0) return "עכשיו";
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "כרגע";
-  if (mins < 60) return `לפני ${mins} ${mins === 1 ? "דקה" : "דקות"}`;
+  if (mins < 1) return "הרגע";
+  if (mins < 60) return `לפני ${minuteCount(mins)}`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `לפני ${hours === 2 ? "שעתיים" : hours === 1 ? "שעה" : `${hours} שעות`}`;
+  if (hours < 24) return `לפני ${hourCount(hours)}`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `לפני ${days === 2 ? "יומיים" : days === 1 ? "יום" : `${days} ימים`}`;
-  const weeks = Math.floor(days / 7);
-  return `לפני ${weeks === 1 ? "שבוע" : weeks === 2 ? "שבועיים" : `${weeks} שבועות`}`;
+  if (days < 7) return `לפני ${dayCount(days)}`;
+  return `לפני ${weekCount(Math.floor(days / 7))}`;
 }
 
 // ── Relative deadline phrasing (future) ──
@@ -45,9 +45,8 @@ function dueTime(dueAt: number): string {
   if (hours < 12) return "עד היום";
   if (hours < 24) return "עד מחר";
   const days = Math.floor(hours / 24);
-  if (days < 7) return `עוד ${days === 2 ? "יומיים" : days === 1 ? "יום" : `${days} ימים`}`;
-  const weeks = Math.floor(days / 7);
-  return `עוד ${weeks === 1 ? "שבוע" : weeks === 2 ? "שבועיים" : `${weeks} שבועות`}`;
+  if (days < 7) return `עוד ${dayCount(days)}`;
+  return `עוד ${weekCount(Math.floor(days / 7))}`;
 }
 
 function kindIcon(kind: string, urgency: Urgency) {
@@ -139,7 +138,7 @@ function PanelBody({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-primary bg-primary/10 border-2 border-primary/25 hover:bg-primary/15 transition-all cursor-pointer"
           >
             <Check size={13} />
-            סמן הכל כנקרא
+            סימון הכל כנקרא
           </button>
         )}
       </div>

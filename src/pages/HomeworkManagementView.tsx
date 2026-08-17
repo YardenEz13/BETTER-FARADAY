@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+﻿import { useQuery, useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
@@ -12,6 +12,7 @@ import { usePacketIngest } from "../components/usePacketIngest";
 import MathText from "../components/MathText";
 import { SegTabs, ProgressBar, ToastStack, Modal } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
+import { questionCount } from "../lib/hebrew";
 import { animateSafe, remove as animeRemove } from "../lib/anime";
 import { errorMessage } from "../lib/errors";
 import { formatDateHe as formatDate, toDateTimeLocal } from "../lib/dates";
@@ -178,32 +179,32 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const handlePublish = (id: Id<"homework">) =>
     setConfirm({
       title: "פרסום מטלה", message: "השאלות ייווצרו לכל התלמידים והמטלה תהפוך לפעילה. להמשיך?",
-      confirmLabel: "פרסם", tone: "primary",
-      onConfirm: () => runConfirmed(() => publishHomework({ homeworkId: id }), "פרסום המטלה נכשל. נסו שוב."),
+      confirmLabel: "פרסום", tone: "primary",
+      onConfirm: () => runConfirmed(() => publishHomework({ homeworkId: id }), "פרסום המטלה נכשל. אפשר לנסות שוב."),
     });
 
   const handleDelete = (id: Id<"homework">) =>
     setConfirm({
       title: "מחיקת טיוטה", message: "הטיוטה תימחק לצמיתות. לא ניתן לשחזר.",
-      confirmLabel: "מחק", tone: "danger",
+      confirmLabel: "מחיקה", tone: "danger",
       onConfirm: () => runConfirmed(async () => {
         if (selected?.kind === "hw" && selected.id === id) setSelected(null);
         await deleteHomework({ homeworkId: id });
-      }, "מחיקת הטיוטה נכשלה. נסו שוב."),
+      }, "מחיקת הטיוטה נכשלה. אפשר לנסות שוב."),
     });
 
   const handleClose = (id: Id<"homework">) =>
     setConfirm({
       title: "סגירת מטלה", message: "סגירת המטלה תפיק סיכום כיתתי מבוסס-AI ותנעל הגשות. הפעולה אינה הפיכה.",
-      confirmLabel: "סגור מטלה", tone: "danger",
-      onConfirm: () => runConfirmed(() => closeHomework({ homeworkId: id }), "סגירת המטלה נכשלה. נסו שוב."),
+      confirmLabel: "סגירת מטלה", tone: "danger",
+      onConfirm: () => runConfirmed(() => closeHomework({ homeworkId: id }), "סגירת המטלה נכשלה. אפשר לנסות שוב."),
     });
 
   const handleCancelSchedule = (id: Id<"homework">) =>
     setConfirm({
       title: "ביטול תזמון", message: "הפרסום המתוזמן יבוטל והמטלה תחזור להיות טיוטה.",
-      confirmLabel: "בטל תזמון", tone: "primary",
-      onConfirm: () => runConfirmed(() => cancelScheduled({ homeworkId: id }), "ביטול התזמון נכשל. נסו שוב."),
+      confirmLabel: "ביטול תזמון", tone: "primary",
+      onConfirm: () => runConfirmed(() => cancelScheduled({ homeworkId: id }), "ביטול התזמון נכשל. אפשר לנסות שוב."),
     });
 
   // deleteAssignment also drops the assignment's questions and the stored PDF,
@@ -211,11 +212,11 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
   const handleDeletePdf = (id: Id<"pdfAssignments">) =>
     setConfirm({
       title: "מחיקת מטלת PDF", message: "המטלה, השאלות שסומנו עליה וקובץ ה-PDF יימחקו לצמיתות, יחד עם התשובות שהוגשו.",
-      confirmLabel: "מחק", tone: "danger",
+      confirmLabel: "מחיקה", tone: "danger",
       onConfirm: () => runConfirmed(async () => {
         if (selected?.kind === "pdf" && selected.id === id) setSelected(null);
         await deletePdfAssignment({ assignmentId: id });
-      }, "מחיקת המטלה נכשלה. נסו שוב."),
+      }, "מחיקת המטלה נכשלה. אפשר לנסות שוב."),
     });
 
   // Re-send a homework that already ran: same questions (a pinned חוברת comes
@@ -235,7 +236,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
     try {
       await duplicateHomework({ homeworkId: resend.id, deadline });
     } catch (e) {
-      setErrorMsg(errorMessage(e, "שליחת המטלה מחדש נכשלה. נסו שוב."));
+      setErrorMsg(errorMessage(e, "שליחת המטלה מחדש נכשלה. אפשר לנסות שוב."));
       setTimeout(() => setErrorMsg(null), 3500);
     } finally {
       setResend(null);
@@ -327,7 +328,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
             <div className="clay-card p-10 text-center">
               <BookOpen size={40} className="mx-auto mb-3 text-on-surface-variant" />
               <div className="font-bold text-base text-on-surface mb-1">אין מטלות להצגה</div>
-              <div className="text-sm text-on-surface-variant">התחילו מ״מטלה חדשה״ למעלה.</div>
+              <div className="text-sm text-on-surface-variant">אפשר להתחיל מ״מטלה חדשה״ למעלה.</div>
             </div>
           ) : filtered.map((it) => (
             <motion.div key={`${it.kind}-${it.id}`} variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
@@ -358,7 +359,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
         ) : (
           <div className="clay-card p-12 text-center text-on-surface-variant">
             <BarChart2 size={44} className="mx-auto mb-3" />
-            <div className="font-semibold text-sm">בחרו מטלה לצפייה בנתונים</div>
+            <div className="font-semibold text-sm">בחירת מטלה לצפייה בנתונים</div>
           </div>
         )}
       </div>
@@ -400,7 +401,7 @@ export function HomeworkManagementView({ classroomId }: { classroomId: Id<"class
           <>
             <button className="btn-clay-ghost flex-1 !py-2.5" onClick={() => setResend(null)}>ביטול</button>
             <button className="btn-clay-primary flex-1 !py-2.5" onClick={submitResend}>
-              <RotateCcw size={16} /> שלח שוב
+              <RotateCcw size={16} /> שליחה חוזרת
             </button>
           </>
         }
@@ -552,7 +553,7 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
             <button onClick={(e) => { e.stopPropagation(); onCancelSchedule?.(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
               style={{ borderColor: "var(--color-secondary)", color: "var(--color-secondary)" }}>
-              <XCircle size={14} /> בטל תזמון
+              <XCircle size={14} /> ביטול תזמון
             </button>
           )}
           {isDraft && (
@@ -564,12 +565,12 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
               <button onClick={(e) => { e.stopPropagation(); onPublish?.(); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
                 style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}>
-                <Send size={14} /> פרסם
+                <Send size={14} /> פרסום
               </button>
               <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
                 style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}>
-                <Trash2 size={14} /> מחק
+                <Trash2 size={14} /> מחיקה
               </button>
             </>
           )}
@@ -577,21 +578,21 @@ function AssignmentRow({ it, selected, onOpen, onEdit, onPublish, onDelete, onCl
             <button onClick={(e) => { e.stopPropagation(); onResend?.(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
               style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}>
-              <RotateCcw size={14} /> שלח שוב
+              <RotateCcw size={14} /> שליחה חוזרת
             </button>
           )}
           {isActiveHw && (
             <button onClick={(e) => { e.stopPropagation(); onClose?.(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
               style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}>
-              <XCircle size={14} /> סגור מטלה
+              <XCircle size={14} /> סגירת מטלה
             </button>
           )}
           {isPdf && (
             <button onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
               style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}>
-              <Trash2 size={14} /> מחק מטלה
+              <Trash2 size={14} /> מחיקת מטלה
             </button>
           )}
         </div>
@@ -719,7 +720,7 @@ function HomeworkDetail({ homeworkId }: { homeworkId: Id<"homework"> }) {
                           {isSub && <span className="flex items-center gap-1"><CheckCircle2 size={11} /> הושלם</span>}
                           {isIP && <span className="text-tertiary">בתהליך</span>}
                           {g.status === "pending" && <span className="text-error">טרם התחיל</span>}
-                          <span className="px-1.5 rounded bg-surface-container-high">{g.subs.length} שאלות</span>
+                          <span className="px-1.5 rounded bg-surface-container-high">{questionCount(g.subs.length)}</span>
                           {g.totalTimeMs > 0 && <span className="flex items-center gap-1"><Clock size={11} /> {Math.ceil(g.totalTimeMs / 60000)} דק׳</span>}
                           {g.aiInteractions > 0 && <span className="flex items-center gap-1"><Zap size={11} /> {g.aiInteractions} AI</span>}
                         </div>
@@ -982,7 +983,7 @@ function StudentQuestionsPanel({ g, onBack }: { g: StudentGroup; onBack: () => v
             {isSub && <span className="flex items-center gap-1"><CheckCircle2 size={11} /> הושלם</span>}
             {isIP && <span className="text-tertiary">בתהליך</span>}
             {g.status === "pending" && <span className="text-error">טרם התחיל</span>}
-            <span className="px-1.5 rounded bg-surface-container-high">{g.subs.length} שאלות</span>
+            <span className="px-1.5 rounded bg-surface-container-high">{questionCount(g.subs.length)}</span>
             {g.totalTimeMs > 0 && <span className="flex items-center gap-1"><Clock size={11} /> {Math.ceil(g.totalTimeMs / 60000)} דק׳</span>}
             {g.aiInteractions > 0 && <span className="flex items-center gap-1"><Zap size={11} /> {g.aiInteractions} AI</span>}
           </div>
@@ -1076,7 +1077,7 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
     try {
       await deleteQuestion({ questionId });
     } catch (e) {
-      setErr(errorMessage(e, "מחיקת השאלה נכשלה. נסו שוב."));
+      setErr(errorMessage(e, "מחיקת השאלה נכשלה. אפשר לנסות שוב."));
     } finally {
       setRemoving(null);
     }
@@ -1094,7 +1095,7 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
       {detail.pdfUrl && (
         <a href={detail.pdfUrl} target="_blank" rel="noreferrer"
           className="self-start flex items-center gap-1.5 text-xs font-bold text-primary hover:underline">
-          <FileText size={13} /> פתח את ה-PDF המקורי
+          <FileText size={13} /> פתיחת ה-PDF המקורי
         </a>
       )}
       {err && (
@@ -1116,12 +1117,12 @@ function PdfAssignmentDetail({ assignmentId }: { assignmentId: Id<"pdfAssignment
                 <button
                   onClick={() => removeQuestion(q._id)}
                   disabled={removing === q._id}
-                  aria-label={`מחק שאלה ${qi + 1}`}
-                  title="מחק שאלה"
+                  aria-label={`מחיקת שאלה ${qi + 1}`}
+                  title="מחיקת שאלה"
                   className="ms-auto flex items-center gap-1 px-2 py-1 rounded-lg border-2 text-[11px] font-semibold transition-colors disabled:opacity-50"
                   style={{ borderColor: "color-mix(in srgb, var(--color-error) 45%, var(--color-outline))", color: "var(--color-error)" }}
                 >
-                  <Trash2 size={12} /> {removing === q._id ? "מוחק…" : "מחק"}
+                  <Trash2 size={12} /> {removing === q._id ? "מוחקים…" : "מחיקה"}
                 </button>
               </div>
               {q.parts.map((p, pi) => {

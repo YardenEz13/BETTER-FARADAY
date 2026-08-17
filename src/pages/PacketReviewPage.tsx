@@ -8,6 +8,7 @@ import MathText from "../components/MathText";
 import { Check, X, AlertTriangle, Loader as Loader2, RefreshCw, Sparkles } from "../components/electric";
 import { ElectricLoader } from "../components/electric/ElectricLoader";
 import { errorMessage } from "../lib/errors";
+import { questionCount } from "../lib/hebrew";
 
 type PacketQuestion = Doc<"packetImportQuestions">;
 type PacketDraft = NonNullable<PacketQuestion["draft"]>;
@@ -120,7 +121,7 @@ export default function PacketReviewPage() {
     setBanner(
       r.errors.length > 0
         ? `אושרו ${r.approved}, ${r.errors.length} נכשלו (${r.errors[0].message})`
-        : `אושרו ${r.approved} שאלות.`,
+        : `${r.approved === 1 ? "אושרה" : "אושרו"} ${questionCount(r.approved)}.`,
     );
   };
 
@@ -138,8 +139,8 @@ export default function PacketReviewPage() {
     const r = await createHomework({ packetId: id, title, deadline, topicIds });
     setBanner(
       r.errors.length > 0
-        ? `נוצרו שיעורי בית עם ${r.pinnedQuestions + r.pinnedCompounds} שאלות, ${r.errors.length} דילגו.`
-        : `נוצרו שיעורי בית עם ${r.pinnedQuestions + r.pinnedCompounds} שאלות.`,
+        ? `נוצרו שיעורי בית עם ${questionCount(r.pinnedQuestions + r.pinnedCompounds)}, ${r.errors.length} דילגו.`
+        : `נוצרו שיעורי בית עם ${questionCount(r.pinnedQuestions + r.pinnedCompounds)}.`,
     );
   };
 
@@ -176,7 +177,7 @@ export default function PacketReviewPage() {
                 onClick={() => cancel({ packetId: id })}
                 className="text-xs px-3 py-1.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-error)_50%,transparent)] text-[var(--color-error)] font-bold hover:bg-[color-mix(in_srgb,var(--color-error)_10%,transparent)]"
               >
-                בטל
+                ביטול
               </button>
             )}
           </div>
@@ -196,11 +197,11 @@ export default function PacketReviewPage() {
                 type="button"
                 onClick={async () => {
                   const r = await retryAllFailed({ packetId: id });
-                  setBanner(`נשלחו ${r.retried} שאלות לעיבוד חוזר.`);
+                  setBanner(`${r.retried === 1 ? "נשלחה" : "נשלחו"} ${questionCount(r.retried)} לעיבוד חוזר.`);
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-bold hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] flex items-center gap-1.5"
               >
-                <RefreshCw size={13} /> נסה שוב את כל הנכשלות ({packet.counts?.failed})
+                <RefreshCw size={13} /> ניסיון חוזר לכל הנכשלות ({packet.counts?.failed})
               </button>
             )}
           </div>
@@ -237,14 +238,14 @@ export default function PacketReviewPage() {
           <div className="sticky top-2 z-10 flex items-center gap-2 rounded-xl border-2 border-[var(--color-primary)] bg-[var(--color-surface)] px-4 py-2.5 mb-4 shadow-lg">
             <span className="text-sm font-bold flex-1">נבחרו {selected.size}</span>
             <button type="button" onClick={runBulkApprove} className="btn-clay-primary text-xs px-4 py-2 flex items-center gap-1.5">
-              <Check size={14} /> אשר ופרסם
+              <Check size={14} /> אישור ופרסום
             </button>
             <button
               type="button"
               onClick={runBulkDiscard}
               className="text-xs px-4 py-2 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold hover:bg-[var(--color-surface-container-high)]"
             >
-              מחק
+              מחיקה
             </button>
           </div>
         )}
@@ -270,7 +271,7 @@ export default function PacketReviewPage() {
         {packet.status === "review" && (
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
             {missingTopic > 0 && (
-              <span className="text-xs text-[var(--color-error)] font-bold">{missingTopic} שאלות ללא נושא</span>
+              <span className="text-xs text-[var(--color-error)] font-bold">{questionCount(missingTopic)} ללא נושא</span>
             )}
             <button
               type="button"
@@ -279,7 +280,7 @@ export default function PacketReviewPage() {
               title={publishable === 0 ? "אין שאלות לפרסום" : undefined}
               className="btn-clay-primary flex items-center gap-2 px-6 py-3 font-bold disabled:opacity-50"
             >
-              <Sparkles size={16} /> צור שיעורי בית מהחוברת
+              <Sparkles size={16} /> יצירת שיעורי בית מהחוברת
             </button>
           </div>
         )}
@@ -429,7 +430,7 @@ function QuestionEditor({
       >
         <div className="sticky top-0 bg-[var(--color-surface)] border-b-2 border-[var(--color-outline-variant)] px-5 py-3 flex items-center justify-between z-10">
           <div className="font-extrabold">{question.sourceLabelRaw} · {KIND_HE[question.kind]}</div>
-          <button type="button" aria-label="סגור" onClick={onClose}><X size={20} /></button>
+          <button type="button" aria-label="סגירה" onClick={onClose}><X size={20} /></button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 p-5">
@@ -443,7 +444,7 @@ function QuestionEditor({
                 onChange={(e) => setTopicId(e.target.value ? (e.target.value as Id<"topics">) : undefined)}
                 className="w-full rounded-lg border-2 border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               >
-                <option value="">— בחר נושא —</option>
+                <option value="">— בחירת נושא —</option>
                 {topics.map((t) => (
                   <option key={t._id} value={t._id}>{t.nameHe}</option>
                 ))}
@@ -479,18 +480,18 @@ function QuestionEditor({
 
             <div className="flex flex-wrap gap-2 pt-2">
               <button type="button" disabled={busy} onClick={onApprove} className="btn-clay-primary flex items-center gap-1.5 px-5 py-2.5 text-sm">
-                <Check size={15} /> אשר ופרסם
+                <Check size={15} /> אישור ופרסום
               </button>
               <button type="button" disabled={busy} onClick={onSave} className="px-5 py-2.5 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm hover:bg-[var(--color-surface-container-high)]">
-                שמור
+                שמירה
               </button>
               {question.status === "failed" && (
                 <button type="button" onClick={() => { retry({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm flex items-center gap-1.5">
-                  <RefreshCw size={14} /> נסה שוב
+                  <RefreshCw size={14} /> ניסיון חוזר
                 </button>
               )}
               <button type="button" onClick={() => { discard({ questionId: question._id }); onClose(); }} className="px-4 py-2.5 rounded-lg border-2 border-[color-mix(in_srgb,var(--color-error)_45%,transparent)] text-[var(--color-error)] font-bold text-sm ms-auto">
-                מחק
+                מחיקה
               </button>
             </div>
           </div>
@@ -539,7 +540,7 @@ function SimpleFields({ draft, onChange }: { draft: Extract<PacketDraft, { kind:
       <Field label="נוסח השאלה" value={draft.stem} onChange={(v) => onChange({ ...draft, stem: v })} textarea />
       {draft.format === "multiple_choice" ? (
         <div>
-          <label className="label-mono text-xs text-[var(--color-primary)] block mb-1">אפשרויות (סמן את הנכונה)</label>
+          <label className="label-mono text-xs text-[var(--color-primary)] block mb-1">אפשרויות (סימון הנכונה)</label>
           {draft.choices.map((c, i) => (
             <div key={i} className="flex items-center gap-2 mb-1.5">
               <input
@@ -600,7 +601,7 @@ function SectionEditor({ section, onChange }: { section: Section; onChange: (pat
             onClick={() => onChange({ proofSteps: [...(section.proofSteps ?? []), { stepIndex: section.proofSteps?.length ?? 0, expectedClaim: "", expectedReason: "" }] })}
             className="text-xs font-bold text-[var(--color-primary)] self-start"
           >
-            + הוסף שלב
+            + הוספת שלב
           </button>
         </>
       ) : (

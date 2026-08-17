@@ -10,6 +10,7 @@ import { ElectricBolt, SignalWave, Lens, Battery } from "../components/electric"
 import { ElectricLoader } from "../components/electric/ElectricLoader";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { useCountUp } from "../lib/gsapUtils";
+import { countOf, dayCount } from "../lib/hebrew";
 
 export default function LearningProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -121,7 +122,7 @@ export default function LearningProgress() {
             style={{ boxShadow: 'var(--shadow-clay)' }}
           >
             <Flame size={15} className="text-tertiary" />
-            <span className="num font-bold text-tertiary text-sm">{student.streak} ימים</span>
+            <span className="num font-bold text-tertiary text-sm">{dayCount(student.streak)}</span>
           </div>
           {/* Accuracy chip */}
           <div
@@ -240,7 +241,7 @@ export default function LearningProgress() {
                         <div className="flex gap-5 flex-wrap">
                           <div className="flex items-center gap-2 text-on-surface-variant text-sm">
                             <Lens size={18} tone="spark" glow={0.5} />
-                            <span>{correct} תשובות נכונות מתוך {total}</span>
+                            <span>{countOf(correct, "תשובה נכונה אחת", "שתי תשובות נכונות", "תשובות נכונות")} מתוך {total}</span>
                           </div>
                         </div>
                       </motion.div>
@@ -275,7 +276,7 @@ export default function LearningProgress() {
               <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex items-center justify-center gap-3 border border-white/20">
                 <Flame size={28} className="text-yellow-300" />
                 <div className="text-right">
-                  <p className="font-black text-lg leading-none" style={{ fontFamily: 'Assistant, sans-serif' }}>{student.streak} ימים ברצף</p>
+                  <p className="font-black text-lg leading-none" style={{ fontFamily: 'Assistant, sans-serif' }}>{dayCount(student.streak)} ברצף</p>
                   <p className="text-white/70 text-sm mt-0.5">אל תשבור את הרצף 🔥</p>
                 </div>
               </div>
@@ -354,7 +355,7 @@ export default function LearningProgress() {
               <h4 className="font-bold text-on-surface text-sm">הישג חדש במרחק נגיעה!</h4>
               <p className="text-on-surface-variant text-xs mt-0.5">
                 {completedTopics < topics.length
-                  ? `עוד נושא אחד והתג "המתמיד" שלך`
+                  ? `עוד נושא אחד והתג "המתמיד" נפתח`
                   : `כל הכבוד! כבשת את כל הנושאים 🎉`}
               </p>
             </div>

@@ -139,7 +139,7 @@ export default function Onboarding() {
             <span className="num font-extrabold text-primary">+25 XP</span>
           </motion.div>
           <p className="font-medium text-on-surface-variant text-sm mb-6 leading-relaxed">
-            הרמה שלך נקבעה לפי המבחן:
+            הרמה נקבעה לפי המבחן:
             <br />
             <span className="font-extrabold text-lg text-on-surface">רמת {levelName}</span>
             <span className="text-on-surface-variant"> · שלב {resultLevel}/5</span>
@@ -198,7 +198,7 @@ export default function Onboarding() {
                   ברוכים הבאים, {state.name}! ⚡
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm mb-7 leading-relaxed">
-                  בוא נגדיר את הפרופיל שלך. איזה צבע מתאים לך?
+                  עכשיו מגדירים את הפרופיל. איזה צבע הכי מתאים?
                 </p>
 
                 {/* Live letter-avatar preview */}
@@ -246,10 +246,10 @@ export default function Onboarding() {
             {step === 1 && (
               <div>
                 <h1 className="font-extrabold text-2xl text-on-surface mb-1.5" style={{ fontFamily: "'Assistant', sans-serif" }}>
-                  מה מעניין אותך? 🎯
+                  מה מעניין? 🎯
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm mb-6 leading-relaxed">
-                  נשתמש בזה כדי להתאים לך את שאלות שיעורי הבית. המתמטיקה נשארת — רק הסיפור משתנה!
+                  זה מה שיתאים את שאלות שיעורי הבית. המתמטיקה נשארת — רק הסיפור משתנה!
                 </p>
 
                 <div className="grid grid-cols-2 gap-3 mb-5">
@@ -280,7 +280,7 @@ export default function Onboarding() {
 
                 {/* Free-text option */}
                 <label className="block font-semibold text-sm text-on-surface-variant mb-2">
-                  או כתוב נושא משלך:
+                  או נושא אחר:
                 </label>
                 <input
                   type="text"
@@ -301,7 +301,7 @@ export default function Onboarding() {
                   מבחן קצר 📝
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm mb-6 leading-relaxed">
-                  3 שאלות שיעזרו לנו להתאים לך את הרמה. אין טעויות כאן — פשוט תענה מה שנראה לך.
+                  3 שאלות להתאמת הרמה. אין כאן טעויות — פשוט לענות מה שנראה הכי הגיוני.
                 </p>
 
                 {!quiz ? (

@@ -29,6 +29,8 @@ import FaradayTour from "../components/FaradayTour";
 import FaradayReaction from "../components/FaradayReaction";
 import { computeAchievements } from "../lib/achievements";
 import { tierForPrice, TIER_STYLE, iconPath } from "../lib/rewardTier";
+// `topicCount` is already a local count in this file — alias the phrase helper.
+import { dayCount, freezeCount, topicCount as countTopics } from "../lib/hebrew";
 
 /* ── Shop theme key → learning-map backdrop ──
    The value on a `theme` shop row is looked up here; "night" additionally
@@ -348,7 +350,7 @@ function DailyGoalCard({ studentId, reducedMotion }: { studentId: Id<"students">
                   <Target size={18} className="text-primary" />
                   <h3 className="font-bold text-lg text-on-surface">בחירת יעד יומי</h3>
                 </div>
-                <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer" aria-label="סגור">
+                <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-all cursor-pointer" aria-label="סגירה">
                   <X size={16} />
                 </button>
               </div>
@@ -413,7 +415,7 @@ function WeeklyStreakCard({ streak }: { streak: number }) {
           <p className="font-medium text-xs text-on-surface-variant leading-snug">
             {activeThisWeek >= 7
               ? "שבוע מושלם — כל הכבוד! ✨"
-              : `${activeThisWeek} ${activeThisWeek === 1 ? "יום פעיל" : "ימים פעילים"} השבוע`}
+              : `${dayCount(activeThisWeek)} ${activeThisWeek === 1 ? "פעיל" : "פעילים"} השבוע`}
           </p>
         </div>
       </div>
@@ -829,7 +831,7 @@ export default function StudentHome() {
                 {student.homeworkTheme ? (
                   <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
                 ) : (
-                  <div className="font-medium text-on-surface-variant text-[10px]">בחר נושא ✨</div>
+                  <div className="font-medium text-on-surface-variant text-[10px]">בחירת נושא ✨</div>
                 )}
               </div>
             </div>
@@ -844,7 +846,7 @@ export default function StudentHome() {
           </div>
           <div className="stat-chip">
             <StreakBolt days={student.streak} size={15} atRisk={streakInDanger} />
-            <span className="font-bold">{student.streak} ימים</span>
+            <span className="font-bold">{dayCount(student.streak)}</span>
           </div>
           {boostLeftH > 0 && (
             <div
@@ -879,8 +881,8 @@ export default function StudentHome() {
             type="button"
             onClick={toggleSfxMuted}
             aria-pressed={!sfxMuted}
-            aria-label={sfxMuted ? "הפעל צלילים" : "השתק צלילים"}
-            title={sfxMuted ? "הפעל צלילים" : "השתק צלילים"}
+            aria-label={sfxMuted ? "הפעלת צלילים" : "השתקת צלילים"}
+            title={sfxMuted ? "הפעלת צלילים" : "השתקת צלילים"}
             className="w-9 h-9 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer shadow-(--shadow-clay)"
           >
             {sfxMuted ? <SpeakerOff size={16} /> : <Speaker size={16} />}
@@ -932,11 +934,11 @@ export default function StudentHome() {
               <Flame className="text-tertiary flex-shrink-0" size={22} />
               <div className="flex-1 text-right">
                 <div className="font-bold text-on-surface text-sm">
-                  🔥 הרצף שלך בסכנה! פתרו שאלה אחת היום כדי לשמור עליו
+                  🔥 הרצף בסכנה! שאלה אחת היום מספיקה כדי לשמור עליו
                 </div>
                 {freezesAvailable > 0 && (
                   <div className="font-medium text-on-surface-variant text-xs mt-0.5">
-                    יש לך {freezesAvailable} {freezesAvailable === 1 ? "הקפאה" : "הקפאות"}
+                    נשארו {freezeCount(freezesAvailable)}
                   </div>
                 )}
               </div>
@@ -1025,12 +1027,12 @@ export default function StudentHome() {
                   מפת הלמידה שלי
                 </h1>
                 <p className="font-medium text-on-surface-variant text-sm translate-y-2">
-                  יחידה {completedTopics + 1} מתוך {topics.length} · כל שאלה מקרבת אותך ליעד
+                  יחידה {completedTopics + 1} מתוך {topics.length} · כל שאלה מקרבת ליעד
                 </p>
               </div>
               <div className="hidden sm:flex bg-surface rounded-full px-4 py-2 items-center gap-2.5 border-2 border-outline font-semibold text-sm shadow-(--shadow-clay)">
                 <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
-                <span className="text-on-surface font-bold">{student.streak} ימים רצוף</span>
+                <span className="text-on-surface font-bold">{dayCount(student.streak)} ברצף</span>
               </div>
             </div>
           </div>
@@ -1296,8 +1298,8 @@ export default function StudentHome() {
                 <div>
                   <h4 className="font-bold text-on-surface mb-1.5 text-sm">פרופסור פאראדיי</h4>
                   <p className="font-medium text-on-surface-variant leading-relaxed text-sm">
-                    אהלן! אתה בכיוון הנכון.{completedTopics > 0 ? ` כבר ${completedTopics} נושאים מאחוריך — ` : ' '}
-                    בוא נמשיך. תקוע על משהו? אני כאן עם רמז.
+                    אהלן! הכיוון נכון.{completedTopics > 0 ? ` כבר ${countTopics(completedTopics)} מאחור — ` : ' '}
+                    אפשר להמשיך. משהו נתקע? אני כאן עם רמז.
                   </p>
                   <button
                     className="mt-4 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm border-2 border-primary-dark cursor-pointer shadow-(--shadow-clay-primary)"
@@ -1319,7 +1321,7 @@ export default function StudentHome() {
               <div className="w-0.5 h-6 bg-outline" />
               <div className="flex items-center gap-2">
                 <StreakBolt days={student.streak} size={18} atRisk={streakInDanger} />
-                <span className="font-bold text-on-surface text-sm">{student.streak} ימים</span>
+                <span className="font-bold text-on-surface text-sm">{dayCount(student.streak)}</span>
               </div>
               <div className="w-0.5 h-6 bg-outline" />
               <div className="flex items-center gap-2">

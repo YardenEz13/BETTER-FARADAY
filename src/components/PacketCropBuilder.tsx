@@ -141,7 +141,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
       setTimeout(() => renderPage(1), 0);
     } catch (err) {
       console.error("[PacketCrop] load failed:", err);
-      setError("טעינת ה-PDF נכשלה. נסה קובץ אחר.");
+      setError("טעינת ה-PDF נכשלה. אפשר לנסות קובץ אחר.");
     }
   };
 
@@ -175,7 +175,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
   const cropSelection = (): string | null => {
     const canvas = canvasRef.current;
     if (!canvas || !sel || sel.w < 8 || sel.h < 8) {
-      setError("סמן אזור גדול יותר.");
+      setError("צריך לסמן אזור גדול יותר.");
       return null;
     }
     const rect = canvas.getBoundingClientRect();
@@ -289,7 +289,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 onClick={() => fileInputRef.current?.click()}
                 className="flex-1 grid place-items-center rounded-2xl border-2 border-dashed border-[var(--color-primary)] text-[var(--color-primary)] font-bold"
               >
-                <span className="flex items-center gap-2"><Upload size={18} /> בחר קובץ PDF</span>
+                <span className="flex items-center gap-2"><Upload size={18} /> בחירת קובץ PDF</span>
               </button>
             ) : (
               <>
@@ -300,8 +300,8 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                     : "bg-[color-mix(in_srgb,var(--color-tertiary)_15%,transparent)] text-[var(--color-tertiary)]"
                 }`}>
                   {stage === "question"
-                    ? `סמן את שאלה ${pairs.length + 1} וגזור`
-                    : `עכשיו סמן את התשובה לשאלה ${pairs.length + 1} (בדפי הפתרונות) — או דלג`}
+                    ? `לסימון וגזירה של שאלה ${pairs.length + 1}`
+                    : `עכשיו לסמן את התשובה לשאלה ${pairs.length + 1} (בדפי הפתרונות) — או לדלג`}
                 </div>
 
                 <div className="flex-1 overflow-auto rounded-xl border-2 border-[var(--color-outline-variant)] bg-white relative">
@@ -349,7 +349,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                     <>
                       <button type="button" onClick={skipAnswer}
                         className="px-4 py-2 rounded-lg border-2 border-[var(--color-outline-variant)] font-bold text-sm">
-                        דלג (בלי תשובה)
+                        דילוג (בלי תשובה)
                       </button>
                       <button type="button" onClick={takeAnswerCrop} disabled={!sel}
                         className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
@@ -384,7 +384,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                       {p.answerDataUrl
                         ? <span className="text-[10px] text-[var(--color-primary)] font-bold flex items-center gap-0.5"><Check size={11} /> תשובה</span>
                         : <span className="text-[10px] text-[var(--color-on-surface-variant)]">בלי תשובה</span>}
-                      <button type="button" aria-label="מחק" onClick={() => removePair(i)}>
+                      <button type="button" aria-label="מחיקה" onClick={() => removePair(i)}>
                         <Trash2 size={13} className="text-[var(--color-error)]" />
                       </button>
                     </span>
@@ -408,7 +408,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 className="btn-clay-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold disabled:opacity-50"
               >
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {submitting ? "שולח…" : <>שלח הכל ל-AI <Send size={14} /></>}
+                {submitting ? "שולחים…" : <>שליחת הכל ל-AI <Send size={14} /></>}
               </button>
             </div>
           </div>

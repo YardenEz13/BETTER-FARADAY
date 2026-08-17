@@ -146,7 +146,7 @@ export default function ProofSectionRenderer({
       }
     } catch {
       // Gemini overloaded / network — nothing saved, let the student retry.
-      setGradeError("הבדיקה נכשלה זמנית (העומס על השרת גבוה). נסה לבדוק את ההוכחה שוב.");
+      setGradeError("הבדיקה נכשלה זמנית (העומס על השרת גבוה). אפשר לבדוק את ההוכחה שוב.");
     } finally {
       setIsGrading(false);
     }
@@ -219,7 +219,7 @@ export default function ProofSectionRenderer({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="label-mono text-[10px] text-on-surface/50">טענה (מה אנחנו יודעים)</label>
+                  <label className="label-mono text-[10px] text-on-surface/50">טענה (מה ידוע)</label>
                   <textarea
                     className="bg-surface border border-outline rounded-lg px-3 py-2 text-on-surface text-sm focus:border-primary focus:outline-none transition-colors resize-none"
                     placeholder="לדוגמה: AO = OC"
@@ -259,10 +259,10 @@ export default function ProofSectionRenderer({
                     animate={{ opacity: 1, y: 0 }}
                   >
                     {result.claimCorrect && !result.reasonCorrect && (
-                      <div className="mb-1">✓ הטענה נכונה — בדוק את ההצדקה</div>
+                      <div className="mb-1">✓ הטענה נכונה — כדאי לבדוק את ההצדקה</div>
                     )}
                     {!result.claimCorrect && result.reasonCorrect && (
-                      <div className="mb-1">✓ ההצדקה נכונה — בדוק את הטענה</div>
+                      <div className="mb-1">✓ ההצדקה נכונה — כדאי לבדוק את הטענה</div>
                     )}
                     <div>{result.feedback}</div>
                     {step.clueIfWrong && result.stepScore === 0 && (
@@ -309,9 +309,9 @@ export default function ProofSectionRenderer({
             disabled={isGrading || !allFilled}
           >
             {isGrading ? (
-              <><Loader2 size={14} className="animate-spin" /> בודק את ההוכחה...</>
+              <><Loader2 size={14} className="animate-spin" /> בודקים את ההוכחה…</>
             ) : (
-              <><Send size={14} /> בדוק את ההוכחה</>
+              <><Send size={14} /> בדיקת ההוכחה</>
             )}
           </button>
 

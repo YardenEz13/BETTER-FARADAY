@@ -80,7 +80,7 @@ describe("ProofSectionRenderer", () => {
     claimInputs.forEach((el, i) => fireEvent.change(el, { target: { value: `claim ${i}` } }));
     reasonInputs.forEach((el, i) => fireEvent.change(el, { target: { value: `reason ${i}` } }));
 
-    fireEvent.click(screen.getByRole("button", { name: /בדוק את ההוכחה/ }));
+    fireEvent.click(screen.getByRole("button", { name: /בדיקת ההוכחה/ }));
 
     await waitFor(() => expect(mockGradeSection).toHaveBeenCalledTimes(1));
     expect(mockGradeSection).toHaveBeenCalledWith({
@@ -107,6 +107,6 @@ describe("ProofSectionRenderer", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /בדוק את ההוכחה/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /בדיקת ההוכחה/ })).toBeDisabled();
   });
 });

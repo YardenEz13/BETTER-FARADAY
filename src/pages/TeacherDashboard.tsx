@@ -23,6 +23,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import FaradayTour, { type TourStep } from "../components/FaradayTour";
 import { useTheme } from "../components/ThemeContext";
 import { errorMessage } from "../lib/errors";
+import { dayCount, studentCount } from "../lib/hebrew";
 import {
   CommandCenterData, CCStudent, CCStatus, CCTone,
   STATUS, LANES, toneColor, avatarStyle, cellColor, segColor, accColor,
@@ -412,7 +413,7 @@ function relDayHe(ms: number): string {
   const days = Math.floor((Date.now() - ms) / (24 * 60 * 60 * 1000));
   if (days <= 0) return "היום";
   if (days === 1) return "אתמול";
-  return `לפני ${days} ימים`;
+  return `לפני ${dayCount(days)}`;
 }
 
 const ACTION_TONE: Record<string, string> = {
@@ -494,7 +495,7 @@ function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
           <p className="text-[13px] text-on-surface-variant mt-0.5">התקציר הראשון ייווצר ביום ראשון. אפשר גם ליצור אותו עכשיו.</p>
         </div>
         <button className="btn-clay-primary flex-shrink-0" style={{ padding: "0.6rem 1.1rem", fontSize: 13.5 }} onClick={run} disabled={busy || !classroomId}>
-          {busy ? "יוצר…" : "צור תקציר עכשיו"}
+          {busy ? "יוצרים…" : "יצירת תקציר עכשיו"}
         </button>
       </div>
     );
@@ -514,7 +515,7 @@ function WeeklyDigest({ digest, classroomId, onSelectStudent, fire }: {
           <div className="text-[11.5px] font-semibold text-on-surface-variant mt-1">7 הימים האחרונים · עודכן {relDayHe(digest.generatedAt)}</div>
         </div>
         <button className="btn-clay-ghost flex items-center gap-1.5 flex-shrink-0" style={{ padding: "0.5rem 0.9rem", fontSize: 12.5 }} onClick={run} disabled={busy}>
-          <Zap size={14} className={busy ? "animate-pulse" : ""} /> {busy ? "מרענן…" : "רענן תקציר"}
+          <Zap size={14} className={busy ? "animate-pulse" : ""} /> {busy ? "מרעננים…" : "רענון תקציר"}
         </button>
       </div>
 
@@ -733,7 +734,7 @@ function PendingLevelsPanel({ classroomId, fire }: {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors disabled:opacity-50"
                 style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)" }}
               >
-                <CheckCircle2 size={14} /> אשר
+                <CheckCircle2 size={14} /> אישור
               </button>
               <button
                 onClick={() => decide(s._id, "rejected", s.studentName)}
@@ -918,8 +919,8 @@ function StudentCard({ s, topics, onSelect, fire }: { s: CCStudent; topics: Comm
         <span className="text-[11px] font-semibold text-on-surface-variant me-auto truncate">
           {s.weak ? <>חולשה: {s.weak.name} · <span className="num">{s.weak.pct}%</span></> : "אין מספיק נתונים"}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שלח רמז" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-tertiary"><Lightbulb size={17} tone="current" animated={false} glow={0.4} /></button>
-        <button onClick={(e) => { e.stopPropagation(); fire(`הודעה נשלחה אל ${s.name}`); }} title="שלח הודעה" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-secondary"><Send size={15} /></button>
+        <button onClick={(e) => { e.stopPropagation(); fire(`רמז נשלח אל ${s.name}`); }} title="שליחת רמז" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-tertiary"><Lightbulb size={17} tone="current" animated={false} glow={0.4} /></button>
+        <button onClick={(e) => { e.stopPropagation(); fire(`הודעה נשלחה אל ${s.name}`); }} title="שליחת הודעה" className="flex items-center justify-center rounded-lg w-[30px] h-[30px] border-2 border-outline bg-surface text-secondary"><Send size={15} /></button>
       </div>
     </div>
   );
@@ -963,7 +964,7 @@ function MasteryView({ data, masteryView, setMasteryView, sort, setSort, onlyRis
           <span className="inline-flex items-center justify-center rounded w-4 h-4 border-2 border-current text-label-sm">{onlyRisk ? "✓" : ""}</span>
           רק דורשי תשומת לב
         </button>
-        <span className="num text-label-lg font-normal text-on-surface-variant ms-auto hidden md:inline">{students.length} תלמידים</span>
+        <span className="num text-label-lg font-normal text-on-surface-variant ms-auto hidden md:inline">{studentCount(students.length)}</span>
       </div>
 
       {/* topic strip */}
@@ -1173,7 +1174,7 @@ function StudentDrawer({ s, topics, isMobile, onClose, fire }: { s: CCStudent; t
             <div className="font-display font-extrabold text-headline-md">{s.name}</div>
             <span className="text-label-lg font-bold" style={{ color: c }}>{STATUS[s.status].he}</span>
           </div>
-          <ClayButton variant="icon" onClick={onClose} aria-label="סגור" className="w-[38px] h-[38px]"><X size={17} /></ClayButton>
+          <ClayButton variant="icon" onClick={onClose} aria-label="סגירה" className="w-[38px] h-[38px]"><X size={17} /></ClayButton>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 mb-4.5">
@@ -1197,7 +1198,7 @@ function StudentDrawer({ s, topics, isMobile, onClose, fire }: { s: CCStudent; t
         </div>
 
         <div className="flex gap-2 mt-3.5">
-          <ClayButton variant="secondary" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`רמז נשלח אל ${s.name}`)}>שלח רמז</ClayButton>
+          <ClayButton variant="secondary" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`רמז נשלח אל ${s.name}`)}>שליחת רמז</ClayButton>
           <ClayButton variant="ghost" className="flex-1 px-2 py-[0.6rem] text-body-sm" onClick={() => fire(`הודעה נשלחה אל ${s.name}`)}>הודעה</ClayButton>
         </div>
       </motion.div>

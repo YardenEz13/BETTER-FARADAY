@@ -56,7 +56,7 @@ export default function FaradayConsole({
               <img src={attachedImage.dataUrl} alt="תצוגה מקדימה" className="w-12 h-12 rounded-lg object-cover border border-primary/40 shadow-sm flex-shrink-0" />
               <div className="flex items-center gap-1.5 flex-1 min-w-0 text-primary">
                 <ImagePlus size={14} className="flex-shrink-0" />
-                <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן לך רמז לצעד הבא</span>
+                <span className="font-label-md truncate" style={{ fontSize: '12px' }}>תמונת מחברת מצורפת — פאראדיי ייתן רמז לצעד הבא</span>
               </div>
               <button
                 onClick={onRemoveImage}
@@ -85,7 +85,7 @@ export default function FaradayConsole({
               onClick={() => fileInputRef.current?.click()}
               disabled={isTyping || isAnalyzing}
               className={`p-2 transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed ${attachedImage ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
-              title="צלם או צרף תמונת מחברת לבדיקה"
+              title="צילום או צירוף תמונת מחברת לבדיקה"
             >
               <ImagePlus className="" />
             </button>
@@ -93,7 +93,7 @@ export default function FaradayConsole({
               onClick={onOpenQRBridge}
               disabled={isTyping || isAnalyzing}
               className="p-2 text-on-surface-variant hover:text-primary transition-colors rounded-lg hover:bg-surface-variant/50 disabled:opacity-40 disabled:cursor-not-allowed"
-              title="צלם מהטלפון (QR)"
+              title="צילום מהטלפון (QR)"
             >
               <QrCode className="" />
             </button>
@@ -110,7 +110,7 @@ export default function FaradayConsole({
                 type="text"
                 dir="rtl"
                 className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/50 focus:ring-0 focus:outline-none py-2 px-2 font-body-md text-right"
-                placeholder={attachedImage ? "הוסף שאלה על התמונה (לא חובה)..." : "הקלד את התשובה שלך כאן... (ניתן להשתמש ב-LaTeX)"}
+                placeholder={attachedImage ? "אפשר להוסיף שאלה על התמונה (לא חובה)…" : "התשובה כאן… (אפשר להשתמש ב-LaTeX)"}
                 value={input}
                 onChange={e => onInputChange(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSubmit()}
@@ -141,7 +141,7 @@ export default function FaradayConsole({
                   style={{ boxShadow: 'var(--shadow-clay-primary)' }}
                   onClick={fireCharge}
                   disabled={(!input.trim() && !attachedImage) || isTyping || isAnalyzing}
-                  title={attachedImage ? "קבל רמז לפי התמונה" : "שלח"}
+                  title={attachedImage ? "רמז לפי התמונה" : "שליחה"}
                 >
                   <Send className="" />
                 </button>

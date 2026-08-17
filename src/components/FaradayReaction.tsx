@@ -31,7 +31,7 @@ const LEVEL_NAMES = ["מתחיל", "חוקר", "מתקדם", "מומחה", "מא
 const CORRECT_LINES = [
   "מצוין! הזרם זורם!",
   "כמו מעגל סגור — מושלם!",
-  "יש לך מוליכות גבוהה למתמטיקה!",
+  "יש כאן מוליכות גבוהה למתמטיקה!",
   "בול בפוטנציאל! כל הכבוד.",
   "התשובה הזו מוארת כמו נורה!",
 ];
@@ -48,24 +48,24 @@ const WRONG_LINES = [
 function streakLine(count: number): string {
   const pool = [
     `רצף של ${count}! האנרגיה מזנקת ⚡`,
-    `${count} ברצף — אתה טעון במלואך!`,
+    `${count} ברצף — הסוללה טעונה במלואה!`,
     `וואו, ${count} נכונות ברצף! זרם מקסימלי!`,
-    `${count} ברצף! המעגל שלך לוהט 🔥`,
+    `${count} ברצף! המעגל לוהט 🔥`,
   ];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
 const HOMEWORK_LINES = [
-  "סיימת את כל שיעורי הבית — מעגל סגור!",
+  "כל שיעורי הבית הושלמו — מעגל סגור!",
   "כל המשימות הושלמו. עבודה מדויקת!",
-  "שיעורי הבית מאחוריך. אפשר לנשום ⚡",
+  "שיעורי הבית מאחור. אפשר לנשום ⚡",
 ];
 
 /** level-up lines name the tier the student just reached */
 function levelUpLine(level: number): string {
   const name = LEVEL_NAMES[Math.min(Math.max(level, 1), 5) - 1];
   const pool = [
-    `עלית רמה! מהיום אתה ${name} ⚡`,
+    `עלייה ברמה! מהיום הדרגה היא ${name} ⚡`,
     `רמה חדשה נפתחה — ${name}!`,
     `הפוטנציאל עלה: ${name}. כל הכבוד!`,
   ];

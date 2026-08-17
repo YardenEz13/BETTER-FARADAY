@@ -112,7 +112,7 @@ describe("AIChatPanel Component", () => {
     );
 
     const inputEl = await screen.findByRole("textbox");
-    const sendButton = screen.getByRole("button", { name: /שלח/ });
+    const sendButton = screen.getByRole("button", { name: /שליחה/ });
 
     // Type a message
     fireEvent.change(inputEl, { target: { value: "איך מתחילים?" } });

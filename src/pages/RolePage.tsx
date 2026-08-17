@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Users, Shield } from "../components/electric";
 import { log } from "../lib/logger";
+import { countOf } from "../lib/hebrew";
 import { motion } from "framer-motion";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -81,7 +82,7 @@ export default function RolePage() {
   useMagneticHover(teacherCardRef, { strength: 0.05, tilt: 5 });
 
   const features: { Icon: (p: ElectricIconProps) => JSX.Element; text: string; tone: ElectricTone; bg: string }[] = [
-    { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה שלך — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
+    { Icon: ElectricBolt, text: "תרגול שמתכוונן לרמה — שאלה־שאלה", tone: "spark", bg: "bg-primary/10 border-primary/25 text-primary" },
     { Icon: ElectricAtom, text: "מורה AI אישי, זמין בכל רגע", tone: "violet", bg: "bg-secondary/10 border-secondary/25 text-secondary" },
     { Icon: SignalWave, text: "מעקב חי אחרי כל הכיתה", tone: "amber", bg: "bg-tertiary/10 border-tertiary/25 text-tertiary" },
   ];
@@ -138,7 +139,9 @@ export default function RolePage() {
           >
             <span className="mb-4 lg:mb-6 inline-flex items-center gap-2.5 self-start rounded-full border-2 border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary" style={{ boxShadow: "0 0 9px var(--color-primary)" }} />
-              מערכת פעילה · {students?.length ?? "—"} תלמידים מחוברים
+              מערכת פעילה · {students
+                ? countOf(students.length, "תלמיד אחד מחובר", "שני תלמידים מחוברים", "תלמידים מחוברים")
+                : "— תלמידים מחוברים"}
             </span>
 
             <h1 className="font-display font-bold leading-[1.03] text-on-surface" style={{ fontSize: "clamp(2.4rem, 11vw, 3.6rem)" }}>
@@ -147,7 +150,7 @@ export default function RolePage() {
               <SplitWords text="שמותאמת עבורך" className="text-primary" delay={0.45} />
             </h1>
             <p className="mt-4 lg:mt-5 max-w-[27rem] text-base lg:text-lg font-medium leading-relaxed text-on-surface-variant">
-              <span className="lg:hidden">בחר כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
+              <span className="lg:hidden">אפשר לבחור כיצד להיכנס — ה‑AI ממתין לשאלות.</span>
               <span className="hidden lg:inline">למידת מתמטיקה מעולם לא הייתה נגישה ופשוטה יותר.</span>
             </p>
 
@@ -172,7 +175,7 @@ export default function RolePage() {
             }}
           >
             <div className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-              SELECT MODE · בחר כניסה
+              SELECT MODE · בחירת כניסה
             </div>
 
             {/* Student card */}
@@ -191,7 +194,7 @@ export default function RolePage() {
                 </span>
               </div>
               <p className="mb-4 text-sm font-medium text-on-surface-variant">
-                בחר את שמך והתחל לתרגל — ה‑AI ממתין לשאלות.
+                לבחור שם ולהתחיל לתרגל — ה‑AI ממתין לשאלות.
               </p>
               <StudentSelector students={students} />
             </div>

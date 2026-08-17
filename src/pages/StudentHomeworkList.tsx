@@ -10,6 +10,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../components/electric";
 import { useCountUp } from "../lib/gsapUtils";
+import { dayCount, questionCount, sectionCount } from "../lib/hebrew";
 import { Skeleton as SkeletonBlock, SkeletonCircle } from "../components/ui";
 import FaradayAvatar from "../components/FaradayAvatar";
 
@@ -110,11 +111,11 @@ export default function StudentHomeworkList() {
                           <div className="font-bold text-base text-on-surface group-hover:text-primary transition-colors truncate">{a.title}</div>
                           <div className="flex gap-4 mt-1.5 flex-wrap">
                             <span className="text-xs text-on-surface-variant flex items-center gap-1.5">
-                              <FileText size={13} className="text-secondary" /> {a.questionCount} שאלות{a.partCount > a.questionCount ? ` · ${a.partCount} סעיפים` : ""}
+                              <FileText size={13} className="text-secondary" /> {questionCount(a.questionCount)}{a.partCount > a.questionCount ? ` · ${sectionCount(a.partCount)}` : ""}
                             </span>
                             {daysLeft !== null && (
                               <span className={`text-xs flex items-center gap-1.5 ${isExpired && !done ? 'text-error font-semibold' : 'text-on-surface-variant'}`}>
-                                <Clock size={13} /> {isExpired ? 'עבר המועד' : `נשארו ${daysLeft} ימים`}
+                                <Clock size={13} /> {isExpired ? 'עבר המועד' : `${daysLeft === 1 ? "נשאר" : "נשארו"} ${dayCount(daysLeft)}`}
                               </span>
                             )}
                           </div>
@@ -174,7 +175,7 @@ export default function StudentHomeworkList() {
               <FaradayAvatar pose="point" px={96} className="mb-4" />
               <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
-                אין משימות פתוחות כרגע. ברגע שהמורה ישלח אחת — היא תופיע כאן.
+                אין משימות פתוחות כרגע. ברגע שתישלח משימה חדשה — היא תופיע כאן.
               </div>
             </motion.div>
           ) : (
@@ -229,11 +230,11 @@ export default function StudentHomeworkList() {
                                 : (isClosed || isExpired) ? 'text-error'
                                 : 'text-tertiary'
                               } />
-                              {hw.questionCount} שאלות
+                              {questionCount(hw.questionCount)}
                             </span>
                             <span className={`text-xs flex items-center gap-1.5 ${isExpired && !isGraded ? 'text-error font-semibold' : 'text-on-surface-variant'}`}>
                               <Clock size={13} />
-                              {isExpired ? 'עבר המועד' : `נשארו ${daysLeft} ימים`}
+                              {isExpired ? 'עבר המועד' : `${daysLeft === 1 ? "נשאר" : "נשארו"} ${dayCount(daysLeft)}`}
                             </span>
                           </div>
                         </div>
@@ -324,7 +325,7 @@ export default function StudentHomeworkList() {
                 <span className="font-bold text-sm text-tertiary">טיפ מהמערכת</span>
               </div>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                התחל מהסעיף הראשון בכל שאלה. האלגוריתם מנתח את הפתרון שלך ולומד את דרך החשיבה שלך שלב אחר שלב.
+                כדאי להתחיל מהסעיף הראשון בכל שאלה. האלגוריתם מנתח את הפתרון ולומד את דרך החשיבה שלב אחר שלב.
               </p>
             </div>
           </motion.div>

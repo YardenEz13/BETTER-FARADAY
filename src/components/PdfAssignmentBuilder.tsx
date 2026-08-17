@@ -10,6 +10,7 @@ import {
 import * as pdfjsLib from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { errorMessage } from "../lib/errors";
+import { countOf, sectionCount } from "../lib/hebrew";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -130,7 +131,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
       setTimeout(() => renderPage(1), 0);
     } catch (err) {
       console.error("[PdfBuilder] load failed:", err);
-      setError("טעינת ה-PDF נכשלה. נסה קובץ אחר.");
+      setError("טעינת ה-PDF נכשלה. אפשר לנסות קובץ אחר.");
     }
   };
 
@@ -173,7 +174,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
   const cropSelection = () => {
     const canvas = canvasRef.current;
     if (!canvas || !sel || sel.w < 8 || sel.h < 8) {
-      setError("סמן אזור גדול יותר סביב השאלה.");
+      setError("צריך לסמן אזור גדול יותר סביב השאלה.");
       return;
     }
     const rect = canvas.getBoundingClientRect();
@@ -317,7 +318,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
             <div>
               <div className="font-headline-md text-on-surface">מטלת PDF אישית</div>
               <div className="font-label-md text-on-surface-variant" style={{ fontSize: "12px" }}>
-                חתוך כל שאלה מה-PDF, הזן תשובה — התלמיד יפתור ויקבל בדיקה מיידית
+                חיתוך כל שאלה מה-PDF והזנת תשובה — התלמיד יפתור ויקבל בדיקה מיידית
               </div>
             </div>
           </div>
@@ -350,9 +351,9 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
                     <Upload size={28} className="text-primary" />
                   </span>
                   <div>
-                    <div className="font-headline-md text-on-surface mb-1">העלה את חוברת הקיץ (PDF)</div>
+                    <div className="font-headline-md text-on-surface mb-1">העלאת חוברת הקיץ (PDF)</div>
                     <div className="font-body-md text-on-surface-variant max-w-[24rem]">
-                      גרור לכאן או לחץ לבחירה. לאחר מכן תסמן כל שאלה ותזין את תשובתה.
+                      אפשר לגרור לכאן או ללחוץ לבחירה. לאחר מכן לסמן כל שאלה ולהזין את תשובתה.
                     </div>
                   </div>
                   <span className="flex items-center gap-1 text-on-surface-variant/70 font-label-md" style={{ fontSize: "11px" }}>
@@ -381,7 +382,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
                     {rendering && <Loader2 size={15} className="text-primary animate-spin" />}
                     <button onClick={cropSelection} disabled={!sel || sel.w < 8}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md disabled:opacity-40 transition-all" style={{ fontSize: "12.5px" }}>
-                      <Scissors size={14} /> חתוך שאלה
+                      <Scissors size={14} /> חיתוך שאלה
                     </button>
                   </div>
                 </div>
@@ -407,7 +408,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
             {pendingCrop && (
               <div className="rounded-xl border-2 border-primary bg-primary/5 p-3 flex flex-col gap-2.5">
                 <div className="font-label-md text-primary" style={{ fontSize: "12px" }}>
-                  תצוגת החיתוך — הזן תשובות {pendingParts.length > 1 ? `(${pendingParts.length} סעיפים)` : ""}
+                  תצוגת החיתוך — הזנת תשובות {pendingParts.length > 1 ? `(${sectionCount(pendingParts.length)})` : ""}
                 </div>
                 <img src={pendingCrop} alt="crop" className="w-full rounded-lg border border-outline-variant bg-white" />
 
@@ -435,13 +436,13 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
 
                 <button onClick={addPart}
                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-dashed border-primary/40 text-primary hover:bg-primary/10 font-label-md transition-all" style={{ fontSize: "12.5px" }}>
-                  <Plus size={14} /> הוסף סעיף
+                  <Plus size={14} /> הוספת סעיף
                 </button>
 
                 <div className="flex gap-2 pt-0.5">
                   <button onClick={confirmQuestion}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md transition-all">
-                    <Check size={15} /> הוסף שאלה
+                    <Check size={15} /> הוספת שאלה
                   </button>
                   <button onClick={() => { setPendingCrop(null); setSel(null); }}
                     className="px-3 py-2 rounded-lg border-2 border-outline-variant text-on-surface-variant hover:bg-surface-variant/50">
@@ -463,7 +464,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
                 <label className="font-label-md text-on-surface-variant block mb-1">תלמיד יעד <span className="text-error">*</span></label>
                 <select value={studentId} onChange={(e) => setStudentId(e.target.value ? (e.target.value as Id<"students">) : "")} dir="rtl"
                   className="w-full bg-surface-container border-2 border-outline-variant rounded-lg px-3 py-2 text-on-surface focus:border-primary focus:outline-none">
-                  <option value="">— בחר תלמיד —</option>
+                  <option value="">— בחירת תלמיד —</option>
                   {students?.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
                 </select>
                 <div className="flex gap-2 mt-2">
@@ -499,7 +500,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
               </div>
               {questions.length === 0 ? (
                 <div className="text-center py-6 text-on-surface-variant/60 font-body-md text-sm border-2 border-dashed border-outline-variant rounded-xl">
-                  עדיין אין שאלות. סמן אזור ב-PDF ולחץ "חתוך שאלה".
+                  עדיין אין שאלות. אפשר לסמן אזור ב-PDF וללחוץ "חיתוך שאלה".
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -530,7 +531,9 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-outline-variant/60 bg-surface-container-lowest flex-shrink-0">
           <span className="font-label-md text-on-surface-variant text-sm">
-            {questions.length > 0 ? `${questions.length} שאלות מוכנות` : "סמן שאלות מה-PDF"}
+            {questions.length > 0
+              ? countOf(questions.length, "שאלה אחת מוכנה", "שתי שאלות מוכנות", "שאלות מוכנות")
+              : "סמן שאלות מה-PDF"}
           </span>
           <div className="flex items-center gap-2">
             <button onClick={publishing ? undefined : onClose} disabled={publishing}

@@ -131,7 +131,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
                 onClick={handleSubmit}
                 disabled={selectedIndex === null}
               >
-                <Send size={20} /> בדוק תשובה
+                <Send size={20} /> בדיקת תשובה
               </button>
               {aiChatTrigger && (
                 <button
@@ -148,7 +148,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
                   style={{ boxShadow: 'var(--shadow-clay)' }}
                   onClick={onQrBridge}
                 >
-                  <Smartphone size={20} /> צלם מהטלפון
+                  <Smartphone size={20} /> צילום מהטלפון
                 </button>
               )}
             </div>
@@ -185,7 +185,7 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
             style={{ boxShadow: 'var(--shadow-clay-secondary)' }}
             onClick={handleFinalize}
           >
-            המשך לשאלה הבאה ➜
+            לשאלה הבאה ➜
           </button>
         </motion.div>
       )}

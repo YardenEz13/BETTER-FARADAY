@@ -11,6 +11,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import { ElectricLoader } from "../components/electric";
 import MathText from "../components/MathText";
+import { sectionCount } from "../lib/hebrew";
 
 export default function StudentPdfAssignment() {
   const { studentId, assignmentId } = useParams<{ studentId: string; assignmentId: string }>();
@@ -139,7 +140,7 @@ export default function StudentPdfAssignment() {
               <div className="flex items-center gap-2 px-4 py-2.5 border-b border-outline bg-surface-container-low">
                 <span className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">{i + 1}</span>
                 <span className="font-bold text-sm text-on-surface">שאלה {i + 1}</span>
-                {multiPart && <span className="text-xs text-on-surface-variant">· {q.parts.length} סעיפים</span>}
+                {multiPart && <span className="text-xs text-on-surface-variant">· {sectionCount(q.parts.length)}</span>}
                 {qDone && (
                   <span className={`ms-auto inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${qCorrect === q.parts.length ? "bg-primary-container text-on-primary-container" : "bg-error-container text-on-error-container"}`}>
                     <CheckCircle2 size={13} /> {qCorrect}/{q.parts.length}
@@ -173,7 +174,7 @@ export default function StudentPdfAssignment() {
                           onChange={(e) => setInputs((m) => ({ ...m, [key]: e.target.value }))}
                           onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(q._id, pIdx, value); }}
                           dir="rtl"
-                          placeholder={multiPart ? `תשובת סעיף ${part.label}…` : "כתוב את התשובה שלך כאן…"}
+                          placeholder={multiPart ? `תשובת סעיף ${part.label}…` : "התשובה כאן…"}
                           className="flex-1 min-w-0 bg-surface-container border-2 rounded-xl px-4 py-2.5 text-on-surface focus:outline-none transition-colors"
                           style={{ borderColor: submitted ? (isCorrect ? "var(--color-primary)" : "var(--color-error)") : "var(--color-outline)" }}
                         />
@@ -183,7 +184,7 @@ export default function StudentPdfAssignment() {
                           className="flex items-center gap-1.5 px-5 rounded-xl bg-primary-container hover:bg-primary text-on-primary font-bold transition-all active:scale-95 disabled:opacity-40 flex-shrink-0"
                         >
                           {busy ? <Loader2 size={16} className="animate-spin" /> : submitted ? <CheckCircle2 size={16} /> : <Send size={16} />}
-                          <span className="hidden sm:inline">{submitted ? "בדוק שוב" : "בדוק"}</span>
+                          <span className="hidden sm:inline">{submitted ? "בדיקה חוזרת" : "בדיקה"}</span>
                         </button>
                       </div>
                       {submitted && !isCorrect && (

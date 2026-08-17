@@ -707,7 +707,7 @@ export default function PracticeSession() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm text-on-surface">פרופסור פאראדיי שם לב שקצת קשה כאן ⚡</div>
-              <p className="text-xs text-on-surface-variant mt-0.5 leading-snug">בוא נפרק את השאלה יחד, צעד אחר צעד — בלי לחשוף את התשובה.</p>
+              <p className="text-xs text-on-surface-variant mt-0.5 leading-snug">אפשר לפרק את השאלה יחד, צעד אחר צעד — בלי לחשוף את התשובה.</p>
               <div className="flex gap-2 mt-2.5">
                 <button
                   className="btn-clay-primary !px-3.5 !py-1.5 !text-xs"

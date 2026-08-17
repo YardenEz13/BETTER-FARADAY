@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/react";
 /**
  * Root crash shield — a render error anywhere in the tree lands here instead
  * of white-screening the whole app. Shows a friendly clay card with a reload
- * button; "נסה שוב" first attempts a soft re-render before a full reload.
+ * button; "ניסיון חוזר" first attempts a soft re-render before a full reload.
  */
 export default class AppErrorBoundary extends Component<
   { children: ReactNode },
@@ -39,14 +39,14 @@ export default class AppErrorBoundary extends Component<
             קצר חשמלי קטן
           </h1>
           <p className="text-sm text-on-surface-variant leading-relaxed mb-6">
-            משהו השתבש בתצוגה. הנתונים שלך שמורים — נסה לרענן ונחזור לזרום.
+            משהו השתבש בתצוגה. הנתונים שמורים — אפשר לרענן ולחזור לזרום.
           </p>
           <div className="flex gap-3 justify-center">
             <button
               className="btn-clay-primary !px-5 !py-2.5 !text-sm"
               onClick={() => this.setState({ error: null })}
             >
-              נסה שוב
+              ניסיון חוזר
             </button>
             <button
               className="px-5 py-2.5 rounded-2xl border-2 border-outline font-semibold text-sm text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer"

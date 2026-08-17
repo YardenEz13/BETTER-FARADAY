@@ -14,6 +14,7 @@ import FaradayReaction from "../components/FaradayReaction";
 import { useFaraday } from "../components/chat/FaradayProvider";
 import { Sparkles, Eye, EyeOff } from "../components/electric";
 import { ElectricAtom, ElectricBolt } from "../components/electric";
+import { questionCount, sectionCount } from "../lib/hebrew";
 
 export default function StudentHomework() {
   const { studentId, homeworkId } = useParams<{ studentId: string; homeworkId: string }>();
@@ -197,15 +198,15 @@ export default function StudentHomework() {
                     {currentHw?.title || "רשימת המשימות"}
                   </h1>
                   <p className="font-mono text-primary opacity-80 text-lg uppercase tracking-widest">
-                    {student.name}, {totalCount} שאלות מחכות לך.
-                    {isDeadlinePassed && <span className="text-error ml-4 font-bold"> — עבר המועד!</span>}
+                    {student.name}, {questionCount(totalCount)} {totalCount === 1 ? "ממתינה" : "ממתינות"}.
+                    {isDeadlinePassed && <span className="text-error ms-4 font-bold"> — עבר המועד!</span>}
                   </p>
                 </div>
 
                 {/* Progress bar */}
                 <div className="clay-card p-8 mb-12 relative overflow-hidden">
                   <div className="flex justify-between items-end mb-4">
-                    <div className="label-mono text-primary text-lg">ההתקדמות שלך</div>
+                    <div className="label-mono text-primary text-lg">ההתקדמות</div>
                     <div className="num font-black text-4xl text-primary">{progress}%</div>
                   </div>
                   <div className="w-full h-3 bg-surface-container-low relative border border-outline rounded-full overflow-hidden">
@@ -263,13 +264,13 @@ export default function StudentHomework() {
                           <div className="flex-1">
                             <div className="text-2xl font-black font-display text-on-surface mb-1">
                               שאלה {idx + 1}
-                              {isCompound && <span className="ml-3 text-primary/80 text-sm border border-primary/40 px-2 py-0.5 rounded-sm">581</span>}
+                              {isCompound && <span className="ms-3 text-primary/80 text-sm border border-primary/40 px-2 py-0.5 rounded-sm">581</span>}
                             </div>
                             <div className="font-mono text-sm text-on-surface-variant opacity-60">
                               {isCompound
                                 ? (aq.personalizedPreamble
                                     ? aq.personalizedPreamble.slice(0, 70) + "..."
-                                    : `${(qData as any).sections?.length || 0} סעיפים · רמה ${(qData as any).difficulty || "-"}`)
+                                    : `${sectionCount((qData as any).sections?.length || 0)} · רמה ${(qData as any).difficulty || "-"}`)
                                 : qData
                                   ? (aq.personalizedStem ?? (qData as any).stem ?? "").slice(0, 70) + "..."
                                   : "שאלה"
@@ -279,7 +280,7 @@ export default function StudentHomework() {
                             {aq.themeApplied && (
                               <div className="mt-1 flex items-center gap-1 text-xs text-primary">
                                 <Sparkles size={11} />
-                                <span>ערוך לנושא: {aq.themeApplied}</span>
+                                <span>מותאם לנושא: {aq.themeApplied}</span>
                               </div>
                             )}
                           </div>
@@ -375,7 +376,7 @@ export default function StudentHomework() {
             </div>
 
             <div className="font-mono text-sm leading-relaxed text-on-surface opacity-80 mb-8 relative z-10">
-              נתקעת? פאראדיי כאן כדי לכוון אותך צעד אחר צעד — בלי לחשוף את התשובה הסופית.
+              משהו נתקע? פאראדיי כאן כדי לכוון צעד אחר צעד — בלי לחשוף את התשובה הסופית.
             </div>
 
             <button className="btn-clay-primary w-full justify-center relative z-10" onClick={() => openChat()}>

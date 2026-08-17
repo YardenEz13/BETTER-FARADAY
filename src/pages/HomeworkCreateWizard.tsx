@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
@@ -8,6 +8,7 @@ import {
   Send, FileText, Loader as Loader2,
 } from "../components/electric";
 import { toDateTimeLocal } from "../lib/dates";
+import { countOf } from "../lib/hebrew";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -112,7 +113,7 @@ export default function HomeworkCreateWizard() {
       }
       navigate("/teacher");
     } catch {
-      setErrorMsg("שמירת הטיוטה נכשלה. נסו שוב.");
+      setErrorMsg("שמירת הטיוטה נכשלה. אפשר לנסות שוב.");
     } finally {
       setBusy(false);
     }
@@ -131,7 +132,7 @@ export default function HomeworkCreateWizard() {
       }
       navigate("/teacher");
     } catch {
-      setErrorMsg("פרסום המטלה נכשל. נסו שוב.");
+      setErrorMsg("פרסום המטלה נכשל. אפשר לנסות שוב.");
     } finally {
       setBusy(false);
     }
@@ -146,7 +147,7 @@ export default function HomeworkCreateWizard() {
       await createHomework({ classroomId, ...commonFields(), deadline: deadlineMs!, publishAt: publishMs! });
       navigate("/teacher");
     } catch {
-      setErrorMsg("תזמון הפרסום נכשל. נסו שוב.");
+      setErrorMsg("תזמון הפרסום נכשל. אפשר לנסות שוב.");
     } finally {
       setBusy(false);
     }
@@ -260,7 +261,7 @@ export default function HomeworkCreateWizard() {
                 })}
               </div>
               {selectedTopics.length === 0 && (
-                <p className="text-xs text-on-surface-variant mt-2">בחרו לפחות נושא אחד.</p>
+                <p className="text-xs text-on-surface-variant mt-2">צריך לבחור לפחות נושא אחד.</p>
               )}
             </div>
 
@@ -309,7 +310,7 @@ export default function HomeworkCreateWizard() {
             {pinnedCount > 0 && (
               <div className="border-t-2 border-outline pt-5">
                 <div className="text-sm font-semibold text-primary">
-                  {pinnedCount} שאלות נעוצות יתווספו לכל תלמיד
+                  {countOf(pinnedCount, "שאלה נעוצה אחת תתווסף", "שתי שאלות נעוצות יתווספו", "שאלות נעוצות יתווספו")} לכל תלמיד
                 </div>
                 <p className="text-xs text-on-surface-variant mt-1">
                   נעוצות מייבוא חוברת בניהול מטלות. הן נשמרות כמו שהן.
@@ -380,7 +381,7 @@ export default function HomeworkCreateWizard() {
                 <p className="text-xs text-on-surface-variant mt-2">תזמון פרסום זמין רק ביצירת מטלה חדשה.</p>
               ) : (
                 <p className="text-xs text-on-surface-variant mt-2">
-                  המטלה תיווצר כמתוזמנת ותפורסם אוטומטית במועד שתבחרו.
+                  המטלה תיווצר כמתוזמנת ותפורסם אוטומטית במועד שנקבע.
                 </p>
               )}
               {scheduleOn && !isEdit && (
@@ -423,7 +424,7 @@ export default function HomeworkCreateWizard() {
                 disabled={!step1Valid || busy}
                 className="btn-clay-ghost flex-1 !py-3"
               >
-                {busy ? <Loader2 size={17} className="animate-spin" /> : <FileText size={17} />} שמור כטיוטה
+                {busy ? <Loader2 size={17} className="animate-spin" /> : <FileText size={17} />} שמירה כטיוטה
               </button>
               {scheduleOn && !isEdit ? (
                 <button
@@ -439,7 +440,7 @@ export default function HomeworkCreateWizard() {
                   disabled={!canPublishNow || busy}
                   className="btn-clay-primary flex-1 !py-3"
                 >
-                  {busy ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />} פרסם עכשיו
+                  {busy ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />} פרסום עכשיו
                 </button>
               )}
             </div>

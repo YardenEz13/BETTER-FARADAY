@@ -379,7 +379,7 @@ export default function AIChatPanel({
           setPendingNextQuestion(true);
           const assessMsg: Message = {
             role: "model",
-            content: "רגע לפני שממשיכים לשאלה הבאה — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הבנת הכי טוב?",
+            content: "רגע לפני שממשיכים לשאלה הבאה — איך זה הרגיש? מה היה הכי קשה ומה הכי התבהר?",
           };
           setMessages(prev => {
             const newMsgs = [...prev, assessMsg];
@@ -542,7 +542,7 @@ export default function AIChatPanel({
       setAttachedImage(prepared);
     } catch (err) {
       console.error("[AIChatPanel] Image prepare failed:", err);
-      setImageError(errorMessage(err, "לא ניתן לטעון את התמונה."));
+      setImageError(errorMessage(err, "לא הצלחנו לטעון את התמונה."));
       setTimeout(() => setImageError(null), 5000);
     }
   };
@@ -622,7 +622,7 @@ export default function AIChatPanel({
       }
 
       if (!feedback) {
-        feedback = "לא הצלחתי לנתח את התמונה. נסה לצלם שוב באור טוב, במיקוד חד וכך שכל הפתרון נראה.";
+        feedback = "לא הצלחתי לנתח את התמונה. כדאי לצלם שוב באור טוב, במיקוד חד וכך שכל הפתרון נראה.";
       }
 
       setMessages((prev) => {
@@ -636,7 +636,7 @@ export default function AIChatPanel({
         return;
       }
       console.error("[AIChatPanel] Notebook check error:", e);
-      const fallback = "מצטער, נתקלתי בבעיה בניתוח התמונה. נסה שוב בעוד רגע.";
+      const fallback = "מצטער, נתקלתי בבעיה בניתוח התמונה. אפשר לנסות שוב בעוד רגע.";
       setMessages((prev) => {
         const updated = [...prev, { role: "model" as const, content: fallback }];
         if (chatIdRef.current) saveMessages(chatIdRef.current, updated).catch(console.error);
@@ -842,7 +842,7 @@ export default function AIChatPanel({
         return;
       }
       console.error("AI error:", e);
-      const fallback = "מצטער, נתקלתי בבעיה טכנית. נסה שוב.";
+      const fallback = "מצטער, נתקלתי בבעיה טכנית. אפשר לנסות שוב.";
       setMessages((prev) => {
         const updated = [...prev, { role: "model" as const, content: fallback }];
         if (chatIdRef.current) saveMessages(chatIdRef.current, updated).catch(console.error);
@@ -887,7 +887,7 @@ export default function AIChatPanel({
 
     const assessMsg: Message = {
       role: "model",
-      content: "לפני שנסיים — איך אתה מרגיש שהלך? מה היה הכי קשה ומה הרגשת שהבנת הכי טוב?",
+      content: "לפני שמסיימים — איך זה הרגיש? מה היה הכי קשה ומה הכי התבהר?",
     };
     setMessages(prev => [...prev, assessMsg]);
     if (chatIdRef.current) {
@@ -1094,7 +1094,7 @@ export default function AIChatPanel({
                           ? "מנתח שיחה..."
                           : cycleState === "cycling"
                           ? "מחדש הקשר..."
-                          : "⚡ העוזר האישי שלך למתמטיקה"}
+                          : "⚡ העוזר האישי למתמטיקה"}
                       </span>
                     </div>
                   </div>
@@ -1175,8 +1175,8 @@ export default function AIChatPanel({
                       <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>
                       <div className="font-body-md text-on-surface-variant max-w-[22rem] mx-auto">
                         {agentType === "practice"
-                          ? `כאן כדי לעזור לך לפצח את ${topicName || "השאלה"} — מתחילים ברמז, ואם עדיין תקוע נעמיק יחד עד שיהיה ברור.`
-                          : "כאן כדי ללוות אותך בשיעורי הבית, שלב אחר שלב. שאל אותי כל דבר."}
+                          ? `כאן כדי לפצח את ${topicName || "השאלה"} — מתחילים ברמז, ואם משהו עדיין תקוע נעמיק יחד עד שיהיה ברור.`
+                          : "כאן כדי ללוות בשיעורי הבית, שלב אחר שלב. אפשר לשאול כל דבר."}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 max-w-[30rem]">
@@ -1242,7 +1242,7 @@ export default function AIChatPanel({
                         {isAI && (
                           <button
                             onClick={() => copyMessage(msg.content, i)}
-                            title={copiedIdx === i ? "הועתק!" : "העתק"}
+                            title={copiedIdx === i ? "הועתק!" : "העתקה"}
                             className={`absolute top-1.5 left-1.5 p-1.5 rounded-lg border border-outline-variant bg-surface transition-all z-10 ${
                               copiedIdx === i ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-primary'
                             }`}

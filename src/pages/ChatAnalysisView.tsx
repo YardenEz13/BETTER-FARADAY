@@ -1,4 +1,4 @@
-import { Component, useState, type ReactNode } from "react";
+﻿import { Component, useState, type ReactNode } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -8,6 +8,7 @@ import MathText from "../components/MathText";
 import { ClayCard, ClayButton, Badge, Chip, ProgressBar, SegTabs } from "../components/ui";
 import { ArrowLeft, Clock, Sparkles, Check, Users } from "../components/electric";
 import { errorMessage } from "../lib/errors";
+import { studentCount } from "../lib/hebrew";
 
 /**
  * Chat Analysis · teacher view.
@@ -124,14 +125,14 @@ function ClassGapPanel({ chatId }: { chatId: string }) {
           className="text-sm md:text-base font-bold leading-snug text-pretty"
           style={{ color: "var(--color-on-error-container)" }}
         >
-          {picture.total} תלמידים נשברו על <b>{picture.concepts[0].concept}</b> — זה לא פער אישי, זה פער כיתתי.
+          {studentCount(picture.total)} {picture.total === 1 ? "נשבר" : "נשברו"} על <b>{picture.concepts[0].concept}</b> — זה לא פער אישי, זה פער כיתתי.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {picture.concepts.slice(0, 4).map((c) => (
           <span key={c.concept} className="stat-chip cursor-default">
-            <Users size={13} /> {c.concept} · {c.count} תלמידים
+            <Users size={13} /> {c.concept} · {studentCount(c.count)}
           </span>
         ))}
       </div>
@@ -303,7 +304,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
           {evidence.length > 0 && (
             <>
               <p className="text-sm leading-relaxed text-on-surface-variant text-pretty">
-                לחצו על ראיה כדי לסמן את הסבב שממנו היא נלקחה:
+                לחיצה על ראיה מסמנת את הסבב שממנו היא נלקחה:
               </p>
               <div className="flex flex-wrap gap-2">
                 {evidence.map((e) => (
@@ -319,7 +320,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
             <div className="rounded-2xl bg-surface-container-low p-4 flex flex-col gap-2">
               <span className="text-xs font-extrabold text-on-surface-variant">איך לאמת</span>
               <span className="text-sm leading-relaxed text-on-surface-variant">
-                · לבקש ממנו/ה להסביר את אחד הפתרונות בעל־פה
+                · לבקש הסבר בעל־פה על אחד הפתרונות
               </span>
               <span className="text-sm leading-relaxed text-on-surface-variant">
                 · תרגיל אחד בניסוח שונה מזה שהופיע בשיחה
@@ -463,7 +464,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
                 <Check size={15} strokeWidth={3} /> הוקצה ל{chat.studentName} · 4 תרגילים
               </span>
               <span className="text-xs" style={{ color: "var(--color-on-primary-container)", opacity: 0.85 }}>
-                יופיע אצלו/ה במסך הבית
+                יופיע אצל התלמיד במסך הבית
               </span>
             </div>
           ) : canAssign ? (
@@ -512,7 +513,7 @@ export function ChatAnalysisView({ chat, onBack }: ChatAnalysisViewProps) {
           className="flex flex-col gap-2.5"
           style={{ borderColor: "color-mix(in srgb, var(--color-secondary) 45%, transparent)" }}
         >
-          <h3 className="font-extrabold text-base text-on-surface">במילים שלו/ה</h3>
+          <h3 className="font-extrabold text-base text-on-surface">במילים של התלמיד</h3>
           <p className="text-base leading-snug font-semibold text-pretty text-on-surface">
             {quote.startsWith("״") || quote.startsWith('"') ? quote : `״${quote}״`}
           </p>

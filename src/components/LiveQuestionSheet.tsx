@@ -32,7 +32,7 @@ export function LiveBanner({ studentId, onJoin }: { studentId: string; onJoin: (
     >
       <span className="w-3 h-3 rounded-full bg-error animate-pulse flex-shrink-0" style={{ boxShadow: "0 0 10px var(--color-error)" }} />
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-on-surface text-sm">שיעור חי! המורה שידר/ה שאלה לכיתה</div>
+        <div className="font-bold text-on-surface text-sm">שיעור חי! שאלה חדשה שודרה לכיתה</div>
         {live.answered && (
           <div className="text-xs text-on-surface-variant mt-0.5">
             ענית {live.wasCorrect ? "נכון ✓" : ""} — ממתינים לשאר הכיתה
@@ -65,7 +65,7 @@ export function LiveQuestionSheet({ studentId, onClose }: { studentId: string; o
       setResult(res.isCorrect ? "correct" : "wrong");
       if (res.isCorrect) fireConfetti(window.innerWidth / 2, window.innerHeight * 0.4);
     } catch (e) {
-      setError(errorMessage(e, "השליחה נכשלה. נסה שוב."));
+      setError(errorMessage(e, "השליחה נכשלה. אפשר לנסות שוב."));
     } finally {
       setBusy(false);
     }
@@ -147,7 +147,7 @@ export function LiveQuestionSheet({ studentId, onClose }: { studentId: string; o
                   disabled={selected === null || busy}
                   onClick={answer}
                 >
-                  {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} שלח תשובה
+                  {busy ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} שליחת תשובה
                 </button>
               </div>
             )}

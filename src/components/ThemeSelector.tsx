@@ -43,10 +43,10 @@ export default function ThemePicker({
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="בחר נושא לשיעורי הבית שלך" height="80vh">
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="בחירת נושא לשיעורי הבית" height="80vh">
       <div dir="rtl" className="px-5 pb-10">
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed" style={{ fontFamily: 'Assistant, sans-serif' }}>
-          שאלות שיעורי הבית שלך יוצגו בהקשר של הנושא שתבחר — המתמטיקה נשארת זהה, רק הסיפור משתנה! 🎉
+          שאלות שיעורי הבית יוצגו בהקשר של הנושא הנבחר — המתמטיקה נשארת זהה, רק הסיפור משתנה! 🎉
         </p>
 
         {/* Theme grid — large clay-card tiles */}

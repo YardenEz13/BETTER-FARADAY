@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+﻿import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
@@ -9,6 +9,7 @@ import {
   Trophy, RotateCcw, Timer, ShieldOff, Sparkles,
 } from "../components/electric";
 import { ThemeToggle } from "../components/ThemeContext";
+import { questionCount } from "../lib/hebrew";
 import MathText from "../components/MathText";
 
 // ── מצב מתכונת — Bagrut exam simulation ──
@@ -44,7 +45,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
       navigate(`/student/${studentId}/exam/${res.examId}`);
     } catch (e) {
       setStarting(false);
-      alert("לא הצלחנו להתחיל מתכונת — נסו שוב מאוחר יותר.");
+      alert("לא הצלחנו להתחיל מתכונת — אפשר לנסות שוב מאוחר יותר.");
     }
   };
 
@@ -80,7 +81,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
 
           <div className="grid gap-3 mb-6">
             <Rule icon={<Timer size={18} />} text="שעון עצר: 30 דקות לכל שאלה. כשהזמן נגמר — המתכונת מוגשת אוטומטית." />
-            <Rule icon={<ShieldOff size={18} />} text="אין מורה AI ואין רמזים. אתה לבד, בדיוק כמו בבגרות." />
+            <Rule icon={<ShieldOff size={18} />} text="אין מורה AI ואין רמזים — לבד מול הדף, בדיוק כמו בבגרות." />
             <Rule icon={<Check size={18} />} text="בסיום — פירוק ניקוד מלא לכל סעיף, פתרונות מלאים, וניקוד סופי." />
           </div>
 
@@ -99,7 +100,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
                   }`}
                   style={count === n ? { boxShadow: "var(--shadow-clay-primary)" } : undefined}
                 >
-                  <div className="text-2xl">{n} שאלות</div>
+                  <div className="text-2xl">{questionCount(n)}</div>
                   <div className="label-mono text-xs opacity-70 mt-1">{n * 30} דקות</div>
                 </button>
               ))}
@@ -112,7 +113,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
             className="w-full rounded-full bg-primary text-on-primary border-2 border-primary-dark font-bold text-lg py-4 transition-all hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer disabled:opacity-60"
             style={{ boxShadow: "var(--shadow-clay-primary)" }}
           >
-            {starting ? "מכינים מתכונת…" : "התחל מתכונת 📝"}
+            {starting ? "מכינים מתכונת…" : "התחלת מתכונת 📝"}
           </button>
         </motion.div>
 
@@ -129,7 +130,7 @@ function ExamLobby({ studentId }: { studentId: Id<"students"> }) {
                 >
                   <div className="flex items-center gap-3">
                     <span className="label-mono text-xs text-on-surface-variant">{fmtDate(h.startedAt)}</span>
-                    <span className="text-sm font-semibold">{h.questionCount} שאלות</span>
+                    <span className="text-sm font-semibold">{questionCount(h.questionCount)}</span>
                     {h.status === "in_progress" && (
                       <span className="label-mono text-xs px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary">בתהליך</span>
                     )}
@@ -359,7 +360,7 @@ function ExamActive({
                     value={val}
                     onChange={(e) => handleChange(q._id, s.label, e.target.value)}
                     onBlur={(e) => handleBlur(q._id, s.label, e.target.value)}
-                    placeholder={isProof ? "כתוב כאן את מהלך ההוכחה…" : "התשובה שלך…"}
+                    placeholder={isProof ? "מהלך ההוכחה כאן…" : "התשובה כאן…"}
                     className="w-full bg-surface border-2 border-outline rounded-2xl px-4 py-3 text-on-surface focus:border-primary focus:outline-none transition-colors"
                   />
                 </div>
@@ -492,7 +493,7 @@ function ExamResults({
 
                       {sr.studentAnswer && (
                         <div className="text-sm mb-2">
-                          <span className="text-on-surface-variant">התשובה שלך: </span>
+                          <span className="text-on-surface-variant">התשובה שנרשמה: </span>
                           <span className="font-medium"><MathText>{sr.studentAnswer}</MathText></span>
                         </div>
                       )}
@@ -505,7 +506,7 @@ function ExamResults({
                           </div>
                           {section.solutionSteps?.length > 0 && (
                             <details className="mt-2">
-                              <summary className="label-mono text-xs text-secondary cursor-pointer">הצג פתרון מלא</summary>
+                              <summary className="label-mono text-xs text-secondary cursor-pointer">הצגת פתרון מלא</summary>
                               <div className="flex flex-col gap-2 mt-2">
                                 {section.solutionSteps.map((step: string, i: number) => (
                                   <div key={i} className="flex gap-2 items-start text-sm">

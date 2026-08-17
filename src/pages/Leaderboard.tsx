@@ -13,6 +13,7 @@ import FaradayCanvas from "../components/FaradayCanvas";
 import { Skeleton } from "../components/ui";
 import { useCountUp } from "../lib/gsapUtils";
 import { fireStreak } from "../lib/celebrations";
+import { dayCount, hourCount, minuteCount } from "../lib/hebrew";
 
 type Row = {
   rank: number;
@@ -43,7 +44,11 @@ function useResetCountdown(weekStart: number | undefined) {
       const d = Math.floor(ms / 86_400_000);
       const h = Math.floor((ms % 86_400_000) / 3_600_000);
       const m = Math.floor((ms % 3_600_000) / 60_000);
-      setLabel(d > 0 ? `עוד ${d} ימים ו-${h} שעות` : h > 0 ? `עוד ${h} שעות ו-${m} דקות` : `עוד ${m} דקות`);
+      setLabel(
+        d > 0 ? `עוד ${dayCount(d)} ו־${hourCount(h)}`
+        : h > 0 ? `עוד ${hourCount(h)} ו־${minuteCount(m)}`
+        : `עוד ${minuteCount(m)}`
+      );
     };
     tick();
     const id = setInterval(tick, 60_000);
@@ -122,7 +127,7 @@ function RankRow({ row, reducedMotion }: { row: Row; reducedMotion: boolean }) {
       <span className="flex-1 min-w-0">
         <span className="font-bold text-on-surface block truncate">
           {row.name}
-          {row.isMe && <span className="text-primary font-semibold text-xs me-2">· את/ה</span>}
+          {row.isMe && <span className="text-primary font-semibold text-xs me-2">· אני</span>}
         </span>
         {row.title && <span className="block font-semibold text-[11px] text-secondary truncate">{row.title}</span>}
       </span>
@@ -192,7 +197,7 @@ export default function Leaderboard() {
           </div>
           <h1 className="font-bold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>ליגת השבוע כבויה</h1>
           <p className="text-on-surface-variant font-medium max-w-[26rem] leading-relaxed">
-            המורה עדיין לא הפעיל/ה את טבלת המובילים בכיתה. בינתיים — כל שאלה שתפתרו נספרת! ✨
+            טבלת המובילים עדיין לא הופעלה בכיתה. בינתיים — כל שאלה נספרת! ✨
           </p>
         </div>
       </div>
@@ -231,11 +236,11 @@ export default function Leaderboard() {
         {myRank !== null && (
           <div className="mt-4 mb-6 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary/10 border-2 border-primary/30 w-fit" style={{ boxShadow: "var(--shadow-clay)" }}>
             <Sparkles size={16} className="text-primary" />
-            <span className="font-bold text-primary text-sm">המיקום שלך: #{myRank}</span>
+            <span className="font-bold text-primary text-sm">המיקום: #{myRank}</span>
           </div>
         )}
         {myRank === null && hidden && (
-          <div className="mt-4 mb-6 text-sm text-on-surface-variant font-medium">את/ה מוסתר/ת מהטבלה — אף אחד לא רואה אותך כאן.</div>
+          <div className="mt-4 mb-6 text-sm text-on-surface-variant font-medium">המצב מוסתר — אף אחד לא רואה את השם הזה בטבלה.</div>
         )}
 
         <div className="max-w-[34rem] mx-auto">

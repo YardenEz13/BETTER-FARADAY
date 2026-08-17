@@ -247,7 +247,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                       <button
                         className="btn-icon hover:border-error hover:text-error"
                         onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(chat._id); }}
-                        title="מחק שיחה"
+                        title="מחיקת שיחה"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -327,7 +327,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                           )}
                         </button>
                       ) : (
-                        <span className="text-xs text-on-surface-variant opacity-70">פתח את השיחה כדי לנתח</span>
+                        <span className="text-xs text-on-surface-variant opacity-70">פתיחת השיחה מאפשרת ניתוח</span>
                       )}
                     </div>
                   )}
@@ -388,7 +388,7 @@ export function AIChatAnalyticsView({ analytics }: { analytics: any }) {
                   if (selectedChatId === confirmDeleteId) setSelectedChatId(null);
                 }}
               >
-                מחק
+                מחיקה
               </button>
               <button className="btn-clay-ghost" onClick={() => setConfirmDeleteId(null)}>
                 ביטול

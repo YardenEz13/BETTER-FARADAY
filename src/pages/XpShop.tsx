@@ -16,6 +16,7 @@ import { ToastStack, useToasts } from "../components/ui/Toast";
 import FaradayCanvas from "../components/FaradayCanvas";
 import CyberAvatar from "../components/CyberAvatar";
 import { fireConfetti } from "../lib/celebrations";
+import { dayCount, hourCount, freezeCount } from "../lib/hebrew";
 
 /* ── Animated count-up number that pops on change ── */
 function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotion: boolean }) {
@@ -110,7 +111,7 @@ function ShopCard({
 }: {
   item: ShopItem;
   balance: number;
-  /** Live charge state for consumables ("יש לך 2 הקפאות"), else null. */
+  /** Live charge state for consumables ("במלאי: שתי הקפאות"), else null. */
   charge: string | null;
   reducedMotion: boolean;
   onBought: () => void;
@@ -253,7 +254,7 @@ function ShopCard({
           </span>
         ) : disabled && !affordable && !alwaysBuyable ? (
           <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-surface-container border-2 border-outline text-on-surface-variant font-semibold text-xs">
-            <Lock size={13} /> חסר לך {missing.toLocaleString()} נק׳
+            <Lock size={13} /> חסרות {missing.toLocaleString()} נק׳
           </span>
         ) : (
           <button
@@ -281,12 +282,12 @@ function ShopCard({
    shop query re-runs on every purchase, which is when this actually changes. */
 function chargeLabel(item: ShopItem, freezes: number, boostUntil: number | null): string | null {
   if (item.category === "streak_freeze") {
-    return freezes > 0 ? `יש לך ${freezes} ${freezes === 1 ? "הקפאה" : "הקפאות"}` : null;
+    return freezes > 0 ? `במלאי: ${freezeCount(freezes)}` : null;
   }
   if (item.category === "xp_boost") {
     const hours = Math.ceil(((boostUntil ?? 0) - Date.now()) / 3_600_000);
     if (hours <= 0) return null;
-    return hours >= 48 ? `מגבר פעיל עוד ${Math.round(hours / 24)} ימים` : `מגבר פעיל עוד ${hours} שעות`;
+    return `המגבר פעיל עוד ${hours >= 48 ? dayCount(Math.round(hours / 24)) : hourCount(hours)}`;
   }
   return null;
 }
@@ -388,7 +389,7 @@ export default function XpShop() {
         >
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <div className="label-mono text-on-surface-variant mb-1">היתרה שלך</div>
+              <div className="label-mono text-on-surface-variant mb-1">היתרה</div>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-primary border-2 border-primary-dark flex items-center justify-center flex-shrink-0"
                   style={{ boxShadow: "var(--shadow-clay-primary)" }}>

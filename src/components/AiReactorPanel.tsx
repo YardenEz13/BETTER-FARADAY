@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -37,7 +37,7 @@ export default function AiReactorPanel() {
     try {
       await setAiEnabled({ enabled: !aiEnabled });
     } catch (e) {
-      setErr(errorMessage(e, "שינוי מצב ה-AI נכשל. נסו שוב."));
+      setErr(errorMessage(e, "שינוי מצב ה-AI נכשל. אפשר לנסות שוב."));
     } finally {
       setBusy(false);
     }

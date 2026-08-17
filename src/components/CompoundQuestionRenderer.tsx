@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Check, X, Send, Lock, Clock, Bot, ArrowRight, Smartphone, RefreshCw } from "../components/electric";
 import { Lightbulb as ElectricBulb } from "../components/electric";
 import { log } from "../lib/logger";
+import { countOf, minuteCount } from "../lib/hebrew";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
 
@@ -258,7 +259,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                   </div>
                   <div>
                     <div className="font-bold text-on-surface tracking-wider">סעיף {section.label}׳</div>
-                    <div className="label-mono opacity-60 text-[10px]">{section.points} נקודות סנכרון</div>
+                    <div className="label-mono opacity-60 text-[10px]">{countOf(section.points, "נקודת סנכרון אחת", "שתי נקודות סנכרון", "נקודות סנכרון")}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -307,7 +308,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         {MATH_ANSWER_TYPES.has(section.answerType) ? (
                           <div className="flex flex-col gap-2">
                             <div className="label-mono text-[10px] text-on-surface-variant flex items-center gap-1">
-                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — הקלד ישירות או השתמש במקלדת המתמטית
+                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — אפשר להקליד ישירות או להשתמש במקלדת המתמטית
                             </div>
                             <Suspense
                               fallback={
@@ -320,14 +321,14 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                                 value={answers[section.label] ?? ""}
                                 onChange={(latex) => setAnswers((prev) => ({ ...prev, [section.label]: latex }))}
                                 onEnter={() => handleSubmitSection(section)}
-                                placeholder="הקלד את התשובה…"
+                                placeholder="התשובה כאן…"
                               />
                             </Suspense>
                           </div>
                         ) : (
                           <textarea
                             className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
-                            placeholder="כתוב את הפתרון כאן…"
+                            placeholder="הפתרון כאן…"
                             value={answers[section.label] ?? ""}
                             onChange={(e) => setAnswers((prev) => ({ ...prev, [section.label]: e.target.value }))}
                             rows={3}
@@ -345,7 +346,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             onClick={() => handleSubmitSection(section)}
                             disabled={!answers[section.label]?.trim()}
                           >
-                            <Send size={16} /> בדוק תשובה
+                            <Send size={16} /> בדיקת תשובה
                           </button>
 
                           {section.hints.length > 0 && (
@@ -367,7 +368,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
                           {onQrBridge && (
                             <button className="btn-clay-ghost" onClick={onQrBridge}>
-                              <Smartphone size={16} /> צלם מהטלפון
+                              <Smartphone size={16} /> צילום מהטלפון
                             </button>
                           )}
                         </div>
@@ -423,7 +424,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               className="btn-clay-ghost self-start"
                               onClick={() => handleRetrySection(section)}
                             >
-                              <RefreshCw size={16} /> נסה שוב
+                              <RefreshCw size={16} /> ניסיון חוזר
                             </button>
                           )}
                         </div>
@@ -455,7 +456,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               setSectionStartTime(Date.now());
                             }}
                           >
-                            המשך לסעיף הבא <ArrowRight size={16} />
+                            לסעיף הבא <ArrowRight size={16} />
                           </button>
                         )}
                       </motion.div>
@@ -481,7 +482,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
             ענית על {answeredCount} מתוך {question.sections.length} סעיפים. ההתקדמות נשמרת אוטומטית — אפשר לחזור ולהשלים אחר כך, או להגיש חלקית עכשיו (לאחר הגשה לא ניתן לשנות).
           </div>
           <button className="btn-clay-ghost shrink-0" onClick={handleFinalize}>
-            שמור והגש חלקית
+            שמירה והגשה חלקית
           </button>
         </motion.div>
       )}
@@ -500,12 +501,12 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
           
           <div className="flex flex-wrap gap-6 justify-center label-mono opacity-60">
             <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> {correctCount}/{question.sections.length} סעיפים נכונים</div>
-            <div className="flex items-center gap-2"><Clock size={16} className="text-secondary" /> {Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0} דקות סה"כ</div>
+            <div className="flex items-center gap-2"><Clock size={16} className="text-secondary" /> {minuteCount(Object.values(sectionTimes).reduce((s, t) => s + t, 0) > 0 ? Math.round(Object.values(sectionTimes).reduce((s, t) => s + t, 0) / 60000) : 0)} סה"כ</div>
             <div className="flex items-center gap-2"><ElectricBulb size={18} tone="amber" glow={0.5} /> {Object.values(hintsRevealed).reduce((s, h) => s + h, 0)} רמזים שומשו</div>
           </div>
           
           <button className="btn-clay-primary mt-4" onClick={handleFinalize}>
-            המשך לשאלה הבאה
+            לשאלה הבאה
           </button>
         </motion.div>
       )}

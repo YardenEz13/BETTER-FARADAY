@@ -33,7 +33,7 @@ export default function MobileBridgeUpload() {
       setStatus("done");
     } catch (err) {
       log.bridge("upload failed", { token, error: String(err) });
-      setErrorMsg(errorMessage(err, "ההעלאה נכשלה. נסה שוב."));
+      setErrorMsg(errorMessage(err, "ההעלאה נכשלה. אפשר לנסות שוב."));
       setStatus("error");
     }
   };
@@ -66,7 +66,7 @@ export default function MobileBridgeUpload() {
           <AlertTriangle size={44} className="text-error" />
           <div className="font-headline-md text-on-surface">הקישור פג תוקף</div>
           <div className="font-body-md text-on-surface-variant">
-            צור קוד QR חדש במחשב ונסה שוב.
+            צריך ליצור קוד QR חדש במחשב ולנסות שוב.
           </div>
         </div>
       )}
@@ -97,7 +97,7 @@ export default function MobileBridgeUpload() {
       {publicSession?.found && !publicSession.expired && !alreadyUsed && status !== "done" && (
         <div className="flex flex-col items-center gap-5 w-full max-w-[22rem]">
           <div>
-            <div className="font-headline-md text-on-surface mb-1">צלם את המחברת</div>
+            <div className="font-headline-md text-on-surface mb-1">צילום המחברת</div>
             {publicSession.label && (
               <div className="font-label-md text-on-surface-variant">עבור: {publicSession.label}</div>
             )}
@@ -125,7 +125,7 @@ export default function MobileBridgeUpload() {
             ) : (
               <>
                 <Camera size={44} />
-                <span className="font-label-lg">פתח מצלמה / בחר תמונה</span>
+                <span className="font-label-lg">פתיחת מצלמה / בחירת תמונה</span>
               </>
             )}
           </button>
@@ -137,7 +137,7 @@ export default function MobileBridgeUpload() {
           )}
 
           <div className="font-label-md text-on-surface-variant/70" style={{ fontSize: "12px" }}>
-            התמונה נשלחת ישירות למסך המחשב שלך.
+            התמונה נשלחת ישירות למסך המחשב.
           </div>
         </div>
       )}
