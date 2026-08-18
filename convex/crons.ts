@@ -27,17 +27,13 @@ crons.interval(
 // arms packetImport.sweepStalePacket, which reschedules itself only while
 // the packet is still solving. No polling cron.
 
-// Grow the question bank. Every 1h15m Gemini authors a small batch into the
-// thinnest (topic, difficulty) band and the themed-precompute pipeline picks
-// the new rows up. Uncapped — no target, it never stops on its own. The only
-// brake is the AI kill-switch and the daily Gemini budget cap (aiGate.ts).
-// (Convex's interval() takes one unit at a time — 75 minutes is 1h15m.)
-crons.interval(
-  "generate-questions",
-  { minutes: 75 },
-  internal.questionGen.generateBatch,
-  {},
-);
+// The question-authoring cron is deliberately gone. It wrote unreviewed
+// Gemini questions into the live bank every 75 minutes, and its gap scan
+// (questionGen.pickGap) plus the themed-precompute pipeline it kicked were
+// 4.4 GB/month of database bandwidth between them — 91% of the account's
+// total. `questionGen.generateBatch` still exists and can be run by hand:
+//   npx convex run questionGen:generateBatch
+// Put it back on a schedule only behind a human review gate.
 
 // Watch the Gemini daily budget. Half-hourly is enough to catch a runaway
 // hours before the cap trips, and the check is a single indexed read.

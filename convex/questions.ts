@@ -73,21 +73,6 @@ export const getNextQuestion = query({
         pickRandom(all);
     }
 
-    if (!selectedQuestion) return null;
-
-    // Personalize if theme is precomputed
-    const student = await ctx.db.get(studentId);
-    if (student?.homeworkTheme) {
-      const precomputed = await ctx.db
-        .query("precomputedThemedQuestions")
-        .withIndex("by_question_theme", q => q.eq("questionId", selectedQuestion!._id).eq("theme", student.homeworkTheme!))
-        .first();
-      
-      if (precomputed) {
-        selectedQuestion.stem = precomputed.personalizedText;
-      }
-    }
-
     return selectedQuestion;
   },
 });

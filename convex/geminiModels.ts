@@ -41,11 +41,10 @@ export const GEMINI_MODELS = {
   // Authoring brand-new bagrut-style questions (questionGen cron). Newest
   // model first because a wrong question costs more than a skipped batch;
   // one fallback so a 429 on 3.6 doesn't idle the run. Deliberately short —
-  // older models write weaker questions and the cron retries in 2h anyway.
+  // older models write weaker questions and the run is manual anyway.
   authoring: ["gemini-3.6-flash", "gemini-3.5-flash"],
-  // Background question rewriting/theme personalization (precompute +
-  // homework). Lite models only: it's a rewrite with the math frozen, not
-  // reasoning, and it runs over the whole bank × 10 themes.
+  // Homework theme personalization (ai.personalizeHomework). Lite models only:
+  // it's a rewrite with the math frozen, not reasoning.
   rewrite: ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
   // Background conversation analysis: cheap model first, same reasoning as rewrite.
   analysis: [

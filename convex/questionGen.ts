@@ -1,8 +1,12 @@
-// ── Autonomous question-bank growth ──────────────────────────────────────
-// A cron (every 75min, convex/crons.ts) asks Gemini for new bagrut-style
-// questions written in the style of the ones already in the bank, inserts
-// whatever survives validation, then kicks the themed-precompute pipeline so
-// the new rows get personalized variants like every other question.
+// ── Question-bank growth, on demand ──────────────────────────────────────
+// Asks Gemini for new bagrut-style questions written in the style of the ones
+// already in the bank and inserts whatever survives validation.
+//
+// This ran on a 75-minute cron until its gap scan (`pickGap`, a per-band count
+// over the whole bank) turned out to be 674 MB/month of database bandwidth on
+// its own, and the themed-precompute pipeline it kicked another 3.7 GB. The
+// cron is gone; run it by hand when the bank actually needs rows:
+//   npx convex run questionGen:generateBatch
 //
 // Why this exists: the seeded bank is ~20 questions per topic and
 // `questions.getNextQuestion` falls back to repeats once a topic's pool is
@@ -216,11 +220,6 @@ export const insertGenerated = internalMutation({
       inserted++;
     }
 
-    // New questions need themed variants like every other question. Same
-    // trigger packetPublish uses; the pipeline self-schedules from there.
-    if (inserted > 0) {
-      await ctx.scheduler.runAfter(60_000, internal.precompute.precomputeThemeBatch, {});
-    }
     return inserted;
   },
 });

@@ -54,9 +54,6 @@ describe("getNextQuestion", () => {
               })),
             };
           }
-          if (table === "precomputedThemedQuestions") {
-            return { withIndex: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) };
-          }
           throw new Error(`unexpected table ${table}`);
         }),
       },

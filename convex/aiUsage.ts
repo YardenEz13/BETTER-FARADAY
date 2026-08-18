@@ -104,7 +104,7 @@ export function budgetLevel(requests: number): BudgetLevel {
  * Half-hourly budget watch (convex/crons.ts).
  *
  * Counts every Gemini call recorded today — including the server-side actions
- * (precompute, questionGen, grading, digests) that never touch the proxy's
+ * (homework personalization, grading, digests) that never touch the proxy's
  * rate limiter, so this sees the real bill rather than just student traffic.
  * Over threshold it logs at error level, which is what Convex log streaming
  * and exception reporting forward to a human.

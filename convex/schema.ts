@@ -76,12 +76,6 @@ export default defineSchema({
     aiHint: v.string(),
   }).index("by_student", ["studentId"]),
 
-  precomputedThemedQuestions: defineTable({
-    questionId: v.string(), // Works for both legacy and compound questions
-    theme: v.string(),
-    personalizedText: v.string(),
-  }).index("by_question_theme", ["questionId", "theme"]),
-
   sessions: defineTable({
     studentId: v.id("students"),
     topicId: v.id("topics"),
@@ -697,7 +691,7 @@ export default defineSchema({
   // (seeded, packet-imported, or questionGen cron) and no automated check can
   // prove an answer key right — so the students and teachers looking at it are
   // the detector. questionId is a string: it addresses both `questions` and
-  // `compoundQuestions` rows, same as precomputedThemedQuestions.
+  // `compoundQuestions` rows.
   questionReports: defineTable({
     questionId: v.string(),
     studentId: v.optional(v.id("students")), // absent when a teacher reports

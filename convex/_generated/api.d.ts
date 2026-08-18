@@ -41,7 +41,6 @@ import type * as packetValidators from "../packetValidators.js";
 import type * as packetWatchdog from "../packetWatchdog.js";
 import type * as pdfAssignments from "../pdfAssignments.js";
 import type * as powerMap from "../powerMap.js";
-import type * as precompute from "../precompute.js";
 import type * as proofGrading from "../proofGrading.js";
 import type * as questionGen from "../questionGen.js";
 import type * as questionReports from "../questionReports.js";
@@ -102,7 +101,6 @@ declare const fullApi: ApiFromModules<{
   packetWatchdog: typeof packetWatchdog;
   pdfAssignments: typeof pdfAssignments;
   powerMap: typeof powerMap;
-  precompute: typeof precompute;
   proofGrading: typeof proofGrading;
   questionGen: typeof questionGen;
   questionReports: typeof questionReports;

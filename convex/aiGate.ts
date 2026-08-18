@@ -19,11 +19,10 @@ import { query, mutation, internalQuery } from "./_generated/server";
  *   tutor chat 35 × ~25   ≈  875
  *   notebook vision 35 × 5 ≈  175
  *   chat analysis          ≈  175
- *   themed precompute      ≈  290  (a batch every 5 min while backlogged)
+ *   homework personalization ≈ 35  (one call per themed student per assignment)
  *   proof grading          ≈  200
- *   question authoring     ≈   19  (cron, every 75min, runs indefinitely — no target)
  *   ────────────────────────────
- *   peak day               ≈ 1,735
+ *   peak day               ≈ 1,460
  *
  * At the old 2000 that is a cap a normal busy lesson could trip, and tripping
  * it shows every student "פאראדיי עמוס כרגע" at once — which reads as broken,
