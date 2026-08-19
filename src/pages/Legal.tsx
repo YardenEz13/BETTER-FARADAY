@@ -17,7 +17,7 @@ import { ArrowLeft } from "../components/electric";
 // Public contact for access / correction / deletion requests. Must be an
 // address a human actually reads — it is the only data-subject channel.
 const CONTACT_EMAIL = "yarden.etz@gmail.com";
-const LAST_UPDATED = "22 ביולי 2026";
+const LAST_UPDATED = "19 באוגוסט 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -95,11 +95,11 @@ export default function Legal() {
               <li>
                 <strong>Sentry</strong> — דיווח תקלות טכניות. הקלטת מסך מושבתת.
               </li>
-              <li>
-                <strong>Google Fonts</strong> — טעינת הגופנים כרוכה בהעברת כתובת ה־IP
-                של הדפדפן ל־Google.
-              </li>
             </ul>
+            <p>
+              הגופנים מוגשים מהשרת שלנו ואינם נטענים מרשת חיצונית, כך שטעינת דף
+              אינה חושפת את כתובת ה־IP של הדפדפן לספק גופנים.
+            </p>
             <p>חלק מהספקים מעבדים ומאחסנים מידע מחוץ לישראל, לרבות בארצות הברית.</p>
             <p>איננו מוכרים מידע ואיננו מעבירים אותו למפרסמים.</p>
           </Section>
@@ -125,12 +125,14 @@ export default function Legal() {
             </p>
           </Section>
 
-          <Section title="5. דוח להורים">
+          <Section title="5. מי רואה את המידע">
             <p>
-              המורה יכול/ה להפיק קישור אישי לצפייה בדוח שבועי על התלמיד/ה. הקישור הוא
-              מפתח הגישה היחיד — <strong>כל מי שמחזיק בו יכול לצפות בדוח</strong>, ולכן
-              אין להעבירו הלאה. הקישור פג תוקף אוטומטית לאחר 90 יום, וניתן לביטול מיידי
-              על ידי המורה.
+              המורה של הכיתה רואה את נתוני הלמידה של תלמידי הכיתה, לרבות תמצית
+              השיחות עם פאראדיי והניתוח הפדגוגי הנגזר מהן. המידע משמש להוראה בלבד.
+            </p>
+            <p>
+              אין בשירות דוחות להורים. הורה המבקש לעיין במידע על ילדו/ה יפנה
+              בכתובת שבסעיף 6.
             </p>
           </Section>
 
@@ -180,6 +182,64 @@ export default function Legal() {
             <p>
               על מסמך זה יחולו דיני מדינת ישראל, וסמכות השיפוט הבלעדית נתונה לבתי המשפט
               המוסמכים בישראל.
+            </p>
+          </Section>
+
+          {/* ── ACCESSIBILITY STATEMENT ── */}
+          {/* Israeli service-accessibility regulations expect a declared
+              conformance level, the measures actually taken, the gaps that
+              remain, and a named contact. Claiming full IS 5568 / WCAG 2.0 AA
+              conformance without an audit is itself a violation, so this
+              declares PARTIAL conformance and lists what is unverified.
+              ⚠ Before the service stops being a closed pilot: appoint a named
+              accessibility coordinator and put their name here. */}
+          <hr className="my-9 border-t-2 border-outline" />
+
+          <Section title="11. הצהרת נגישות">
+            <p>
+              אנו רואים בנגישות השירות חלק מהמוצר, ופועלים להנגישו בהתאם לתקן
+              הישראלי ת״י 5568 המבוסס על הנחיות <span dir="ltr">WCAG 2.0</span> ברמה{" "}
+              <span dir="ltr">AA</span>.
+            </p>
+
+            <p className="mt-2 font-bold text-on-surface">מה כבר נעשה</p>
+            <ul className="ms-5 list-disc space-y-1.5">
+              <li>השירות מוגש בעברית ובכיוון ימין־לשמאל, עם הגדרת שפה תקינה בדפדפן.</li>
+              <li>
+                לכל התמונות יש טקסט חלופי, ותמונות דקורטיביות מוסתרות מקוראי מסך כדי
+                שלא יקראו רעש מיותר.
+              </li>
+              <li>
+                המערכת מכבדת את העדפת מערכת ההפעלה להפחתת אנימציות — מי שהגדיר
+                זאת, לא יקבל תנועה מיותרת.
+              </li>
+              <li>קיים מצב תצוגה בהיר וכהה, וניתן להחליף ביניהם בכל מסך.</li>
+              <li>ניתן לנווט במקלדת, ולרכיבים הפעילים יש סימון פוקוס נראה.</li>
+              <li>הממשק מותאם למסכי טלפון, והטקסט נשאר קריא בהגדלה.</li>
+            </ul>
+
+            <p className="mt-2 font-bold text-on-surface">מה עדיין לא נבדק</p>
+            <p>
+              השירות נמצא בפיילוט, ו<strong>טרם עבר אודיט נגישות פורמלי</strong> ולא
+              התקבלה עבורו חוות דעת של מורשה נגישות. לפיכך איננו מצהירים על עמידה
+              מלאה בתקן. בפרט, הרכיבים הבאים טרם נבדקו במלואם:
+            </p>
+            <ul className="ms-5 list-disc space-y-1.5">
+              <li>לוח המקשים המתמטי ומסך בניית התרגיל — בשימוש עם קורא מסך.</li>
+              <li>ניגודיות הצבעים בכל המסכים — טרם נמדדה באופן שיטתי.</li>
+              <li>תוכן מתמטי מורכב עשוי להיקרא באופן חלקי בקוראי מסך מסוימים.</li>
+            </ul>
+
+            <p className="mt-2 font-bold text-on-surface">נתקלתם בבעיה?</p>
+            <p>
+              אם נתקלתם בקושי להשתמש בשירות, נשמח שתדווחו — הפנייה מטופלת כתקלה
+              לכל דבר, ותיאור המסך והפעולה שניסיתם לבצע יעזור לנו לתקן מהר יותר:{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-primary hover:underline">
+                {CONTACT_EMAIL}
+              </a>
+            </p>
+            <p className="label-mono mt-2 opacity-60">
+              תאריך עדכון ההצהרה: {LAST_UPDATED}
             </p>
           </Section>
 
