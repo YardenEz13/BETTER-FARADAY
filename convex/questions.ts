@@ -13,10 +13,17 @@ export const getNextQuestion = query({
     // enough (packet pipeline, ~60+/topic) that re-solving mastered ground is
     // wasted practice, not spaced repetition; a wrong attempt stays eligible so
     // it can resurface until the student actually gets it.
+    // ponytail: newest 500 rather than all-time. This query is subscribed while
+    // a student practises and re-runs on every answer, so an unbounded collect
+    // grew the read forever — a year in, one pull re-read a year of attempts.
+    // 500 covers every distinct question in a topic several times over at the
+    // current bank size. If a topic ever exceeds ~500 questions, index
+    // (studentId, topicId, isCorrect) and read only the correct ones.
     const topicAttempts = await ctx.db
       .query("attempts")
       .withIndex("by_student_topic", (q) => q.eq("studentId", studentId).eq("topicId", topicId))
-      .collect();
+      .order("desc")
+      .take(500);
     const solvedIds = new Set(topicAttempts.filter((a) => a.isCorrect).map((a) => a.questionId));
 
     // Last 10 across every topic — keeps a just-answered question (right or

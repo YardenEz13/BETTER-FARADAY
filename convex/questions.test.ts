@@ -28,16 +28,19 @@ describe("getNextQuestion", () => {
         get: vi.fn().mockResolvedValue(student),
         query: vi.fn().mockImplementation((table: string) => {
           if (table === "attempts") {
-            // Two distinct call sites on the same table: by_student_topic
-            // (every attempt, for solvedIds) vs by_student + order + take(10)
-            // (recentIds). Distinguish by which chain method gets called next.
+            // Two distinct call sites on the same table, and since both are now
+            // bounded reads (order + take) the chain shape no longer tells them
+            // apart — dispatch on the index name instead, same as `questions`
+            // below. by_student_topic feeds solvedIds; by_student feeds the
+            // last-10 recency window.
             return {
-              withIndex: vi.fn().mockReturnValue({
-                collect: vi.fn().mockResolvedValue(topicAttempts),
+              withIndex: vi.fn().mockImplementation((indexName: string) => ({
                 order: vi.fn().mockReturnValue({
-                  take: vi.fn().mockResolvedValue(recentAttempts),
+                  take: vi.fn().mockResolvedValue(
+                    indexName === "by_student_topic" ? topicAttempts : recentAttempts,
+                  ),
                 }),
-              }),
+              })),
             };
           }
           if (table === "sessions") {

@@ -1,7 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { israelDate } from "./streaks";
 
 /* ═══════════════════════════════════════════════════════════════════════
    TEACHER COMMAND CENTER — single aggregated payload
@@ -298,18 +297,12 @@ export const getCommandCenter = query({
     const healthLabel =
       classAvg >= 80 ? "מצוינת" : classAvg >= 65 ? "יציבה" : classAvg >= 50 ? "דורשת מעקב" : "דורשת התערבות";
 
-    // Gemini API usage (all tasks incl. background analysis/rewrites) — from
-    // the aiUsage daily aggregates, one indexed read per day of the window.
-    const usageSpark: number[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const day = israelDate(now - i * DAY);
-      const rows = await ctx.db
-        .query("aiUsage")
-        .withIndex("by_day", (q) => q.eq("day", day))
-        .collect();
-      usageSpark.push(rows.reduce((s, r) => s + r.requests, 0));
-    }
-    const usageToday = usageSpark[usageSpark.length - 1];
+    // Gemini usage deliberately does NOT live here. `aiUsage.record` patches a
+    // row on every Gemini call — tutor messages, grading, digests — and this
+    // query reads seven other tables, so folding usage in made one chat message
+    // re-read every student's attempts and chats. The dashboard subscribes to
+    // `aiUsage.getUsageSummary` separately instead: same number, its own
+    // invalidation, and it re-runs on a handful of tiny indexed rows.
 
     const kpis = [
       {
@@ -344,14 +337,6 @@ export const getCommandCenter = query({
         tone: "secondary" as Tone,
         delta: null,
         spark: aiSpark,
-      },
-      {
-        key: "aiUsage",
-        label: "קריאות Gemini היום",
-        value: usageToday,
-        tone: "tertiary" as Tone,
-        delta: null,
-        spark: usageSpark,
       },
       {
         key: "risk",

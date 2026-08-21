@@ -123,6 +123,10 @@ export default function TeacherDashboard() {
   const data = useQuery(api.commandCenter.getCommandCenter, classroom ? { classroomId: classroom._id } : "skip");
   const aiAnalytics = useQuery(api.aiChat.getTeacherChatAnalytics, classroom ? { classroomId: classroom._id } : "skip");
   const digest = useQuery(api.digest.getLatestDigest, classroom ? { classroomId: classroom._id } : "skip");
+  // Gemini usage rides its own subscription rather than the command-center
+  // payload: it changes on every AI call, and folding it in re-ran a query
+  // that reads seven other tables. Tiny indexed reads, invalidated alone.
+  const usage = useQuery(api.aiUsage.getUsageSummary);
 
   const [view, setView] = useState<View>("triage");
   const [masteryView, setMasteryView] = useState<MasteryMode>("grid");
@@ -262,7 +266,7 @@ export default function TeacherDashboard() {
       {/* ══════════ MAIN ══════════ */}
       <main className="relative z-10 flex-1 overflow-auto">
         <div className="page-shell page-shell--wide pb-28 lg:pb-24 pt-5">
-          {onCommandView && <div data-tour="kpis"><KpiRibbon kpis={data.kpis} /></div>}
+          {onCommandView && <div data-tour="kpis"><KpiRibbon kpis={data.kpis} usage={usage} /></div>}
 
           <AnimatePresence mode="wait">
             <motion.div key={view} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }}>
@@ -371,14 +375,33 @@ function KpiValue({ value, suffix }: { value: number; suffix?: string }) {
 }
 
 /* ───────────────────────── KPI RIBBON ───────────────────────── */
-function KpiRibbon({ kpis }: { kpis: CommandCenterData["kpis"] }) {
+function KpiRibbon({ kpis, usage }: {
+  kpis: CommandCenterData["kpis"];
+  usage: { today: { requests: number }; daily: Array<{ requests: number }> } | undefined;
+}) {
   const ICON: Record<string, typeof Users> = { students: Users, mastery: Zap, active: Activity, ai: Bot, aiUsage: Sparkles, risk: AlertTriangle };
+  // Gemini usage comes from its own query now (see the useQuery above), spliced
+  // back in ahead of "risk" so the ribbon reads the same as it always did.
+  const rows = usage
+    ? [
+        ...kpis.slice(0, -1),
+        {
+          key: "aiUsage",
+          label: "קריאות Gemini היום",
+          value: usage.today.requests,
+          tone: "tertiary" as const,
+          delta: null,
+          spark: usage.daily.map((d) => d.requests),
+        },
+        ...kpis.slice(-1),
+      ]
+    : kpis;
   return (
     <div
       className="flex md:grid gap-3 md:gap-3.5 mb-5 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0"
       style={{ gridTemplateColumns: "repeat(auto-fit, minmax(168px, 1fr))" }}
     >
-      {kpis.map((k) => {
+      {rows.map((k) => {
         const Icon = ICON[k.key] ?? Zap;
         const color = toneColor(k.tone as CCTone);
         const delta = k.spark && k.spark.length >= 2 ? k.spark[k.spark.length - 1] - k.spark[0] : null;
