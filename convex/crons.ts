@@ -19,10 +19,12 @@ const crons = cronJobs();
 //   npx convex run ai:processAbandonedChats
 
 // Reclaim expired / consumed QR bridge sessions. Pure cleanup — consumers
-// validate expiresAt themselves, so hourly latency is invisible.
+// validate expiresAt themselves, so sweep latency is invisible to users and
+// the only thing frequency buys is how long dead rows linger. Was hourly;
+// six-hourly is the same cleanup for a quarter of the reads.
 crons.interval(
   "sweep-bridge-sessions",
-  { hours: 1 },
+  { hours: 6 },
   internal.bridge.sweepExpired,
 );
 
@@ -38,11 +40,12 @@ crons.interval(
 //   npx convex run questionGen:generateBatch
 // Put it back on a schedule only behind a human review gate.
 
-// Watch the Gemini daily budget. Half-hourly is enough to catch a runaway
-// hours before the cap trips, and the check is a single indexed read.
+// Watch the Gemini daily budget. Two-hourly still catches a runaway hours
+// before the cap trips — the cap is ~3.5x the modelled peak day, so nothing
+// crosses it inside one interval — and the check is a single indexed read.
 crons.interval(
   "check-ai-usage",
-  { minutes: 30 },
+  { hours: 2 },
   internal.aiUsage.checkDailyBudget,
   {},
 );
