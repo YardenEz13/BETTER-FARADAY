@@ -7,13 +7,16 @@ const crons = cronJobs();
 // sessionBriefs.createBrief → powerMap.requestRecompute (debounced) →
 // recomputePowerMap → levels.evaluateStudentLevel. No polling crons.
 
-// Cleanup abandoned/empty AI chats. Hourly is enough: the cleanup thresholds
-// themselves are 30min (empty) / 1h (idle), so faster polling buys nothing.
-crons.interval(
-  "cleanup-abandoned-chats",
-  { hours: 1 },
-  internal.ai.processAbandonedChats,
-);
+// The abandoned-chat cleanup cron is deliberately gone. Hourly it read the
+// newest 500 aiChats — fat documents, each carrying the whole `metrics`
+// object — and then spent a Gemini analysis call on every idle chat it found.
+// The client already closes chats normally through aiChat.endChat; this only
+// covered the walked-away case.
+//
+// The trade: empty and idle chats now stay open, so they never get `metrics`
+// and are excluded from the teacher analytics aggregates that filter on them.
+// Still runnable by hand if a backlog needs clearing:
+//   npx convex run ai:processAbandonedChats
 
 // Reclaim expired / consumed QR bridge sessions. Pure cleanup — consumers
 // validate expiresAt themselves, so hourly latency is invisible.

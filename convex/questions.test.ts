@@ -21,8 +21,10 @@ describe("getNextQuestion", () => {
     atDifficulty: ReturnType<typeof q>[];
     atTopic?: ReturnType<typeof q>[];
     student?: { homeworkTheme?: string } | null;
+    /** "questionId:theme" → the themed stem stored for that pair. */
+    themed?: Record<string, string>;
   }) {
-    const { topicAttempts = [], recentAttempts = [], session = null, atDifficulty, atTopic = atDifficulty, student = null } = opts;
+    const { topicAttempts = [], recentAttempts = [], session = null, atDifficulty, atTopic = atDifficulty, student = null, themed = {} } = opts;
     return {
       db: {
         get: vi.fn().mockResolvedValue(student),
@@ -55,6 +57,24 @@ describe("getNextQuestion", () => {
               withIndex: vi.fn().mockImplementation((indexName: string) => ({
                 collect: vi.fn().mockResolvedValue(indexName === "by_topic_difficulty" ? atDifficulty : atTopic),
               })),
+            };
+          }
+          if (table === "precomputedThemedQuestions") {
+            // Replay the index builder to learn which (questionId, theme) pair
+            // is being probed, then answer from the fixture map.
+            return {
+              withIndex: vi.fn().mockImplementation((_name: string, cb: (b: unknown) => unknown) => {
+                const captured: Record<string, string> = {};
+                const builder = {
+                  eq: (field: string, value: string) => {
+                    captured[field] = value;
+                    return builder;
+                  },
+                };
+                cb(builder);
+                const hit = themed[`${captured.questionId}:${captured.theme}`];
+                return { first: vi.fn().mockResolvedValue(hit ? { personalizedText: hit } : null) };
+              }),
             };
           }
           throw new Error(`unexpected table ${table}`);
@@ -124,5 +144,44 @@ describe("getNextQuestion", () => {
     const ctx = mockCtx({ session: { currentDifficulty: 1 }, atDifficulty: [], atTopic: [] });
     const picked = await (getNextQuestion as any)._handler(ctx, { studentId, topicId });
     expect(picked).toBeNull();
+  });
+
+  // Nothing generates themed variants any more, but ~10.5k already exist and
+  // are still served. The contract is: use one when it exists for this
+  // student's theme, and fall back to the original stem in every other case —
+  // no theme set, or no row for this question.
+  describe("themed stems", () => {
+    it("serves the themed variant when one exists for the student's theme", async () => {
+      const ctx = mockCtx({
+        session: { currentDifficulty: 1 },
+        atDifficulty: [q("q1", 1)],
+        student: { homeworkTheme: "כדורגל" },
+        themed: { "q1:כדורגל": "מסי בועט 3 בעיטות..." },
+      });
+      const picked = await (getNextQuestion as any)._handler(ctx, { studentId, topicId });
+      expect(picked.stem).toBe("מסי בועט 3 בעיטות...");
+    });
+
+    it("leaves the stem alone when no variant was generated for that pair", async () => {
+      const ctx = mockCtx({
+        session: { currentDifficulty: 1 },
+        atDifficulty: [{ ...q("q1", 1), stem: "מקורי" } as never],
+        student: { homeworkTheme: "מינקראפט" },
+        themed: { "q1:כדורגל": "לא רלוונטי" },
+      });
+      const picked = await (getNextQuestion as any)._handler(ctx, { studentId, topicId });
+      expect(picked.stem).toBe("מקורי");
+    });
+
+    it("skips the lookup entirely when the student has no theme", async () => {
+      const ctx = mockCtx({
+        session: { currentDifficulty: 1 },
+        atDifficulty: [{ ...q("q1", 1), stem: "מקורי" } as never],
+        student: {},
+        themed: { "q1:כדורגל": "לא רלוונטי" },
+      });
+      const picked = await (getNextQuestion as any)._handler(ctx, { studentId, topicId });
+      expect(picked.stem).toBe("מקורי");
+    });
   });
 });

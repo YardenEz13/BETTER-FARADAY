@@ -80,6 +80,22 @@ export const getNextQuestion = query({
         pickRandom(all);
     }
 
+    if (!selectedQuestion) return null;
+
+    // Swap in a themed variant when one was already generated for this
+    // student's theme. One indexed point lookup; a miss costs the theme, not
+    // the question. Nothing generates new variants any more (see schema).
+    const student = await ctx.db.get(studentId);
+    if (student?.homeworkTheme) {
+      const themed = await ctx.db
+        .query("precomputedThemedQuestions")
+        .withIndex("by_question_theme", (q) =>
+          q.eq("questionId", selectedQuestion._id).eq("theme", student.homeworkTheme!),
+        )
+        .first();
+      if (themed) selectedQuestion.stem = themed.personalizedText;
+    }
+
     return selectedQuestion;
   },
 });

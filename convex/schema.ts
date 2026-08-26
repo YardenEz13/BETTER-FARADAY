@@ -76,6 +76,20 @@ export default defineSchema({
     aiHint: v.string(),
   }).index("by_student", ["studentId"]),
 
+  // Themed rewrites of question stems ("כדורגל", "מינקראפט", …), keyed by
+  // question + theme. The pipeline that WROTE these is gone — it re-scanned a
+  // 40-question page against 400 point lookups every five minutes and cost
+  // 3.7 GB/month. Reading them is the cheap half: one indexed point lookup per
+  // question served, ~1 KB, and getNextQuestion falls back to the original
+  // Hebrew stem whenever a row is missing. So the ~10.5k rows already generated
+  // stay useful; questions added from here on simply read in their original
+  // wording. Do not put the generator back without a bandwidth budget.
+  precomputedThemedQuestions: defineTable({
+    questionId: v.string(), // Works for both legacy and compound questions
+    theme: v.string(),
+    personalizedText: v.string(),
+  }).index("by_question_theme", ["questionId", "theme"]),
+
   sessions: defineTable({
     studentId: v.id("students"),
     topicId: v.id("topics"),
