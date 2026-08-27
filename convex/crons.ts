@@ -3,6 +3,17 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
+// Dev deployments run these cleanups far less often — nobody is using dev, so
+// every run there is pure waste. Set on the dev deployment only:
+//   npx convex env set SLOW_CRONS 1
+//
+// The default is deliberately the PROD cadence. If the variable is ever unset,
+// missing, or unreadable, every deployment falls back to running crons more
+// often, which is harmless. The inverse default — gating crons ON — fails by
+// silently not running them in production, which is not a failure you notice.
+const SLOW_CRONS = !!process.env.SLOW_CRONS;
+console.log(`[crons] cadence: ${SLOW_CRONS ? "slow (dev)" : "normal (prod)"}`);
+
 // Power-map recompute + level evaluation are event-driven now:
 // sessionBriefs.createBrief → powerMap.requestRecompute (debounced) →
 // recomputePowerMap → levels.evaluateStudentLevel. No polling crons.
@@ -24,7 +35,7 @@ const crons = cronJobs();
 // six-hourly is the same cleanup for a quarter of the reads.
 crons.interval(
   "sweep-bridge-sessions",
-  { hours: 6 },
+  { hours: SLOW_CRONS ? 12 : 6 },
   internal.bridge.sweepExpired,
 );
 
@@ -45,7 +56,7 @@ crons.interval(
 // crosses it inside one interval — and the check is a single indexed read.
 crons.interval(
   "check-ai-usage",
-  { hours: 2 },
+  { hours: SLOW_CRONS ? 6 : 2 },
   internal.aiUsage.checkDailyBudget,
   {},
 );
