@@ -2,6 +2,7 @@ import { useState } from "react";
 import FaradayAvatar, { type FaradayPose, isLargePose } from "../components/FaradayAvatar";
 import FaradayMoodAvatar, { type FaradayMood } from "../components/FaradayMoodAvatar";
 import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
+import Faraday25D, { type Faraday25DPose } from "../components/Faraday25D";
 
 /**
  * Dev-only mascot lab: every pose and every animation on one screen, rendered
@@ -15,11 +16,14 @@ import FaradayReaction, { type FaradayReactionKind } from "../components/Faraday
 const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak", "point", "thumbsup", "wave"];
 const KINDS: FaradayReactionKind[] = ["correct", "wrong", "streak", "levelup", "homework"];
 const MOODS: FaradayMood[] = ["idle", "thinking", "happy"];
+const HEAD_POSES: Faraday25DPose[] = ["idle", "thinking", "happy", "wrong", "streak"];
 
 export default function MascotLab() {
   const [reaction, setReaction] = useState<FaradayReactionKind | null>(null);
   const [mood, setMood] = useState<FaradayMood>("idle");
   const [spriteKey, setSpriteKey] = useState(0);
+  // Faraday25D masks are cut for the head crop, so the lab only offers those.
+  const [headPose, setHeadPose] = useState<Faraday25DPose>("idle");
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-on-surface p-6 flex flex-col gap-8"
@@ -59,6 +63,21 @@ export default function MascotLab() {
               {m}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="label-mono text-primary">2.5D — his own art on five depth planes, tilts toward the pointer</h2>
+        <div className="flex flex-wrap items-center gap-8">
+          <Faraday25D pose={headPose} px={200} />
+          <Faraday25D pose={headPose} px={96} />
+          <div className="flex flex-wrap gap-2">
+            {HEAD_POSES.map((p) => (
+              <button key={p} className={headPose === p ? "btn-clay-primary" : "btn-clay-ghost"} onClick={() => setHeadPose(p)}>
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

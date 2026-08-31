@@ -179,10 +179,11 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
             className="relative rounded-2xl bg-surface px-4 py-3"
             style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
           >
-            {/* tail toward the avatar (start side) */}
+            {/* Tail toward the avatar (start side). `.bubble-tail` owns the
+                rotation because it has to mirror under RTL — see index.css. */}
             <span
               aria-hidden
-              className="absolute bottom-3 w-2.5 h-2.5 rotate-45 bg-surface"
+              className="absolute bottom-3 w-2.5 h-2.5 bubble-tail bg-surface"
               style={{
                 insetInlineStart: -6,
                 borderInlineStart: `2px solid ${accent}`,

@@ -1186,6 +1186,113 @@ body {
   100% { transform: scale(1, 1); }
 }
 
+/* 2.5D mascot — Faraday25D.tsx. Five copies of one pose PNG, each masked to a
+   region and parked at a real translateZ, so tilting parallaxes them apart.
+   No new assets: every layer is the file the app already ships.
+
+   --f25-depth is the perspective distance and the scales below are derived from
+   it as (depth - z) / depth. That factor cancels the magnification translateZ
+   gets under perspective — without it the layers do not register at rest and he
+   just looks blurred. Change the depth and every scale changes with it. */
+.faraday-25d {
+  --f25-depth: 620px;
+  perspective: var(--f25-depth);
+  display: grid;
+  place-items: center;
+}
+.faraday-25d-stage,
+.faraday-25d-sway {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.faraday-25d-stage {
+  transform: rotateX(var(--f25-rx, 0deg)) rotateY(var(--f25-ry, 0deg));
+  /* Long enough to feel like weight, short enough to keep up with a pointer. */
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.faraday-25d-sway {
+  animation: faraday-25d-sway 7s ease-in-out infinite;
+}
+@keyframes faraday-25d-sway {
+  0%, 100% { transform: rotateY(-4deg) rotateX(1.2deg); }
+  50%      { transform: rotateY(4deg) rotateX(-1.2deg); }
+}
+
+.faraday-25d-layer,
+.faraday-25d-glow {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Back plane. Deliberately faint: it exists to give the parallax something to
+   move against and to seat him on the page, not to be noticed. An earlier pass
+   had this at full strength and he arrived wearing a violet halo. */
+.faraday-25d-glow {
+  transform: translateZ(-38px) scale(1.0613);
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 50% 48%,
+    color-mix(in srgb, var(--color-inverse-primary) 16%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 7%, transparent) 52%,
+    transparent 70%
+  );
+  filter: blur(10px);
+}
+
+/* z 0 — the whole portrait. Unmasked, so however the masks above are tuned,
+   there is always a complete Faraday underneath and nothing can tear. */
+.faraday-25d-base { transform: translateZ(0); }
+
+/* The masks are feathered on purpose: a hard edge on a copy sitting over
+   identical pixels shows up as a double outline the moment he tilts.
+   Percentages, never left/right — the drawing does not mirror under RTL.
+   Centres measured off public/faraday-idle.png: skin spans x 19-81% / y 27-81%,
+   the hair masses sit around x 17% and x 83%, the collar below y 82%. */
+.faraday-25d-face {
+  transform: translateZ(18px) scale(0.9710);
+  -webkit-mask-image: radial-gradient(ellipse 30% 28% at 50% 54%, #000 58%, transparent 84%);
+          mask-image: radial-gradient(ellipse 30% 28% at 50% 54%, #000 58%, transparent 84%);
+}
+.faraday-25d-wing-a,
+.faraday-25d-wing-b { transform: translateZ(33px) scale(0.9468); }
+.faraday-25d-wing-a {
+  -webkit-mask-image: radial-gradient(ellipse 16% 26% at 17% 56%, #000 48%, transparent 85%);
+          mask-image: radial-gradient(ellipse 16% 26% at 17% 56%, #000 48%, transparent 85%);
+}
+.faraday-25d-wing-b {
+  -webkit-mask-image: radial-gradient(ellipse 16% 26% at 83% 56%, #000 48%, transparent 85%);
+          mask-image: radial-gradient(ellipse 16% 26% at 83% 56%, #000 48%, transparent 85%);
+}
+.faraday-25d-collar {
+  transform: translateZ(44px) scale(0.9290);
+  -webkit-mask-image: linear-gradient(to top, #000 0 13%, transparent 27%);
+          mask-image: linear-gradient(to top, #000 0 13%, transparent 27%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faraday-25d-sway { animation: none; transform: none; }
+  .faraday-25d-stage { transition: none; }
+}
+
+/* Speech-bubble tail (FaradayReaction). A square rotated 45°, with borders on
+   the two edges meeting at the corner that points toward the avatar.
+
+   The rotation has to flip with direction. `rotate()` is physical while
+   `border-inline-start` is logical, so under RTL the inset moves to the other
+   edge but the rotation does not, and the outlined corner lands 90° away —
+   the tail stops joining the bubble and renders as a floating ">" chevron.
+   Mirroring the angle puts the same border pair back on the pointing corner. */
+.bubble-tail { transform: rotate(45deg); }
+[dir="rtl"] .bubble-tail { transform: rotate(-45deg); }
+
 /* Hide scrollbars on horizontally-scrolling rails (tab bar, KPI strip) */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
