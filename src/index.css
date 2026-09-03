@@ -149,23 +149,29 @@
   --color-on-error-container:     #660000;
 
   /* ── LIGHT MODE SURFACES (default) — faint green-tinted "paper" ── */
-  --color-background:                  #F3F6F2;
+  /* Neutrals are deliberately NOT grey: every step carries a little of the
+     volt-green hue, so the clay surfaces read as part of the accent family
+     rather than as a grey chassis the green sits on top of. Outline is also
+     darker than a hairline neutral would be — it is a 2px structural border
+     and the whole clay shadow system is built from it, so contrast here is
+     what makes the surfaces feel moulded instead of drawn. */
+  --color-background:                  #EDF4EC;
   --color-on-background:               #14201A;
   --color-surface:                     #ffffff;
-  --color-surface-dim:                 #e8ece8;
+  --color-surface-dim:                 #e3ece2;
   --color-surface-bright:              #ffffff;
   --color-surface-container-lowest:    #ffffff;
-  --color-surface-container-low:       #f7f7f7;
-  --color-surface-container:           #f0f0f0;
-  --color-surface-container-high:      #e8e8e8;
-  --color-surface-container-highest:   #dedede;
-  --color-surface-variant:             #e8e8e8;
-  --color-on-surface:                  #3c3c3c;
-  --color-on-surface-variant:          #777777;
-  --color-inverse-surface:             #3c3c3c;
-  --color-inverse-on-surface:          #f7f7f7;
-  --color-outline:                     #e0e0e0;
-  --color-outline-variant:             #ebebeb;
+  --color-surface-container-low:       #f2f7f1;
+  --color-surface-container:           #eaf1e9;
+  --color-surface-container-high:      #e1ebe0;
+  --color-surface-container-highest:   #d6e3d5;
+  --color-surface-variant:             #e1ebe0;
+  --color-on-surface:                  #33413a;
+  --color-on-surface-variant:          #6c7a70;
+  --color-inverse-surface:             #33413a;
+  --color-inverse-on-surface:          #f2f7f1;
+  --color-outline:                     #cfdfcd;
+  --color-outline-variant:             #dfeade;
   --color-scrim:                       #0a1a10;  /* overlay dim layer (green-black ink) */
 
   /* ── BORDER RADIUS — bubbly claymorphic ── */
@@ -194,7 +200,10 @@
   --spacing-margin-mobile:  16px;
 
   /* ── CLAY SHADOWS — 3D offset press style ── */
-  --shadow-clay:           0 4px 0 0 #d2d8d2, 0 1px 4px rgba(0,0,0,0.06);
+  /* 5px, not 4: the extra pixel is what reads as "moulded" rather than
+     "bordered", and the side colour is green-tinted so the lift belongs to
+     the same family as the surface it lifts off. */
+  --shadow-clay:           0 5px 0 0 #bdd0ba, 0 1px 4px rgba(0,0,0,0.07);
   --shadow-clay-primary:   0 4px 0 0 #0E9E4D;
   --shadow-clay-secondary: 0 4px 0 0 #5b41db;
   --shadow-clay-tertiary:  0 4px 0 0 #d68a00;
@@ -268,12 +277,14 @@
   --color-on-surface-variant:        #8ba593;
   --color-inverse-surface:           #dce8df;
   --color-inverse-on-surface:        #131D17;
-  --color-outline:                   #2a3d2f;
-  --color-outline-variant:           #18241b;
+  /* Lifted a step so a 2px border still reads as structure against the dark
+     surfaces — same intent as the light theme's darker outline. */
+  --color-outline:                   #33493a;
+  --color-outline-variant:           #1d2c21;
   --color-scrim:                     #000000;
 
-  /* Clay shadows on dark */
-  --shadow-clay:           0 4px 0 0 #060b07, 0 1px 4px rgba(0,0,0,0.45);
+  /* Clay shadows on dark — 5px to match the light theme's depth */
+  --shadow-clay:           0 5px 0 0 #060b07, 0 1px 4px rgba(0,0,0,0.45);
   --shadow-clay-primary:   0 4px 0 0 #0c5e30;
   --shadow-clay-secondary: 0 4px 0 0 #4632a0;
   --shadow-clay-tertiary:  0 4px 0 0 #7a5200;

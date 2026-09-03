@@ -934,7 +934,7 @@ export default function StudentHome() {
               <Flame className="text-tertiary flex-shrink-0" size={22} />
               <div className="flex-1 text-right">
                 <div className="font-bold text-on-surface text-sm">
-                  🔥 הרצף בסכנה! שאלה אחת היום מספיקה כדי לשמור עליו
+                  הרצף בסכנה! שאלה אחת היום מספיקה כדי לשמור עליו
                 </div>
                 {freezesAvailable > 0 && (
                   <div className="font-medium text-on-surface-variant text-xs mt-0.5">
@@ -948,8 +948,12 @@ export default function StudentHome() {
           {/* Live class — the teacher is broadcasting a question right now */}
           <LiveBanner studentId={studentId!} onJoin={() => setLiveSheetOpen(true)} />
 
-          {/* Retention nudge — topics whose charge is draining (forgetting curve) */}
-          {decayingTopics.length > 0 && (
+          {/* Retention nudge — topics whose charge is draining (forgetting curve).
+              Suppressed while the streak is in danger: two red-alert banners
+              stacked meant neither read as urgent, and the streak is the one
+              that actually expires tonight. Any topic keeps the streak alive,
+              so nothing is lost by deferring these chips a day. */}
+          {!streakInDanger && decayingTopics.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -959,7 +963,7 @@ export default function StudentHome() {
               <div className="flex items-center gap-3 mb-2">
                 <Battery className="text-secondary flex-shrink-0" size={20} />
                 <div className="font-bold text-on-surface text-sm">
-                  המטען יורד! נושאים שלמדת מתחילים להישכח — שאלה אחת מחזירה את הזרם ⚡
+                  המטען יורד! נושאים שלמדת מתחילים להישכח — שאלה אחת מחזירה את הזרם
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">

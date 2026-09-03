@@ -63,7 +63,6 @@ export default function PracticeSession() {
   const [hint, setHint]                     = useState<string | null>(null);
   const [loadingHint, setLoadingHint]       = useState(false);
   const [hintsUsed, setHintsUsed]           = useState(0);
-  const [elapsed, setElapsed]               = useState(0);
   const [sessionXP, setSessionXP]           = useState(0);
   const [earnedXP, setEarnedXP]             = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -170,10 +169,11 @@ export default function PracticeSession() {
     gsap.to(el, { opacity: 0, duration: 0.2, delay: 0.78 });
   };
 
-  useEffect(() => {
-    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
-    return () => clearInterval(iv);
-  }, [questionKey]);
+  // No per-question stopwatch. Practice is not timed — exam mode is, and a
+  // clock ticking beside a maths problem adds pressure without teaching
+  // anything. The solve time still gets recorded: `timeMs` on the attempt is
+  // measured from startTimeRef, which this never fed. Dropping it also stops a
+  // re-render every second for the whole session.
 
   // Countdown timer during review phase
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function PracticeSession() {
     if (activeQuestion) {
       setSelected(null); setSubmitted(false); setReviewPhase(false);
       setCountdown(0); setShowHint(false);
-      setHint(null); setHintsUsed(0); setElapsed(0);
+      setHint(null); setHintsUsed(0);
       startTimeRef.current = Date.now(); setShowCelebration(false); setEarnedXP(0);
     }
   }, [activeQuestion?._id]);
@@ -303,7 +303,6 @@ export default function PracticeSession() {
   };
 
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
-  const timerStr  = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
@@ -444,10 +443,6 @@ export default function PracticeSession() {
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-surface-container border-2 border-outline text-on-surface-variant">
                         {'★'.repeat(Math.max(0, activeQuestion.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (activeQuestion.difficulty || 1)))} רמה {activeQuestion.difficulty}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-on-surface-variant text-sm">
-                      <Clock size={14} />
-                      <span className="font-medium">{timerStr}</span>
                     </div>
                   </div>
 
