@@ -1,51 +1,129 @@
-# Pilot readiness plan — 4 weeks
+# Pilot readiness plan
 
-Target: a real classroom pilot one month out. This plan is ordered by
-execution sequence, not by severity. Each step lists what to do, why it
-matters for the pilot specifically, and where the work lands in the code.
+**Baseline verified 2026-09-04** by running the app, the suites and the live
+queries — not by reading the code. Everything below with a number in it was
+observed, not assumed.
 
-Current baseline (verified 2026-08-01): `tsc -b` green, `npm run test` green
-at 198/198, prod Convex deployment `befitting-panther-27` exists, rate
-limiter + AI kill-switch + Sentry + uptime probe + `/legal` all present.
+| Check | Result |
+|---|---|
+| `tsc -b` | green |
+| `npm test` | green, 297/297 across 33 files |
+| `npm run lint` | 0 errors (107 warnings, mostly pre-existing `any`) |
+| `npx playwright test` | green — **1 spec**, the student practice loop, and that is the entire e2e coverage |
+| prod `/health` | `{"ok":true,"aiEnabled":true}` |
+| Question bank | **1,295 questions**, 254–261 per topic across the 5 real topics |
+| `questionReports` | 1 report filed ("השאלה בערבית") — the channel works |
 
-Question bank is now **226 legacy questions + 22 compoundQuestions**, up from
-the 100 this plan was written against — but the growth did not come from
-Step 1's recommended engine. Live count against the dev deployment:
+## What changed since the last baseline
 
-| Topic | Q count | Difficulty 1–4 | Difficulty 5 |
-|---|---|---|---|
-| Sequences & Series | 54 | 13/13/13/13 | 2 |
-| Probability | 42 | 10/12/9/9 | 2 |
-| Rational Functions | 42 | 10/10/10/10 | 2 |
-| Trig Functions | 46 | 9/12/12/11 | 2 |
-| Geometry | 42 | 10/11/9/10 | 2 |
+The `questionGen` cron ran unattended for a month and grew the bank from 226
+to **1,295** before it was deleted. That inverts this plan's original
+priorities: **Step 1 (volume) is over-delivered by ~4x. Step 2 (trust) is now
+the whole ballgame** — 1,295 machine-authored questions, none human-reviewed,
+one student report between them and a classroom.
 
-Provenance: 150 hand-seeded (`seedBagrut.ts` + `seedGeometry.ts`), 76 from the
-`questionGen` cron (75-minute cadence, unreviewed). Difficulty coverage is
-solid at bands 1–4 (9–13 per topic) but thin everywhere at band 5 (flat
-2/topic, clearly seed-only). `questionReports` is empty — 0 total, which given
-no review discipline has run yet (Step 2) reads as "unused," not "clean."
+Also removed since: the themed-precompute pipeline and the abandoned-chat
+cron (see `docs/convex-budget.md` — two crons were 4.4 GB/month of database
+bandwidth and disabled the whole Convex team). Nothing grows the bank now;
+adding content is a deliberate act.
 
-**The packet pipeline works.** Three runs exist, all of the same PDF
-(`dimutWeb.pdf`): one `failed` at PDF load ("טעינת ה-PDF נכשלה", 39 questions
-inventoried), one `cancelled`, and one crop-mode run that **successfully
-published all 12 of its questions into `compoundQuestions`** — those 12 are
-the bulk of the 22 compound questions in the bank. An earlier revision of this
-doc recorded the pipeline as "0-for-3, never published anything"; that was
-wrong, and the reason it looked that way is itself a bug, now fixed: `review`
-is a terminal status in `packetImport.ts` (nothing ever transitions a packet
-out of it), so a fully-published packet sat in the teacher's list forever
-labelled "מוכן לבדיקה" at 12/12 approved. The UI now derives completion from
-the row statuses and shows "פורסם" / files it under סגורות.
+## The MVP list, in order
 
-So the honest read is: crop mode is proven end to end, auto mode has one PDF-
-load failure worth diagnosing, and the real gap is **throughput** — only one
-paper has ever been carried to publish.
+Ordered by what actually blocks a classroom, not by effort.
 
-The gap is now content *trust* and pipeline throughput, not volume — Step 3's
-selection-logic item is also done (see below). Original gap description
-(volume/trust/operational headroom) is superseded by this baseline.
+### 1. 🔴 The uptime monitor checks nothing
 
+`gh variable list` is empty. Both curl steps in `.github/workflows/uptime.yml`
+are gated on `vars.CONVEX_SITE_URL != ''`, so every run since setup has
+reported **success while probing nothing**. A green monitor that monitors
+nothing is worse than no monitor — it manufactures confidence.
+
+```bash
+gh variable set CONVEX_SITE_URL --body https://befitting-panther-27.convex.site
+```
+
+### 2. 🔴 Content correctness gate
+
+1,295 unreviewed AI-authored questions. One wrong `correctIndex` in front of a
+class costs teacher trust permanently, and you do not get it back inside a
+one-month pilot. Volume is no longer the constraint, so this is now the only
+content work that matters.
+
+Cheapest useful version: review only what students will actually see in the
+pilot's first fortnight — the difficulty bands the adaptive engine starts in
+(1–3), for the topics the class is covering. That is a few hundred questions,
+not 1,295. The review UI already exists (`PacketReviewPage.tsx`).
+
+### 3. 🔴 Convex spending limit
+
+Still unset. It is the only hard backstop against a repeat of the August
+incident, and it is a dashboard toggle.
+
+### 4. 🔴 Parental consent + school sign-off
+
+`docs/parental-consent-he.md` is drafted but every `[...]` field is unfilled
+and it has had no legal or school review. Longest lead time in the project —
+it gates the pilot date regardless of engineering.
+
+### 5. 🟠 Auth (Clerk)
+
+Deferred deliberately until real students exist. Until it lands:
+`PrototypeGate` hardcodes `BDIKA`/`123456` in the shipped bundle and `/teacher`
+sits behind that same string, so any student who types the URL reads every
+classmate's chat transcripts. **Nothing with real students on the current
+build** — not even a quick demo.
+
+### 6. 🟠 Tenancy
+
+`classroom.getFirstClassroom` is `.first()`. No `teachers`, `schools` or
+`users` table. Fine for one pilot class; a hard blocker for the second.
+
+### 7. 🟠 Bulk roster import
+
+`classroom.addStudent` takes one name at a time. A class of 35 on day one is
+35 forms before any value has been shown. ~20 lines (paste names, split on
+newline) and it removes the most likely week-1 teacher quit.
+
+### 8. 🟡 e2e coverage
+
+One spec. Homework submission and the AI chat panel — the two paths most
+likely to break in front of a class — have none, and nothing runs at mobile
+viewport.
+
+### 9. 🟡 Accessibility statement follow-through
+
+Published (`/legal` §11) declaring **partial** conformance. Before the service
+stops being a closed pilot it needs a named accessibility coordinator in that
+section, and the three unverified areas actually verified.
+
+### 10. 🟡 Curriculum scope
+
+Five topics. No חדו"א — the largest single chunk of the 5-unit exam — plus no
+וקטורים, הנדסה אנליטית, גדילה ודעיכה. Either extend through the packet
+pipeline or narrow the pitch honestly to "תרגול ממוקד ב-5 נושאים". Do not sell
+bagrut prep with a hole where derivatives should be.
+
+### 11. ⚪ The number that sells it
+
+One real cohort, one before/after result. Nothing above matters to a principal
+without it, and nothing else on this list can substitute.
+
+## Known-good, do not re-litigate
+
+- Practice loop, review deck, XP shop, leaderboard, exam mode, homework, and
+  the teacher dashboard all render with no console errors (swept 2026-09-04).
+- Fonts self-hosted; no CDN in the runtime path.
+- Rate limiter, AI kill-switch, Sentry, `/legal`, `classroom.purgeStudent`
+  cascade all present.
+- Bandwidth: ~3.3 GB/month modelled for a 35-student pilot, ≈$0.30 of Starter
+  overage. The remaining cliff is the teacher dashboard at ~4.5 MB per
+  execution — see `docs/convex-budget.md`.
+
+---
+
+*The step-by-step detail below is the original 4-week plan. It is kept for the
+reasoning, not the sequencing — steps 1 and 3 are done, and the priorities
+above supersede its ordering.*
 ---
 
 ## Step 1 — Scale the question bank through the packet pipeline

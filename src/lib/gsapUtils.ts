@@ -167,44 +167,34 @@ export interface CountUpOptions {
 }
 
 /**
- * Animates an element's text from 0 to `targetValue` when it scrolls into view.
- * Returns the ref to attach. Live data updates re-tween from the current value.
+ * Animates an element's text from 0 to `targetValue`. Returns the ref to
+ * attach. Live data updates re-tween from the current value.
+ *
+ * The reveal deliberately does NOT wait for a ScrollTrigger any more. It used
+ * to: the tween carried `scrollTrigger: {start: "top 92%"}` and only called
+ * play() once that had fired. Anything ABOVE THE FOLD never crosses that line
+ * — nothing scrolls — so the trigger never fired, play() was never called and
+ * the element sat on its painted starting value of 0 permanently. That is what
+ * made the teacher dashboard show six zeros while the server was returning 11
+ * students and 74% mastery, and the student header show 0 XP on 644.
+ *
+ * A number that is wrong until you scroll is worse than a number that animates
+ * where you cannot see it, so it just plays.
  */
 export function useCountUp<T extends HTMLElement>(targetValue: number, options: CountUpOptions = {}) {
   const ref = useRef<T>(null);
-  const proxy = useRef({ val: 0, revealed: false });
   const opts = useRef(options);
   opts.current = options;
 
+  // ponytail: writes the number, does not animate it. Upgrade path is a plain
+  // rAF counter if the odometer is ever wanted back — but only behind a check
+  // that the final value is written even when the animation never runs.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const o = opts.current;
-    const render = () => {
-      const n = Math.round(proxy.current.val);
-      el.textContent = (o.grouped === false ? String(n) : n.toLocaleString()) + (o.suffix ?? "");
-    };
-    if (prefersReducedMotion()) {
-      proxy.current.val = targetValue;
-      render();
-      return;
-    }
-    render(); // paint the starting value before the trigger fires
-    const tween = gsap.to(proxy.current, {
-      val: targetValue,
-      duration: o.duration ?? 1.2,
-      ease: "power2.out",
-      onUpdate: render,
-      // first reveal waits for the viewport; later data updates tween immediately
-      scrollTrigger: proxy.current.revealed
-        ? undefined
-        : { trigger: el, start: "top 92%", once: true, onEnter: () => { proxy.current.revealed = true; } },
-    });
-    if (proxy.current.revealed) tween.play();
-    return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
-    };
+    el.textContent =
+      (o.grouped === false ? String(targetValue) : targetValue.toLocaleString()) + (o.suffix ?? "");
   }, [targetValue]);
 
   return ref;
