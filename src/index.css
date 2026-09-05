@@ -155,24 +155,26 @@
      darker than a hairline neutral would be — it is a 2px structural border
      and the whole clay shadow system is built from it, so contrast here is
      what makes the surfaces feel moulded instead of drawn. */
-  --color-background:                  #EDF4EC;
+  --color-background:                  #E6F5E6;
   --color-on-background:               #14201A;
   --color-surface:                     #ffffff;
-  --color-surface-dim:                 #e3ece2;
+  --color-surface-dim:                 #dcefdb;
   --color-surface-bright:              #ffffff;
   --color-surface-container-lowest:    #ffffff;
-  --color-surface-container-low:       #f2f7f1;
-  --color-surface-container:           #eaf1e9;
-  --color-surface-container-high:      #e1ebe0;
-  --color-surface-container-highest:   #d6e3d5;
-  --color-surface-variant:             #e1ebe0;
-  --color-on-surface:                  #33413a;
-  --color-on-surface-variant:          #6c7a70;
-  --color-inverse-surface:             #33413a;
-  --color-inverse-on-surface:          #f2f7f1;
-  --color-outline:                     #cfdfcd;
-  --color-outline-variant:             #dfeade;
+  --color-surface-container-low:       #effaee;
+  --color-surface-container:           #e6f5e5;
+  --color-surface-container-high:      #daf0d9;
+  --color-surface-container-highest:   #cbe8c9;
+  --color-surface-variant:             #daf0d9;
+  --color-on-surface:                  #26382c;
+  --color-on-surface-variant:          #5f7565;
+  --color-inverse-surface:             #26382c;
+  --color-inverse-on-surface:          #effaee;
+  --color-outline:                     #c2e2bf;
+  --color-outline-variant:             #d5eed3;
   --color-scrim:                       #0a1a10;  /* overlay dim layer (green-black ink) */
+  --color-hot:                         #059669;  /* white-hot core — reward/charged accent */
+  --color-spark-solid:                 #10b981;  /* opaque spark for canvas motifs on light */
 
   /* ── BORDER RADIUS — bubbly claymorphic ── */
   --radius-sm:   0.625rem;  /* 10px */
@@ -203,7 +205,7 @@
   /* 5px, not 4: the extra pixel is what reads as "moulded" rather than
      "bordered", and the side colour is green-tinted so the lift belongs to
      the same family as the surface it lifts off. */
-  --shadow-clay:           0 5px 0 0 #bdd0ba, 0 1px 4px rgba(0,0,0,0.07);
+  --shadow-clay:           0 5px 0 0 #b2d9ae, 0 1px 4px rgba(0,0,0,0.07);
   --shadow-clay-primary:   0 4px 0 0 #0E9E4D;
   --shadow-clay-secondary: 0 4px 0 0 #5b41db;
   --shadow-clay-tertiary:  0 4px 0 0 #d68a00;
@@ -211,6 +213,12 @@
   --shadow-sm:             0 1px 3px rgba(0,0,0,0.08);
   --shadow-md:             0 4px 12px rgba(0,0,0,0.08);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.10);
+
+  /* ── GLOW SHADOWS — electric identity ── */
+  --glow-primary:  0 0 20px rgba(23, 201, 100, 0.32);
+  --glow-spark:    0 0 22px rgba(91, 255, 159, 0.45);
+  --glow-hot:      0 0 24px rgba(5, 150, 105, 0.35);
+  --glow-tertiary: 0 0 20px rgba(255, 176, 46, 0.30);
 
   /* ── TRANSITIONS ── */
   --t-fast:   150ms ease-out;
@@ -282,6 +290,8 @@
   --color-outline:                   #33493a;
   --color-outline-variant:           #1d2c21;
   --color-scrim:                     #000000;
+  --color-hot:                       #EAFFF4;
+  --color-spark-solid:               #5BFF9F;
 
   /* Clay shadows on dark — 5px to match the light theme's depth */
   --shadow-clay:           0 5px 0 0 #060b07, 0 1px 4px rgba(0,0,0,0.45);
@@ -292,6 +302,9 @@
   --shadow-sm:             0 1px 3px rgba(0,0,0,0.3);
   --shadow-md:             0 4px 12px rgba(0,0,0,0.3);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.4);
+
+  /* Glow tracks the dark primary (#22D86B), as the old color-mix did */
+  --glow-primary: 0 0 20px rgba(34, 216, 107, 0.32);
 }
 
 /* ═══════════════════ GLOBAL RESET ════════════════════ */
@@ -872,8 +885,8 @@ body {
 
 
 /* ═══════════════════ GLOW UTILITIES ════════════════════ */
-/* Theme-aware: track the active primary/spark/tertiary tokens in both modes */
-.glow-primary        { box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 32%, transparent); }
+/* Theme-aware: --glow-primary is re-tinted in the dark block */
+.glow-primary        { box-shadow: var(--glow-primary); }
 
 /* ═══════════════════ MICRO-INTERACTION UTILITIES (Voltage 2.0) ════════════ */
 
