@@ -103,7 +103,27 @@ const res = await fetch(`${API}/models/${MODEL}:generateContent`, {
   body: JSON.stringify(body),
 });
 if (!res.ok) {
-  console.error("request failed", res.status, (await res.text()).slice(0, 900));
+  const text = await res.text();
+  console.error("request failed", res.status, text.slice(0, 900));
+  // A well-formed key that Google still rejects is a project/enablement
+  // problem, not a typo, and the raw 400 says none of that. This has already
+  // cost one debugging round here.
+  if (text.includes("API_KEY_INVALID")) {
+    console.error(`
+The key parsed fine — this is Google refusing it, not a formatting problem.
+Check, in order:
+  1. Brand new key? Give it a minute to propagate, then retry.
+  2. https://aistudio.google.com/apikey — is this key listed and active, under
+     the project you expect? Keys are per-project and per-account.
+  3. Does the key carry API restrictions that exclude "Generative Language API"?
+  4. Is the Generative Language API enabled on that project at all? A key made
+     in Cloud Console does not enable it for you; an AI Studio key does.
+Quickest fix is usually a fresh key from AI Studio, which enables the API with it.
+
+Test any key without running a generation:
+  node --env-file=.env.local -e 'fetch("https://generativelanguage.googleapis.com/v1beta/models",{headers:{"x-goog-api-key":process.env.GEMINI_API_KEY}}).then(r=>console.log(r.status===200?"key works":"rejected: "+r.status))'
+`);
+  }
   process.exit(1);
 }
 const json = await res.json();
