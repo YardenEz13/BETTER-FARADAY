@@ -9,7 +9,7 @@ their (much smaller) output into `public/`.
 | File | Feeds | Rebuild with |
 |---|---|---|
 | `faraday-sheet.png` | the six pose PNGs | `node scripts/slice-mascot.mjs` |
-| `faraday-sheet.png` | `faraday-rig.psd` — the rig layers | `node scripts/cut-rig-layers.mjs` |
+| `faraday-hires.png` | `faraday-rig.psd` + `public/faraday-rig/` | `node scripts/cut-rig-layers.mjs` |
 | `faraday-icon.png` | favicon + apple-touch icon | `node scripts/make-favicon.mjs` |
 
 `faraday-icon.png` is a *different drawing* — shaded hair, wrinkles, a white
@@ -28,12 +28,15 @@ $bmp = New-Object System.Drawing.Bitmap $img.Width, $img.Height, ([System.Drawin
 $bmp.Save("$p.tmp", [System.Drawing.Imaging.ImageFormat]::Png)
 ```
 
-## Raising the rig's resolution
+## `faraday-hires.png` — the rig's source
 
-The rig below is cut from a 197x211 head upscaled 5x, so its outlines are soft
-at the 200px it renders at. `scripts/make-hires-portrait.mjs` asks Nano Banana
-for the *same drawing* back at 2K — same proportions, same line weight, same
-palette — which is the one lever that does not change how he looks:
+A 1024px redraw of the canonical idle pose on flat magenta, generated from
+`seed-idle.png` (itself the sheet's idle cell upscaled). **This, not
+`faraday-sheet.png`, is what the rig is cut from** — the sheet's cells are
+197x211, which upscaled 5x gave outlines too soft to hold at 200px.
+
+Regenerate with `scripts/make-hires-portrait.mjs`, which asks for the *same
+drawing* back at 2K — same proportions, same line weight, same palette:
 
 ```
 node scripts/make-turntable-seed.mjs assets-src/seed-idle.png
@@ -44,15 +47,22 @@ Put `GEMINI_API_KEY=<key>` in `.env.local` — gitignored by the `*.local` rule,
 so it never reaches a commit. Node reads the file itself; passing the key inline
 on the command line would leave it in shell history instead.
 
-Then point `SHEET` in `scripts/cut-rig-layers.mjs` at the result and re-tune the
+Then point `SOURCE` in `scripts/cut-rig-layers.mjs` at the result and re-pick the
 twelve seed coordinates against it — they are pixel positions in the source, so
-they do not survive a new image.
+they do not survive a new image. Two traps found doing exactly that:
 
-Costs a paid generation per run. **Neither key currently in the repo works** —
-both are the right shape and both 400 on `models.list`, so they are revoked or
-restricted, not malformed. `.env.local` also still carries a stale
-`VITE_GEMINI_API_KEY`; nothing outside a stubbed test reads it and no key
-literal appears in the built JS, so it is dead weight rather than a leak.
+- The browser may save the result as **JPEG with a `.png` name**, and may append
+  a second extension. Check the signature (`ff d8` is JPEG) and convert with the
+  PowerShell recipe above before anything tries to decode it as PNG.
+- The generated art connects his jacket, face outline and hair outline into one
+  dark network, so the jacket fill needs its radius cap or it claims every
+  outline in the picture and starves the nearest-owner sweep.
+
+Costs a paid generation per run, and **image generation is not on the free
+tier**: every image model returns `free_tier_requests limit: 0`, which arrives
+as a 429 saying "retry in 22s" — the quota is zero, not spent, so retrying never
+works. Either enable billing or generate in the AI Studio UI and save the file
+here. `scripts/check-gemini-key.mjs` tests a key without spending anything.
 
 Expect several rounds. Every clause of that script's prompt is a failure this
 project already hit — see "Prompt notes" below before editing it.

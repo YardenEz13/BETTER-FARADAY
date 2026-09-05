@@ -44,7 +44,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
 import { encodePsd, decodePsdLayers } from "./psd.mjs";
 
-const SHEET = "assets-src/faraday-sheet.png";
+const SOURCE = "assets-src/faraday-hires.png";
 /** One PSD, because Rive imports it as a unit: drag it onto an artboard and
  *  every layer arrives positioned, ordered and named. Loose PNGs would be
  *  twelve manual placements with nothing holding them in register. */
@@ -55,9 +55,6 @@ const OUT_STACK = "assets-src/faraday-rig-stack.png";
 const WEB_DIR = "public/faraday-rig";
 const WEB = 512;
 const WORK = 1024;
-
-/** Idle cell bounds, from slice-mascot.mjs. */
-const CELL = { x: [35, 264], y: [35, 278], inset: 4 };
 
 /* ── pixel classes ───────────────────────────────────────────────────── */
 
@@ -214,64 +211,70 @@ function nearestOwner(owner, px, w, h) {
 
 /**
  * Back to front. Seeds are coordinates in the WORK canvas, read off a zoomed
- * render; `snap` absorbs the imprecision. `paintHoles` fills enclosed regions
+ * render, and they are specific to one source image — a new portrait means
+ * re-picking every one of them. `snap` absorbs the imprecision. `paintHoles` fills enclosed regions
  * with the seed colour instead of the original pixels — the inpaint.
  *
  * Later layers win the pixels earlier ones claimed, so the small parts are
  * listed after the big ones they sit on.
  */
 const LAYERS = [
-  { name: "jacket",      seeds: [[740, 925], [285, 925]], want: "dark",  tol: 90 },
-  { name: "bowtie",      seeds: [[505, 910]],             want: "dark",  tol: 80, maxR: 110, holeFill: true },
+  // Capped, and this is load-bearing: his jacket, his outline and the hair
+  // outline are one connected dark network in this drawing, so an uncapped
+  // fill from the shoulders walks the whole silhouette and claims every
+  // outline in the picture. Those have to stay unowned for the sweep below to
+  // split them between the parts they separate.
+  { name: "jacket",      seeds: [[312, 904], [685, 892]], want: "dark",  tol: 90, maxR: 210 },
+  { name: "bowtie",      seeds: [[492, 911]],             want: "dark",  tol: 80, maxR: 130, holeFill: true },
 
   // One mass, not three: the swoop and both wings are a single white region in
   // this drawing. Splitting them is hand work on the redraw (plan §5.3).
-  { name: "hair",        seeds: [[450, 180], [170, 430], [860, 430]],
+  { name: "hair",        seeds: [[450, 150], [150, 400], [860, 380]],
                          want: "white", tol: 75, holeFill: true },
 
   // After the hair, and capped, because his collar and his sideburns are one
   // connected white region — an uncapped fill from either seed takes both, and
   // whichever is listed last wins the lot. The cap keeps each fill local; being
   // listed second is what lets the collar take its half back off the hair.
-  { name: "collar",      seeds: [[640, 852], [356, 858]], want: "white", tol: 70, maxR: 120 },
+  { name: "collar",      seeds: [[356, 830], [623, 830]], want: "white", tol: 70, maxR: 120 },
 
   // The face. holeFill swallows the eyes, brows, nose and wrinkles and
   // paintHoles replaces them with flat skin, which is the inpaint the parts
   // above need to move over.
-  { name: "head",        seeds: [[510, 440], [350, 690], [660, 690], [215, 620], [810, 620]],
+  { name: "head",        seeds: [[500, 400], [343, 681], [660, 681], [212, 600], [812, 600]],
                          want: "skin", tol: 95, holeFill: true, paintHoles: true },
 
   // `sitsOn` puts the whole of these — outline, anti-aliased shoulder and all —
   // onto the part rather than the face. Without it the nearest-owner sweep
   // splits each outline down its middle, which is right between the face and
   // the hair but wrong here: it leaves dark ghost sockets painted on the head.
-  { name: "eye-white-a", seeds: [[338, 579]], want: "white", tol: 60, maxR: 95, holeFill: true, paintHoles: true, sitsOn: "head" },
-  { name: "eye-white-b", seeds: [[682, 579]], want: "white", tol: 60, maxR: 95, holeFill: true, paintHoles: true, sitsOn: "head" },
-  { name: "brow-a",      seeds: [[371, 479]], want: "white", tol: 75, maxR: 95, sitsOn: "head" },
-  { name: "brow-b",      seeds: [[643, 479]], want: "white", tol: 75, maxR: 95, sitsOn: "head" },
-  { name: "mouth",       seeds: [[499, 731]], want: "dark",  tol: 95, maxR: 130, sitsOn: "head" },
+  { name: "eye-white-a", seeds: [[331, 575]], want: "white", tol: 60, maxR: 95, holeFill: true, paintHoles: true, sitsOn: "head" },
+  { name: "eye-white-b", seeds: [[694, 575]], want: "white", tol: 60, maxR: 95, holeFill: true, paintHoles: true, sitsOn: "head" },
+  { name: "brow-a",      seeds: [[374, 476]], want: "white", tol: 75, maxR: 95, sitsOn: "head" },
+  { name: "brow-b",      seeds: [[648, 476]], want: "white", tol: 75, maxR: 95, sitsOn: "head" },
+  { name: "mouth",       seeds: [[498, 737]], want: "dark",  tol: 95, maxR: 130, sitsOn: "head" },
 
   // maxR is doing real work: the pupil touches the upper-lid arc, and without
   // the cap the fill escapes along it and takes the whole face.
-  { name: "pupil-a",     seeds: [[391, 582]], want: "dark",  tol: 95, maxR: 52, holeFill: true, sitsOn: "eye-white-a" },
-  { name: "pupil-b",     seeds: [[627, 579]], want: "dark",  tol: 95, maxR: 52, holeFill: true, sitsOn: "eye-white-b" },
+  { name: "pupil-a",     seeds: [[384, 578]], want: "dark",  tol: 95, maxR: 60, holeFill: true, sitsOn: "eye-white-a" },
+  { name: "pupil-b",     seeds: [[629, 578]], want: "dark",  tol: 95, maxR: 60, holeFill: true, sitsOn: "eye-white-b" },
 ];
 
 /* ── build ───────────────────────────────────────────────────────────── */
 
-const sheet = decodePng(readFileSync(SHEET));
+const art = decodePng(readFileSync(SOURCE));
+const cw = art.w, ch = art.h;
+const cell = new Uint8ClampedArray(art.px);
 
-// Crop the idle cell and key the painted checkerboard, exactly as
-// slice-mascot.mjs does — same flood fill, same background test.
-const cw = CELL.x[1] - CELL.x[0] - CELL.inset * 2;
-const ch = CELL.y[1] - CELL.y[0] - CELL.inset * 2;
-const cell = new Uint8ClampedArray(cw * ch * 4);
-for (let y = 0; y < ch; y++) {
-  const from = ((CELL.y[0] + CELL.inset + y) * sheet.w + CELL.x[0] + CELL.inset) * 4;
-  cell.set(sheet.px.subarray(from, from + cw * 4), y * cw * 4);
-}
 {
-  const isBg = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) <= 14 && Math.min(r, g, b) > 196;
+  // Key the magenta backdrop by the *relationship* between channels, not by
+  // equality: the model never returns exactly #FF00FF, and this one came back
+  // 224,27,200. Magenta is the one hue his palette has none of — skin, white
+  // hair and dark outlines all fail this test, so nothing of him is punched out.
+  const isBg = (r, g, b) => Math.min(r, b) - g > 30;
+  // Flood in from the border rather than keying every matching pixel: an
+  // edge-in fill stops at his outline, so a magenta-ish highlight *inside* the
+  // drawing survives.
   const seen = new Uint8Array(cw * ch), stack = [];
   for (let x = 0; x < cw; x++) stack.push(x, (ch - 1) * cw + x);
   for (let y = 0; y < ch; y++) stack.push(y * cw, y * cw + cw - 1);
@@ -287,6 +290,14 @@ for (let y = 0; y < ch; y++) {
     if (x < cw - 1) stack.push(p + 1);
     if (y > 0) stack.push(p - cw);
     if (y < ch - 1) stack.push(p + cw);
+  }
+  // Despill: the key leaves a magenta-tinted rim on anti-aliased edge pixels.
+  // Pull g up toward min(r,b) there or he ships with a purple fringe.
+  for (let p = 0; p < cw * ch; p++) {
+    const i = p * 4;
+    if (cell[i + 3] < 32) continue;
+    const lo = Math.min(cell[i], cell[i + 2]);
+    if (lo - cell[i + 1] > 20) cell[i + 1] = lo;
   }
 }
 

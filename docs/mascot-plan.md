@@ -172,7 +172,8 @@ get a hole the moment it moves 3px.
 
 1. ~~**Cut it yourself from the existing sheet (~6-10h, $0).**~~ **DONE** —
    `scripts/cut-rig-layers.mjs` → `assets-src/faraday-rig.psd`, 12 layers on one
-   1024px canvas. Cut in code rather than by hand: the art is flat fills inside
+   1024px canvas. Now cut from `assets-src/faraday-hires.png` — a 1024px redraw
+   of the same pose (option 2 below), which fixed the softness the first cut had. Cut in code rather than by hand: the art is flat fills inside
    thick outlines, so flood-filling from a seed per region does the same job as
    a lasso tool, and the occluded regions inpaint *exactly* (they are closed
    shapes, so they are filled with their own colour rather than a guess).
