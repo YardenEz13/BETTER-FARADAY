@@ -53,18 +53,11 @@ if (!seedPath || !outPath) {
   process.exit(1);
 }
 if (!KEY) { console.error("GEMINI_API_KEY not set"); process.exit(1); }
-// Fail on the wrong *kind* of credential before spending a request. A Gemini
-// API key is "AIza" + 35 chars; an "AQ."-prefixed string is an OAuth/session
-// token copied out of the AI Studio UI, and the API rejects it as
-// API_KEY_INVALID — which reads like a bad key rather than the wrong type.
-if (!/^AIza[A-Za-z0-9_-]{35}$/.test(KEY)) {
-  console.error(
-    `GEMINI_API_KEY is not in Gemini API key format (expected "AIza" + 35 chars, got ${KEY.length} chars starting "${KEY.slice(0, 3)}").\n` +
-    `An "AQ."-prefixed value is an OAuth/session token, not an API key.\n` +
-    `Get a real one at https://aistudio.google.com/apikey — "Create API key".`,
-  );
-  process.exit(1);
-}
+// No format check. Google issues at least two key shapes — the long-standing
+// "AIza…" and a newer "AQ.…" — and a regex written against one of them silently
+// rejects the other. An earlier version of this script asserted "AIza" + 35 and
+// refused a perfectly good AQ. key. The API is the only authority on what it
+// accepts; let it answer.
 
 const API = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-3.1-flash-image";

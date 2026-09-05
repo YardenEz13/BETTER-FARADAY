@@ -23,13 +23,9 @@ if (!KEY) {
 
 console.log(`key      ${KEY.slice(0, 6)}…${KEY.slice(-4)}  (${KEY.length} chars)`);
 
-if (!/^AIza[A-Za-z0-9_-]{35}$/.test(KEY)) {
-  console.error(`format   WRONG — expected "AIza" + 35 chars`);
-  console.error(`         An "AQ."-prefixed value is an OAuth/session token, not an API key.`);
-  console.error(`         Create one at https://aistudio.google.com/apikey`);
-  process.exit(1);
-}
-console.log("format   ok");
+// No format assertion: Google issues at least two key shapes, the long-standing
+// "AIza…" and a newer "AQ.…", and a regex written against one silently rejects
+// the other. Only the API knows what it accepts.
 
 const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
   headers: { "x-goog-api-key": KEY },
@@ -48,7 +44,7 @@ console.error(`status   rejected (${res.status})`);
 console.error(text.replace(KEY, "<KEY>").slice(0, 400));
 if (text.includes("API_KEY_INVALID")) {
   console.error(`
-The key is well-formed, so this is Google refusing it. In order:
+Google is refusing this key. In order:
   1. Does the masked key above match your AI Studio dashboard? If not, a stale
      GEMINI_API_KEY in your machine environment is shadowing .env.local:
        [Environment]::SetEnvironmentVariable('GEMINI_API_KEY', $null, 'User')
