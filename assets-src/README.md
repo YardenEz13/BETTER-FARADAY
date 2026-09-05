@@ -28,6 +28,31 @@ $bmp = New-Object System.Drawing.Bitmap $img.Width, $img.Height, ([System.Drawin
 $bmp.Save("$p.tmp", [System.Drawing.Imaging.ImageFormat]::Png)
 ```
 
+## Raising the rig's resolution
+
+The rig below is cut from a 197x211 head upscaled 5x, so its outlines are soft
+at the 200px it renders at. `scripts/make-hires-portrait.mjs` asks Nano Banana
+for the *same drawing* back at 2K — same proportions, same line weight, same
+palette — which is the one lever that does not change how he looks:
+
+```
+node scripts/make-turntable-seed.mjs assets-src/seed-idle.png
+GEMINI_API_KEY=... node scripts/make-hires-portrait.mjs assets-src/seed-idle.png assets-src/faraday-hires.png
+```
+
+Then point `SHEET` in `scripts/cut-rig-layers.mjs` at the result and re-tune the
+twelve seed coordinates against it — they are pixel positions in the source, so
+they do not survive a new image.
+
+Costs a paid generation per run. **Neither key currently in the repo works** —
+both are the right shape and both 400 on `models.list`, so they are revoked or
+restricted, not malformed. `.env.local` also still carries a stale
+`VITE_GEMINI_API_KEY`; nothing outside a stubbed test reads it and no key
+literal appears in the built JS, so it is dead weight rather than a leak.
+
+Expect several rounds. Every clause of that script's prompt is a failure this
+project already hit — see "Prompt notes" below before editing it.
+
 ## Rig layers — `faraday-rig.psd`
 
 The idle Faraday cut into 12 separately-movable parts, for the Rive rig test in
