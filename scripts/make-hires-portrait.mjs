@@ -69,6 +69,13 @@ if (!/^AIza[A-Za-z0-9_-]{35}$/.test(KEY)) {
 const API = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-3.1-flash-image";
 
+// Say which key is in play, masked the way AI Studio masks it. `--env-file`
+// does NOT override a variable that is already set, so a stale machine-level
+// GEMINI_API_KEY silently shadows the one in .env.local and every run fails
+// against a key you are not looking at. That cost a whole debugging session
+// once; four visible characters end it.
+console.log(`using GEMINI_API_KEY ${KEY.slice(0, 6)}…${KEY.slice(-4)} (${KEY.length} chars)`);
+
 const prompt = `The attached picture shows FARADAY, a cartoon professor. Redraw
 FARADAY exactly as he appears in the attached picture, at high resolution with
 crisp clean vector-like edges.
