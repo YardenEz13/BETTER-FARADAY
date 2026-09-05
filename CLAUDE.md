@@ -23,6 +23,26 @@ work → green-torch → master → prod
 - Check out `green-torch` at session start (create from `origin/green-torch` if missing). Never commit to `master` directly.
 - Merge `green-torch` → `master` only when asked. **Pushing `master` deploys Convex to prod** via `.github/workflows/ci.yml`, so that merge is a production release.
 - `graphify update .` then push, after every commit.
+- Preview URL for `green-torch`:
+  `https://better-faraday-git-green-torch-yardenez13s-projects.vercel.app`
+  It is built against the **dev** Convex deployment, not prod — the client URL
+  is baked in at build time, so check the bundle rather than `.env.local`
+  before pointing anything destructive at it.
+
+### `backup/opus-prod-readiness-20260714` — leave it alone
+
+A parked branch, 5 commits from 2026-07-14, never merged and **not to be merged
+as-is**. Do not delete it: it is the only copy of the work.
+
+It is half superseded. `.github/workflows/ci.yml` and `playwright.config.ts`
+were redone on `green-torch` since, so merging replays them as conflicts. What
+never landed anywhere is `src/lib/logClientError.ts` (client error sink) and the
+whole `loadtest/` directory (k6 live-write load test).
+
+It also touches `PracticeSession.tsx`, `TeacherDashboard.tsx` and `main.tsx`,
+all of which have moved a long way since. Reconciling it is a manual job, not a
+merge. If the observability or load-test work is wanted, cherry-pick `63b22ae`
+and `4db9062` rather than merging the branch.
 
 ## Rules
 
