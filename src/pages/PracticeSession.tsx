@@ -413,9 +413,17 @@ export default function PracticeSession() {
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
 
-          {/* Mobile streak bar — the header ChargeMeter is desktop-only, so the
-              correct-answer streak still has a home on small screens. */}
-          <div className="sm:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3" style={{ boxShadow: 'var(--shadow-clay)' }}>
+          {/* Faraday and the streak, below the desktop breakpoint.
+
+              He rides along in the card the streak already had rather than
+              taking a row of his own: vertical space is the scarce thing on a
+              phone. The card and the header ChargeMeter now switch at the same
+              `lg` the sidebar does, so there is exactly one streak display at
+              every width — they were split at `sm`, which left tablets showing
+              the header meter and no Faraday at all. */}
+          <div className="lg:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3 flex items-center gap-4" style={{ boxShadow: 'var(--shadow-clay)' }}>
+            {!rigVisible && <FaradayRig mood={rigMood} px={84} className="flex-shrink-0" />}
+            <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-bold text-on-surface-variant">רצף תשובות</span>
               <span className="num text-xs font-extrabold text-primary flex items-center gap-1">
@@ -434,6 +442,7 @@ export default function PracticeSession() {
                   />
                 );
               })}
+            </div>
             </div>
           </div>
 
@@ -766,16 +775,16 @@ export default function PracticeSession() {
         )}
       </AnimatePresence>
 
-      {/* Faraday's line about the last answer, auto-dismissing. Bubble only on
-          desktop, where the rig in the sidebar is already reacting and a second
-          Faraday in the corner is one too many; on phones the rig is hidden, so
-          the avatar comes back and this is the whole mascot moment. */}
+      {/* Faraday's line about the last answer, auto-dismissing. Always bubble
+          only: he is on screen at every width now — the sidebar above lg, the
+          streak card below it — and his face is already the reaction, so the
+          bubble carries the words and nothing else. */}
       <FaradayReaction
         kind={reaction?.kind ?? "correct"}
         streakCount={reaction?.count}
         visible={!!reaction}
         onDone={() => setReaction(null)}
-        bubbleOnly={rigVisible}
+        bubbleOnly
       />
 
       <AnimatePresence>
@@ -810,7 +819,7 @@ function ChargeMeter({ combo, max }: { combo: number; max: number }) {
   }, [combo, level]);
   return (
     <div
-      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
+      className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
       style={{ boxShadow: 'var(--shadow-clay)' }}
       title="טעינת אנרגיה — רצף תשובות נכונות"
     >

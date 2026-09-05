@@ -68,6 +68,8 @@ export default function FaradayRig({
   const root = useRef<HTMLDivElement>(null);
   const reduced = !!useReducedMotion();
   const [blinking, setBlinking] = useState(false);
+  /** When the pointer last drove the gaze, so idle drift can stay out of its way. */
+  const lastPointerRef = useRef(0);
 
   // Drive look-at through CSS custom properties rather than React state: it
   // fires on every pointer move, and re-rendering twelve images at that rate to
@@ -98,8 +100,34 @@ export default function FaradayRig({
     return () => window.clearTimeout(timer);
   }, [reduced]);
 
+  /**
+   * Idle gaze. With nothing to follow he drifts his eyes on his own, which on a
+   * phone is every single moment — there is no pointer to track, so without this
+   * he stares dead ahead forever and reads as switched off. Desktop gets it too
+   * whenever the cursor is somewhere else on the page.
+   *
+   * Kept well inside the pupils' travel so a drift never looks like a stare, and
+   * skipped while the pointer is actually driving him, or the two fight over the
+   * same two numbers.
+   */
+  useEffect(() => {
+    if (reduced || look) return;
+    let timer: number;
+    const drift = () => {
+      timer = window.setTimeout(() => {
+        if (Date.now() - lastPointerRef.current > 1600) {
+          setLook((Math.random() * 2 - 1) * 0.55, (Math.random() * 2 - 1) * 0.4);
+        }
+        drift();
+      }, 1600 + Math.random() * 2800);
+    };
+    drift();
+    return () => window.clearTimeout(timer);
+  }, [reduced, look]);
+
   const track = (e: PointerEvent<HTMLDivElement>) => {
     if (reduced || look || e.pointerType === "touch") return;
+    lastPointerRef.current = Date.now();
     const b = e.currentTarget.getBoundingClientRect();
     const clamp = (v: number) => Math.max(-1, Math.min(1, v));
     // Divided by a distance rather than the box, so he tracks the pointer across
