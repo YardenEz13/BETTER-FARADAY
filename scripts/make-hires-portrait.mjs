@@ -3,7 +3,12 @@
  * Redraw the idle Faraday at high resolution, on-model, with Nano Banana.
  *
  *   node scripts/make-turntable-seed.mjs assets-src/seed-idle.png
- *   node scripts/make-hires-portrait.mjs assets-src/seed-idle.png assets-src/faraday-hires.png
+ *   node --env-file=.env.local scripts/make-hires-portrait.mjs \
+ *        assets-src/seed-idle.png assets-src/faraday-hires.png
+ *
+ * Needs GEMINI_API_KEY in .env.local, which is gitignored (`*.local`). Prefer
+ * that over `GEMINI_API_KEY=... node …` on one line: the inline form puts the
+ * key in your shell history, and Node reads the file natively since 20.6.
  *
  * Dev-machine tool. Costs a paid image generation per run — do not put this in
  * CI, and look at the output before spending again.

@@ -37,8 +37,12 @@ palette — which is the one lever that does not change how he looks:
 
 ```
 node scripts/make-turntable-seed.mjs assets-src/seed-idle.png
-GEMINI_API_KEY=... node scripts/make-hires-portrait.mjs assets-src/seed-idle.png assets-src/faraday-hires.png
+node --env-file=.env.local scripts/make-hires-portrait.mjs assets-src/seed-idle.png assets-src/faraday-hires.png
 ```
+
+Put `GEMINI_API_KEY=<key>` in `.env.local` — gitignored by the `*.local` rule,
+so it never reaches a commit. Node reads the file itself; passing the key inline
+on the command line would leave it in shell history instead.
 
 Then point `SHEET` in `scripts/cut-rig-layers.mjs` at the result and re-tune the
 twelve seed coordinates against it — they are pixel positions in the source, so
