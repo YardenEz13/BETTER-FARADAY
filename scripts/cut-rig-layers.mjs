@@ -40,7 +40,7 @@
  * bite out of it under each hair wing. Move the hair more than ~15px at 1024
  * and the bite shows. Fine for secondary motion, not for a real head turn.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
 import { encodePsd, decodePsdLayers } from "./psd.mjs";
 
@@ -50,6 +50,10 @@ const SHEET = "assets-src/faraday-sheet.png";
  *  twelve manual placements with nothing holding them in register. */
 const OUT_PSD = "assets-src/faraday-rig.psd";
 const OUT_STACK = "assets-src/faraday-rig-stack.png";
+/** Shipped copies of the same layers, for the DOM rig. 512 is 2x the largest
+ *  site the mascot renders at, and these go to phones on school networks. */
+const WEB_DIR = "public/faraday-rig";
+const WEB = 512;
 const WORK = 1024;
 
 /** Idle cell bounds, from slice-mascot.mjs. */
@@ -382,6 +386,30 @@ for (const [i, r] of back.entries()) {
 }
 console.log(`\n${OUT_PSD}  ${(readFileSync(OUT_PSD).length / 1024).toFixed(0)}KB, ` +
   `${back.length} layers, round-trips exactly`);
+
+/* ── web layers ──────────────────────────────────────────────────────── */
+
+// The same cut, shipped, for the DOM rig in src/components/FaradayRig.tsx.
+//
+// Full canvas per layer rather than cropped to the bbox, unlike the PSD: the rig
+// nests the layers so a parent's transform carries its children, and that only
+// works if every layer shares one coordinate space. Stacking them is then
+// `position:absolute; inset:0` with nothing to position by hand. The empty space
+// costs almost nothing — it is one transparent run per row to PNG.
+mkdirSync(WEB_DIR, { recursive: true });
+let webBytes = 0;
+for (const { name, x, y, w, h, rgba } of cut) {
+  const full = new Uint8ClampedArray(WORK * WORK * 4);
+  for (let ly = 0; ly < h; ly++) {
+    const from = (ly * w) * 4;
+    full.set(rgba.subarray(from, from + w * 4), ((y + ly) * WORK + x) * 4);
+  }
+  const small = resample(full, WORK, WORK, 0, 0, WORK, WEB);
+  const file = `${WEB_DIR}/${name}.png`;
+  writeFileSync(file, encodePng(WEB, WEB, small));
+  webBytes += readFileSync(file).length;
+}
+console.log(`${WEB_DIR}/  ${cut.length} layers at ${WEB}px, ${(webBytes / 1024).toFixed(0)}KB total`);
 
 // Coverage check: the flattened stack must put back essentially all of him. A
 // silent drop here is the failure mode this whole script has — a mistuned

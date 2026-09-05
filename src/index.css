@@ -1363,3 +1363,134 @@ math-field.faraday-mathfield::part(virtual-keyboard-toggle),
 math-field.faraday-mathfield::part(menu-toggle) {
   color: var(--color-on-surface-variant);
 }
+
+/* ── Rigged mascot — FaradayRig.tsx ──────────────────────────────────────
+   The twelve cut parts from public/faraday-rig/, nested so a parent's
+   transform carries its children. Nesting is the bone system; the transition
+   below is the blend that a cross-faded pose swap cannot do.
+
+   Two numbers drive the whole look-at: --rig-lx and --rig-ly, each -1..1 in
+   ARTWORK space. They are set from JS on pointer move, and everything that
+   should follow the gaze reads them. Never flip them for RTL — he is a person,
+   not a chevron; a caller that wants him looking at a page element flips the
+   sign it passes in.
+
+   Pivots are percentages of the square canvas, measured off the layer bounds
+   the cutter prints. Because every layer ships at full canvas size, one
+   coordinate space covers all of them. */
+.frig {
+  position: relative;
+  display: block;
+  user-select: none;
+}
+.frig-layer,
+.frig-body,
+.frig-head-grp,
+.frig-eye {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.frig-layer {
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Breathing. Lives on its own element so it composes with everything below —
+   two animations cannot share one element, which is the limitation that forces
+   the flat mascot to pick one motion at a time. */
+.frig-body {
+  transform-origin: 50% 92%;
+  animation: frig-breathe 4.2s ease-in-out infinite;
+}
+@keyframes frig-breathe {
+  0%, 100% { transform: scale(1) translateY(0) rotate(0deg); }
+  30%      { transform: scale(1.028) translateY(-1.2%) rotate(-0.6deg); }
+  65%      { transform: scale(1.008) translateY(-0.3%) rotate(0.5deg); }
+}
+
+/* The head follows the gaze at a fraction of it, so the eyes lead and the head
+   catches up — the thing that reads as attention rather than a swivel. */
+.frig-head-grp {
+  transform-origin: 50% 82%;
+  transform:
+    rotate(calc(var(--rig-lx, 0) * 3.2deg))
+    translate(calc(var(--rig-lx, 0) * 1.1%), calc(var(--rig-ly, 0) * -0.8%));
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hair lags the head. A longer transition on the same input is the cheapest
+   possible follow-through: no mesh, no physics, just arriving late. */
+.frig-hair {
+  transform-origin: 50% 62%;
+  transform: rotate(calc(var(--rig-lx, 0) * -1.4deg));
+  transition: transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Pupils. The sclera under them was inpainted to a full disc by the cutter, so
+   there is real white to slide across. Travel is capped low on purpose — a
+   pupil that reaches the rim of the eye looks deranged rather than attentive. */
+.frig-pupil-a,
+.frig-pupil-b {
+  transform: translate(calc(var(--rig-lx, 0) * 2.6%), calc(var(--rig-ly, 0) * -2%));
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Blink squashes each eye about its own centre. The head underneath is clean
+   skin — the cutter painted the sockets out — so what is left at the bottom of
+   the squash is the eye's own dark rim compressed into a line, which is why
+   this reads as a closed eye without any eyelid drawing. */
+.frig-eye {
+  transition: transform 90ms ease-in;
+}
+.frig-eye-a { transform-origin: 36.8% 55.6%; }
+.frig-eye-b { transform-origin: 62.7% 55.7%; }
+
+/* Brows and mouth: the mood. Transitioned, so a mood change is one expression
+   travelling to another rather than a cut between two drawings. */
+.frig-brow-a,
+.frig-brow-b,
+.frig-mouth {
+  transition: transform 200ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.frig-brow-a { transform-origin: 36.8% 47.3%; }
+.frig-brow-b { transform-origin: 62.6% 47.3%; }
+.frig-mouth  { transform-origin: 49.3% 71.5%; }
+
+/* Brows sit slightly apart in the artwork, so their rotations mirror each other
+   to stay symmetrical — a and b, positions in the drawing, never start/end. */
+.frig[data-mood="thinking"] .frig-brow-a { transform: translateY(-1.4%) rotate(-5deg); }
+.frig[data-mood="thinking"] .frig-brow-b { transform: translateY(1%) rotate(-2deg); }
+.frig[data-mood="thinking"] .frig-mouth  { transform: translateX(-1.6%) scaleX(0.86); }
+
+.frig[data-mood="happy"] .frig-brow-a { transform: translateY(-3.4%) rotate(-3deg); }
+.frig[data-mood="happy"] .frig-brow-b { transform: translateY(-3.4%) rotate(3deg); }
+.frig[data-mood="happy"] .frig-mouth  { transform: translateY(0.6%) scale(1.16, 1.3); }
+.frig[data-mood="happy"] .frig-eye    { transform: scaleY(0.82); }
+
+.frig[data-mood="wrong"] .frig-brow-a { transform: translateY(1.6%) rotate(7deg); }
+.frig[data-mood="wrong"] .frig-brow-b { transform: translateY(1.6%) rotate(-7deg); }
+.frig[data-mood="wrong"] .frig-mouth  { transform: translateY(1.2%) scale(0.84, 0.9); }
+
+.frig[data-mood="streak"] .frig-brow-a { transform: translateY(-4.6%) rotate(-6deg); }
+.frig[data-mood="streak"] .frig-brow-b { transform: translateY(-4.6%) rotate(6deg); }
+.frig[data-mood="streak"] .frig-mouth  { transform: translateY(0.8%) scale(1.2, 1.4); }
+.frig[data-mood="streak"] .frig-body   { animation-duration: 2.4s; }
+
+/* Blink still wins while a mood is squinting: it is listed after, and both set
+   the same property on the same element. */
+.frig[data-blink] .frig-eye { transform: scaleY(0.06); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hold him still rather than speeding the loop up — the global reduced-motion
+     rule only crushes duration, which turns a breath into a twitch. */
+  .frig-body { animation: none; }
+  .frig-head-grp,
+  .frig-hair,
+  .frig-pupil-a,
+  .frig-pupil-b,
+  .frig-eye { transition: none; }
+}

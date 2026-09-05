@@ -3,6 +3,7 @@ import FaradayAvatar, { type FaradayPose, isLargePose } from "../components/Fara
 import FaradayMoodAvatar, { type FaradayMood } from "../components/FaradayMoodAvatar";
 import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
 import Faraday25D, { type Faraday25DPose } from "../components/Faraday25D";
+import FaradayRig, { type RigMood } from "../components/FaradayRig";
 
 /**
  * Dev-only mascot lab: every pose and every animation on one screen, rendered
@@ -17,6 +18,7 @@ const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak", "p
 const KINDS: FaradayReactionKind[] = ["correct", "wrong", "streak", "levelup", "homework"];
 const MOODS: FaradayMood[] = ["idle", "thinking", "happy"];
 const HEAD_POSES: Faraday25DPose[] = ["idle", "thinking", "happy", "wrong", "streak"];
+const RIG_MOODS: RigMood[] = ["idle", "thinking", "happy", "wrong", "streak"];
 
 export default function MascotLab() {
   const [reaction, setReaction] = useState<FaradayReactionKind | null>(null);
@@ -24,6 +26,7 @@ export default function MascotLab() {
   const [spriteKey, setSpriteKey] = useState(0);
   // Faraday25D masks are cut for the head crop, so the lab only offers those.
   const [headPose, setHeadPose] = useState<Faraday25DPose>("idle");
+  const [rigMood, setRigMood] = useState<RigMood>("idle");
 
   return (
     <div dir="rtl" className="min-h-screen bg-background text-on-surface p-6 flex flex-col gap-8"
@@ -63,6 +66,31 @@ export default function MascotLab() {
               {m}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="label-mono text-primary">
+          Rigged — 12 cut parts, nested. Eyes follow the pointer; moods blend instead of cutting.
+        </h2>
+        <div className="flex flex-wrap items-center gap-8">
+          <FaradayRig mood={rigMood} px={240} />
+          <FaradayRig mood={rigMood} px={96} />
+          <div className="flex flex-col gap-3 basis-72 grow">
+            <div className="flex flex-wrap gap-2">
+              {RIG_MOODS.map((m) => (
+                <button key={m} className={rigMood === m ? "btn-clay-primary" : "btn-clay-ghost"}
+                  onClick={() => setRigMood(m)}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-on-surface-variant">
+              Move the pointer anywhere near him. Compare a mood change here with the pose
+              swap above — that one cross-fades two drawings, this one travels between two
+              expressions.
+            </p>
+          </div>
         </div>
       </section>
 
