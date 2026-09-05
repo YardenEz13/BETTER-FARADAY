@@ -9,7 +9,12 @@ their (much smaller) output into `public/`.
 | File | Feeds | Rebuild with |
 |---|---|---|
 | `faraday-sheet.png` | the six pose PNGs | `node scripts/slice-mascot.mjs` |
+| `faraday-sheet.png` | `faraday-rig/` — the rig layers | `node scripts/cut-rig-layers.mjs` |
 | `faraday-icon.png` | favicon + apple-touch icon | `node scripts/make-favicon.mjs` |
+
+`faraday-icon.png` is a *different drawing* — shaded hair, wrinkles, a white
+collar. Only the favicon uses it. `faraday-sheet.png` is the canonical model;
+generate against that one.
 
 Both arrived as JPEG data with a `.png` name — check the signature before
 assuming otherwise (`ff d8` is JPEG, `89 50 4e 47` is PNG). Convert with
@@ -22,6 +27,45 @@ $bmp = New-Object System.Drawing.Bitmap $img.Width, $img.Height, ([System.Drawin
 ([System.Drawing.Graphics]::FromImage($bmp)).DrawImage($img, 0, 0, $img.Width, $img.Height)
 $bmp.Save("$p.tmp", [System.Drawing.Imaging.ImageFormat]::Png)
 ```
+
+## Rig layers — `faraday-rig/`
+
+The idle Faraday cut into 12 separately-movable parts, for the Rive rig test in
+`docs/mascot-plan.md` §14. Source-only, never shipped: the app still renders the
+flat pose PNGs in `public/`.
+
+Every layer is written on the same 1024x1024 canvas, so importing the folder
+into Rive stacks them in register with no offsets to re-enter. `manifest.json`
+carries each layer's pixel count, bounding box and a suggested pivot;
+`_stack.png` is the flattened result, and the script fails if it does not put
+back at least 90% of the source character.
+
+| Layers | |
+|---|---|
+| structure | `jacket` `collar` `bowtie` `hair` `head` |
+| face | `eye-white-a/b` `pupil-a/b` `brow-a/b` `mouth` |
+
+`a`/`b` are positions **in the artwork**, never `left`/`right` or `start`/`end`
+— the drawing does not mirror under RTL. Same rule as `.faraday-25d-wing-a` in
+`src/index.css`.
+
+### What this cut can and cannot do
+
+Verified by moving the parts: the pupils slide over a full white sclera, and the
+brows lift off clean skin, both with no hole where the part used to be. The
+inpainting is exact rather than guessed — those regions are closed shapes, so
+they are filled with their own colour, not with invented pixels.
+
+Two ceilings, neither fixable here:
+
+- **The hair is one mass**, not a swoop and two wings. It is a single connected
+  white region in this drawing.
+- **The face outline is drawn where the hair overlaps it**, so the head has a
+  bite out of it under each hair wing. Move the hair more than ~15px at 1024 and
+  a white seam opens along the hairline.
+
+Both need the redraw in `docs/mascot-plan.md` §5.3. This cut exists to answer
+whether that redraw is worth buying.
 
 ## Video clips — `video/`
 
