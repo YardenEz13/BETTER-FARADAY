@@ -11,6 +11,7 @@ import {
 import { useFaraday } from "../components/chat/FaradayProvider";
 import FaradayAvatar from "../components/FaradayAvatar";
 import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
+import FaradayRig, { type RigMood } from "../components/FaradayRig";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -191,6 +192,30 @@ export default function PracticeSession() {
     }
   }, [activeQuestion?._id]);
 
+  /* The rig only renders in the lg+ sidebar, and the reaction bubble needs to
+     know: with him on screen it drops its own avatar and speaks as a bare
+     toast. Same breakpoint and same listener shape as AIChatPanel's dock. */
+  const [rigVisible, setRigVisible] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setRigVisible(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  /* He starts pondering once a question has sat unanswered for a few seconds.
+     Without it `idle` is the only mood he ever wears before an answer, and a
+     mascot that holds one face until you click is furniture. */
+  const [pondering, setPondering] = useState(false);
+  useEffect(() => {
+    setPondering(false);
+    if (submitted) return;
+    const t = setTimeout(() => setPondering(true), 4000);
+    return () => clearTimeout(t);
+  }, [activeQuestion?._id, submitted]);
+
   if (!student || !currentTopic) return null;
 
   const handleSelect = async (idx: number, choiceEl?: HTMLElement) => {
@@ -303,6 +328,15 @@ export default function PracticeSession() {
   };
 
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
+
+  /* The mascot's whole state, derived — nothing new is tracked for him. A
+     streak only overrides `happy` once it is worth remarking on, which is the
+     same threshold the reaction bubble and fireStreak already use. */
+  const rigMood: RigMood = !submitted
+    ? (pondering ? "thinking" : "idle")
+    : isCorrect
+      ? (combo >= 3 ? "streak" : "happy")
+      : "wrong";
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
@@ -678,8 +712,18 @@ export default function PracticeSession() {
           ) : null}
         </div>
 
-        {/* Right: Calculator */}
-        <div className="w-[300px] flex-shrink-0 hidden lg:block">
+        {/* Right: Faraday, then the calculator */}
+        <div className="w-[300px] flex-shrink-0 hidden lg:flex flex-col gap-5">
+          {/* He watches the student work: eyes follow the pointer, expression
+              follows the answer. Sized to be legible — the moods move brows and
+              pupils by a few percent, which is invisible in an avatar circle.
+              Desktop only for now; where he goes on a phone is still open, and
+              FaradayReaction already covers that moment there.
+
+              Gated on the media query rather than just `hidden lg:flex`: a
+              hidden <img> is still fetched, and that would spend 164KB of
+              layers on phones to render nothing. */}
+          {rigVisible && <FaradayRig mood={rigMood} px={200} className="self-center" />}
           <CalculatorCard />
         </div>
         </div>
@@ -722,12 +766,16 @@ export default function PracticeSession() {
         )}
       </AnimatePresence>
 
-      {/* Faraday personality pop-in — reacts to the last answer, auto-dismisses */}
+      {/* Faraday's line about the last answer, auto-dismissing. Bubble only on
+          desktop, where the rig in the sidebar is already reacting and a second
+          Faraday in the corner is one too many; on phones the rig is hidden, so
+          the avatar comes back and this is the whole mascot moment. */}
       <FaradayReaction
         kind={reaction?.kind ?? "correct"}
         streakCount={reaction?.count}
         visible={!!reaction}
         onDone={() => setReaction(null)}
+        bubbleOnly={rigVisible}
       />
 
       <AnimatePresence>
