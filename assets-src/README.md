@@ -8,13 +8,19 @@ their (much smaller) output into `public/`.
 
 | File | Feeds | Rebuild with |
 |---|---|---|
-| `faraday-sheet.png` | the six pose PNGs | `node scripts/slice-mascot.mjs` |
+| `faraday-sheet.png` | the seed for `faraday-hires.png` | `node scripts/make-turntable-seed.mjs` |
 | `faraday-hires.png` | `faraday-rig.psd` + `public/faraday-rig/` | `node scripts/cut-rig-layers.mjs` |
 | `faraday-icon.png` | favicon + apple-touch icon | `node scripts/make-favicon.mjs` |
 
 `faraday-icon.png` is a *different drawing* — shaded hair, wrinkles, a white
-collar. Only the favicon uses it. `faraday-sheet.png` is the canonical model;
-generate against that one.
+collar. Only the favicon uses it.
+
+`faraday-sheet.png` is no longer cut from directly. It was the source of the six
+pose PNGs via `slice-mascot.mjs`, now deleted: it wrote the same
+`public/faraday-*.png` files that `slice-poses.mjs` writes, so running it would
+have silently reverted the whole set to 197px cells. The sheet survives as the
+ancestor — it seeds `faraday-hires.png`, which everything else now descends
+from.
 
 Both arrived as JPEG data with a `.png` name — check the signature before
 assuming otherwise (`ff d8` is JPEG, `89 50 4e 47` is PNG). Convert with
