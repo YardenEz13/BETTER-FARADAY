@@ -160,3 +160,35 @@ What did *not* take, and needs saying harder:
   one. Measured: the typing clip's best loop pair scores 0.78, against 3.5 for
   the celebration clip, which had no loop anywhere and so ships as a one-shot.
   Find the window by scanning every frame pair for the lowest difference.
+
+## Regenerating the pose PNGs
+
+The six head poses shipped in `public/` are generated, not composed. The rig
+cannot make them: it has twelve layers and none is an arm, while `thinking` puts
+a hand at his chin, `happy` raises both, and `wrong` holds out an open palm.
+Rendering them off the rig gives five near-identical heads with different
+eyebrows — expression is not gesture.
+
+```
+node scripts/make-poses.mjs --print   # prompts for manual AI Studio runs
+node --env-file=.env.local scripts/make-poses.mjs   # or generate directly
+node scripts/slice-poses.mjs          # cut all six to public/faraday-*.png
+```
+
+All five attach `faraday-hires.png` as the reference, so the whole set ends up
+the same vintage as the rig; `idle` needs no generation because that file *is*
+the idle pose. `slice-poses.mjs` skips whatever has not been generated yet, so
+it can be re-run as they arrive.
+
+**Do it all at once.** The six are internally consistent today, so replacing
+some and not others fragments the set worse than leaving it alone.
+
+**Sparks are deliberately not in the prompts.** The old `happy` had green sparks
+and `streak` amber bolts drawn into the art; `SparkBurst` in
+`src/components/electric` already draws them at runtime — `FaradayReaction` uses
+it — so baking them in duplicates the effect, freezes the colour, and hands the
+transparency key a field of detached islands.
+
+Framing is shared, not per-pose: every crop is anchored on idle's box, widened
+symmetrically only where a pose genuinely reaches further. Cropping each pose to
+its own bounds is what makes a mascot's head change size when it swaps.
