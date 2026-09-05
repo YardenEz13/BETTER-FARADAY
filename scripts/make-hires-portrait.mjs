@@ -60,7 +60,12 @@ if (!KEY) { console.error("GEMINI_API_KEY not set"); process.exit(1); }
 // accepts; let it answer.
 
 const API = "https://generativelanguage.googleapis.com/v1beta";
-const MODEL = "gemini-3.1-flash-image";
+// gemini-2.5-flash-image is the image model the free tier actually grants. The
+// 3.x image models report `limit: 0` for free-tier requests, which arrives as a
+// RESOURCE_EXHAUSTED telling you to retry in 22 seconds — retrying never helps,
+// because the quota is zero rather than spent. Override to a 3.x model on a
+// paid key, where the output is better.
+const MODEL = process.env.GEMINI_IMAGE_MODEL ?? "gemini-2.5-flash-image";
 
 // Say which key is in play, masked the way AI Studio masks it. `--env-file`
 // does NOT override a variable that is already set, so a stale machine-level
