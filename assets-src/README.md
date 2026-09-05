@@ -9,7 +9,7 @@ their (much smaller) output into `public/`.
 | File | Feeds | Rebuild with |
 |---|---|---|
 | `faraday-sheet.png` | the six pose PNGs | `node scripts/slice-mascot.mjs` |
-| `faraday-sheet.png` | `faraday-rig/` — the rig layers | `node scripts/cut-rig-layers.mjs` |
+| `faraday-sheet.png` | `faraday-rig.psd` — the rig layers | `node scripts/cut-rig-layers.mjs` |
 | `faraday-icon.png` | favicon + apple-touch icon | `node scripts/make-favicon.mjs` |
 
 `faraday-icon.png` is a *different drawing* — shaded hair, wrinkles, a white
@@ -28,17 +28,21 @@ $bmp = New-Object System.Drawing.Bitmap $img.Width, $img.Height, ([System.Drawin
 $bmp.Save("$p.tmp", [System.Drawing.Imaging.ImageFormat]::Png)
 ```
 
-## Rig layers — `faraday-rig/`
+## Rig layers — `faraday-rig.psd`
 
 The idle Faraday cut into 12 separately-movable parts, for the Rive rig test in
 `docs/mascot-plan.md` §14. Source-only, never shipped: the app still renders the
 flat pose PNGs in `public/`.
 
-Every layer is written on the same 1024x1024 canvas, so importing the folder
-into Rive stacks them in register with no offsets to re-enter. `manifest.json`
-carries each layer's pixel count, bounding box and a suggested pivot;
-`_stack.png` is the flattened result, and the script fails if it does not put
-back at least 90% of the source character.
+**A PSD and not a folder of PNGs**, because Rive imports one as a unit — drag it
+onto an artboard and every layer arrives positioned, ordered and named. Twelve
+loose PNGs would be twelve manual placements with nothing holding them in
+register, and a sidecar JSON of coordinates is no help: Rive cannot read one.
+
+`scripts/psd.mjs` writes it, no dependency, same as `png.mjs` next door. The
+cutter round-trips the file through its own reader before finishing, and
+`faraday-rig-stack.png` is the flattened result — the script fails if the layers
+do not put back at least 90% of the source character.
 
 | Layers | |
 |---|---|

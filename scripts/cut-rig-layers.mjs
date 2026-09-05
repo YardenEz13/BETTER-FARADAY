@@ -4,12 +4,14 @@
  *
  *   node scripts/cut-rig-layers.mjs
  *
- * Writes assets-src/faraday-rig/*.png plus a manifest. See docs/mascot-plan.md
- * §5 and §14 step 1: this exists to find out whether eye tracking and a blended
- * idle↔thinking are worth the real art, NOT to ship. The source is a 197x211
- * character upscaled 5x, so the outlines are soft and the hair is one mass
- * instead of three. Both are fine for a rig test and neither is fixable here —
- * they need the redraw in §5.3.
+ * Writes assets-src/faraday-rig.psd — one layered file, because that is what
+ * Rive imports as a unit — plus a flattened PNG to eyeball the result.
+ *
+ * See docs/mascot-plan.md §5 and §14 step 1: this exists to find out whether eye
+ * tracking and a blended idle↔thinking are worth the real art, NOT to ship. The
+ * source is a 197x211 character upscaled 5x, so the outlines are soft and the
+ * hair is one mass instead of three. Both are fine for a rig test and neither is
+ * fixable here — they need the redraw in §5.3.
  *
  * ## How the cutting works
  *
@@ -38,13 +40,16 @@
  * bite out of it under each hair wing. Move the hair more than ~15px at 1024
  * and the bite shows. Fine for secondary motion, not for a real head turn.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
+import { encodePsd, decodePsdLayers } from "./psd.mjs";
 
 const SHEET = "assets-src/faraday-sheet.png";
-const OUT_DIR = "assets-src/faraday-rig";
-/** Work canvas. Every layer is written at this size so they stack in register
- *  when imported into Rive — no offsets to re-enter by hand. */
+/** One PSD, because Rive imports it as a unit: drag it onto an artboard and
+ *  every layer arrives positioned, ordered and named. Loose PNGs would be
+ *  twelve manual placements with nothing holding them in register. */
+const OUT_PSD = "assets-src/faraday-rig.psd";
+const OUT_STACK = "assets-src/faraday-rig-stack.png";
 const WORK = 1024;
 
 /** Idle cell bounds, from slice-mascot.mjs. */
@@ -269,7 +274,6 @@ const work = resample(cell, cw, ch,
   mnX + (mxX - mnX + 1) / 2 - side / 2,
   mnY + (mxY - mnY + 1) / 2 - side / 2, side, WORK);
 
-mkdirSync(OUT_DIR, { recursive: true });
 
 // Pass 1 — fill each region from its seeds.
 //
@@ -304,9 +308,9 @@ sitsOn.forEach((v, i) => {
   if (LAYERS[i].sitsOn && v < 0) throw new Error(`${LAYERS[i].name}: no layer named "${LAYERS[i].sitsOn}"`);
 });
 
-// Pass 3 — write each layer: the pixels it owns, plus everything it paints over
+// Pass 3 — build each layer: the pixels it owns, plus everything it paints over
 // (its own enclosed holes, and whatever sits on top of it).
-const manifest = [];
+const cut = [];
 for (const [idx, { L, mask, holes, seedRGB }] of built.entries()) {
   const out = new Uint8ClampedArray(WORK * WORK * 4);
   let n = 0, bx0 = WORK, bx1 = 0, by0 = WORK, by1 = 0;
@@ -332,34 +336,52 @@ for (const [idx, { L, mask, holes, seedRGB }] of built.entries()) {
   }
   if (!n) throw new Error(`layer "${L.name}" came out empty — seed or tolerance is wrong`);
 
-  writeFileSync(`${OUT_DIR}/${L.name}.png`, encodePng(WORK, WORK, out));
-  // Pivot = bbox centre. Right for the pupils and brows; the head and hair want
-  // theirs dragged down to the neck by hand in the editor.
-  manifest.push({
-    name: L.name, px: n,
-    bbox: [bx0, by0, bx1 - bx0 + 1, by1 - by0 + 1],
-    pivot: [Math.round((bx0 + bx1) / 2), Math.round((by0 + by1) / 2)],
-  });
-  console.log(
-    `${L.name.padEnd(12)} ${String(n).padStart(7)} px   ` +
-    `bbox ${bx0},${by0} ${bx1 - bx0 + 1}x${by1 - by0 + 1}`,
-  );
+  // Crop to the layer's own bounds. PSD stores each layer at its bounding box,
+  // and the parts are mostly transparent, so this is what keeps the file small.
+  const w = bx1 - bx0 + 1, h = by1 - by0 + 1;
+  const rgba = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const s = ((by0 + y) * WORK + bx0 + x) * 4;
+      rgba.set(out.subarray(s, s + 4), (y * w + x) * 4);
+    }
+  }
+  cut.push({ name: L.name, x: bx0, y: by0, w, h, rgba, px: n });
+  console.log(`${L.name.padEnd(12)} ${String(n).padStart(7)} px   bbox ${bx0},${by0} ${w}x${h}`);
 }
 
-writeFileSync(`${OUT_DIR}/manifest.json`,
-  JSON.stringify({ canvas: WORK, source: SHEET, layers: manifest }, null, 2) + "\n");
-
-// A flattened stack, so a glance says whether the layers still cover him.
+// A flattened stack, so a glance says whether the layers still cover him — and
+// the composite the PSD carries for readers that ignore layers.
 const flat = new Uint8ClampedArray(WORK * WORK * 4);
-for (const L of LAYERS) {
-  const l = decodePng(readFileSync(`${OUT_DIR}/${L.name}.png`));
-  for (let p = 0; p < WORK * WORK; p++) {
-    const i = p * 4;
-    if (l.px[i + 3] < 8) continue;
-    flat[i] = l.px[i]; flat[i + 1] = l.px[i + 1]; flat[i + 2] = l.px[i + 2]; flat[i + 3] = 255;
+for (const { x, y, w, h, rgba } of cut) {
+  for (let ly = 0; ly < h; ly++) {
+    for (let lx = 0; lx < w; lx++) {
+      const s = (ly * w + lx) * 4;
+      if (rgba[s + 3] < 8) continue;
+      const d = ((y + ly) * WORK + x + lx) * 4;
+      flat[d] = rgba[s]; flat[d + 1] = rgba[s + 1]; flat[d + 2] = rgba[s + 2]; flat[d + 3] = 255;
+    }
   }
 }
-writeFileSync(`${OUT_DIR}/_stack.png`, encodePng(WORK, WORK, flat));
+writeFileSync(OUT_STACK, encodePng(WORK, WORK, flat));
+
+writeFileSync(OUT_PSD, encodePsd({ width: WORK, height: WORK, layers: cut, composite: flat }));
+
+// Round-trip the PSD. Nobody can eyeball a binary, and a layer that comes back
+// misplaced or short is exactly the kind of thing that only surfaces once it is
+// already open in Rive.
+const back = decodePsdLayers(readFileSync(OUT_PSD));
+if (back.length !== cut.length) throw new Error(`PSD: wrote ${cut.length} layers, read ${back.length}`);
+for (const [i, r] of back.entries()) {
+  const w = cut[i];
+  if (r.name !== w.name) throw new Error(`PSD layer ${i}: name "${r.name}" != "${w.name}"`);
+  if (r.x !== w.x || r.y !== w.y || r.w !== w.w || r.h !== w.h) {
+    throw new Error(`PSD layer "${w.name}": bounds ${r.x},${r.y} ${r.w}x${r.h} != ${w.x},${w.y} ${w.w}x${w.h}`);
+  }
+  if (!r.rgba.equals(w.rgba)) throw new Error(`PSD layer "${w.name}": pixels differ after round-trip`);
+}
+console.log(`\n${OUT_PSD}  ${(readFileSync(OUT_PSD).length / 1024).toFixed(0)}KB, ` +
+  `${back.length} layers, round-trips exactly`);
 
 // Coverage check: the flattened stack must put back essentially all of him. A
 // silent drop here is the failure mode this whole script has — a mistuned

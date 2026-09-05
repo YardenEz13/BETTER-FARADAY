@@ -171,7 +171,7 @@ get a hole the moment it moves 3px.
 ### Three ways to get it, cheapest first
 
 1. ~~**Cut it yourself from the existing sheet (~6-10h, $0).**~~ **DONE** —
-   `scripts/cut-rig-layers.mjs` → `assets-src/faraday-rig/`, 12 layers on one
+   `scripts/cut-rig-layers.mjs` → `assets-src/faraday-rig.psd`, 12 layers on one
    1024px canvas. Cut in code rather than by hand: the art is flat fills inside
    thick outlines, so flood-filling from a seed per region does the same job as
    a lasso tool, and the occluded regions inpaint *exactly* (they are closed
@@ -513,11 +513,11 @@ hair.
 ## 14. Order of work
 
 1. ~~**Cut layers from `faraday-sheet.png`.**~~ **DONE** —
-   `node scripts/cut-rig-layers.mjs` → `assets-src/faraday-rig/` (12 layers,
-   one 1024px canvas, `manifest.json` with pivots). See §5.
-2. **Rig it in Rive on the free tier.** Import the folder — the layers are all
-   on the same canvas, so they land in register. Bones, eye constraint,
-   `breathe`, `blink`, three moods. Do not export. (1-2 days)
+   `node scripts/cut-rig-layers.mjs` → `assets-src/faraday-rig.psd` (12 named
+   layers on one 1024px canvas). See §5.
+2. **Rig it in Rive on the free tier.** Drag the PSD onto an artboard — Rive
+   groups it and every layer arrives positioned, ordered and named. Bones, eye
+   constraint, `breathe`, `blink`, three moods. Do not export. (1-2 days)
 3. **Look at it.** Eye tracking plus a blended `idle↔thinking` is the whole bet.
    If that does not feel obviously better than what ships today, stop — take
    Track A, or stop entirely.
