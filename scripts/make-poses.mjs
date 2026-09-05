@@ -67,9 +67,16 @@ const POSES = [
     `He is thinking: one hand raised to his chin with the index finger resting
 against his cheek, eyes glancing up and to one side, one eyebrow raised higher
 than the other, mouth a small closed thoughtful line.` },
+  // Round one came back as a calm closed-eye portrait: the model kept the "eyes
+  // closed" clause and quietly dropped both the arms and the open mouth, landing
+  // 0.9% away from `blink`. Arms first now, mouth stated twice, and the eyes
+  // described as an *action* (squeezed shut from laughing) rather than a state.
   { name: "happy", action:
-    `He is delighted: both arms raised up and out in celebration with open hands,
-eyes closed in a happy upward curve, mouth open in a wide joyful laugh.` },
+    `Both of his arms are thrown up high above his shoulders in celebration, hands
+open with the fingers spread wide, elbows bent. His mouth is wide open in a big
+hearty laugh, open enough to see inside it. His eyes are squeezed shut from
+laughing so hard, each one a happy upward-curving arc. He is mid-cheer: this is
+his loudest, most delighted moment, the whole body celebrating.` },
   { name: "wrong", action:
     `He is gently encouraging: one open palm raised toward the viewer in a soft
 "not quite, try again" gesture, eyebrows tilted up in the middle in sympathy,

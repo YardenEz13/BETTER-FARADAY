@@ -119,3 +119,45 @@ if (!base) {
   console.error("nothing to do — generate the portraits first (scripts/make-poses.mjs --print)");
   process.exit(1);
 }
+
+/* Distinctness check.
+ *
+ * A generation can come back on-model, correctly framed, and still be the wrong
+ * pose: the first `happy` kept its "eyes closed" clause, quietly dropped the
+ * raised arms and the open laugh, and landed 0.9% away from `blink`. Every
+ * individual layer looked fine. Only comparing the finished poses to each other
+ * caught it — and FaradayReaction shows `happy` on every correct answer, so it
+ * would have shipped him looking asleep.
+ *
+ * `blink` is exempt against `idle` on purpose: it is *supposed* to be idle with
+ * the eyes shut, and registering tightly against it is what makes the blink
+ * animation work. */
+const shipped = SOURCES.map((s) => s.name).filter((n) => existsSync(`public/faraday-${n}.png`));
+const px = Object.fromEntries(shipped.map((n) => [n, decodePng(readFileSync(`public/faraday-${n}.png`)).px]));
+const pctDiff = (a, b) => {
+  let d = 0;
+  const n = OUT_SIZE * OUT_SIZE;
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    if (Math.abs(px[a][i] - px[b][i]) > 24 || Math.abs(px[a][i + 3] - px[b][i + 3]) > 24) d++;
+  }
+  return (100 * d) / n;
+};
+const TOO_ALIKE = 2.0;
+const clashes = [];
+for (let i = 0; i < shipped.length; i++) {
+  for (let j = i + 1; j < shipped.length; j++) {
+    const [a, b] = [shipped[i], shipped[j]];
+    if (a === "idle" && b === "blink") continue;
+    if (b === "idle" && a === "blink") continue;
+    const d = pctDiff(a, b);
+    if (d < TOO_ALIKE) clashes.push(`${a} vs ${b}: ${d.toFixed(1)}% different`);
+  }
+}
+if (clashes.length) {
+  console.error(`\nFAIL: poses that should be distinct are near-identical (< ${TOO_ALIKE}%):`);
+  for (const c of clashes) console.error("  " + c);
+  console.error("Regenerate the offender — the model likely dropped the gesture and kept only the expression.");
+  process.exit(1);
+}
+console.log(`\nall ${shipped.length} poses mutually distinct`);
