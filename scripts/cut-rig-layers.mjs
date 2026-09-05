@@ -145,6 +145,35 @@ function holeFill(mask, w, h) {
 }
 
 /**
+ * Label each enclosed region with its own id, so they can be judged separately.
+ *
+ * The face's holes are not one thing. An eye socket has to be painted flat —
+ * a part covers it — but his nose, brow wrinkles, cheek lines and chin crease
+ * are enclosed regions too, and nothing draws those except the face itself.
+ * Painting every hole leaves a smooth skin blob with no features and no nose.
+ */
+function components(holes, w, h) {
+  const id = new Int32Array(w * h).fill(-1);
+  let n = 0;
+  for (let seed = 0; seed < w * h; seed++) {
+    if (!holes[seed] || id[seed] >= 0) continue;
+    const stack = [seed];
+    id[seed] = n;
+    while (stack.length) {
+      const p = stack.pop();
+      const x = p % w, y = (p - x) / w;
+      const push = (q) => { if (holes[q] && id[q] < 0) { id[q] = n; stack.push(q); } };
+      if (x > 0) push(p - 1);
+      if (x < w - 1) push(p + 1);
+      if (y > 0) push(p - w);
+      if (y < h - 1) push(p + w);
+    }
+    n++;
+  }
+  return { id, count: n };
+}
+
+/**
  * Hand every still-unclaimed pixel to whichever layer is nearest, by one
  * breadth-first sweep out of every claimed pixel at once.
  *
@@ -316,6 +345,19 @@ sitsOn.forEach((v, i) => {
 // (its own enclosed holes, and whatever sits on top of it).
 const cut = [];
 for (const [idx, { L, mask, holes, seedRGB }] of built.entries()) {
+  // Which enclosed regions actually have a part sitting on them. An eye socket
+  // does, and gets filled flat so the eye has clean skin to move over; the nose
+  // and the wrinkles do not, and keep their own pixels.
+  let holeId = null, covered = null;
+  if (L.paintHoles) {
+    const { id, count } = components(holes, WORK, WORK);
+    holeId = id;
+    covered = new Uint8Array(count);
+    for (let p = 0; p < WORK * WORK; p++) {
+      if (id[p] >= 0 && sitsOn[owner[p]] === idx) covered[id[p]] = 1;
+    }
+  }
+
   const out = new Uint8ClampedArray(WORK * WORK * 4);
   let n = 0, bx0 = WORK, bx1 = 0, by0 = WORK, by1 = 0;
   for (let p = 0; p < WORK * WORK; p++) {
@@ -323,7 +365,9 @@ for (const [idx, { L, mask, holes, seedRGB }] of built.entries()) {
     // above hands each outline's outer half to whoever is nearest, so the face
     // ends up *owning* the rim around its own eye sockets — checking ownership
     // first would copy those dark pixels straight back onto the clean face.
-    const paint = L.paintHoles && ((holes[p] && mask[p]) || sitsOn[owner[p]] === idx);
+    const paint = L.paintHoles && (
+      (holes[p] && mask[p] && covered[holeId[p]]) || sitsOn[owner[p]] === idx
+    );
     if (owner[p] !== idx && !paint) continue;
     const i = p * 4;
     if (paint) {
