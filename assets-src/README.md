@@ -100,9 +100,10 @@ can gesture and not only emote — it is cut from the idle portrait, which has n
 arms. They only register because every pose goes through one shared framing box,
 so his head lands in the same place at the same size in all of them.
 
-Two of them render *behind* his hair and two in front, and it matters: raised
-arms carry a black sleeve that otherwise cuts a dark wedge across his white hair,
-while `thinking` rests a hand on his chin and has to cover it.
+They render on top of everything. Tucking the raised arms behind his hair hides
+the sleeve, and a hand with no arm reaching it reads as floating rather than
+raised — worse than the wedge the sleeve makes across the hair, and wrong
+besides: in the drawing those arms are in front of him.
 
 `a`/`b` are positions **in the artwork**, never `left`/`right` or `start`/`end`
 — the drawing does not mirror under RTL. Same rule as `.faraday-25d-wing-a` in

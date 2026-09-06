@@ -46,14 +46,6 @@ export type RigMood = "idle" | "thinking" | "happy" | "wrong" | "streak";
  */
 const GESTURES = new Set<RigMood>(["thinking", "happy", "wrong", "streak"]);
 
-/**
- * Gestures whose arms come from *behind* him, and so must render behind his
- * hair. Raised arms carry a black sleeve, and drawn on top that sleeve cuts a
- * dark wedge straight across his white hair — the hair has to win there.
- * `thinking` and `wrong` are the opposite: those hands are forward of his face
- * and have to cover it, or the chin shows through his own fingers.
- */
-const GESTURES_BEHIND = new Set<RigMood>(["happy", "streak"]);
 
 /** Back to front. Order matters — it is the paint order of the drawing. */
 const LAYERS = [
@@ -164,6 +156,10 @@ export default function FaradayRig({
     setLook(0, 0);
   };
 
+  // Always on top. Tucking the raised arms behind his hair hides the sleeve, and
+  // a hand with no arm reaching it reads as floating rather than raised — which
+  // is worse than the wedge the sleeve makes across his hair, and wrong besides:
+  // in the drawing these arms are in front of him.
   const gesture = GESTURES.has(mood) ? (
     // `key` remounts on every mood change, which replays the entrance —
     // otherwise swapping one gesture for another is a hard cut.
@@ -208,7 +204,6 @@ export default function FaradayRig({
         {img("jacket")}
         {img("bowtie")}
         <div className="frig-head-grp">
-          {GESTURES_BEHIND.has(mood) && gesture}
           {img("hair")}
           {img("collar")}
           {img("head")}
@@ -223,7 +218,7 @@ export default function FaradayRig({
           {img("brow-a")}
           {img("brow-b")}
           {img("mouth")}
-          {!GESTURES_BEHIND.has(mood) && gesture}
+          {gesture}
         </div>
       </div>
     </div>
