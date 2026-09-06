@@ -102,6 +102,24 @@ export default function FaradayRig({
     arrived.current.add(name);
     if (arrived.current.size >= LAYERS.length) setReady(true);
   };
+
+  /**
+   * The hands are tracked separately from the twelve body layers, and the
+   * placeholder waits for them too.
+   *
+   * It has to. The placeholder is the flat pose, which has his hands drawn into
+   * it — so handing over the moment the body layers land, while a 55KB gesture
+   * is still in flight, makes his hands vanish and then pop back. Worse than
+   * never having animated them.
+   *
+   * After that first handover the placeholder is done for good: a mood change
+   * that far along should bring the new hands in on their own entrance, not
+   * flash the whole mascot back to a still.
+   */
+  const [handsIn, setHandsIn] = useState(!GESTURES.has(mood));
+  useEffect(() => { setHandsIn(!GESTURES.has(mood)); }, [mood]);
+  const shown = useRef(false);
+  if (ready && handsIn) shown.current = true;
   /** When the pointer last drove the gaze, so idle drift can stay out of its way. */
   const lastPointerRef = useRef(0);
 
@@ -190,6 +208,13 @@ export default function FaradayRig({
       alt=""
       aria-hidden
       draggable={false}
+      decoding="async"
+      // Held invisible until it has actually decoded, so the entrance plays on
+      // a hand that exists rather than on an empty box.
+      data-in={handsIn ? "" : undefined}
+      ref={(el) => { if (el?.complete && el.naturalWidth > 0) setHandsIn(true); }}
+      onLoad={() => setHandsIn(true)}
+      onError={() => setHandsIn(true)}
       className="frig-layer frig-gesture"
     />
   ) : null;
@@ -228,11 +253,11 @@ export default function FaradayRig({
       onPointerLeave={rest}
       role="img"
       aria-label={alt}
-      data-loading={ready ? undefined : ""}
+      data-loading={shown.current ? undefined : ""}
     >
       {/* Held until every layer is in, then it is gone. Not aria-hidden on
           purpose — while it is showing it *is* the mascot. */}
-      {!ready && (
+      {!shown.current && (
         <img
           src={`/faraday-${mood}.png`}
           alt=""
