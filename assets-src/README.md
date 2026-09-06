@@ -93,6 +93,16 @@ do not put back at least 90% of the source character.
 |---|---|
 | structure | `jacket` `collar` `bowtie` `hair` `head` |
 | face | `eye-white-a/b` `pupil-a/b` `brow-a/b` `mouth` |
+| gestures | `gesture-thinking/happy/wrong/streak` — `node scripts/cut-gestures.mjs` |
+
+The gesture layers are his hands, lifted out of the generated poses so the rig
+can gesture and not only emote — it is cut from the idle portrait, which has no
+arms. They only register because every pose goes through one shared framing box,
+so his head lands in the same place at the same size in all of them.
+
+Two of them render *behind* his hair and two in front, and it matters: raised
+arms carry a black sleeve that otherwise cuts a dark wedge across his white hair,
+while `thinking` rests a hand on his chin and has to cover it.
 
 `a`/`b` are positions **in the artwork**, never `left`/`right` or `start`/`end`
 — the drawing does not mirror under RTL. Same rule as `.faraday-25d-wing-a` in

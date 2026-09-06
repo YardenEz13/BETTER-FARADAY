@@ -1507,3 +1507,27 @@ math-field.faraday-mathfield::part(menu-toggle) {
   .frig-pupil-b,
   .frig-eye { transition: none; }
 }
+
+/* Gesture layer — the hands, lifted out of the generated poses by
+   scripts/cut-gestures.mjs and shown only for the moods that have them.
+
+   They arrive rather than appear: a hand that pops in fully formed reads as a
+   sprite swap, which is the thing the rig exists to stop being. Rising from
+   slightly low and small, with the overshoot on the same curve the mood
+   transitions use, reads as him raising them.
+
+   Sits above every other layer on purpose — `thinking` rests its hand against
+   his chin and has to cover it. */
+.frig-gesture {
+  transform-origin: 50% 78%;
+  animation: frig-gesture-in 380ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+@keyframes frig-gesture-in {
+  0%   { opacity: 0; transform: translateY(7%) scale(0.86); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Still a change of state worth seeing — just without the travel. */
+  .frig-gesture { animation: none; }
+}

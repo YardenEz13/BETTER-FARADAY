@@ -37,6 +37,24 @@ import { useReducedMotion } from "framer-motion";
 
 export type RigMood = "idle" | "thinking" | "happy" | "wrong" | "streak";
 
+/**
+ * Moods that have hands, cut from the generated poses by cut-gestures.mjs.
+ *
+ * The rig itself is cut from the idle portrait, which has no arms, so without
+ * these he can change expression but never gesture. `idle` has none by design —
+ * his hands are down.
+ */
+const GESTURES = new Set<RigMood>(["thinking", "happy", "wrong", "streak"]);
+
+/**
+ * Gestures whose arms come from *behind* him, and so must render behind his
+ * hair. Raised arms carry a black sleeve, and drawn on top that sleeve cuts a
+ * dark wedge straight across his white hair — the hair has to win there.
+ * `thinking` and `wrong` are the opposite: those hands are forward of his face
+ * and have to cover it, or the chin shows through his own fingers.
+ */
+const GESTURES_BEHIND = new Set<RigMood>(["happy", "streak"]);
+
 /** Back to front. Order matters — it is the paint order of the drawing. */
 const LAYERS = [
   "jacket", "bowtie", "hair", "collar", "head",
@@ -146,6 +164,19 @@ export default function FaradayRig({
     setLook(0, 0);
   };
 
+  const gesture = GESTURES.has(mood) ? (
+    // `key` remounts on every mood change, which replays the entrance —
+    // otherwise swapping one gesture for another is a hard cut.
+    <img
+      key={mood}
+      src={`/faraday-rig/gesture-${mood}.png`}
+      alt=""
+      aria-hidden
+      draggable={false}
+      className="frig-layer frig-gesture"
+    />
+  ) : null;
+
   const img = (name: string) => (
     <img
       key={name}
@@ -177,6 +208,7 @@ export default function FaradayRig({
         {img("jacket")}
         {img("bowtie")}
         <div className="frig-head-grp">
+          {GESTURES_BEHIND.has(mood) && gesture}
           {img("hair")}
           {img("collar")}
           {img("head")}
@@ -191,6 +223,7 @@ export default function FaradayRig({
           {img("brow-a")}
           {img("brow-b")}
           {img("mouth")}
+          {!GESTURES_BEHIND.has(mood) && gesture}
         </div>
       </div>
     </div>
