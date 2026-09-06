@@ -17,13 +17,20 @@
  * arrive one at a time when they are run by hand in AI Studio, and re-running
  * this after each one should work.
  *
- * ## Why the crop is not per-pose
+ * ## One frame for every pose, sized to the widest
  *
- * Normalising every pose to its own bounding box is what makes a mascot jitter
- * when it swaps: each drawing gets scaled differently, so his head changes size
- * between poses. The head-and-shoulders poses are therefore framed on a *shared*
- * box derived from idle, and only the ones that genuinely need more room — arms
- * raised — are allowed to grow, symmetrically, so his head stays put.
+ * Normalising each pose to its own bounding box is what makes a mascot jitter
+ * when it swaps: every drawing gets scaled differently, so his head changes size.
+ *
+ * An earlier version framed on idle's box and let a pose *grow* it when the arms
+ * needed room. That fixes position and quietly breaks scale — a bigger box
+ * scaled into the same 192px square means a smaller head. `happy` came out 8.3%
+ * smaller than `idle`, measured on the distance between his pupils, which is
+ * visible when the two swap.
+ *
+ * So the side is computed once across every pose and every pose uses it. His
+ * head is then identical everywhere, and the cost is that the poses without
+ * raised arms carry some empty space — cheap, and it compresses to nothing.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";
@@ -81,11 +88,10 @@ function bounds(px, w, h) {
   return { x0, x1, y0, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
-/* Frame everything on idle's box so his head does not change size pose to pose;
-   a pose that overflows it (arms up) widens the box symmetrically about idle's
-   own centre, which keeps his head on the same spot in the crop. */
-let base = null;
-
+/* Pass 1 — key every source, and find the one box that holds all of them.
+   The centre comes from idle alone (he is the reference pose); the side is
+   whatever the most sprawling pose needs about that centre. */
+const keyedSources = [];
 for (const { name, file } of SOURCES) {
   if (!existsSync(file)) {
     console.warn(`${name.padEnd(10)} SKIPPED — ${file} not generated yet`);
@@ -94,30 +100,32 @@ for (const { name, file } of SOURCES) {
   const img = decodePng(readFileSync(file));
   const px = new Uint8ClampedArray(img.px);
   key(px, img.w, img.h);
-  const b = bounds(px, img.w, img.h);
-
-  if (!base) {
-    base = { cx: b.x0 + b.w / 2, cy: b.y0 + b.h / 2, side: Math.max(b.w, b.h) * 1.1 };
-  }
-  // Grow only if this pose reaches outside the shared box.
-  const need = Math.max(
-    2 * Math.abs(b.x0 + b.w / 2 - base.cx) + b.w,
-    2 * Math.abs(b.y0 + b.h / 2 - base.cy) + b.h,
-  ) * 1.06;
-  const side = Math.max(base.side, need);
-
-  const out = resample(px, img.w, img.h, base.cx - side / 2, base.cy - side / 2, side, OUT_SIZE);
-  const dest = `public/faraday-${name}.png`;
-  writeFileSync(dest, encodePng(OUT_SIZE, OUT_SIZE, out));
-  console.log(
-    `${name.padEnd(10)} ${dest.padEnd(28)} bbox ${b.w}x${b.h}` +
-    `${side > base.side ? `  (widened to ${Math.round(side)})` : ""}`,
-  );
+  keyedSources.push({ name, img, px, b: bounds(px, img.w, img.h) });
 }
 
-if (!base) {
+if (!keyedSources.length) {
   console.error("nothing to do — generate the portraits first (scripts/make-poses.mjs --print)");
   process.exit(1);
+}
+
+const ref = keyedSources[0].b;                       // idle, listed first
+const cx = ref.x0 + ref.w / 2, cy = ref.y0 + ref.h / 2;
+const side = Math.max(
+  Math.max(ref.w, ref.h) * 1.1,
+  ...keyedSources.map(({ b }) => Math.max(
+    2 * Math.abs(b.x0 + b.w / 2 - cx) + b.w,
+    2 * Math.abs(b.y0 + b.h / 2 - cy) + b.h,
+  ) * 1.06),
+);
+console.log(`frame ${Math.round(side)}px about (${Math.round(cx)}, ${Math.round(cy)}), shared by all
+`);
+
+/* Pass 2 — every pose through the same box. */
+for (const { name, img, px, b } of keyedSources) {
+  const out = resample(px, img.w, img.h, cx - side / 2, cy - side / 2, side, OUT_SIZE);
+  const dest = `public/faraday-${name}.png`;
+  writeFileSync(dest, encodePng(OUT_SIZE, OUT_SIZE, out));
+  console.log(`${name.padEnd(10)} ${dest.padEnd(28)} bbox ${b.w}x${b.h}`);
 }
 
 /* Distinctness check.
