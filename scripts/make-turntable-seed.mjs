@@ -11,7 +11,7 @@
  * of him we have.
  *
  * Magenta because the rest of the sprite pipeline keys against it and his
- * palette has none — see extract-poses.mjs and assets-src/README.md.
+ * palette has none — see assets-src/README.md.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { decodePng, encodePng, resample } from "./png.mjs";

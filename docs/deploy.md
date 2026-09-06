@@ -21,18 +21,23 @@ npx convex deploy -y        # pushes convex/ to the prod deployment
 | `npx convex deploy` (create prod) | ✅ done |
 | Seed topics: `npx convex run seedTopics:seedTopics --prod` | ✅ done (5 topics) |
 | Seed questions: `seedBagrut:seedBagrutQuestions`, `seedGeometry:seedGeometryProof`, `seedGeometryQuestions:addGeometryQuestions`, `addMore:addQuestions` (all `--prod`) | ✅ done (100 + 1 + 10 + 10) |
-| `npx convex env set GEMINI_API_KEY <key> --prod` | ⚠️ **manual** — run yourself (key is in `.env.local` as VITE_GEMINI_API_KEY, or copy from dev: `npx convex env get GEMINI_API_KEY`) |
-| Themed-question precompute backfill: `npx convex run precompute:startPrecomputePipeline --prod` | ⚠️ after GEMINI_API_KEY is set |
+| `npx convex env set GEMINI_API_KEY <key> --prod` | ✅ done — `/health` returns `aiEnabled: true` |
+| ~~Themed-question precompute backfill~~ | ❌ **removed.** The pipeline was deleted — it cost 3.7 GB/month of database bandwidth. The ~10.5k rows it already generated are still served; nothing generates more. See `docs/convex-budget.md`. |
 | Vercel prod env vars (dashboard → Project → Settings → Environment Variables, scope Production): `VITE_CONVEX_URL=https://befitting-panther-27.convex.cloud`, `VITE_SENTRY_DSN=<from sentry.io project>`, `SENTRY_AUTH_TOKEN=<sentry org token>` — then redeploy | ⚠️ manual |
 | Vercel **Preview** env vars (same screen, scope Preview): `VITE_CONVEX_URL=https://optimistic-weasel-444.convex.cloud` — branch/preview deploys point at the dev deployment | ⚠️ manual |
-| GitHub repo variables (Settings → Secrets and variables → Actions → Variables): `CONVEX_SITE_URL=https://befitting-panther-27.convex.site`, optional `PROD_APP_URL=<vercel prod URL>` | ⚠️ manual — powers `.github/workflows/uptime.yml` |
+| GitHub repo variables: `CONVEX_SITE_URL`, optional `PROD_APP_URL` | 🔴 **NOT SET — the uptime monitor is a no-op.** `gh variable list` returns empty. Both curl steps in `uptime.yml` are gated on `vars.CONVEX_SITE_URL != ''`, so every run since setup has reported **success while checking nothing**. Fix: `gh variable set CONVEX_SITE_URL --body https://befitting-panther-27.convex.site` |
 | Sentry: create React project at sentry.io → copy DSN | ⚠️ manual |
 
 ## Verification checklist (after the manual steps)
 
 - `curl https://befitting-panther-27.convex.site/health` → `{"ok":true,...}` (already verified ✅)
 - Vercel prod URL loads and the network tab shows requests to `befitting-panther-27.convex.cloud`
-- Prod dashboard → Crons shows exactly: `cleanup-abandoned-chats` (1h), `sweep-bridge-sessions` (1h), `generate-weekly-digests` (weekly)
+- Prod dashboard → Crons shows exactly three: `sweep-bridge-sessions` (6h),
+  `check-ai-usage` (2h), `generate-weekly-digests` (weekly). If you see
+  `generate-questions`, `cleanup-abandoned-chats` or anything precompute, an
+  old deploy is live — those were removed deliberately.
+- **`SLOW_CRONS` must NOT be set on prod.** It is set on dev only, and slows
+  the two cleanups to 6h/12h. Prod reads the faster branch by default.
 - Send a tutor message → teacher dashboard "קריאות Gemini היום" KPI increments
 - Uptime workflow: run manually via Actions → Uptime → Run workflow
 

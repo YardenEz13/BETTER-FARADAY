@@ -1,0 +1,436 @@
+#!/usr/bin/env node
+/**
+ * Cut the idle Faraday into rig layers — the throwaway that proves the rig.
+ *
+ *   node scripts/cut-rig-layers.mjs
+ *
+ * Writes assets-src/faraday-rig.psd — one layered file, because that is what
+ * Rive imports as a unit — plus a flattened PNG to eyeball the result.
+ *
+ * See docs/mascot-plan.md §5 and §14 step 1: this exists to find out whether eye
+ * tracking and a blended idle↔thinking are worth the real art, NOT to ship. The
+ * source is a 197x211 character upscaled 5x, so the outlines are soft and the
+ * hair is one mass instead of three. Both are fine for a rig test and neither is
+ * fixable here — they need the redraw in §5.3.
+ *
+ * ## How the cutting works
+ *
+ * Flood fill from a seed, stopping where the
+ * colour stops matching. The art is flat cartoon fills inside thick dark
+ * outlines, so a fill started in the middle of a region walks to that region's
+ * outline and halts. Three things make it reliable:
+ *
+ *   snap      the seed slides to the nearest pixel of the class it wants, so a
+ *             coordinate picked by eye off a zoomed render does not have to be
+ *             pixel-exact
+ *   maxR      a hard radius cap. The pupil touches the upper-lid arc, and
+ *             without a cap the fill escapes along it and takes the whole face.
+ *   holeFill  anything fully enclosed by the mask joins it. This is what pulls
+ *             the white specular crescent into the pupil, and what gives the
+ *             head layer a clean face — the eyes, brows, nose and wrinkles are
+ *             all holes in the skin region, so they vanish into it.
+ *
+ * `holeFill` is also the inpainting, and it is exact rather than guessed: the
+ * sclera is a closed white shape, so painting its holes with its own white
+ * gives a real full disc for the pupil to slide over. Nothing is invented.
+ *
+ * ## What is NOT solved here
+ *
+ * The face outline is drawn where the hair overlaps it, so the head layer has a
+ * bite out of it under each hair wing. Move the hair more than ~15px at 1024
+ * and the bite shows. Fine for secondary motion, not for a real head turn.
+ */
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { decodePng, encodePng, resample } from "./png.mjs";
+import { encodePsd, decodePsdLayers } from "./psd.mjs";
+import { sharedFrame, through } from "./mascot-frame.mjs";
+
+const SOURCE = "assets-src/faraday-hires.png";
+/** One PSD, because Rive imports it as a unit: drag it onto an artboard and
+ *  every layer arrives positioned, ordered and named. Loose PNGs would be
+ *  twelve manual placements with nothing holding them in register. */
+const OUT_PSD = "assets-src/faraday-rig.psd";
+const OUT_STACK = "assets-src/faraday-rig-stack.png";
+/** Shipped copies of the same layers, for the DOM rig. 512 is 2x the largest
+ *  site the mascot renders at, and these go to phones on school networks. */
+const WEB_DIR = "public/faraday-rig";
+const WEB = 512;
+const WORK = 1024;
+
+/* ── pixel classes ───────────────────────────────────────────────────── */
+
+const at = (px, w, x, y) => (y * w + x) * 4;
+
+function classOf(px, i) {
+  if (px[i + 3] < 32) return "none";
+  const r = px[i], g = px[i + 1], b = px[i + 2];
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  if (mx < 70) return "dark";
+  if (mx - mn <= 22 && mn > 140) return "white";
+  if (r > g && g > b && r - b > 30) return "skin";
+  return "other";
+}
+
+/** Perceptual-enough distance for flat cartoon fills. */
+const dist = (px, i, c) =>
+  Math.abs(px[i] - c[0]) + Math.abs(px[i + 1] - c[1]) + Math.abs(px[i + 2] - c[2]);
+
+/* ── mask ops ────────────────────────────────────────────────────────── */
+
+/** Slide a seed to the nearest pixel of `want`, searching outward in rings. */
+function snap(px, w, h, [sx, sy], want) {
+  for (let r = 0; r <= 40; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = sx + dx, y = sy + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if (classOf(px, at(px, w, x, y)) === want) return [x, y];
+      }
+    }
+  }
+  throw new Error(`no "${want}" pixel within 40px of ${sx},${sy}`);
+}
+
+/** Flood fill from seeds, bounded by colour tolerance and radius. */
+function fill(px, w, h, seeds, { want, tol, maxR }) {
+  const mask = new Uint8Array(w * h);
+  for (const raw of seeds) {
+    const [sx, sy] = snap(px, w, h, raw, want);
+    const c = [px[at(px, w, sx, sy)], px[at(px, w, sx, sy) + 1], px[at(px, w, sx, sy) + 2]];
+    const stack = [sy * w + sx];
+    while (stack.length) {
+      const p = stack.pop();
+      if (mask[p]) continue;
+      const x = p % w, y = (p - x) / w;
+      if (maxR && (x - sx) ** 2 + (y - sy) ** 2 > maxR * maxR) continue;
+      const i = p * 4;
+      if (px[i + 3] < 32 || dist(px, i, c) > tol) continue;
+      mask[p] = 1;
+      if (x > 0) stack.push(p - 1);
+      if (x < w - 1) stack.push(p + 1);
+      if (y > 0) stack.push(p - w);
+      if (y < h - 1) stack.push(p + w);
+    }
+  }
+  return mask;
+}
+
+/**
+ * Add every region fully enclosed by the mask. Flood the *outside* inward from
+ * the canvas border through non-mask pixels; whatever the flood never reaches
+ * is enclosed. This is what pulls the pupil's white highlight into the pupil,
+ * and what turns the head's skin region into a clean face.
+ */
+function holeFill(mask, w, h) {
+  const outside = new Uint8Array(w * h);
+  const stack = [];
+  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+  while (stack.length) {
+    const p = stack.pop();
+    if (outside[p] || mask[p]) continue;
+    outside[p] = 1;
+    const x = p % w, y = (p - x) / w;
+    if (x > 0) stack.push(p - 1);
+    if (x < w - 1) stack.push(p + 1);
+    if (y > 0) stack.push(p - w);
+    if (y < h - 1) stack.push(p + w);
+  }
+  const holes = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) if (!mask[p] && !outside[p]) holes[p] = 1;
+  return holes;
+}
+
+/**
+ * Label each enclosed region with its own id, so they can be judged separately.
+ *
+ * The face's holes are not one thing. An eye socket has to be painted flat —
+ * a part covers it — but his nose, brow wrinkles, cheek lines and chin crease
+ * are enclosed regions too, and nothing draws those except the face itself.
+ * Painting every hole leaves a smooth skin blob with no features and no nose.
+ */
+function components(holes, w, h) {
+  const id = new Int32Array(w * h).fill(-1);
+  let n = 0;
+  for (let seed = 0; seed < w * h; seed++) {
+    if (!holes[seed] || id[seed] >= 0) continue;
+    const stack = [seed];
+    id[seed] = n;
+    while (stack.length) {
+      const p = stack.pop();
+      const x = p % w, y = (p - x) / w;
+      const push = (q) => { if (holes[q] && id[q] < 0) { id[q] = n; stack.push(q); } };
+      if (x > 0) push(p - 1);
+      if (x < w - 1) push(p + 1);
+      if (y > 0) push(p - w);
+      if (y < h - 1) push(p + w);
+    }
+    n++;
+  }
+  return { id, count: n };
+}
+
+/**
+ * Hand every still-unclaimed pixel to whichever layer is nearest, by one
+ * breadth-first sweep out of every claimed pixel at once.
+ *
+ * What is unclaimed after the fills is the dark outlines and their anti-aliased
+ * shoulders — flood fills stop *at* an outline, so no fill ever contains one.
+ * Growing each region into `dark` separately does not work: at this upscale an
+ * outline shades from the fill colour to black over several pixels, and the
+ * mid-tone shoulder is neither dark nor the fill, so every region's growth
+ * stalls on the first step and the outlines come out as dots.
+ *
+ * Sweeping from all layers simultaneously instead splits each outline down its
+ * middle, which is what a rig wants: the face keeps the half against the face,
+ * the hair keeps the half against the hair, and neither is left edgeless when
+ * they move apart.
+ */
+function nearestOwner(owner, px, w, h) {
+  let queue = [];
+  for (let p = 0; p < w * h; p++) if (owner[p] >= 0) queue.push(p);
+  while (queue.length) {
+    const next = [];
+    for (const p of queue) {
+      const x = p % w, y = (p - x) / w;
+      const push = (q) => {
+        if (owner[q] >= 0 || px[q * 4 + 3] < 32) return;
+        owner[q] = owner[p];
+        next.push(q);
+      };
+      if (x > 0) push(p - 1);
+      if (x < w - 1) push(p + 1);
+      if (y > 0) push(p - w);
+      if (y < h - 1) push(p + w);
+    }
+    queue = next;
+  }
+}
+
+/* ── layer table ─────────────────────────────────────────────────────── */
+
+/**
+ * Back to front. Seeds are coordinates in the WORK canvas, read off a zoomed
+ * render, and they are specific to one source image — a new portrait means
+ * re-picking every one of them. `snap` absorbs the imprecision. `paintHoles` fills enclosed regions
+ * with the seed colour instead of the original pixels — the inpaint.
+ *
+ * Later layers win the pixels earlier ones claimed, so the small parts are
+ * listed after the big ones they sit on.
+ */
+const LAYERS = [
+  // Capped, and this is load-bearing: his jacket, his outline and the hair
+  // outline are one connected dark network in this drawing, so an uncapped
+  // fill from the shoulders walks the whole silhouette and claims every
+  // outline in the picture. Those have to stay unowned for the sweep below to
+  // split them between the parts they separate.
+  { name: "jacket",      seeds: [[335, 858], [665, 848]], want: "dark",  tol: 90, maxR: 186 },
+  { name: "bowtie",      seeds: [[494, 865]],             want: "dark",  tol: 80, maxR: 115, holeFill: true },
+
+  // One mass, not three: the swoop and both wings are a single white region in
+  // this drawing. Splitting them is hand work on the redraw (plan §5.3).
+  { name: "hair",        seeds: [[457, 192], [192, 413], [820, 395]],
+                         want: "white", tol: 75, holeFill: true },
+
+  // After the hair, and capped, because his collar and his sideburns are one
+  // connected white region — an uncapped fill from either seed takes both, and
+  // whichever is listed last wins the lot. The cap keeps each fill local; being
+  // listed second is what lets the collar take its half back off the hair.
+  { name: "collar",      seeds: [[374, 793], [610, 793]], want: "white", tol: 70, maxR: 106 },
+
+  // The face. holeFill swallows the eyes, brows, nose and wrinkles and
+  // paintHoles replaces them with flat skin, which is the inpaint the parts
+  // above need to move over.
+  { name: "head",        seeds: [[501, 413], [363, 661], [643, 661], [247, 590], [777, 590]],
+                         want: "skin", tol: 95, holeFill: true, paintHoles: true },
+
+  // `sitsOn` puts the whole of these — outline, anti-aliased shoulder and all —
+  // onto the part rather than the face. Without it the nearest-owner sweep
+  // splits each outline down its middle, which is right between the face and
+  // the hair but wrong here: it leaves dark ghost sockets painted on the head.
+  { name: "eye-white-a", seeds: [[352, 568]], want: "white", tol: 60, maxR: 84, holeFill: true, paintHoles: true, sitsOn: "head" },
+  { name: "eye-white-b", seeds: [[673, 568]], want: "white", tol: 60, maxR: 84, holeFill: true, paintHoles: true, sitsOn: "head" },
+  { name: "brow-a",      seeds: [[390, 480]], want: "white", tol: 75, maxR: 84, sitsOn: "head" },
+  { name: "brow-b",      seeds: [[632, 480]], want: "white", tol: 75, maxR: 84, sitsOn: "head" },
+  { name: "mouth",       seeds: [[500, 711]], want: "dark",  tol: 95, maxR: 115, sitsOn: "head" },
+
+  // maxR is doing real work: the pupil touches the upper-lid arc, and without
+  // the cap the fill escapes along it and takes the whole face.
+  { name: "pupil-a",     seeds: [[399, 570]], want: "dark",  tol: 95, maxR: 53, holeFill: true, sitsOn: "eye-white-a" },
+  { name: "pupil-b",     seeds: [[615, 570]], want: "dark",  tol: 95, maxR: 53, holeFill: true, sitsOn: "eye-white-b" },
+];
+
+/* ── build ───────────────────────────────────────────────────────────── */
+
+/* Through the shared framing box — the same one slice-poses.mjs and
+   cut-gestures.mjs use. This is not cosmetic: the flat pose PNG stands in as a
+   placeholder while these twelve layers load, and the rig used to frame on its
+   own bounds, which made it 13% larger than the poses and the swap a visible
+   jump. The seed coordinates below are positions in *this* box. */
+const FRAME = sharedFrame();
+const work = through(FRAME, FRAME.idle, WORK);
+console.log(`frame ${Math.round(FRAME.side)}px about (${Math.round(FRAME.cx)}, ${Math.round(FRAME.cy)})
+`);
+
+// Pass 1 — fill each region from its seeds.
+//
+// `owner` tracks who holds each *original* pixel, and drives the sweep below.
+// Painted holes are deliberately left out of it: they are colour this script
+// invented, and the parts that really live there (a pupil over its sclera, a
+// brow over the forehead) must stay free to claim them.
+const owner = new Int16Array(WORK * WORK).fill(-1);
+const built = LAYERS.map((L, idx) => {
+  const mask = fill(work, WORK, WORK, L.seeds, { want: L.want, tol: L.tol, maxR: L.maxR });
+  let holes = null;
+  if (L.holeFill) {
+    holes = holeFill(mask, WORK, WORK);
+    for (let p = 0; p < WORK * WORK; p++) if (holes[p]) mask[p] = 1;
+  }
+  for (let p = 0; p < WORK * WORK; p++) {
+    if (!mask[p]) continue;
+    if (L.paintHoles && holes[p]) continue;
+    owner[p] = idx;
+  }
+  const [sx, sy] = snap(work, WORK, WORK, L.seeds[0], L.want);
+  const si = at(work, WORK, sx, sy);
+  return { L, mask, holes, seedRGB: [work[si], work[si + 1], work[si + 2]] };
+});
+
+// Pass 2 — the outlines, to whichever layer is nearest.
+nearestOwner(owner, work, WORK, WORK);
+
+// Which layer each part sits on, by index, for the paint-over below.
+const sitsOn = LAYERS.map((L) => (L.sitsOn ? LAYERS.findIndex((o) => o.name === L.sitsOn) : -1));
+sitsOn.forEach((v, i) => {
+  if (LAYERS[i].sitsOn && v < 0) throw new Error(`${LAYERS[i].name}: no layer named "${LAYERS[i].sitsOn}"`);
+});
+
+// Pass 3 — build each layer: the pixels it owns, plus everything it paints over
+// (its own enclosed holes, and whatever sits on top of it).
+const cut = [];
+for (const [idx, { L, mask, holes, seedRGB }] of built.entries()) {
+  // Which enclosed regions actually have a part sitting on them. An eye socket
+  // does, and gets filled flat so the eye has clean skin to move over; the nose
+  // and the wrinkles do not, and keep their own pixels.
+  let holeId = null, covered = null;
+  if (L.paintHoles) {
+    const { id, count } = components(holes, WORK, WORK);
+    holeId = id;
+    covered = new Uint8Array(count);
+    for (let p = 0; p < WORK * WORK; p++) {
+      if (id[p] >= 0 && sitsOn[owner[p]] === idx) covered[id[p]] = 1;
+    }
+  }
+
+  const out = new Uint8ClampedArray(WORK * WORK * 4);
+  let n = 0, bx0 = WORK, bx1 = 0, by0 = WORK, by1 = 0;
+  for (let p = 0; p < WORK * WORK; p++) {
+    // `paint` means "synthesise here", and it wins over ownership. The sweep
+    // above hands each outline's outer half to whoever is nearest, so the face
+    // ends up *owning* the rim around its own eye sockets — checking ownership
+    // first would copy those dark pixels straight back onto the clean face.
+    const paint = L.paintHoles && (
+      (holes[p] && mask[p] && covered[holeId[p]]) || sitsOn[owner[p]] === idx
+    );
+    if (owner[p] !== idx && !paint) continue;
+    const i = p * 4;
+    if (paint) {
+      out[i] = seedRGB[0]; out[i + 1] = seedRGB[1]; out[i + 2] = seedRGB[2]; out[i + 3] = 255;
+    } else {
+      out[i] = work[i]; out[i + 1] = work[i + 1]; out[i + 2] = work[i + 2]; out[i + 3] = work[i + 3];
+    }
+    n++;
+    const x = p % WORK, y = (p - x) / WORK;
+    if (x < bx0) bx0 = x;
+    if (x > bx1) bx1 = x;
+    if (y < by0) by0 = y;
+    if (y > by1) by1 = y;
+  }
+  if (!n) throw new Error(`layer "${L.name}" came out empty — seed or tolerance is wrong`);
+
+  // Crop to the layer's own bounds. PSD stores each layer at its bounding box,
+  // and the parts are mostly transparent, so this is what keeps the file small.
+  const w = bx1 - bx0 + 1, h = by1 - by0 + 1;
+  const rgba = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const s = ((by0 + y) * WORK + bx0 + x) * 4;
+      rgba.set(out.subarray(s, s + 4), (y * w + x) * 4);
+    }
+  }
+  cut.push({ name: L.name, x: bx0, y: by0, w, h, rgba, px: n });
+  console.log(`${L.name.padEnd(12)} ${String(n).padStart(7)} px   bbox ${bx0},${by0} ${w}x${h}`);
+}
+
+// A flattened stack, so a glance says whether the layers still cover him — and
+// the composite the PSD carries for readers that ignore layers.
+const flat = new Uint8ClampedArray(WORK * WORK * 4);
+for (const { x, y, w, h, rgba } of cut) {
+  for (let ly = 0; ly < h; ly++) {
+    for (let lx = 0; lx < w; lx++) {
+      const s = (ly * w + lx) * 4;
+      if (rgba[s + 3] < 8) continue;
+      const d = ((y + ly) * WORK + x + lx) * 4;
+      flat[d] = rgba[s]; flat[d + 1] = rgba[s + 1]; flat[d + 2] = rgba[s + 2]; flat[d + 3] = 255;
+    }
+  }
+}
+writeFileSync(OUT_STACK, encodePng(WORK, WORK, flat));
+
+writeFileSync(OUT_PSD, encodePsd({ width: WORK, height: WORK, layers: cut, composite: flat }));
+
+// Round-trip the PSD. Nobody can eyeball a binary, and a layer that comes back
+// misplaced or short is exactly the kind of thing that only surfaces once it is
+// already open in Rive.
+const back = decodePsdLayers(readFileSync(OUT_PSD));
+if (back.length !== cut.length) throw new Error(`PSD: wrote ${cut.length} layers, read ${back.length}`);
+for (const [i, r] of back.entries()) {
+  const w = cut[i];
+  if (r.name !== w.name) throw new Error(`PSD layer ${i}: name "${r.name}" != "${w.name}"`);
+  if (r.x !== w.x || r.y !== w.y || r.w !== w.w || r.h !== w.h) {
+    throw new Error(`PSD layer "${w.name}": bounds ${r.x},${r.y} ${r.w}x${r.h} != ${w.x},${w.y} ${w.w}x${w.h}`);
+  }
+  if (!r.rgba.equals(w.rgba)) throw new Error(`PSD layer "${w.name}": pixels differ after round-trip`);
+}
+console.log(`\n${OUT_PSD}  ${(readFileSync(OUT_PSD).length / 1024).toFixed(0)}KB, ` +
+  `${back.length} layers, round-trips exactly`);
+
+/* ── web layers ──────────────────────────────────────────────────────── */
+
+// The same cut, shipped, for the DOM rig in src/components/FaradayRig.tsx.
+//
+// Full canvas per layer rather than cropped to the bbox, unlike the PSD: the rig
+// nests the layers so a parent's transform carries its children, and that only
+// works if every layer shares one coordinate space. Stacking them is then
+// `position:absolute; inset:0` with nothing to position by hand. The empty space
+// costs almost nothing — it is one transparent run per row to PNG.
+mkdirSync(WEB_DIR, { recursive: true });
+let webBytes = 0;
+for (const { name, x, y, w, h, rgba } of cut) {
+  const full = new Uint8ClampedArray(WORK * WORK * 4);
+  for (let ly = 0; ly < h; ly++) {
+    const from = (ly * w) * 4;
+    full.set(rgba.subarray(from, from + w * 4), ((y + ly) * WORK + x) * 4);
+  }
+  const small = resample(full, WORK, WORK, 0, 0, WORK, WEB);
+  const file = `${WEB_DIR}/${name}.png`;
+  writeFileSync(file, encodePng(WEB, WEB, small));
+  webBytes += readFileSync(file).length;
+}
+console.log(`${WEB_DIR}/  ${cut.length} layers at ${WEB}px, ${(webBytes / 1024).toFixed(0)}KB total`);
+
+// Coverage check: the flattened stack must put back essentially all of him. A
+// silent drop here is the failure mode this whole script has — a mistuned
+// tolerance loses a region and every layer still looks individually fine.
+let src = 0, got = 0;
+for (let p = 0; p < WORK * WORK; p++) {
+  if (work[p * 4 + 3] > 128) src++;
+  if (flat[p * 4 + 3] > 128) got++;
+}
+const cover = got / src;
+console.log(`\nstack covers ${(cover * 100).toFixed(1)}% of the source character`);
+if (cover < 0.9) {
+  console.error("FAIL: layers do not reconstruct him — a region is unassigned.");
+  process.exit(1);
+}

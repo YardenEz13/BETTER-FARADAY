@@ -23,6 +23,12 @@ export interface FaradayReactionProps {
   streakCount?: number;
   /** new level 1–5 — woven into the level-up line */
   level?: number;
+  /**
+   * Drop the avatar and speak as a bare toast. For screens that already show
+   * Faraday somewhere else — two of him on one page is one too many — where
+   * his face is the reaction and this only needs to carry the line.
+   */
+  bubbleOnly?: boolean;
 }
 
 /** Level names as the schema documents them (students.level, 1–5). */
@@ -80,7 +86,7 @@ function pickLine(kind: FaradayReactionKind, streakCount?: number, level?: numbe
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export default function FaradayReaction({ kind, visible, onDone, streakCount, level }: FaradayReactionProps) {
+export default function FaradayReaction({ kind, visible, onDone, streakCount, level, bubbleOnly = false }: FaradayReactionProps) {
   const reduced = !!useReducedMotion();
   // Freeze the chosen line for the lifetime of a single appearance so it doesn't
   // re-randomize on unrelated re-renders while the bubble is on screen.
@@ -144,30 +150,32 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
           {/* Avatar. Deliberately not overflow-hidden: the celebrate and streak
               poses throw arms and sparks past the ring, and clipping them to the
               circle flattens the pose. */}
-          <div
-            className={`relative w-12 h-12 rounded-full bg-surface flex items-center justify-center flex-shrink-0 ${reduced ? "" : "faraday-land"}`}
-            style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
-          >
-            {/* Rays firing off the avatar on a win. Rendered behind him via a
-                negative z-index so the burst does not wash out his face. */}
-            {celebratory && !reduced && (
-              <span className="absolute inset-0 scale-[1.7]" style={{ zIndex: -1 }}>
-                <SparkBurst rays={kind === "correct" ? 8 : 12} />
-              </span>
-            )}
-            {/* Level-up gets the 12-frame celebration; everything else is a
-                still. Reduced motion falls back to the static pose, since a
-                sprite frozen on frame one reads as a mistake, not a moment. */}
-            {kind === "levelup" && !reduced ? (
-              <span className="faraday-sprite" role="img" aria-label="פרופסור פאראדיי חוגג" />
-            ) : (
-              <FaradayAvatar
-                pose={kind === "wrong" ? "wrong" : kind === "streak" || kind === "levelup" ? "streak" : "happy"}
-                px={44}
-                fill
-              />
-            )}
-          </div>
+          {!bubbleOnly && (
+            <div
+              className={`relative w-12 h-12 rounded-full bg-surface flex items-center justify-center flex-shrink-0 ${reduced ? "" : "faraday-land"}`}
+              style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
+            >
+              {/* Rays firing off the avatar on a win. Rendered behind him via a
+                  negative z-index so the burst does not wash out his face. */}
+              {celebratory && !reduced && (
+                <span className="absolute inset-0 scale-[1.7]" style={{ zIndex: -1 }}>
+                  <SparkBurst rays={kind === "correct" ? 8 : 12} />
+                </span>
+              )}
+              {/* Level-up gets the 12-frame celebration; everything else is a
+                  still. Reduced motion falls back to the static pose, since a
+                  sprite frozen on frame one reads as a mistake, not a moment. */}
+              {kind === "levelup" && !reduced ? (
+                <span className="faraday-sprite" role="img" aria-label="פרופסור פאראדיי חוגג" />
+              ) : (
+                <FaradayAvatar
+                  pose={kind === "wrong" ? "wrong" : kind === "streak" || kind === "levelup" ? "streak" : "happy"}
+                  px={44}
+                  fill
+                />
+              )}
+            </div>
+          )}
 
           {/* Speech bubble — clay card with a tail pointing toward the avatar.
               Pops a beat after the avatar lands, so he arrives and *then*
@@ -180,16 +188,20 @@ export default function FaradayReaction({ kind, visible, onDone, streakCount, le
             style={{ border: `2px solid ${accent}`, boxShadow: "var(--shadow-clay)" }}
           >
             {/* Tail toward the avatar (start side). `.bubble-tail` owns the
-                rotation because it has to mirror under RTL — see index.css. */}
-            <span
-              aria-hidden
-              className="absolute bottom-3 w-2.5 h-2.5 bubble-tail bg-surface"
-              style={{
-                insetInlineStart: -6,
-                borderInlineStart: `2px solid ${accent}`,
-                borderBlockEnd: `2px solid ${accent}`,
-              }}
-            />
+                rotation because it has to mirror under RTL — see index.css.
+                Dropped with the avatar: a tail pointing at nothing reads as a
+                rendering fault rather than a speech bubble. */}
+            {!bubbleOnly && (
+              <span
+                aria-hidden
+                className="absolute bottom-3 w-2.5 h-2.5 bubble-tail bg-surface"
+                style={{
+                  insetInlineStart: -6,
+                  borderInlineStart: `2px solid ${accent}`,
+                  borderBlockEnd: `2px solid ${accent}`,
+                }}
+              />
+            )}
             <p className="text-sm font-semibold leading-snug text-on-surface">
               {line}
             </p>

@@ -3,7 +3,7 @@ import { Bot } from "./electric";
 
 /**
  * Professor Faraday, the app mascot. One transparent 192px PNG per pose, cut
- * from the generated character sheet by `scripts/slice-mascot.mjs`:
+ * from the 1024px portraits by `scripts/slice-poses.mjs`:
  *
  *   public/faraday-idle.png      neutral, eyes open
  *   public/faraday-thinking.png  hand at chin
@@ -12,49 +12,14 @@ import { Bot } from "./electric";
  *   public/faraday-streak.png    amber lightning
  *   public/faraday-blink.png     eyes closed — registers against `idle`
  *
- * Plus two full-body gesture poses, cut from generated video by
- * scripts/extract-poses.mjs:
- *
- *   public/faraday-point.png     raised finger, explaining
- *   public/faraday-thumbsup.png  thumbs up, delighted
- *   public/faraday-wave.png      open-palm wave, greeting
- *
- * Those two frame the whole torso, so the head lands much smaller. Use them at
- * 64px and up — in a 44px avatar circle the face turns to mush. `isLargePose`
- * marks them so callers do not have to remember.
+ * All six are cut from the same 1024px portraits by scripts/slice-poses.mjs and
+ * share one framing box, so his head does not change size when a pose swaps.
  *
  * One size for all of them: 192px covers 3x on the largest site (64px), and a
  * resolution ladder for a ~40KB asset costs more in files than it saves in bytes.
  */
 export type FaradayPose =
-  | "idle" | "thinking" | "happy" | "wrong" | "streak"
-  | "point" | "thumbsup" | "wave";
-
-const LARGE_POSES: FaradayPose[] = ["point", "thumbsup", "wave"];
-
-/** Full-body poses — legible at 64px and up, not in a small avatar circle. */
-export const isLargePose = (pose: FaradayPose) => LARGE_POSES.includes(pose);
-
-/**
- * Dev-only guard against the one mistake this component invites: dropping a
- * full-body pose into a small avatar circle, where the face turns to mush. It
- * is invisible in code review and only shows up when someone looks at a phone.
- *
- * Warns once per pose+size so a re-rendering list cannot flood the console.
- * `fill` is skipped: the parent decides the size there, and guessing it would
- * cost a ref and a layout read to catch a mistake that is rarer than this one.
- */
-const warnedPoses = new Set<string>();
-function warnIfTooSmall(pose: FaradayPose, px: number, fill: boolean) {
-  if (!import.meta.env.DEV || fill || !isLargePose(pose) || px >= 64) return;
-  const key = `${pose}@${px}`;
-  if (warnedPoses.has(key)) return;
-  warnedPoses.add(key);
-  console.warn(
-    `FaradayAvatar: "${pose}" is a full-body pose — at ${px}px his face is unreadable. ` +
-      `Render it at 64px or more, or use a head-and-shoulders pose (idle, thinking, happy, wrong, streak).`,
-  );
-}
+  | "idle" | "thinking" | "happy" | "wrong" | "streak";
 
 export interface FaradayAvatarProps {
   /** which pose to show */
@@ -85,7 +50,6 @@ export default function FaradayAvatar({
   alt = "פרופסור פאראדיי",
 }: FaradayAvatarProps) {
   const [failed, setFailed] = useState(false);
-  warnIfTooSmall(pose, px, fill);
 
   if (failed) {
     return <Bot size={Math.round(px * 0.6)} className={`text-primary ${className}`} />;

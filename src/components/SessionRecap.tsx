@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Zap, Flame, Target, CheckCircle as CheckCircle2, RotateCcw, MapIcon as Map } from "./electric";
 import { SparkBurst } from "./electric";
-import FaradayAvatar from "./FaradayAvatar";
+import FaradayRig from "./FaradayRig";
 
 /* ── Celebratory end-of-session recap ──
    Big accuracy ring, count-up XP, streak flame, daily-goal bar, and CTAs.
@@ -94,7 +94,7 @@ export default function SessionRecap({
         {/* Faraday reacts to how the round actually went — the encouraging pose
             when it was rough, so a weak round is not met with a grin. */}
         <div className="flex justify-center -mt-2 mb-1">
-          <FaradayAvatar pose={accuracy >= 50 ? "thumbsup" : "wrong"} px={84} />
+          <FaradayRig mood={accuracy >= 50 ? "happy" : "wrong"} px={84} />
         </div>
 
         <div className="text-center mb-1">

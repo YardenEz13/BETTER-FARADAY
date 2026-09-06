@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent } from "react";
 import { useReducedMotion } from "framer-motion";
-import { type FaradayPose, isLargePose } from "./FaradayAvatar";
+import { type FaradayPose } from "./FaradayAvatar";
 
 /**
  * Professor Faraday with depth, built out of his own art.
@@ -45,8 +45,8 @@ import { type FaradayPose, isLargePose } from "./FaradayAvatar";
 /** Max tilt in degrees at the edge of the box. */
 const TILT = 14;
 
-/** Poses this works on: the masks are shaped for the head-and-shoulders crop. */
-export type Faraday25DPose = Exclude<FaradayPose, "point" | "thumbsup" | "wave">;
+/** Every pose is a head-and-shoulders crop now, so the masks fit all of them. */
+export type Faraday25DPose = FaradayPose;
 
 export interface Faraday25DProps {
   pose?: Faraday25DPose;
@@ -64,12 +64,6 @@ export default function Faraday25D({
 }: Faraday25DProps) {
   const stage = useRef<HTMLDivElement>(null);
   const reduced = !!useReducedMotion();
-
-  // The full-body poses frame him completely differently, so the masks would
-  // land on his chest. Cheap guard — this is invisible in review otherwise.
-  if (import.meta.env.DEV && isLargePose(pose as FaradayPose)) {
-    console.warn(`Faraday25D: "${pose}" is a full-body pose; the depth masks are cut for the head crop.`);
-  }
 
   const tilt = (e: PointerEvent<HTMLDivElement>) => {
     if (reduced || e.pointerType === "touch" || !stage.current) return;

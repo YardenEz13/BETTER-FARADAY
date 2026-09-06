@@ -11,6 +11,7 @@ import {
 import { useFaraday } from "../components/chat/FaradayProvider";
 import FaradayAvatar from "../components/FaradayAvatar";
 import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
+import FaradayRig, { type RigMood } from "../components/FaradayRig";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -191,6 +192,30 @@ export default function PracticeSession() {
     }
   }, [activeQuestion?._id]);
 
+  /* The rig only renders in the lg+ sidebar, and the reaction bubble needs to
+     know: with him on screen it drops its own avatar and speaks as a bare
+     toast. Same breakpoint and same listener shape as AIChatPanel's dock. */
+  const [rigVisible, setRigVisible] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setRigVisible(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  /* He starts pondering once a question has sat unanswered for a few seconds.
+     Without it `idle` is the only mood he ever wears before an answer, and a
+     mascot that holds one face until you click is furniture. */
+  const [pondering, setPondering] = useState(false);
+  useEffect(() => {
+    setPondering(false);
+    if (submitted) return;
+    const t = setTimeout(() => setPondering(true), 4000);
+    return () => clearTimeout(t);
+  }, [activeQuestion?._id, submitted]);
+
   if (!student || !currentTopic) return null;
 
   const handleSelect = async (idx: number, choiceEl?: HTMLElement) => {
@@ -304,6 +329,15 @@ export default function PracticeSession() {
 
   const isCorrect = submitted && selected === activeQuestion?.correctIndex;
 
+  /* The mascot's whole state, derived — nothing new is tracked for him. A
+     streak only overrides `happy` once it is worth remarking on, which is the
+     same threshold the reaction bubble and fireStreak already use. */
+  const rigMood: RigMood = !submitted
+    ? (pondering ? "thinking" : "idle")
+    : isCorrect
+      ? (combo >= 3 ? "streak" : "happy")
+      : "wrong";
+
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
 
@@ -379,9 +413,17 @@ export default function PracticeSession() {
         {/* Left: Question area */}
         <div className="flex-1 flex flex-col gap-5">
 
-          {/* Mobile streak bar — the header ChargeMeter is desktop-only, so the
-              correct-answer streak still has a home on small screens. */}
-          <div className="sm:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3" style={{ boxShadow: 'var(--shadow-clay)' }}>
+          {/* Faraday and the streak, below the desktop breakpoint.
+
+              He rides along in the card the streak already had rather than
+              taking a row of his own: vertical space is the scarce thing on a
+              phone. The card and the header ChargeMeter now switch at the same
+              `lg` the sidebar does, so there is exactly one streak display at
+              every width — they were split at `sm`, which left tablets showing
+              the header meter and no Faraday at all. */}
+          <div className="lg:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3 flex items-center gap-4" style={{ boxShadow: 'var(--shadow-clay)' }}>
+            {!rigVisible && <FaradayRig mood={rigMood} px={84} className="flex-shrink-0" />}
+            <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-bold text-on-surface-variant">רצף תשובות</span>
               <span className="num text-xs font-extrabold text-primary flex items-center gap-1">
@@ -400,6 +442,7 @@ export default function PracticeSession() {
                   />
                 );
               })}
+            </div>
             </div>
           </div>
 
@@ -678,8 +721,18 @@ export default function PracticeSession() {
           ) : null}
         </div>
 
-        {/* Right: Calculator */}
-        <div className="w-[300px] flex-shrink-0 hidden lg:block">
+        {/* Right: Faraday, then the calculator */}
+        <div className="w-[300px] flex-shrink-0 hidden lg:flex flex-col gap-5">
+          {/* He watches the student work: eyes follow the pointer, expression
+              follows the answer. Sized to be legible — the moods move brows and
+              pupils by a few percent, which is invisible in an avatar circle.
+              Desktop only for now; where he goes on a phone is still open, and
+              FaradayReaction already covers that moment there.
+
+              Gated on the media query rather than just `hidden lg:flex`: a
+              hidden <img> is still fetched, and that would spend 164KB of
+              layers on phones to render nothing. */}
+          {rigVisible && <FaradayRig mood={rigMood} px={200} className="self-center" />}
           <CalculatorCard />
         </div>
         </div>
@@ -722,12 +775,16 @@ export default function PracticeSession() {
         )}
       </AnimatePresence>
 
-      {/* Faraday personality pop-in — reacts to the last answer, auto-dismisses */}
+      {/* Faraday's line about the last answer, auto-dismissing. Always bubble
+          only: he is on screen at every width now — the sidebar above lg, the
+          streak card below it — and his face is already the reaction, so the
+          bubble carries the words and nothing else. */}
       <FaradayReaction
         kind={reaction?.kind ?? "correct"}
         streakCount={reaction?.count}
         visible={!!reaction}
         onDone={() => setReaction(null)}
+        bubbleOnly
       />
 
       <AnimatePresence>
@@ -762,7 +819,7 @@ function ChargeMeter({ combo, max }: { combo: number; max: number }) {
   }, [combo, level]);
   return (
     <div
-      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
+      className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border-2 border-outline"
       style={{ boxShadow: 'var(--shadow-clay)' }}
       title="טעינת אנרגיה — רצף תשובות נכונות"
     >

@@ -2,13 +2,14 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft, Check, X, Lock, Star, Package, Flame, Trophy,
   ElectricBolt, Battery, SparkBurst,
   ELECTRIC_ICONS, type ElectricIconName,
 } from "../components/electric";
+import { useCountUp } from "../lib/gsapUtils";
 import { computeAchievements, type Achievement } from "../lib/achievements";
 import { errorMessage } from "../lib/errors";
 import { ThemeToggle } from "../components/ThemeContext";
@@ -19,41 +20,18 @@ import { fireConfetti } from "../lib/celebrations";
 import { dayCount, hourCount, freezeCount } from "../lib/hebrew";
 
 /* ── Animated count-up number that pops on change ── */
-function AnimatedBalance({ value, reducedMotion }: { value: number; reducedMotion: boolean }) {
-  const [display, setDisplay] = useState(value);
-  const chipRef = useRef<HTMLSpanElement>(null);
-  const prev = useRef(value);
-
-  useEffect(() => {
-    if (reducedMotion) { setDisplay(value); prev.current = value; return; }
-    const from = prev.current;
-    const to = value;
-    prev.current = value;
-    if (from === to) return;
-    const duration = 650;
-    const start = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(from + (to - from) * eased));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    // pop
-    const el = chipRef.current;
-    if (el) {
-      el.animate(
-        [{ transform: "scale(1)" }, { transform: "scale(1.22)" }, { transform: "scale(1)" }],
-        { duration: 450, easing: "cubic-bezier(.34,1.56,.64,1)" },
-      );
-    }
-    return () => cancelAnimationFrame(raf);
-  }, [value, reducedMotion]);
-
+/**
+ * The balance odometer. This was a hand-rolled rAF tween that rendered 0 while
+ * the server was returning 244 — a second, separate implementation of the
+ * counter that `useCountUp` already provides and that the rest of the app uses.
+ * Reusing the shared one deletes ~30 lines and the bug with them; it also
+ * handles reduced motion itself, so the prop is gone.
+ */
+function AnimatedBalance({ value }: { value: number }) {
+  const ref = useCountUp<HTMLSpanElement>(value, { duration: 0.65 });
   return (
-    <span ref={chipRef} className="num inline-block font-black tabular-nums">
-      {display.toLocaleString()}
+    <span ref={ref} className="num inline-block font-black tabular-nums">
+      {value.toLocaleString()}
     </span>
   );
 }
@@ -396,7 +374,7 @@ export default function XpShop() {
                   <Battery size={26} tone="ghost" glow={0.6} />
                 </div>
                 <span className="text-4xl md:text-5xl text-primary" style={{ fontFamily: "'Assistant', sans-serif" }}>
-                  <AnimatedBalance value={shop?.balance ?? 0} reducedMotion={reducedMotion} />
+                  <AnimatedBalance value={shop?.balance ?? 0} />
                 </span>
                 <span className="text-lg font-bold text-on-surface-variant self-end mb-1">נק׳</span>
               </div>
