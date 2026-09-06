@@ -1,7 +1,7 @@
 /**
  * Minimal PNG codec: decode, encode, and a box-filter resample.
  *
- * Shared by slice-mascot.mjs and make-favicon.mjs. Only what those two need —
+ * Shared by slice-poses.mjs, cut-rig-layers.mjs and make-favicon.mjs. Only what they need —
  * non-interlaced 8-bit RGB/RGBA in, RGBA out. A native image dependency for a
  * pair of one-time asset scripts is not worth the install.
  */

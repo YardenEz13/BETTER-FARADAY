@@ -15,7 +15,7 @@
  *
  * ## How the cutting works
  *
- * Same idiom as `slice-mascot.mjs`: flood fill from a seed, stopping where the
+ * Flood fill from a seed, stopping where the
  * colour stops matching. The art is flat cartoon fills inside thick dark
  * outlines, so a fill started in the middle of a region walks to that region's
  * outline and halts. Three things make it reliable:

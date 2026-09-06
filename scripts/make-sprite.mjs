@@ -27,7 +27,7 @@ if (!dir || !name) {
   process.exit(1);
 }
 
-/** Magenta backdrop — see extract-poses.mjs. */
+/** Magenta backdrop — see assets-src/README.md. */
 const isBackdrop = (r, g, b) => Math.min(r, b) - g > 30;
 
 function keyOut(w, h, px) {

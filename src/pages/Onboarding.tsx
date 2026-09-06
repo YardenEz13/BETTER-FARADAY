@@ -124,7 +124,7 @@ export default function Onboarding() {
             {initial}
           </div>
           <div className="flex justify-center mb-3">
-            <FaradayAvatar pose="thumbsup" px={96} />
+            <FaradayAvatar pose="streak" px={96} />
           </div>
           <h1 className="font-extrabold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
             הכל מוכן, {state.name}! 🎉
@@ -192,7 +192,7 @@ export default function Onboarding() {
               <div>
                 {/* First screen a new student sees — he should be the one saying hello */}
                 <div className="flex justify-center mb-2">
-                  <FaradayAvatar pose="wave" px={104} />
+                  <FaradayAvatar pose="happy" px={104} />
                 </div>
                 <h1 className="font-extrabold text-2xl text-on-surface mb-1.5" style={{ fontFamily: "'Assistant', sans-serif" }}>
                   ברוכים הבאים, {state.name}! ⚡

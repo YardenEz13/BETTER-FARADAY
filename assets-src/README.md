@@ -126,7 +126,7 @@ outlines the background key relies on).
 | Clip | Purpose | Used from it |
 |---|---|---|
 | `poses-v1-grey.mp4` | first pose attempt, grey backdrop | nothing — superseded, kept as the counter-example |
-| `poses-v2-magenta.mp4` | pose library, magenta backdrop, 2s holds | holds at 3.35s, 5.35s, 7.2s, 9.0s → `point`, `thumbsup` |
+| `poses-v2-magenta.mp4` | pose library, magenta backdrop, 2s holds | nothing — fed `point`/`thumbsup`/`wave`, all deleted |
 | `celebration.mp4` | celebration | 12 frames, 4.90s–6.00s at 0.1s → `faraday-celebrate.png` |
 | `typing-loop.mp4` | chat typing indicator | 12 frames, 2.617s–3.45s → `faraday-typing.png`, head-cropped |
 
@@ -134,9 +134,15 @@ outlines the background key relies on).
 re-cut from the compressed `celebration.mp4` matches the one built from the
 original to within 0.6% transparent area, with zero magenta fringe either way.
 
-Rebuild with `scripts/extract-poses.mjs` (stills) or `scripts/make-sprite.mjs`
-(strips); both document their ffmpeg frame-grab. ffmpeg is a dev-machine tool
-here, not a project dependency — nothing in `npm run build` needs it.
+Rebuild the sprite strips with `scripts/make-sprite.mjs`, which documents its
+ffmpeg frame-grab. ffmpeg is a dev-machine tool here, not a project dependency —
+nothing in `npm run build` needs it.
+
+`extract-poses.mjs` is gone with the poses it cut. `point`, `thumbsup` and
+`wave` were the last art from the video lineage, full-body where everything else
+is a head crop, and they were the only reason `isLargePose` and its size guard
+existed. Deleting them took that whole concept with them. The clips stay as the
+record; the celebration and typing strips still come from here.
 
 ## Prompt notes for the next generation
 

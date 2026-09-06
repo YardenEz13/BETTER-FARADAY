@@ -1,5 +1,5 @@
 import { useState } from "react";
-import FaradayAvatar, { type FaradayPose, isLargePose } from "../components/FaradayAvatar";
+import FaradayAvatar, { type FaradayPose } from "../components/FaradayAvatar";
 import FaradayMoodAvatar, { type FaradayMood } from "../components/FaradayMoodAvatar";
 import FaradayReaction, { type FaradayReactionKind } from "../components/FaradayReaction";
 import Faraday25D, { type Faraday25DPose } from "../components/Faraday25D";
@@ -14,7 +14,7 @@ import FaradayRig, { type RigMood } from "../components/FaradayRig";
  * approve a promotion; the homework bubble needs a finished set).
  */
 
-const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak", "point", "thumbsup", "wave"];
+const POSES: FaradayPose[] = ["idle", "thinking", "happy", "wrong", "streak"];
 const KINDS: FaradayReactionKind[] = ["correct", "wrong", "streak", "levelup", "homework"];
 const MOODS: FaradayMood[] = ["idle", "thinking", "happy"];
 const HEAD_POSES: Faraday25DPose[] = ["idle", "thinking", "happy", "wrong", "streak"];
@@ -46,9 +46,7 @@ export default function MascotLab() {
                 style={{ boxShadow: "var(--shadow-clay)" }}>
                 <FaradayAvatar pose={p} px={88} />
               </div>
-              <span className="text-xs font-semibold">
-                {p}{isLargePose(p) && " · large only"}
-              </span>
+              <span className="text-xs font-semibold">{p}</span>
             </div>
           ))}
         </div>

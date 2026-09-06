@@ -30,7 +30,7 @@ More than a mascot spike usually gets. Inventory before adding anything:
 
 | Thing | Where | Notes |
 |---|---|---|
-| 8 pose PNGs, 192px, ~40KB each | `public/faraday-*.png` | idle, thinking, happy, wrong, streak, point, thumbsup, wave |
+| 6 pose PNGs, 192px | `public/faraday-*.png` | idle, thinking, happy, wrong, streak, blink — all cut from `faraday-hires.png`. The full-body `point`/`thumbsup`/`wave` were deleted with `isLargePose`. |
 | Blink frame registered against idle | `public/faraday-blink.png` | real second drawing, not a CSS eyelid |
 | Celebrate sprite, 12 frames, one-shot | `public/faraday-celebrate.png` | `.faraday-sprite`, `steps(12)` |
 | Typing sprite, 12 frames, seamless loop | `public/faraday-typing.png` | `.faraday-typing`, 0.833s measured loop |
@@ -38,7 +38,7 @@ More than a mascot spike usually gets. Inventory before adding anything:
 | 2.5D parallax head | `src/components/Faraday25D.tsx` | 5 masked copies of one PNG at real `translateZ` |
 | Speech-bubble reactions, Hebrew lines | `src/components/FaradayReaction.tsx` | framer-motion spring, 5 kinds |
 | Dev-only mascot lab | `src/pages/MascotLab.tsx` → `/mascot` | every pose and animation on one screen |
-| Asset pipeline, zero deps | `scripts/slice-mascot.mjs`, `extract-poses.mjs`, `make-sprite.mjs`, `make-turntable.mjs`, `png.mjs` | own PNG codec; flood-fill keying; Veo turntable |
+| Asset pipeline, zero deps | `scripts/slice-poses.mjs`, `cut-rig-layers.mjs`, `make-poses.mjs`, `make-sprite.mjs`, `png.mjs`, `psd.mjs` | own PNG and PSD codecs; magenta keying |
 | Source art + prompt notes | `assets-src/README.md` | genuinely good failure notes — read before regenerating |
 
 15 call sites consume the mascot (`AIChatPanel`, `StudentHome`, `PracticeSession`,
