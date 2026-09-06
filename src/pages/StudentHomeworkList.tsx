@@ -12,7 +12,7 @@ import { ElectricBolt, ElectricAtom, Lightbulb as ElectricBulb } from "../compon
 import { useCountUp } from "../lib/gsapUtils";
 import { dayCount, questionCount, sectionCount } from "../lib/hebrew";
 import { Skeleton as SkeletonBlock, SkeletonCircle } from "../components/ui";
-import FaradayAvatar from "../components/FaradayAvatar";
+import FaradayRig from "../components/FaradayRig";
 
 export default function StudentHomeworkList() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -172,7 +172,7 @@ export default function StudentHomeworkList() {
               className="bg-surface rounded-3xl p-16 flex flex-col items-center justify-center border-2 border-outline text-center"
               style={{ boxShadow: 'var(--shadow-clay)' }}
             >
-              <FaradayAvatar pose="happy" px={96} className="mb-4" />
+              <FaradayRig mood="happy" px={96} className="mb-4" />
               <div className="font-bold text-xl text-on-surface mb-2">הכל נקי כאן 🎉</div>
               <div className="text-on-surface-variant text-sm max-w-[20rem]">
                 אין משימות פתוחות כרגע. ברגע שתישלח משימה חדשה — היא תופיע כאן.

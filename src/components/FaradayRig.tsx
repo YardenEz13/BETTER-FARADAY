@@ -54,6 +54,8 @@ export interface FaradayRigProps {
    * Omitted means he follows the pointer.
    */
   look?: { x: number; y: number };
+  /** spark-green halo, same as FaradayAvatar's */
+  glow?: boolean;
   className?: string;
   alt?: string;
 }
@@ -62,6 +64,7 @@ export default function FaradayRig({
   mood = "idle",
   px = 200,
   look,
+  glow = false,
   className = "",
   alt = "פרופסור פאראדיי",
 }: FaradayRigProps) {
@@ -158,7 +161,11 @@ export default function FaradayRig({
     <div
       ref={root}
       className={`frig ${className}`}
-      style={{ width: px, height: px }}
+      style={{
+        width: px,
+        height: px,
+        filter: glow ? "drop-shadow(0 0 8px var(--color-inverse-primary))" : undefined,
+      }}
       data-mood={mood}
       data-blink={blinking ? "" : undefined}
       onPointerMove={track}

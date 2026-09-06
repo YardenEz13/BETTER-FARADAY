@@ -20,6 +20,17 @@ const MOODS: FaradayMood[] = ["idle", "thinking", "happy"];
 const HEAD_POSES: Faraday25DPose[] = ["idle", "thinking", "happy", "wrong", "streak"];
 const RIG_MOODS: RigMood[] = ["idle", "thinking", "happy", "wrong", "streak"];
 
+/** The six places the rig renders outside PracticeSession, at their real sizes. */
+const SHIPPED_RIGS: { where: string; mood: RigMood; px: number; glow?: boolean }[] = [
+  { where: "SessionRecap · good round", mood: "happy",  px: 84 },
+  { where: "SessionRecap · rough round", mood: "wrong", px: 84 },
+  { where: "Onboarding · welcome",      mood: "happy",  px: 104 },
+  { where: "Onboarding · all set",      mood: "streak", px: 96 },
+  { where: "ReviewDeck · nothing due",  mood: "happy",  px: 84 },
+  { where: "ReviewDeck · deck cleared", mood: "streak", px: 88, glow: true },
+  { where: "Homework · all clear",      mood: "happy",  px: 96 },
+];
+
 export default function MascotLab() {
   const [reaction, setReaction] = useState<FaradayReactionKind | null>(null);
   const [mood, setMood] = useState<FaradayMood>("idle");
@@ -89,6 +100,22 @@ export default function MascotLab() {
               expressions.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="label-mono text-primary">
+          Where the rig actually ships — each of these is an empty or end-of-thing state you
+          cannot reach with a seeded student who has data
+        </h2>
+        <div className="flex flex-wrap items-end gap-6">
+          {SHIPPED_RIGS.map((r) => (
+            <div key={r.where} className="flex flex-col items-center gap-2">
+              <FaradayRig mood={r.mood} px={r.px} glow={r.glow} />
+              <span className="text-xs font-semibold">{r.where}</span>
+              <span className="label-mono text-[0.6rem]">{r.mood} · {r.px}px{r.glow ? " · glow" : ""}</span>
+            </div>
+          ))}
         </div>
       </section>
 

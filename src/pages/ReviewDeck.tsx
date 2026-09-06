@@ -11,7 +11,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import FaradayCanvas from "../components/FaradayCanvas";
 import MathText from "../components/MathText";
-import FaradayAvatar from "../components/FaradayAvatar";
+import FaradayRig from "../components/FaradayRig";
 import { fireStreak } from "../lib/celebrations";
 
 type Card = {
@@ -29,7 +29,7 @@ type Card = {
 function CheerfulEmpty({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-      <FaradayAvatar pose="happy" px={84} className="mb-4" />
+      <FaradayRig mood="happy" px={84} className="mb-4" />
       <h2 className="font-bold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>
         אין טעויות לחזור עליהן! ✨
       </h2>
@@ -156,7 +156,7 @@ export default function ReviewDeck() {
           >
             {!reducedMotion && <SparkBurst />}
             <div className="relative">
-              <FaradayAvatar pose="streak" px={88} glow className="mx-auto mb-4" />
+              <FaradayRig mood="streak" px={88} glow className="mx-auto mb-4" />
               <h2 className="font-bold text-2xl text-on-surface mb-2" style={{ fontFamily: "'Assistant', sans-serif" }}>סיימת את החזרה! ⚡</h2>
               <p className="text-on-surface-variant font-medium mb-8">
                 {correctCount} מתוך {total} נכונות. כל חזרה מחזקת את החומר.
