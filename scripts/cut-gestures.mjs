@@ -34,56 +34,17 @@
  * sits well below the eyes.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { decodePng, encodePng, resample } from "./png.mjs";
+import { encodePng, resample } from "./png.mjs";
+import { keyed, sharedFrame, through } from "./mascot-frame.mjs";
 
 const WORK = 1024;
 const WEB = 512;
 const OUT_DIR = "public/faraday-rig";
-const IDLE = "assets-src/faraday-hires.png";
 
 /** Arms outside idle's silhouette. */
 const OUTSIDE = ["happy", "wrong", "streak"];
 /** Hand overlapping the face — needs the colour path. */
 const OVERLAPPING = ["thinking"];
-
-const isBg = (r, g, b) => Math.min(r, b) - g > 30;
-
-function keyed(file) {
-  const img = decodePng(readFileSync(file));
-  const px = new Uint8ClampedArray(img.px), w = img.w, h = img.h;
-  const seen = new Uint8Array(w * h), stack = [];
-  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
-  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
-  while (stack.length) {
-    const p = stack.pop();
-    if (seen[p]) continue;
-    seen[p] = 1;
-    const i = p * 4;
-    if (!isBg(px[i], px[i + 1], px[i + 2])) continue;
-    px[i + 3] = 0;
-    const x = p % w, y = (p - x) / w;
-    if (x > 0) stack.push(p - 1);
-    if (x < w - 1) stack.push(p + 1);
-    if (y > 0) stack.push(p - w);
-    if (y < h - 1) stack.push(p + w);
-  }
-  for (let p = 0; p < w * h; p++) {
-    const i = p * 4;
-    if (px[i + 3] < 32) continue;
-    const lo = Math.min(px[i], px[i + 2]);
-    if (lo - px[i + 1] > 20) px[i + 1] = lo;
-  }
-  let x0 = w, x1 = 0, y0 = h, y1 = 0;
-  for (let p = 0; p < w * h; p++) {
-    if (px[p * 4 + 3] <= 24) continue;
-    const x = p % w, y = (p - x) / w;
-    if (x < x0) x0 = x;
-    if (x > x1) x1 = x;
-    if (y < y0) y0 = y;
-    if (y > y1) y1 = y;
-  }
-  return { px, w, h, b: { x0, x1, y0, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 } };
-}
 
 /** Connected components of a boolean mask. */
 function blobs(mask, w, h) {
@@ -113,18 +74,10 @@ function blobs(mask, w, h) {
 /* ── frame everything through one box, exactly as slice-poses.mjs does ─────── */
 
 const names = [...OUTSIDE, ...OVERLAPPING];
-const idle = keyed(IDLE);
+const FRAME = sharedFrame();
 const sources = Object.fromEntries(names.map((n) => [n, keyed(`assets-src/poses/${n}.png`)]));
-const cx = idle.b.x0 + idle.b.w / 2, cy = idle.b.y0 + idle.b.h / 2;
-const side = Math.max(
-  Math.max(idle.b.w, idle.b.h) * 1.1,
-  ...[idle, ...Object.values(sources)].map((k) => Math.max(
-    2 * Math.abs(k.b.x0 + k.b.w / 2 - cx) + k.b.w,
-    2 * Math.abs(k.b.y0 + k.b.h / 2 - cy) + k.b.h,
-  ) * 1.06),
-);
-const frame = (k) => resample(k.px, k.w, k.h, cx - side / 2, cy - side / 2, side, WORK);
-const A = frame(idle);
+const frame = (k) => through(FRAME, k, WORK);
+const A = frame(FRAME.idle);
 
 /* Idle's alpha, dilated. Without the dilation every anti-aliased pixel along his
    own outline reads as "new" and each gesture ships with a ghost of his

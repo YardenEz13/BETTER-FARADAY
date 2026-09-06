@@ -1531,3 +1531,28 @@ math-field.faraday-mathfield::part(menu-toggle) {
   /* Still a change of state worth seeing — just without the travel. */
   .frig-gesture { animation: none; }
 }
+
+/* Placeholder while the rig's twelve layers arrive — FaradayRig.tsx.
+
+   The flat pose PNG sits in his place and the layered rig is held at zero
+   opacity until every one has loaded, so he never assembles himself on screen
+   in front of the student. Both are the same drawing through the same framing
+   box, so the handover does not move him.
+
+   The fade is on the rig rather than the placeholder: cross-fading the two
+   would show the background through both at the midpoint. */
+.frig-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.frig[data-loading] .frig-body { opacity: 0; }
+.frig-body { transition: opacity 220ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .frig-body { transition: none; }
+}

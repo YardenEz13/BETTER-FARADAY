@@ -33,7 +33,8 @@
  * raised arms carry some empty space — cheap, and it compresses to nothing.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { decodePng, encodePng, resample } from "./png.mjs";
+import { decodePng, encodePng } from "./png.mjs";
+import { keyed, sharedFrame, through } from "./mascot-frame.mjs";
 
 const OUT_SIZE = 192;
 const SOURCES = [
@@ -45,87 +46,21 @@ const SOURCES = [
   { name: "streak",   file: "assets-src/poses/streak.png" },
 ];
 
-/** Magenta by channel relationship — the model never returns exactly #FF00FF. */
-const isBg = (r, g, b) => Math.min(r, b) - g > 30;
+/* Every pose through the one shared box — see scripts/mascot-frame.mjs. */
+const FRAME = sharedFrame();
+console.log(`frame ${Math.round(FRAME.side)}px about (${Math.round(FRAME.cx)}, ${Math.round(FRAME.cy)})
+`);
 
-/** Key the backdrop by flooding in from the border, so magenta-ish pixels
- *  *inside* the drawing survive. Then despill the anti-aliased rim. */
-function key(px, w, h) {
-  const seen = new Uint8Array(w * h), stack = [];
-  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
-  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
-  while (stack.length) {
-    const p = stack.pop();
-    if (seen[p]) continue;
-    seen[p] = 1;
-    const i = p * 4;
-    if (!isBg(px[i], px[i + 1], px[i + 2])) continue;
-    px[i + 3] = 0;
-    const x = p % w, y = (p - x) / w;
-    if (x > 0) stack.push(p - 1);
-    if (x < w - 1) stack.push(p + 1);
-    if (y > 0) stack.push(p - w);
-    if (y < h - 1) stack.push(p + w);
-  }
-  for (let p = 0; p < w * h; p++) {
-    const i = p * 4;
-    if (px[i + 3] < 32) continue;
-    const lo = Math.min(px[i], px[i + 2]);
-    if (lo - px[i + 1] > 20) px[i + 1] = lo;
-  }
-}
-
-function bounds(px, w, h) {
-  let x0 = w, x1 = 0, y0 = h, y1 = 0;
-  for (let p = 0; p < w * h; p++) {
-    if (px[p * 4 + 3] <= 24) continue;
-    const x = p % w, y = (p - x) / w;
-    if (x < x0) x0 = x;
-    if (x > x1) x1 = x;
-    if (y < y0) y0 = y;
-    if (y > y1) y1 = y;
-  }
-  return { x0, x1, y0, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 };
-}
-
-/* Pass 1 — key every source, and find the one box that holds all of them.
-   The centre comes from idle alone (he is the reference pose); the side is
-   whatever the most sprawling pose needs about that centre. */
-const keyedSources = [];
 for (const { name, file } of SOURCES) {
   if (!existsSync(file)) {
     console.warn(`${name.padEnd(10)} SKIPPED — ${file} not generated yet`);
     continue;
   }
-  const img = decodePng(readFileSync(file));
-  const px = new Uint8ClampedArray(img.px);
-  key(px, img.w, img.h);
-  keyedSources.push({ name, img, px, b: bounds(px, img.w, img.h) });
-}
-
-if (!keyedSources.length) {
-  console.error("nothing to do — generate the portraits first (scripts/make-poses.mjs --print)");
-  process.exit(1);
-}
-
-const ref = keyedSources[0].b;                       // idle, listed first
-const cx = ref.x0 + ref.w / 2, cy = ref.y0 + ref.h / 2;
-const side = Math.max(
-  Math.max(ref.w, ref.h) * 1.1,
-  ...keyedSources.map(({ b }) => Math.max(
-    2 * Math.abs(b.x0 + b.w / 2 - cx) + b.w,
-    2 * Math.abs(b.y0 + b.h / 2 - cy) + b.h,
-  ) * 1.06),
-);
-console.log(`frame ${Math.round(side)}px about (${Math.round(cx)}, ${Math.round(cy)}), shared by all
-`);
-
-/* Pass 2 — every pose through the same box. */
-for (const { name, img, px, b } of keyedSources) {
-  const out = resample(px, img.w, img.h, cx - side / 2, cy - side / 2, side, OUT_SIZE);
+  const k = keyed(file);
+  const out = through(FRAME, k, OUT_SIZE);
   const dest = `public/faraday-${name}.png`;
   writeFileSync(dest, encodePng(OUT_SIZE, OUT_SIZE, out));
-  console.log(`${name.padEnd(10)} ${dest.padEnd(28)} bbox ${b.w}x${b.h}`);
+  console.log(`${name.padEnd(10)} ${dest.padEnd(28)} bbox ${k.b.w}x${k.b.h}`);
 }
 
 /* Distinctness check.

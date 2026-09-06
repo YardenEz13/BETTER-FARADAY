@@ -81,6 +81,27 @@ export default function FaradayRig({
   const root = useRef<HTMLDivElement>(null);
   const reduced = !!useReducedMotion();
   const [blinking, setBlinking] = useState(false);
+
+  /**
+   * Twelve layers is twelve requests, and until they all arrive he assembles
+   * himself in front of the student — a hovering pair of eyebrows, then a
+   * collar. So the flat pose PNG stands in until they are all here.
+   *
+   * It is the right placeholder because it is the same drawing through the same
+   * framing box (scripts/mascot-frame.mjs), so the swap does not move him, and
+   * because it is one 36KB file the app already ships and has almost certainly
+   * cached from an avatar somewhere else.
+   *
+   * Tracked as a Set of layer names rather than a counter: a cached image can
+   * report `complete` on mount *and* fire `load`, and counting both would end
+   * the wait early with layers still missing.
+   */
+  const [ready, setReady] = useState(false);
+  const arrived = useRef(new Set<string>());
+  const settle = (name: string) => {
+    arrived.current.add(name);
+    if (arrived.current.size >= LAYERS.length) setReady(true);
+  };
   /** When the pointer last drove the gaze, so idle drift can stay out of its way. */
   const lastPointerRef = useRef(0);
 
@@ -180,6 +201,14 @@ export default function FaradayRig({
       alt=""
       aria-hidden
       draggable={false}
+      decoding="async"
+      // A layer already in cache is `complete` before React can attach onLoad,
+      // and then onLoad never fires — so that case has to be caught here or the
+      // rig waits forever on an image it already has.
+      ref={(el) => { if (el?.complete && el.naturalWidth > 0) settle(name); }}
+      onLoad={() => settle(name)}
+      // A missing layer must not strand him behind the placeholder for ever.
+      onError={() => settle(name)}
       className={`frig-layer frig-${name}`}
     />
   );
@@ -199,7 +228,19 @@ export default function FaradayRig({
       onPointerLeave={rest}
       role="img"
       aria-label={alt}
+      data-loading={ready ? undefined : ""}
     >
+      {/* Held until every layer is in, then it is gone. Not aria-hidden on
+          purpose — while it is showing it *is* the mascot. */}
+      {!ready && (
+        <img
+          src={`/faraday-${mood}.png`}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="frig-placeholder"
+        />
+      )}
       <div className="frig-body">
         {img("jacket")}
         {img("bowtie")}
