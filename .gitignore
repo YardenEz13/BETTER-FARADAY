@@ -72,3 +72,7 @@ assets-src/seed-idle.png
 # Local snapshot of the question bank for scripts/check-questions.mjs.
 # Regenerate with `--refresh`; it is production content, not source.
 assets-src/question-cache.json
+
+# Resume checkpoint for the same script — which questions have been checked.
+# Derived; docs/question-review.md is the artifact worth keeping.
+assets-src/question-verdicts.json

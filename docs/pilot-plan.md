@@ -175,9 +175,11 @@ This is the question a principal asks, and there is no answer for it yet. Two
 pieces, and the cheap one is most of the value:
 
 1. **Prompt** — the model stops tutoring, says plainly it is a math helper and
-   cannot help with this, and names a human: the teacher, a parent, ער"ן 1201,
-   or קו הנוער 1-800-20-30-40. It must not attempt counselling. Small, and it
-   is the difference between a bad answer and no answer.
+   cannot help with this, and names a human: the teacher, a parent, or ער"ן
+   (1201). It must not attempt counselling. Confirm the numbers with the school
+   counsellor before shipping them — a wrong helpline number in a distress reply
+   is worse than none. Small, and it is the difference between a bad answer and
+   no answer.
 2. **Escalation** — whether a flag reaches the teacher is the *school's* call,
    not ours. Automatic distress detection has false positives that out a
    student's private life to a teacher, which can do its own harm. Ask them;

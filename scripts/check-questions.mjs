@@ -3,11 +3,20 @@
  * Triage the machine-authored question bank: have a model solve each question
  * blind and flag the ones where it disagrees with the stored answer.
  *
- *   node --env-file=.env.local scripts/check-questions.mjs --limit 20   # try it
- *   node --env-file=.env.local scripts/check-questions.mjs              # all of band 1-3
+ *   node --env-file=.env.local scripts/check-questions.mjs --limit 20   # 20 more
+ *   node --env-file=.env.local scripts/check-questions.mjs              # until quota runs out
  *   node scripts/check-questions.mjs --refresh                          # re-pull from Convex
  *
  * Writes docs/question-review.md. Touches no Convex writes at all.
+ *
+ * ## It resumes
+ *
+ * Every verdict is checkpointed to assets-src/question-verdicts.json after each
+ * batch, keyed by question id. The free tier runs out of quota long before the
+ * bank runs out of questions, so a run ends in a 429 by design — the next run
+ * picks up at the first unchecked question instead of re-spending the quota on
+ * the same first thirty. The report is rebuilt from the whole checkpoint, not
+ * just this run. Delete that file to re-check everything from scratch.
  *
  * ## This flags suspects. It does not clear questions.
  *
@@ -37,24 +46,44 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
-const KEY = process.env.GEMINI_API_KEY;
-// A pinned model, not a `-latest` alias: the alias routes to a shared pool that
-// returned 503 "high demand" on most calls, and a batch lost to that is
-// questions that silently never got checked.
-const MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
-const API = "https://generativelanguage.googleapis.com/v1beta";
-const CACHE = "assets-src/question-cache.json";
-const REPORT = "docs/question-review.md";
-/** §2: review what students actually meet first — the bands the engine starts in. */
-const BANDS = [1, 2, 3];
-/** Questions per model call. Bigger batches cost fewer calls; too big and it loses track. */
-const BATCH = 8;
-
 const arg = (name) => {
   const i = process.argv.indexOf(name);
   return i < 0 ? null : process.argv[i + 1] ?? true;
 };
 const LIMIT = arg("--limit") ? Number(arg("--limit")) : Infinity;
+const RECHECK = typeof arg("--recheck") === "string" ? arg("--recheck") : null;
+
+/**
+ * .env.local beats the ambient environment on purpose. This machine exports a
+ * stale GEMINI_API_KEY, and `node --env-file` will not override a variable that
+ * is already set — so the dead key won and every batch came back 400 with an
+ * error that reads as if the file were at fault. Reading the file here makes the
+ * invocation work from any shell, with or without --env-file.
+ */
+const fileKey = () => {
+  try {
+    const m = readFileSync(".env.local", "utf8").match(/^GEMINI_API_KEY\s*=\s*(.*)$/m);
+    return m ? m[1].trim().replace(/^["']|["']$/g, "") || null : null;
+  } catch { return null; }
+};
+const KEY = fileKey() ?? process.env.GEMINI_API_KEY;
+// A pinned model, not a `-latest` alias: the alias routes to a shared pool that
+// returned 503 "high demand" on most calls, and a batch lost to that is
+// questions that silently never got checked.
+const MODEL = RECHECK ?? process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
+const API = "https://generativelanguage.googleapis.com/v1beta";
+const CACHE = "assets-src/question-cache.json";
+const BASE_VERDICTS = "assets-src/question-verdicts.json";
+// --recheck <model>: a second, blind opinion from a stronger model on the
+// questions the main pass flagged. Its own checkpoint and its own report, so
+// neither pass can overwrite the other and the two stay comparable.
+const VERDICTS = RECHECK ? "assets-src/question-verdicts." + RECHECK + ".json" : BASE_VERDICTS;
+const REPORT = RECHECK ? "docs/question-review-recheck.md" : "docs/question-review.md";
+const LETTERS = "ABCDEFGH";
+/** §2: review what students actually meet first — the bands the engine starts in. */
+const BANDS = [1, 2, 3];
+/** Questions per model call. Bigger batches cost fewer calls; too big and it loses track. */
+const BATCH = 8;
 
 /* ── pull once, then live off the cache ──────────────────────────────── */
 
@@ -104,16 +133,28 @@ if (!cached) console.log("pulling from Convex (once):");
 const all = cached ? JSON.parse(readFileSync(CACHE, "utf8")) : pull();
 if (cached) console.log(`using ${CACHE} — ${all.length} questions, zero Convex reads. --refresh to re-pull.\n`);
 
-const questions = all.slice(0, LIMIT === Infinity ? all.length : LIMIT);
-if (!KEY) {
+/** Verdicts from previous runs, by question id. Missing = not checked yet. */
+const done = existsSync(VERDICTS) ? JSON.parse(readFileSync(VERDICTS, "utf8")) : {};
+/** A recheck only sees what the main pass flagged; the agreed ones it never looks at. */
+const base = RECHECK && existsSync(BASE_VERDICTS) ? JSON.parse(readFileSync(BASE_VERDICTS, "utf8")) : null;
+const wasFlagged = (q) => {
+  const v = base[q._id];
+  return v && !(v.letter === LETTERS[q.correctIndex] && v.confidence === "high");
+};
+const pending = all.filter((q) => !done[q._id] && (!base || wasFlagged(q)));
+// --limit applies to what is *left*, not to the front of the bank: after a
+// quota-capped run, `--limit 20` has to mean twenty more, not the same twenty.
+const questions = pending.slice(0, LIMIT === Infinity ? pending.length : LIMIT);
+if (Object.keys(done).length) {
+  console.log(`resuming: ${Object.keys(done).length} already checked, ${pending.length} left — this run takes ${questions.length}.\n`);
+}
+if (!KEY && questions.length) {
   console.error("GEMINI_API_KEY not set — run with --env-file=.env.local");
   console.error(`(the cache is built either way: ${questions.length} questions ready)`);
   process.exit(1);
 }
 
 /* ── ask, blind ──────────────────────────────────────────────────────── */
-
-const LETTERS = "ABCDEFGH";
 
 async function solve(batch) {
   const body = batch.map((q, i) =>
@@ -174,8 +215,7 @@ ${body}`;
 
 /* ── run ─────────────────────────────────────────────────────────────── */
 
-const flagged = [];
-let agreed = 0, unparsed = 0;
+let unparsed = 0;
 
 for (let i = 0; i < questions.length; i += BATCH) {
   const batch = questions.slice(i, i + BATCH);
@@ -185,36 +225,60 @@ for (let i = 0; i < questions.length; i += BATCH) {
   } catch (e) {
     console.error(`batch ${i / BATCH + 1} failed: ${e.message}`);
     if (String(e.message).startsWith("429")) {
-      console.error("rate limited — stopping here; the report covers what was checked.");
+      console.error("rate limited — stopping here; the next run resumes from this point.");
       break;
     }
     continue;
   }
   batch.forEach((q, k) => {
     const v = verdicts.get(k + 1);
+    // Deliberately not checkpointed: an unparsed question stays pending so the
+    // next run retries it, rather than being recorded as permanently unreadable.
     if (!v) { unparsed++; return; }
-    const stored = LETTERS[q.correctIndex];
-    if (v.letter === stored && v.confidence === "high") { agreed++; return; }
-    flagged.push({ ...q, stored, model: v.letter, confidence: v.confidence, why: v.why });
+    // Which model said so: the bank gets checked across several models as each
+    // one's daily quota runs out, and a flag is only as good as its solver.
+    done[q._id] = { ...v, by: MODEL };
   });
-  process.stdout.write(`\rchecked ${Math.min(i + BATCH, questions.length)}/${questions.length}  flagged ${flagged.length}`);
+  // After every batch, not at the end — the run ends in a 429 by design.
+  writeFileSync(VERDICTS, JSON.stringify(done, null, 2));
+  process.stdout.write(`\rchecked ${Math.min(i + BATCH, questions.length)}/${questions.length} this run · ${Object.keys(done).length}/${all.length} of the bank`);
 }
 console.log();
 
 /* ── report ──────────────────────────────────────────────────────────── */
 
-const pct = (n) => ((100 * n) / Math.max(questions.length, 1)).toFixed(1);
+// Rebuilt from the whole checkpoint, so the report is every question ever
+// checked — not just the handful this run's quota allowed.
+const flagged = [];
+const solvers = new Set();
+let agreed = 0;
+for (const q of all) {
+  const v = done[q._id];
+  if (!v) continue;
+  solvers.add(v.by ?? "unrecorded");
+  const stored = LETTERS[q.correctIndex];
+  if (v.letter === stored && v.confidence === "high") { agreed++; continue; }
+  flagged.push({ ...q, stored, model: v.letter, confidence: v.confidence, why: v.why });
+}
+const checked = agreed + flagged.length;
+// Counted against whatever this run was scoped to: the whole band, or just the
+// questions a --recheck was handed.
+const remaining = all.filter((q) => !done[q._id] && (!base || wasFlagged(q))).length;
+const scopeTotal = checked + remaining;
+const solverList = [...solvers].map((m) => "`" + m + "`").join(" + ");
+
+const pct = (n) => ((100 * n) / Math.max(checked, 1)).toFixed(1);
 const lines = [
   `# Question review — model triage`,
   ``,
-  `${new Date().toISOString().slice(0, 10)} · \`${MODEL}\` · difficulty ${BANDS.join("/")} · machine-authored only`,
+  `${new Date().toISOString().slice(0, 10)} · ${solverList} · difficulty ${BANDS.join("/")} · machine-authored only`,
   ``,
   `| | |`,
   `|---|---|`,
-  `| checked | ${questions.length} of ${all.length} in band |`,
+  `| checked | ${checked} of ${scopeTotal}${RECHECK ? " flagged by the main pass" : " in band"} |`,
   `| model agreed, high confidence | ${agreed} (${pct(agreed)}%) |`,
   `| **flagged for a human** | **${flagged.length} (${pct(flagged.length)}%)** |`,
-  `| no parseable verdict | ${unparsed} |`,
+  `| no parseable verdict this run (retried next run) | ${unparsed} |`,
   ``,
   `A flag is a *suspect*, not a verdict. The bank was machine-authored and this is`,
   `another model reading it, so the same blind spot can sit on both sides. Read the`,
@@ -240,5 +304,8 @@ for (const [title, group] of byKind) {
 }
 mkdirSync("docs", { recursive: true });
 writeFileSync(REPORT, lines.join("\n") + "\n");
-console.log(`\n${agreed}/${questions.length} agreed · ${flagged.length} flagged · ${unparsed} unparsed`);
+console.log(`\n${agreed}/${checked} agreed · ${flagged.length} flagged · ${unparsed} unparsed this run`);
 console.log(`report: ${REPORT}`);
+console.log(remaining
+  ? `${remaining} left — re-run to continue (checkpoint: ${VERDICTS})`
+  : RECHECK ? `every flagged question re-checked.` : `whole band checked.`);
