@@ -31,16 +31,15 @@ adding content is a deliberate act.
 
 Ordered by what actually blocks a classroom, not by effort.
 
-### 1. 🔴 The uptime monitor checks nothing
+### 1. ✅ The uptime monitor checks nothing — DONE 2026-09-07
 
-`gh variable list` is empty. Both curl steps in `.github/workflows/uptime.yml`
-are gated on `vars.CONVEX_SITE_URL != ''`, so every run since setup has
-reported **success while probing nothing**. A green monitor that monitors
-nothing is worse than no monitor — it manufactures confidence.
+Both variables are set and a manual run was watched end to end: Convex
+`/health` returned `{"ok":true,"aiEnabled":true}` and the frontend probe hit
+`https://better-faraday.vercel.app`.
 
-```bash
-gh variable set CONVEX_SITE_URL --body https://befitting-panther-27.convex.site
-```
+`PROD_APP_URL` had to be the **stable alias**, not the per-deploy URL GitHub
+reports for a Production deployment — that one changes on every deploy, so a
+monitor pointed at it goes red the next time you ship.
 
 ### 2. 🔴 Content correctness gate
 
@@ -53,6 +52,20 @@ Cheapest useful version: review only what students will actually see in the
 pilot's first fortnight — the difficulty bands the adaptive engine starts in
 (1–3), for the topics the class is covering. That is a few hundred questions,
 not 1,295. The review UI already exists (`PacketReviewPage.tsx`).
+
+`scripts/check-questions.mjs` now narrows that further. It has a model solve
+each question **blind** — stem and choices only, never the stored answer, since
+a model shown an answer tends to ratify it — and flags disagreements into
+`docs/question-review.md`. **841** questions are machine-authored in bands 1–3.
+
+First 96 checked: **96 agreed, 0 flagged**. Encouraging, and not evidence of
+correctness — the bank was machine-authored and this is another model reading
+it, so a shared blind spot flags nothing. Its job is to shorten the human's
+list, not replace them. Validated by corrupting three stored answers and
+confirming all three were caught.
+
+Costs Convex one read per topic, once, cached to disk after; re-running the
+checks is free. Nothing is written back.
 
 ### 3. 🔴 Convex spending limit
 
@@ -84,11 +97,19 @@ build** — not even a quick demo.
 35 forms before any value has been shown. ~20 lines (paste names, split on
 newline) and it removes the most likely week-1 teacher quit.
 
-### 8. 🟡 e2e coverage
+### 8. 🟠 e2e coverage — partly done 2026-09-07
 
-One spec. Homework submission and the AI chat panel — the two paths most
-likely to break in front of a class — have none, and nothing runs at mobile
-viewport.
+Was one spec. Now two, each run at desktop and at a Pixel 5 viewport: 4 passing.
+Students are on phones and nothing had ever run at 375px.
+
+The new spec opens the AI chat panel and asserts its greeting. It deliberately
+stops there rather than sending a message — asserting on a real reply means a
+live Gemini call per run: money, the rate limiter, and a non-deterministic
+string to match. The breakage worth catching is a panel that fails to mount or
+mounts behind the question card, and that is free to test.
+
+**Still open: homework submission.** It needs `seedE2E` extended to create an
+assignment, which is the only reason it is not done here.
 
 ### 9. 🟡 Accessibility statement follow-through
 

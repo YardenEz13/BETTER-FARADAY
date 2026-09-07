@@ -68,3 +68,7 @@ playwright-report/
 # Intermediate seed for scripts/make-hires-portrait.mjs — rebuild with
 # `node scripts/make-turntable-seed.mjs assets-src/seed-idle.png`
 assets-src/seed-idle.png
+
+# Local snapshot of the question bank for scripts/check-questions.mjs.
+# Regenerate with `--refresh`; it is production content, not source.
+assets-src/question-cache.json

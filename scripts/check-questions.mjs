@@ -1,0 +1,244 @@
+#!/usr/bin/env node
+/**
+ * Triage the machine-authored question bank: have a model solve each question
+ * blind and flag the ones where it disagrees with the stored answer.
+ *
+ *   node --env-file=.env.local scripts/check-questions.mjs --limit 20   # try it
+ *   node --env-file=.env.local scripts/check-questions.mjs              # all of band 1-3
+ *   node scripts/check-questions.mjs --refresh                          # re-pull from Convex
+ *
+ * Writes docs/question-review.md. Touches no Convex writes at all.
+ *
+ * ## This flags suspects. It does not clear questions.
+ *
+ * 1,295 of these were written by a model. Asking another model whether they are
+ * right produces a *shortlist for a human*, not a verdict — the same blind spot
+ * can sit on both sides. `docs/pilot-plan.md` §2 is explicit that correctness
+ * review is a human job; this exists to point that human at the fifty questions
+ * worth their afternoon instead of all 1,295.
+ *
+ * ## It is not shown the answer
+ *
+ * The obvious version hands the model the question and its stored `correctIndex`
+ * and asks "is this right?". That invites agreement — models are strongly
+ * disposed to ratify an answer presented as already decided. So the prompt gets
+ * the stem and the choices only, the model commits to a letter, and the
+ * comparison happens here in the script where it cannot be talked out of it.
+ *
+ * ## Why this does not repeat the August incident
+ *
+ * docs/convex-budget.md: Database I/O is bytes read and written by function
+ * executions, and the multiplier that caused the 4.38 GB month was *reactive
+ * subscriptions* re-running on every write. A script is neither. This is one
+ * execution per topic, five topics, once — and the result is cached on disk, so
+ * re-running the checks after a prompt change costs Convex nothing at all.
+ * Nothing is written back: the report is a local file.
+ */
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const KEY = process.env.GEMINI_API_KEY;
+// A pinned model, not a `-latest` alias: the alias routes to a shared pool that
+// returned 503 "high demand" on most calls, and a batch lost to that is
+// questions that silently never got checked.
+const MODEL = process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
+const API = "https://generativelanguage.googleapis.com/v1beta";
+const CACHE = "assets-src/question-cache.json";
+const REPORT = "docs/question-review.md";
+/** §2: review what students actually meet first — the bands the engine starts in. */
+const BANDS = [1, 2, 3];
+/** Questions per model call. Bigger batches cost fewer calls; too big and it loses track. */
+const BATCH = 8;
+
+const arg = (name) => {
+  const i = process.argv.indexOf(name);
+  return i < 0 ? null : process.argv[i + 1] ?? true;
+};
+const LIMIT = arg("--limit") ? Number(arg("--limit")) : Infinity;
+
+/* ── pull once, then live off the cache ──────────────────────────────── */
+
+/**
+ * Call the Convex CLI directly rather than through `npx`. On Windows `npx`
+ * needs `shell: true`, and cmd then strips the quotes out of the JSON argument
+ * before Convex ever sees it — `{"topicId":"x"}` arrives as `{topicId:x}` and
+ * fails to parse. Running the CLI's own entry point with node takes no shell.
+ */
+const CONVEX_CLI = "node_modules/convex/bin/main.js";
+const runConvex = (fn, args = {}) => {
+  const out = execFileSync(process.execPath, [CONVEX_CLI, "run", fn, JSON.stringify(args)], {
+    encoding: "utf8", maxBuffer: 64 * 1024 * 1024,
+  });
+  const start = out.search(/[[{]/);
+  if (start < 0) throw new Error(`no JSON from ${fn}: ${out.slice(0, 200)}`);
+  return JSON.parse(out.slice(start));
+};
+
+function pull() {
+  const topics = runConvex("topics:list");
+  const rows = [];
+  for (const t of topics) {
+    // getByTopic already exists and returns the topic's questions — no new
+    // Convex function to write, review and deploy just to read.
+    const qs = runConvex("questions:getByTopic", { topicId: t._id });
+    for (const q of qs) {
+      // Hand-seeded rows have no `generatedAt`; those were written by a person
+      // and are not what this is for.
+      if (q.generatedAt === undefined) continue;
+      if (!BANDS.includes(q.difficulty)) continue;
+      rows.push({
+        _id: q._id, topic: t.nameHe, difficulty: q.difficulty,
+        stem: q.stem, choices: q.choices, correctIndex: q.correctIndex,
+      });
+    }
+    console.log(`  ${t.nameHe.padEnd(24)} ${qs.length} total, ${rows.filter((r) => r.topic === t.nameHe).length} in band ${BANDS.join("/")}`);
+  }
+  mkdirSync("assets-src", { recursive: true });
+  writeFileSync(CACHE, JSON.stringify(rows, null, 2));
+  console.log(`\ncached ${rows.length} questions to ${CACHE} (${(readFileSync(CACHE).length / 1024).toFixed(0)}KB read once)\n`);
+  return rows;
+}
+
+const cached = existsSync(CACHE) && !arg("--refresh");
+if (!cached) console.log("pulling from Convex (once):");
+const all = cached ? JSON.parse(readFileSync(CACHE, "utf8")) : pull();
+if (cached) console.log(`using ${CACHE} — ${all.length} questions, zero Convex reads. --refresh to re-pull.\n`);
+
+const questions = all.slice(0, LIMIT === Infinity ? all.length : LIMIT);
+if (!KEY) {
+  console.error("GEMINI_API_KEY not set — run with --env-file=.env.local");
+  console.error(`(the cache is built either way: ${questions.length} questions ready)`);
+  process.exit(1);
+}
+
+/* ── ask, blind ──────────────────────────────────────────────────────── */
+
+const LETTERS = "ABCDEFGH";
+
+async function solve(batch) {
+  const body = batch.map((q, i) =>
+    `### שאלה ${i + 1}\n${q.stem}\n` +
+    q.choices.map((c, k) => `${LETTERS[k]}. ${c}`).join("\n"),
+  ).join("\n\n");
+
+  const prompt =
+`אתה בודק מאגר שאלות במתמטיקה לבגרות 5 יחידות. פתור כל שאלה בעצמך.
+
+לכל שאלה החזר שורה אחת בפורמט:
+<מספר שאלה>|<אות התשובה הנכונה>|<ביטחון: high או low>|<נימוק קצר במשפט אחד>
+
+אם השאלה שגויה, דו-משמעית, חסרת נתונים, או שאף אפשרות אינה נכונה — החזר X כאות והסבר מה בדיוק לא תקין.
+אל תחזיר שום דבר מלבד השורות האלה.
+
+${body}`;
+
+  // 503 "high demand" and 429 are both transient and both common on the free
+  // tier. Backing off beats losing a batch — a dropped batch is questions that
+  // silently never got checked, which is the failure this script exists to stop.
+  let res, wait = 4000;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(`${API}/models/${MODEL}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0 },
+      }),
+    });
+    if (res.ok || (res.status !== 503 && res.status !== 429)) break;
+    await new Promise((r) => setTimeout(r, wait));
+    wait *= 2;
+  }
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`${res.status} ${t.replace(KEY, "<KEY>").slice(0, 300)}`);
+  }
+  const json = await res.json();
+  const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
+  const verdicts = new Map();
+  for (const line of text.split("\n")) {
+    // It labels its lines "שאלה 3|B|high|…" rather than starting with the
+    // number, so the prefix is optional here. Anchored at line start either way:
+    // a loose match would pick digits out of the reasoning text.
+    const m = line.match(/^\s*(?:שאלה\s*)?(\d+)\s*\|\s*([A-HX])\s*\|\s*(high|low)\s*\|\s*(.*)$/i);
+    if (m) verdicts.set(Number(m[1]), { letter: m[2].toUpperCase(), confidence: m[3].toLowerCase(), why: m[4].trim() });
+  }
+  // A batch that parses to nothing means the model changed shape on us, and
+  // silently counting eight questions as "unparsed" hides that.
+  if (verdicts.size === 0 && text.trim()) {
+    console.error(`
+  unparseable reply: ${JSON.stringify(text.slice(0, 160))}`);
+  }
+  return verdicts;
+}
+
+/* ── run ─────────────────────────────────────────────────────────────── */
+
+const flagged = [];
+let agreed = 0, unparsed = 0;
+
+for (let i = 0; i < questions.length; i += BATCH) {
+  const batch = questions.slice(i, i + BATCH);
+  let verdicts;
+  try {
+    verdicts = await solve(batch);
+  } catch (e) {
+    console.error(`batch ${i / BATCH + 1} failed: ${e.message}`);
+    if (String(e.message).startsWith("429")) {
+      console.error("rate limited — stopping here; the report covers what was checked.");
+      break;
+    }
+    continue;
+  }
+  batch.forEach((q, k) => {
+    const v = verdicts.get(k + 1);
+    if (!v) { unparsed++; return; }
+    const stored = LETTERS[q.correctIndex];
+    if (v.letter === stored && v.confidence === "high") { agreed++; return; }
+    flagged.push({ ...q, stored, model: v.letter, confidence: v.confidence, why: v.why });
+  });
+  process.stdout.write(`\rchecked ${Math.min(i + BATCH, questions.length)}/${questions.length}  flagged ${flagged.length}`);
+}
+console.log();
+
+/* ── report ──────────────────────────────────────────────────────────── */
+
+const pct = (n) => ((100 * n) / Math.max(questions.length, 1)).toFixed(1);
+const lines = [
+  `# Question review — model triage`,
+  ``,
+  `${new Date().toISOString().slice(0, 10)} · \`${MODEL}\` · difficulty ${BANDS.join("/")} · machine-authored only`,
+  ``,
+  `| | |`,
+  `|---|---|`,
+  `| checked | ${questions.length} of ${all.length} in band |`,
+  `| model agreed, high confidence | ${agreed} (${pct(agreed)}%) |`,
+  `| **flagged for a human** | **${flagged.length} (${pct(flagged.length)}%)** |`,
+  `| no parseable verdict | ${unparsed} |`,
+  ``,
+  `A flag is a *suspect*, not a verdict. The bank was machine-authored and this is`,
+  `another model reading it, so the same blind spot can sit on both sides. Read the`,
+  `question before changing anything.`,
+  ``,
+];
+const byKind = [
+  ["Model says no option is correct", flagged.filter((f) => f.model === "X")],
+  ["Model picked a different answer", flagged.filter((f) => f.model !== "X" && f.model !== f.stored)],
+  ["Model agreed but was unsure", flagged.filter((f) => f.model === f.stored)],
+];
+for (const [title, group] of byKind) {
+  if (!group.length) continue;
+  lines.push(`## ${title} — ${group.length}`, ``);
+  for (const f of group) {
+    lines.push(
+      `### \`${f._id}\` · ${f.topic} · difficulty ${f.difficulty}`, ``,
+      f.stem, ``,
+      ...f.choices.map((c, k) => `- ${LETTERS[k]}. ${c}${LETTERS[k] === f.stored ? "  ← stored answer" : ""}${LETTERS[k] === f.model ? "  ← model" : ""}`),
+      ``, `> ${f.why}`, ``,
+    );
+  }
+}
+mkdirSync("docs", { recursive: true });
+writeFileSync(REPORT, lines.join("\n") + "\n");
+console.log(`\n${agreed}/${questions.length} agreed · ${flagged.length} flagged · ${unparsed} unparsed`);
+console.log(`report: ${REPORT}`);

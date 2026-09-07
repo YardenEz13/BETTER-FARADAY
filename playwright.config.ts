@@ -26,7 +26,14 @@ export default defineConfig({
     baseURL,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Students are on phones and nothing ran at a phone viewport, so every
+    // mobile-only layout path — the streak card Faraday rides in, the chat
+    // panel as a bottom sheet rather than a dock — was untested. Same specs,
+    // 375px wide.
+    { name: "mobile", use: { ...devices["Pixel 5"] } },
+  ],
   // Nothing to start when the target is already deployed.
   webServer: process.env.E2E_BASE_URL
     ? undefined
