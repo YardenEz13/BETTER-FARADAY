@@ -67,16 +67,27 @@ confirming all three were caught.
 Costs Convex one read per topic, once, cached to disk after; re-running the
 checks is free. Nothing is written back.
 
-### 3. 🔴 Convex spending limit
+### 3. ⚪ Convex spending limit — deprioritised 2026-09-07
 
-Still unset. It is the only hard backstop against a repeat of the August
-incident, and it is a dashboard toggle.
+Owner's call: the school does not care, and that is correct — it is not a
+school-facing risk. Recorded so the tradeoff is deliberate: it is not a bill
+risk either, it is an *availability* risk. Blowing the quota mid-pilot stops
+the site for the class, and the August incident showed the failure mode is a
+cron nobody was watching rather than a decision anybody made. Still a dashboard
+toggle if that changes.
 
-### 4. 🔴 Parental consent + school sign-off
+### 4. 🟠 Parental consent + school sign-off — app side done 2026-09-07
 
-`docs/parental-consent-he.md` is drafted but every `[...]` field is unfilled
-and it has had no legal or school review. Longest lead time in the project —
-it gates the pilot date regardless of engineering.
+The **paperwork** is the long pole and none of it is engineering:
+`docs/parental-consent-he.md` still has every `[...]` field unfilled and has had
+no legal or school review.
+
+The **app side** is now enforced rather than assumed. `classroom.addStudent`
+requires a `consentOn` date (`convex/classroom.ts`, `consentDateError`), and it
+is the only public door into the `students` table — so a student cannot exist in
+the system without a recorded consent date. Malformed and future dates are
+rejected; `convex/classroom.test.ts` covers both. The school's paper file stays
+the system of record and this is the pointer to it.
 
 ### 5. 🟠 Auth (Clerk)
 
@@ -91,11 +102,21 @@ build** — not even a quick demo.
 `classroom.getFirstClassroom` is `.first()`. No `teachers`, `schools` or
 `users` table. Fine for one pilot class; a hard blocker for the second.
 
-### 7. 🟠 Bulk roster import
+### 7. 🟠 Roster — bulk import dropped, but there is no roster screen at all
 
-`classroom.addStudent` takes one name at a time. A class of 35 on day one is
-35 forms before any value has been shown. ~20 lines (paste names, split on
-newline) and it removes the most likely week-1 teacher quit.
+**Bulk import dropped 2026-09-07** by owner's decision: the pilot starts with
+students added by hand, deliberately, rather than handing a school a system
+nobody has watched work yet. Sound — and it makes the *one-at-a-time* path the
+one that has to exist.
+
+It does not. `classroom.addStudent` has exactly one caller in the whole app
+(`PdfAssignmentBuilder.tsx:236`), an inline box inside the PDF assignment
+builder. There is no roster view, and `classroom.ts` has no `removeStudent`.
+Adding the class by hand today means opening the assignment builder 35 times or
+running `npx convex run` 35 times.
+
+A roster panel is the missing piece, not bulk paste: list the class, add one
+with name + consent date, and show which rows predate the consent field.
 
 ### 8. 🟠 e2e coverage — partly done 2026-09-07
 
@@ -117,17 +138,106 @@ Published (`/legal` §11) declaring **partial** conformance. Before the service
 stops being a closed pilot it needs a named accessibility coordinator in that
 section, and the three unverified areas actually verified.
 
-### 10. 🟡 Curriculum scope
+### 10. ⚪ Curriculum scope — narrowed by decision 2026-09-07
 
-Five topics. No חדו"א — the largest single chunk of the 5-unit exam — plus no
-וקטורים, הנדסה אנליטית, גדילה ודעיכה. Either extend through the packet
-pipeline or narrow the pitch honestly to "תרגול ממוקד ב-5 נושאים". Do not sell
-bagrut prep with a hole where derivatives should be.
+Five topics. No חדו"א, וקטורים, הנדסה אנליטית or גדילה ודעיכה. Owner's call:
+do not build them for the pilot.
+
+That settles the engineering and leaves the **pitch**, which is the part that
+was never optional. The service is "תרגול ממוקד ב-5 נושאים", not bagrut prep.
+Anything said to the school, the parents' form, or the landing page has to
+match that, because a parent who signs up for bagrut prep and finds no
+derivatives is a complaint that costs more than the missing topics do.
 
 ### 11. ⚪ The number that sells it
 
 One real cohort, one before/after result. Nothing above matters to a principal
 without it, and nothing else on this list can substitute.
+
+## Found 2026-09-07 — not previously on any list
+
+These came out of reading the consent form against the code. The first is the
+one to act on.
+
+### 12. 🔴 The tutor has no answer for a student who is not asking about math
+
+Verified: `PRACTICE_AGENT_PROMPT`, `HOMEWORK_AGENT_PROMPT` and
+`PROOF_AGENT_PROMPT` (`src/services/localAI.ts:23-62`) are purely pedagogical.
+Not one line tells the model what to do when the message is not a math question.
+
+What is actually shipping is a warm, patient, endlessly available chat partner,
+in Hebrew, for 16-year-olds, at 11pm. Some of them will type something that is
+not about sequences. A fraction of those will type something that matters. Right
+now the model improvises, nobody is told, and the transcript sits in `aiMessages`
+until a teacher happens to open it.
+
+This is the question a principal asks, and there is no answer for it yet. Two
+pieces, and the cheap one is most of the value:
+
+1. **Prompt** — the model stops tutoring, says plainly it is a math helper and
+   cannot help with this, and names a human: the teacher, a parent, ער"ן 1201,
+   or קו הנוער 1-800-20-30-40. It must not attempt counselling. Small, and it
+   is the difference between a bad answer and no answer.
+2. **Escalation** — whether a flag reaches the teacher is the *school's* call,
+   not ours. Automatic distress detection has false positives that out a
+   student's private life to a teacher, which can do its own harm. Ask them;
+   do not decide it here.
+
+Also unhandled and much cheaper: the same prompt gap means the tutor will
+happily discuss anything else off-topic. Same one-line fix.
+
+### 13. 🔴 Which Gemini tier the prod key sits on is a consent question
+
+Step 4 lists the paid tier as a **quota** matter. It is also a privacy one, and
+that is the bigger half: Google's free API tier permits using submitted content
+to improve their products; the paid tier does not. What Faraday submits is
+minors' chat transcripts and photographs of their notebooks.
+
+`docs/parental-consent-he.md` tells parents the data goes to Google **for
+processing**. It does not say it may train a model, because that must not be
+true. **Verify the prod key's tier before the form is printed**, not after.
+
+*(The precise terms are Google's to state — read the current API terms rather
+than taking this paragraph as the citation.)*
+
+### 14. 🟠 Retention has no end date and nothing enforces one
+
+The form's "[יימחק המידע / יישמר עד תאריך ____]" is unfilled, and the code has
+no opinion either: `aiMessages` persists indefinitely since the abandoned-chat
+cron was removed for bandwidth (`docs/convex-budget.md`). Whatever date goes in
+that blank, the enforcement is a diarised run of `classroom.purgeStudent` per
+student at pilot end — it is an `internalMutation`, CLI-only, which is the right
+posture but means it happens only if someone remembers. Put it in the runbook
+(Step 9) with the date.
+
+### 15. 🔴 The consent form makes a promise the current build contradicts
+
+The form says the class teacher sees the learning data and that it is used for
+teaching only. On the shipped build, `/teacher` sits behind `BDIKA`/`123456`
+hardcoded in `PrototypeGate.tsx:23` — in the JavaScript bundle any student can
+read. Every classmate's chat transcripts, confusion scores and struggle analysis
+are one URL away.
+
+Deferring auth is defensible. Handing a parent a signed form containing a
+sentence the build makes false is not, and that is what §5 turns into the moment
+the form is printed. This does not need Clerk to clear: it needs the teacher
+gate off a string that ships to the client.
+
+### 16. 🟡 Three questions for whoever reviews the form — not engineering
+
+Flagging, not advising; none of this is legal advice.
+
+- **תיקון 13** to חוק הגנת הפרטיות came into force in August 2025 and changed
+  enforcement and obligations. A database of minors' learning data plus chat
+  transcripts is squarely in scope. Ask the lawyer about this amendment by name.
+- **חוזר מנכ״ל** on schools using external online services with student data.
+  §ג of the form asks the school to confirm it. Ask **now** — if clearance is
+  required, that queue is longer than the parent forms and it, not the
+  paperwork, is the real gate on the pilot date.
+- **The non-consenting student.** §ג asks the school to define the alternative.
+  Worth knowing before they answer: the app cannot enforce it. `classroom.list`
+  shows every name to everyone and anyone can pick any name, so the roster is
+  the record of who consented, not a control on who plays.
 
 ## Known-good, do not re-litigate
 

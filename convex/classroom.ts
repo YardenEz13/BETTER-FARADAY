@@ -51,15 +51,42 @@ const AVATAR_COLORS = [
   "#06b6d4", "#ef4444", "#6366f1", "#14b8a6", "#f97316",
 ];
 
+/**
+ * Why a date and not a boolean: a checkbox records that someone clicked a
+ * checkbox. A date is a claim that can be checked against the school's paper
+ * file, which is the actual system of record.
+ *
+ * Returns the Hebrew error, or null when the date is usable.
+ */
+export function consentDateError(consentOn: string, today = new Date().toISOString().slice(0, 10)): string | null {
+  // Date.parse alone accepts "2026-13-45" in some engines and any RFC-2822
+  // string in all of them, so the shape is checked before the value.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(consentOn) || Number.isNaN(Date.parse(consentOn))) {
+    return "תאריך הסכמת ההורים חסר או לא תקין (YYYY-MM-DD)";
+  }
+  // A future date means nobody had a signed form in hand — the exact case this
+  // exists to stop. ISO dates compare correctly as strings.
+  if (consentOn > today) return "תאריך הסכמת ההורים לא יכול להיות בעתיד";
+  return null;
+}
+
+// Creating a student is the moment data collection on a minor begins, so it is
+// also the moment consent has to exist. `docs/parental-consent-he.md` promises
+// parents that nothing starts before a signed form comes back; this is the only
+// public door into the students table, so requiring the date here is what makes
+// that promise enforceable instead of aspirational.
 export const addStudent = mutation({
   args: {
     classroomId: v.id("classrooms"),
     name: v.string(),
+    consentOn: v.string(), // YYYY-MM-DD from the signed form
     homeworkTheme: v.optional(v.string()),
   },
-  handler: async (ctx, { classroomId, name, homeworkTheme }) => {
+  handler: async (ctx, { classroomId, name, consentOn, homeworkTheme }) => {
     const trimmed = name.trim();
     if (!trimmed) throw new Error("שם התלמיד ריק");
+    const consentError = consentDateError(consentOn);
+    if (consentError) throw new Error(consentError);
     // Spread avatar colors deterministically by current roster size.
     const existing = await ctx.db
       .query("students")
@@ -72,6 +99,7 @@ export const addStudent = mutation({
       avatarColor,
       streak: 0,
       level: 1,
+      consentOn,
       homeworkTheme: homeworkTheme?.trim() || undefined,
     });
   },

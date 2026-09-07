@@ -29,6 +29,12 @@ export default defineSchema({
     onboardedAt: v.optional(v.number()),   // ms epoch when the first-run welcome wizard was completed; absent = show onboarding
     dailyGoal: v.optional(v.number()),     // questions-per-day target (5-30); absent = DEFAULT_DAILY_GOAL
     hideFromLeaderboard: v.optional(v.boolean()), // per-student opt-out of the weekly class leaderboard
+    // Date (YYYY-MM-DD) the signed parental consent form was returned. Required
+    // by classroom.addStudent, so every student created through the app has one
+    // — the invariant is enforced at the door rather than audited afterwards.
+    // Optional here only so pre-consent rows (seeds, E2E) stay valid.
+    // The school's paper file is the system of record; this is the pointer to it.
+    consentOn: v.optional(v.string()),
   }).index("by_classroom", ["classroomId"]),
 
   topics: defineTable({

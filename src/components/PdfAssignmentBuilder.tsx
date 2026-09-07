@@ -48,6 +48,7 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
   const [studentId, setStudentId] = useState<Id<"students"> | "">("");
   const [deadlineDays, setDeadlineDays] = useState(14);
   const [newStudentName, setNewStudentName] = useState("");
+  const [consentOn, setConsentOn] = useState("");
   const [addingStudent, setAddingStudent] = useState(false);
 
   // ── PDF state ──
@@ -230,10 +231,10 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
 
   const handleAddStudent = async () => {
     const name = newStudentName.trim();
-    if (!name) return;
+    if (!name || !consentOn) return;
     setAddingStudent(true);
     try {
-      const id = await addStudent({ classroomId, name });
+      const id = await addStudent({ classroomId, name, consentOn });
       setStudentId(id);
       setNewStudentName("");
     } catch (err) {
@@ -472,11 +473,21 @@ export default function PdfAssignmentBuilder({ classroomId, onClose, onPublished
                     placeholder="…או צור תלמיד חדש"
                     onKeyDown={(e) => { if (e.key === "Enter") handleAddStudent(); }}
                     className="flex-1 bg-surface-container border-2 border-outline-variant rounded-lg px-3 py-1.5 text-on-surface text-sm focus:border-primary focus:outline-none" />
-                  <button onClick={handleAddStudent} disabled={!newStudentName.trim() || addingStudent}
+                  {/* Consent date is required by classroom.addStudent, so it is
+                      required here — a native date input rather than a picker
+                      dependency, and max=today matches the server's check. */}
+                  <input type="date" value={consentOn} onChange={(e) => setConsentOn(e.target.value)}
+                    max={new Date().toISOString().slice(0, 10)}
+                    title="תאריך טופס הסכמת ההורים החתום"
+                    className="bg-surface-container border-2 border-outline-variant rounded-lg px-2 py-1.5 text-on-surface text-sm focus:border-primary focus:outline-none" />
+                  <button onClick={handleAddStudent} disabled={!newStudentName.trim() || !consentOn || addingStudent}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-primary text-primary hover:bg-primary/10 font-label-md disabled:opacity-40" style={{ fontSize: "12.5px" }}>
                     {addingStudent ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />} צור
                   </button>
                 </div>
+                <p className="font-label-sm text-on-surface-variant mt-1">
+                  תאריך טופס ההסכמה החתום — אין להוסיף תלמיד לפני שהטופס חזר.
+                </p>
               </div>
 
               <div>
