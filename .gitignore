@@ -75,4 +75,4 @@ assets-src/question-cache.json
 
 # Resume checkpoint for the same script — which questions have been checked.
 # Derived; docs/question-review.md is the artifact worth keeping.
-assets-src/question-verdicts.json
+assets-src/question-verdicts*.json

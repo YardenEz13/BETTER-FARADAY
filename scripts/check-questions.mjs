@@ -26,6 +26,19 @@
  * review is a human job; this exists to point that human at the fifty questions
  * worth their afternoon instead of all 1,295.
  *
+ * ## The letter goes last, and that is not cosmetic
+ *
+ * The first version of this format was `<n>|<letter>|<confidence>|<why>`, which
+ * makes the model commit to an answer before it has done any arithmetic. The
+ * first full run flagged 82 questions; five sampled by hand were all false
+ * positives, and in three of them the model's own `why` field worked the problem
+ * correctly, concluded the stored answer was right, and the letter field beside
+ * it said something else. It had answered from pattern-match and then reasoned
+ * its way to the truth with nowhere to put it.
+ *
+ * So the reasoning field comes first and the letter is last, with the prompt
+ * saying so explicitly. Same tokens, same cost — the ordering is the whole fix.
+ *
  * ## It is not shown the answer
  *
  * The obvious version hands the model the question and its stored `correctIndex`
@@ -166,7 +179,9 @@ async function solve(batch) {
 `אתה בודק מאגר שאלות במתמטיקה לבגרות 5 יחידות. פתור כל שאלה בעצמך.
 
 לכל שאלה החזר שורה אחת בפורמט:
-<מספר שאלה>|<אות התשובה הנכונה>|<ביטחון: high או low>|<נימוק קצר במשפט אחד>
+<מספר שאלה>|<החישוב המלא, כולל התוצאה המספרית>|<ביטחון: high או low>|<אות התשובה>
+
+האות היא השדה האחרון — כתוב אותה רק אחרי שסיימת את החישוב, ורק אם היא תואמת לתוצאה שקיבלת.
 
 אם השאלה שגויה, דו-משמעית, חסרת נתונים, או שאף אפשרות אינה נכונה — החזר X כאות והסבר מה בדיוק לא תקין.
 אל תחזיר שום דבר מלבד השורות האלה.
@@ -198,11 +213,12 @@ ${body}`;
   const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
   const verdicts = new Map();
   for (const line of text.split("\n")) {
-    // It labels its lines "שאלה 3|B|high|…" rather than starting with the
-    // number, so the prefix is optional here. Anchored at line start either way:
-    // a loose match would pick digits out of the reasoning text.
-    const m = line.match(/^\s*(?:שאלה\s*)?(\d+)\s*\|\s*([A-HX])\s*\|\s*(high|low)\s*\|\s*(.*)$/i);
-    if (m) verdicts.set(Number(m[1]), { letter: m[2].toUpperCase(), confidence: m[3].toLowerCase(), why: m[4].trim() });
+    // It labels its lines "שאלה 3|…" rather than starting with the number, so
+    // the prefix is optional here. Anchored at both ends: the reasoning field is
+    // non-greedy and full of `|` from absolute values, so only the anchored tail
+    // tells us where it stops.
+    const m = line.match(/^\s*(?:שאלה\s*)?(\d+)\s*\|\s*(.*?)\s*\|\s*(high|low)\s*\|\s*([A-HX])\s*$/i);
+    if (m) verdicts.set(Number(m[1]), { why: m[2].trim(), confidence: m[3].toLowerCase(), letter: m[4].toUpperCase() });
   }
   // A batch that parses to nothing means the model changed shape on us, and
   // silently counting eight questions as "unparsed" hides that.
