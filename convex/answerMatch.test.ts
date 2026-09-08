@@ -56,6 +56,16 @@ const accept: Array<[string, string, string]> = [
   ["π", "\\pi", "pi"],
   ["2π", "6.283185307", "pi evaluated"],
 
+  // ── notation an adversarial pass found rejected ──
+  ["{2,5}", "{5,2}", "a set is unordered"],
+  ["90°", "90", "degree sign against a bare number"],
+  ["|x|", "abs(x)", "bars against the function form"],
+  ["|x-3|", "\\left|x-3\\right|", "bars against the LaTeX the symbol strip inserts"],
+  ["2<x<5", "x>2,x<5", "a chained range split into two constraints"],
+  ["2<x<5", "5>x>2", "a chained range written the other way round"],
+  ["x>2", "2<x", "an inequality written the other way round"],
+  ["x = ±2", "x=2,x=-2", "both branches of a ± answer"],
+
   // ── plain numbers still work ──
   ["670", "670", "integer"],
   ["30", "30.0", "trailing zero"],
@@ -81,6 +91,16 @@ const reject: Array<[string, string, string]> = [
   ["(4, 8)", "(8,4)", "coordinates transposed"],
   ["670", "", "empty answer"],
   ["670", "   ", "whitespace-only answer"],
+
+  // ── false accepts an adversarial pass found ──
+  ["abs(x)", "x", "dropping the absolute value — differs for negative x"],
+  ["sqrt(x^2)", "x", "dropping the absolute value — differs for negative x"],
+  ["x = ±2", "x = 2", "only the + branch of a ± answer"],
+  ["x = ±2", "x = -2", "only the − branch of a ± answer"],
+  ["1000", "1004", "a wrong integer inside the old flat rounding tolerance"],
+  ["17", "17.08", "a wrong value inside the old flat rounding tolerance"],
+  ["100", "100.4", "a wrong value inside the old flat rounding tolerance"],
+  ["x=100,x=100.4", "x=100.2,x=100.2", "one duplicated near-value covering two distinct roots"],
 ];
 
 describe("matchAnswer — answers that must be accepted", () => {
@@ -125,6 +145,19 @@ describe("matchAnswer — verdicts", () => {
     expect(matchAnswer("√2", "\\sqrt{2}").readAs).toBe("sqrt(2)");
   });
 
+  it("accepts a decimal rounded to the precision the student actually wrote", () => {
+    // 1.414 is √2 to three places; 1.41 is √2 to two. Both are honest roundings.
+    expect(matchAnswer("√2", "1.414").verdict).toBe("rounded");
+    expect(matchAnswer("√2", "1.41").verdict).toBe("rounded");
+  });
+
+  it("does not treat a wrong number as a rounding just because it is close", () => {
+    // The tolerance comes from the student's own written precision, so "1004"
+    // claims integer precision and is 4 out — not a rounding of 1000.
+    expect(matchAnswer("1000", "1004").verdict).toBe("wrong");
+    expect(matchAnswer("17", "17.08").verdict).toBe("wrong");
+  });
+
   it("marks an unparseable stored answer as unparsed, not wrong", () => {
     // "ראה הוכחה מלאה" is a real stored correctAnswer on proof sections.
     expect(matchAnswer("ראה הוכחה מלאה", "5").verdict).toBe("unparsed");
@@ -146,6 +179,25 @@ describe("canonicalize", () => {
     expect(() => canonicalize("\\frac{1}")).not.toThrow();
     expect(() => canonicalize("\\sqrt{")).not.toThrow();
     expect(() => canonicalize("{{{{{")).not.toThrow();
+  });
+});
+
+describe("hostile input", () => {
+  it("refuses an absurdly long answer instead of parsing it", () => {
+    const deep = "(".repeat(2000) + "1" + ")".repeat(2000);
+    expect(() => matchAnswer("1", deep)).not.toThrow();
+    expect(matchAnswer("1", deep).verdict).toBe("unparsed");
+  });
+
+  it("does not blow the stack on a long operator chain", () => {
+    const chain = "1+".repeat(20000) + "1";
+    expect(() => matchAnswer("20001", chain)).not.toThrow();
+  });
+
+  it("refuses nesting deeper than any real answer", () => {
+    // Under the length cap, so this exercises the parser's own depth guard.
+    expect(() => compile("(".repeat(200) + "1" + ")".repeat(200))).not.toThrow();
+    expect(compile("(".repeat(200) + "1" + ")".repeat(200))).toBeNull();
   });
 });
 

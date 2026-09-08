@@ -5,7 +5,7 @@ import { Id, Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
 import { compoundQuestionsForTopics } from "./compoundQuestions";
-import { matchAnswer, type MatchResult } from "./answerMatch";
+import { matchAnswer, AUTO_GRADED_TYPES, type MatchResult } from "./answerMatch";
 
 // Shared helper: schedule the per-student fan-out for a homework doc. Used by
 // immediate publish (createHomework), scheduled auto-publish (publishScheduled),
@@ -554,6 +554,14 @@ async function gradeSectionAnswer(
     const cq = await ctx.db.get(aq.compoundQuestionId);
     const section = cq?.sections.find((s) => s.label === sectionLabel);
     if (!section) return { correct: false, verdict: "unparsed", readAs };
+    // Only value-compare the types that ARE a value. A proof section is graded
+    // step by step by proofGrading, and the client routes it there — but the
+    // client is not a security boundary (studentId is a client-supplied arg,
+    // see CLAUDE.md), and blind value-matching a proof against the sentence in
+    // its `correctAnswer` would be nonsense. exams.ts gates the same way.
+    if (!AUTO_GRADED_TYPES.has(section.answerType)) {
+      return { correct: false, verdict: "unparsed", readAs };
+    }
     return matchAnswer(section.correctAnswer, studentAnswer, section.answerType);
   }
 

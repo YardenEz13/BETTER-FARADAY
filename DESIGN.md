@@ -164,6 +164,15 @@ on every miss would be most of the Gemini budget. An adjudication that overturns
 `questionReports` row — an answer our parser cannot read is usually a badly formatted question, and the
 bank is machine-authored.
 
+Two policies inside it are load-bearing and were both set by an adversarial pass that broke the first
+version. Rounding is allowed **to the precision the student actually wrote** — "1.414" claims three
+decimals and is a fair rounding of √2, while "1004" claims integer precision and is simply not 1000; the
+flat 0.5% tolerance it replaced accepted both. And the sample points **straddle zero**, because an
+all-positive sample set cannot tell `abs(x)` from `x`.
+
+One known gap, left deliberately: `1,5` is read as two answers, not as 1.5. Israeli notation uses a
+decimal point, and treating the comma as a decimal separator would break every solution set.
+
 **Adding an answer type:** put it in `AUTO_GRADED_TYPES` only if `matchAnswer` can decide it. Anything
 else stays self-check. Every new form goes in the golden set in `convex/answerMatch.test.ts` — a row for
 what must be accepted and, more importantly, a row for the near-miss that must still be rejected.

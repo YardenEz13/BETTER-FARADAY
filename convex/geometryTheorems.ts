@@ -205,13 +205,33 @@ function tokens(text: string): string[] {
     .filter((w) => w && !STOPWORDS.has(w));
 }
 
-/** Two tokens match if they are equal, or differ only by one glued prefix. */
-function tokenMatches(a: string, b: string): boolean {
-  if (a === b) return true;
-  if (a.length > b.length) return tokenMatches(b, a);
-  // a is the shorter one; b may carry one or two prefix letters.
-  if (b.length - a.length === 1 && PREFIXES.includes(b[0]) && b.slice(1) === a) return true;
-  if (b.length - a.length === 2 && PREFIXES.includes(b[0]) && PREFIXES.includes(b[1]) && b.slice(2) === a) return true;
+/** Words that reverse the sentence they introduce, so the theorem after them is
+ *  being ruled out rather than cited. */
+const NEGATIONS = new Set(["לא", "אינו", "אינה", "אינמ", "איננו", "אינ", "בלי", "ללא", "שלא"]);
+
+/**
+ * Shortest alias token that may be reached through prefix-stripping.
+ *
+ * Hebrew glues prefixes onto nouns, so "במקבילית" has to reach "מקבילית". But
+ * applied to a two-letter abbreviation the same rule turns any ordinary word
+ * into a theorem citation: "לזז" ("to move") strips to "זז", the ז.ז
+ * similarity abbreviation, and an admission of "I can't move the point" was
+ * scoring full marks. Short aliases must be written exactly.
+ */
+const MIN_PREFIXABLE = 3;
+
+/**
+ * Does a token from the student's text refer to this alias token?
+ *
+ * Asymmetric on purpose: the student's text may carry glued prefixes, the
+ * canonical alias does not.
+ */
+function tokenMatches(hayToken: string, aliasToken: string): boolean {
+  if (hayToken === aliasToken) return true;
+  if (aliasToken.length < MIN_PREFIXABLE) return false;
+  const extra = hayToken.length - aliasToken.length;
+  if (extra === 1 && PREFIXES.includes(hayToken[0]) && hayToken.slice(1) === aliasToken) return true;
+  if (extra === 2 && PREFIXES.includes(hayToken[0]) && PREFIXES.includes(hayToken[1]) && hayToken.slice(2) === aliasToken) return true;
   return false;
 }
 
@@ -223,13 +243,17 @@ function tokenMatches(a: string, b: string): boolean {
  * words. An order-blind (multiset) match made SAS/ASA/SAA mutually
  * indistinguishable, which would have let a wrong justification pass as right.
  */
-function covers(hay: string[], needle: string[]): boolean {
-  if (needle.length === 0) return false;
+function covers(hay: string[], needle: string[]): { start: number } | null {
+  if (needle.length === 0) return null;
   let i = 0;
-  for (const h of hay) {
-    if (i < needle.length && tokenMatches(h, needle[i])) i++;
+  let start = -1;
+  for (let h = 0; h < hay.length; h++) {
+    if (i < needle.length && tokenMatches(hay[h], needle[i])) {
+      if (i === 0) start = h;
+      i++;
+    }
   }
-  return i === needle.length;
+  return i === needle.length ? { start } : null;
 }
 
 /**
@@ -244,16 +268,33 @@ export function resolveTheorem(text: string): string | null {
   if (words.length === 0) return null;
 
   let best: { id: string; score: number } | null = null;
+  let tiedWithAnother = false;
+
   for (const th of THEOREMS) {
     for (const alias of [th.canonicalHe, ...th.aliases]) {
       const aliasWords = tokens(alias);
       if (aliasWords.length === 0) continue;
-      if (!covers(words, aliasWords)) continue;
+      const hit = covers(words, aliasWords);
+      if (!hit) continue;
+      // "זה לא צלע זווית צלע" names the theorem in order to rule it out.
+      if (hit.start > 0 && NEGATIONS.has(words[hit.start - 1])) continue;
+
       const score = aliasWords.length;
-      if (!best || score > best.score) best = { id: th.id, score };
+      if (!best || score > best.score) {
+        best = { id: th.id, score };
+        tiedWithAnother = false;
+      } else if (score === best.score && th.id !== best.id) {
+        tiedWithAnother = true;
+      }
     }
   }
-  return best?.id ?? null;
+
+  // Two different theorems fit the text equally well — a sentence that mentions
+  // "מאונכים" in passing and cites "צ.ז.צ" as the reason, say. Picking one would
+  // be a coin flip presented as a fact, and this verdict overrides the model, so
+  // it stays silent and lets the model read the sentence.
+  if (!best || tiedWithAnother) return null;
+  return best.id;
 }
 
 /**

@@ -83,6 +83,28 @@ describe("resolveTheorem — refusing to guess", () => {
   });
 });
 
+describe("resolveTheorem — adversarial cases", () => {
+  it("does not read an ordinary Hebrew word as a theorem abbreviation", () => {
+    // "לזז" (to move) prefix-strips to "זז", the ז.ז similarity abbreviation.
+    // A two-letter abbreviation is too small to survive prefix tolerance.
+    expect(resolveTheorem("אי אפשר לזז את הנקודה כי אין מספיק מידע")).toBeNull();
+  });
+
+  it("stays silent when the text points at two different theorems equally", () => {
+    // "מאונכים" and "צ.ז.צ" both match at one token. Picking either would be a
+    // coin flip presented as a fact; leave it to the model.
+    expect(resolveTheorem("לפי ההגדרה, מאונכים אלה לא שווים אבל בגלל צ.ז.צ המשולשים חופפים")).toBeNull();
+  });
+
+  it("does not match a theorem the student is explicitly ruling out", () => {
+    expect(resolveTheorem("יש כאן זווית ואז צלע ואז זווית, זה לא צלע זווית צלע")).toBeNull();
+  });
+
+  it("still matches when a negation is elsewhere in the sentence", () => {
+    expect(resolveTheorem("הזוויות לא שוות בגלל צלע זווית צלע")).toBe("sas");
+  });
+});
+
 describe("canonicalNameOf", () => {
   it("gives a student the formal name for their informal phrasing", () => {
     expect(canonicalNameOf("כי במקבילית האלכסונים חוצים זה את זה"))

@@ -54,7 +54,19 @@ export const AUTO_GRADED_TYPES = new Set(["numeric", "expression", "range", "coo
  * answer is a tuple, a "range" answer is an inequality); the comparison itself
  * is the same numeric one throughout.
  */
+/**
+ * Longest answer we will try to parse. No real answer is close to this; a
+ * multi-kilobyte one is either a paste accident or someone probing the
+ * recursive-descent parser for a stack overflow. `studentId` is a
+ * client-supplied arg with no auth (see CLAUDE.md), so this input reaches the
+ * grading mutation directly and a RangeError here would crash it.
+ */
+const MAX_INPUT = 1000;
+
 export function matchAnswer(correct: string, student: string, answerType = "expression"): MatchResult {
+  if (student.length > MAX_INPUT || correct.length > MAX_INPUT) {
+    return { correct: false, verdict: "unparsed", readAs: student.slice(0, 80) };
+  }
   const readAs = canonicalize(student);
   const want = canonicalize(correct);
   if (!readAs) return { correct: false, verdict: "wrong", readAs: "" };
@@ -62,19 +74,34 @@ export function matchAnswer(correct: string, student: string, answerType = "expr
 
   if (readAs === want) return { correct: true, verdict: "exact", readAs };
 
+  // ± is a two-answer shorthand, so expand it into the pair it stands for.
+  // Collapsing it to one branch (as taking the principal value would) accepts
+  // a student who gave half the solution set — and, worse, accepts the "+"
+  // half while rejecting the "−" half.
+  // Chained and reversed relations are rewritten into a comparable set of
+  // constraints, so 2<x<5, 5>x>2 and x>2,x<5 all reach the same shape.
+  const wantX = normalizeRelations(expandPlusMinus(want));
+  const gotX = normalizeRelations(expandPlusMinus(readAs));
+
   // Multi-part answers ("x=pi/4, x=5pi/4", "(4,8)") compare part-wise. Tuples
   // are ordered, solution sets are not — coordinates are the ordered case.
-  const wantParts = splitParts(want);
-  const studentParts = splitParts(readAs);
+  const wantParts = splitParts(wantX);
+  const studentParts = splitParts(gotX);
   if (wantParts.length > 1 || studentParts.length > 1) {
     if (wantParts.length !== studentParts.length) {
       return { correct: false, verdict: "wrong", readAs };
     }
-    const ordered = answerType === "coordinates" || isTuple(want);
+    const ordered = answerType === "coordinates" || isTuple(wantX);
     return matchParts(wantParts, studentParts, ordered, readAs);
   }
 
-  return matchSingle(want, readAs, readAs);
+  return matchSingle(wantX, gotX, readAs);
+}
+
+/** "x=±2" → "x=+2,x=-2" — the two answers it is shorthand for. */
+function expandPlusMinus(s: string): string {
+  if (!s.includes("±")) return s;
+  return `${s.replace(/±/g, "+")},${s.replace(/±/g, "-")}`;
 }
 
 /* ───────────────────────── canonicalisation ───────────────────────── */
@@ -122,7 +149,10 @@ export function canonicalize(input: string): string {
     .replace(/\\alpha|α/g, "alpha")
     .replace(/\\beta|β/g, "beta")
     .replace(/\\theta|θ/g, "theta")
-    .replace(/\\degree|°/g, "deg")
+    // Degrees are the default unit in this curriculum and both sides get the
+    // same treatment, so the marker carries no information. Left in, "deg"
+    // parses as the variables d·e·g and 90° stops equalling 90.
+    .replace(/\\degree|°/g, "")
     .replace(/√/g, "sqrt")
     .replace(/[−–—]/g, "-")             // U+2212 and dashes are not hyphens
     .replace(/[’′']/g, "'");
@@ -135,8 +165,15 @@ export function canonicalize(input: string): string {
   // Remaining LaTeX function commands (\sin → sin).
   for (const fn of FUNCTION_WORDS) s = s.split("\\" + fn).join(fn);
 
-  // Braces are LaTeX grouping — parentheses mean the same thing to the parser.
-  s = s.replace(/[{}]/g, (m) => (m === "{" ? "(" : ")"));
+  // |x| is how absolute value is written on paper and what the symbol strip
+  // inserts (\left|…\right|, whose commands are stripped just above).
+  s = barsToAbs(s);
+
+  // Braces are usually LaTeX grouping, and parentheses mean the same thing to
+  // the parser — but {2,5} is a solution SET, and turning it into (2,5) makes
+  // it look like an ordered pair, so reordering it would be marked wrong.
+  // Only comma-free groups become parentheses.
+  s = groupingBracesToParens(s);
   // Subscripts identify a variable (a_1), so fold them into the name.
   s = s.replace(/_/g, "");
   // Anything still backslashed is a command we do not model; drop the marker
@@ -149,6 +186,32 @@ export function canonicalize(input: string): string {
   // Trailing punctuation a student adds out of habit.
   s = s.replace(/[.;]+$/g, "");
   return s;
+}
+
+/** `|x-3|` → `abs(x-3)`. Innermost-first, so nesting resolves outward. */
+function barsToAbs(s: string): string {
+  let out = s;
+  let guard = 0;
+  for (;;) {
+    const m = /\|([^|]*)\|/.exec(out);
+    if (!m || guard++ > 50) break;
+    out = out.slice(0, m.index) + `abs(${m[1]})` + out.slice(m.index + m[0].length);
+  }
+  return out;
+}
+
+/** Braces that group become parens; braces that hold a list stay a set. */
+function groupingBracesToParens(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length;) {
+    if (s[i] !== "{") { out += s[i++]; continue; }
+    const g = readGroup(s, i);
+    if (!g) { i++; continue; }  // unbalanced — drop the stray brace
+    const body = groupingBracesToParens(g.body);
+    out += topLevelSplit(body, ",").length > 1 ? `{${body}}` : `(${body})`;
+    i = g.end;
+  }
+  return out;
 }
 
 /** Read a balanced {...} group starting at `i` (which must index the "{"). */
@@ -240,14 +303,16 @@ function tightenBareRoots(s: string): string {
 /* ────────────────────────── structural splitting ────────────────────────── */
 
 const isTuple = (s: string) => /^\(.*,.*\)$/.test(s) && topLevelSplit(s.slice(1, -1), ",").length > 1;
+/** {2,5} — a solution set, which is unordered. */
+const isSet = (s: string) => /^\{.*\}$/.test(s);
 
 /** Split on top-level commas, ignoring commas nested inside brackets. */
 function topLevelSplit(s: string, sep: string): string[] {
   const out: string[] = [];
   let depth = 0, cur = "";
   for (const ch of s) {
-    if (ch === "(" || ch === "[") depth++;
-    else if (ch === ")" || ch === "]") depth--;
+    if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") depth--;
     if (ch === sep && depth === 0) { out.push(cur); cur = ""; } else cur += ch;
   }
   out.push(cur);
@@ -256,7 +321,7 @@ function topLevelSplit(s: string, sep: string): string[] {
 
 /** A "(4,8)" tuple or an "x=1,x=2" solution set becomes its component parts. */
 function splitParts(s: string): string[] {
-  const inner = isTuple(s) ? s.slice(1, -1) : s;
+  const inner = isTuple(s) || isSet(s) ? s.slice(1, -1) : s;
   return topLevelSplit(inner, ",");
 }
 
@@ -271,6 +336,12 @@ function matchParts(want: string[], got: string[], ordered: boolean, readAs: str
     return { correct: true, verdict, readAs, note: verdict === "rounded" ? ROUNDED_NOTE : undefined };
   }
   // Unordered: every wanted part must be claimed by a distinct student part.
+  // Distinct expected answers need distinct student answers — otherwise one
+  // repeated value that is near both of them covers the pair, and the student
+  // never named either root.
+  if (new Set(want).size === want.length && new Set(got).size !== got.length) {
+    return { correct: false, verdict: "wrong", readAs };
+  }
   const taken = new Set<number>();
   let verdict: MatchVerdict = "exact";
   for (const w of want) {
@@ -286,15 +357,71 @@ function matchParts(want: string[], got: string[], ordered: boolean, readAs: str
 const ROUNDED_NOTE = "נכון — התשובה שלך מעוגלת, הערך המדויק קצת שונה.";
 const RELATIONS = ["<=", ">=", "!=", "=", "<", ">"] as const;
 
+const FLIP: Record<string, string> = { "<": ">", ">": "<", "<=": ">=", ">=": "<=", "=": "=", "!=": "!=" };
+
+/** Every top-level relation operator in `s`, with the operands between them. */
+function scanRelations(s: string): { operands: string[]; ops: string[] } {
+  const operands: string[] = [];
+  const ops: string[] = [];
+  let depth = 0, cur = "";
+  for (let i = 0; i < s.length;) {
+    const ch = s[i];
+    if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") depth--;
+    const op = depth === 0 ? RELATIONS.find((r) => s.startsWith(r, i)) : undefined;
+    if (op && cur !== "") {
+      operands.push(cur);
+      ops.push(op);
+      cur = "";
+      i += op.length;
+      continue;
+    }
+    cur += ch;
+    i++;
+  }
+  operands.push(cur);
+  return { operands, ops };
+}
+
+/**
+ * Rewrite every part into constraints with the variable on the left.
+ *
+ * A range is written three interchangeable ways — 2<x<5, 5>x>2, and
+ * "x>2, x<5" — and comparing them as text makes two of the three wrong. This
+ * turns all of them into the same pair of constraints, which the unordered
+ * part matcher then compares.
+ */
+function normalizeRelations(s: string): string {
+  return topLevelSplit(s, ",").map(normalizeOnePart).join(",") || s;
+}
+
+function normalizeOnePart(part: string): string {
+  const { operands, ops } = scanRelations(part);
+  if (ops.length === 0) return part;
+  if (ops.length === 1) return orientConstraint(operands[0], ops[0], operands[1]);
+  if (ops.length === 2) {
+    // a < x < b  ⇒  x > a , x < b
+    return [
+      orientConstraint(operands[1], FLIP[ops[0]] ?? ops[0], operands[0]),
+      orientConstraint(operands[1], ops[1], operands[2]),
+    ].join(",");
+  }
+  return part; // deeper chains are not a shape this curriculum produces
+}
+
+/** "2<x" → "x>2": the side carrying the unknown leads. */
+function orientConstraint(lhs: string, op: string, rhs: string): string {
+  const leftHasVars = (compile(lhs)?.vars.length ?? 0) > 0;
+  const rightHasVars = (compile(rhs)?.vars.length ?? 0) > 0;
+  if (!leftHasVars && rightHasVars) return `${rhs}${FLIP[op] ?? op}${lhs}`;
+  return `${lhs}${op}${rhs}`;
+}
+
 /** Split "x>=2" into its relation parts; null when there is no relation. */
 function splitRelation(s: string): { lhs: string; op: string; rhs: string } | null {
-  for (const op of RELATIONS) {
-    const at = s.indexOf(op);
-    if (at > 0 && at + op.length < s.length) {
-      return { lhs: s.slice(0, at), op, rhs: s.slice(at + op.length) };
-    }
-  }
-  return null;
+  const { operands, ops } = scanRelations(s);
+  if (ops.length !== 1 || !operands[0] || !operands[1]) return null;
+  return { lhs: operands[0], op: ops[0], rhs: operands[1] };
 }
 
 /* ───────────────────────────── comparison ───────────────────────────── */
@@ -326,37 +453,31 @@ function matchSingle(want: string, got: string, readAs: string): MatchResult {
 }
 
 function decide(want: string, got: string, readAs: string): MatchResult {
-  const a = compile(want);
-  const b = compile(got);
-  if (!a || !b) return { correct: false, verdict: "unparsed", readAs };
-
-  const cmp = compare(a, b);
-  if (cmp === "equal") return { correct: true, verdict: "equivalent", readAs };
-  if (cmp === "rounded") return { correct: true, verdict: "rounded", readAs, note: ROUNDED_NOTE };
-  if (cmp === "undecidable") return { correct: false, verdict: "unparsed", readAs };
+  const r = agree(want, got);
+  if (!r.parsed) return { correct: false, verdict: "unparsed", readAs };
+  if (r.rounded) return { correct: true, verdict: "rounded", readAs, note: ROUNDED_NOTE };
+  if (r.ok) return { correct: true, verdict: "equivalent", readAs };
   return { correct: false, verdict: "wrong", readAs };
 }
 
-function numericEqual(want: string, got: string): boolean {
-  const a = compile(want);
-  const b = compile(got);
-  if (!a || !b) return false;
-  const cmp = compare(a, b);
-  return cmp === "equal" || cmp === "rounded";
-}
+const numericEqual = (want: string, got: string): boolean => agree(want, got).ok;
 
-/** Sample points chosen to dodge the usual poles and branch cuts. */
-const SAMPLES = [0.7371, 1.2113, 2.3319, 3.7177, 0.4211, 5.1379, 1.8887, 4.4643];
+/**
+ * Sample points, deliberately straddling zero. An all-positive sample set
+ * cannot tell abs(x) from x, or sqrt(x^2) from x — a student who dropped the
+ * absolute value scored full marks. Points that fall outside a function's
+ * domain evaluate to NaN and are skipped, so the negatives cost nothing.
+ */
+const SAMPLES = [0.7371, -1.2113, 2.3319, -3.7177, 0.4211, -5.1379, 1.8887, 4.4643];
 const EXACT_TOL = 1e-9;
-const ROUND_TOL = 5e-3;
 
 type Compiled = { vars: string[]; eval: (env: Record<string, number>) => number };
 
-function compare(a: Compiled, b: Compiled): "equal" | "rounded" | "different" | "undecidable" {
+/** Largest absolute and relative gap between two expressions over the samples. */
+function compare(a: Compiled, b: Compiled): { status: "equal" | "different" | "undecidable"; maxAbs: number } {
   const vars = [...new Set([...a.vars, ...b.vars])];
-  // A variable only one side mentions means they cannot be the same function,
-  // unless it cancels — the sampling below settles that either way.
   let worstRel = 0;
+  let worstAbs = 0;
   let usable = 0;
 
   const trials = vars.length === 0 ? 1 : SAMPLES.length;
@@ -367,13 +488,42 @@ function compare(a: Compiled, b: Compiled): "equal" | "rounded" | "different" | 
     const y = b.eval(env);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue; // outside a domain
     usable++;
-    const scale = Math.max(1, Math.abs(x), Math.abs(y));
-    worstRel = Math.max(worstRel, Math.abs(x - y) / scale);
+    const diff = Math.abs(x - y);
+    worstAbs = Math.max(worstAbs, diff);
+    worstRel = Math.max(worstRel, diff / Math.max(1, Math.abs(x), Math.abs(y)));
   }
-  if (usable === 0) return "undecidable";
-  if (worstRel <= EXACT_TOL) return "equal";
-  if (worstRel <= ROUND_TOL) return "rounded";
-  return "different";
+  if (usable === 0) return { status: "undecidable", maxAbs: Infinity };
+  return { status: worstRel <= EXACT_TOL ? "equal" : "different", maxAbs: worstAbs };
+}
+
+/** Decimal places in a plain number literal; null when it is not one. */
+function writtenDecimals(s: string): number | null {
+  const m = /^[+-]?\d+(?:\.(\d+))?$/.exec(s);
+  return m ? (m[1]?.length ?? 0) : null;
+}
+
+/**
+ * Do these two expressions agree, and if so was it only after rounding?
+ *
+ * The rounding allowance comes from the student's OWN written precision, not a
+ * flat percentage: "1.414" claims three decimals and is a fair rounding of √2,
+ * while "1004" claims integer precision and is simply not 1000. A flat 0.5%
+ * tolerance accepted both, and let one repeated near-value cover two distinct
+ * roots in a solution set.
+ */
+function agree(want: string, got: string): { ok: boolean; rounded: boolean; parsed: boolean } {
+  const a = compile(want);
+  const b = compile(got);
+  if (!a || !b) return { ok: false, rounded: false, parsed: false };
+  const cmp = compare(a, b);
+  if (cmp.status === "undecidable") return { ok: false, rounded: false, parsed: false };
+  if (cmp.status === "equal") return { ok: true, rounded: false, parsed: true };
+
+  const decimals = writtenDecimals(got);
+  if (decimals !== null && cmp.maxAbs <= 0.5 * Math.pow(10, -decimals) * (1 + 1e-9)) {
+    return { ok: true, rounded: true, parsed: true };
+  }
+  return { ok: false, rounded: false, parsed: true };
 }
 
 /* ─────────────────────────── expression parser ─────────────────────────── */
@@ -389,12 +539,16 @@ const FUNCTIONS: Record<string, (x: number) => number> = {
   cot: (x) => 1 / Math.tan(x), sec: (x) => 1 / Math.cos(x), csc: (x) => 1 / Math.sin(x),
 };
 
-export function compile(src: string): Compiled | null {
-  // ± has no single value; take the principal branch so at least one form
-  // compares, rather than failing the whole answer.
-  const s = src.replace(/±/g, "+");
-  if (!s) return null;
+/** Deeper than any real answer; the guard is against a crafted stack overflow. */
+const MAX_DEPTH = 64;
+
+export function compile(s: string): Compiled | null {
+  // ± is expanded into both answers before we get here (see expandPlusMinus).
+  // Quietly taking the principal branch instead would accept a student who
+  // gave only one of the two roots.
+  if (!s || s.length > MAX_INPUT || s.includes("±")) return null;
   let i = 0;
+  let depth = 0;
   const vars = new Set<string>();
 
   type Node = (env: Record<string, number>) => number;
@@ -453,7 +607,9 @@ export function compile(src: string): Compiled | null {
 
   function parseAtom(): Node | null {
     if (eat("(")) {
+      if (++depth > MAX_DEPTH) return null;
       const inner = parseExpr();
+      depth--;
       if (!inner || !eat(")")) return null;
       return inner;
     }
