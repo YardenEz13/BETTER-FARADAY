@@ -658,6 +658,9 @@ export const Trophy = makeIcon({ paths: ["M20 12 H44 V26 A12 12 0 0 1 20 26 Z", 
 export const Activity = makeIcon({ paths: ["M6 32 H20 L26 16 L34 48 L40 32 H58"] });
 export const TrendingUp = makeIcon({ paths: ["M8 44 L26 26 L36 36 L56 16", "M44 16 H56 V28"] });
 export const Target = makeIcon({ rings: [[32, 32, 22], [32, 32, 13]], dots: [[32, 32, 4]] });
+// Viewfinder — the focus-mode toggle. A frame that crops the world down to one
+// thing, which is exactly what the mode does.
+export const Focus = makeIcon({ paths: ["M10 22 V14 A4 4 0 0 1 14 10 H22", "M42 10 H50 A4 4 0 0 1 54 14 V22", "M54 42 V50 A4 4 0 0 1 50 54 H42", "M22 54 H14 A4 4 0 0 1 10 50 V42"], dots: [[32, 32, 5]] });
 
 export const ELECTRIC_ICONS = {
   // physics family
@@ -754,6 +757,7 @@ export const ELECTRIC_ICONS = {
   activity: Activity,
   trendingUp: TrendingUp,
   target: Target,
+  focus: Focus,
 } as const;
 
 export type ElectricIconName = keyof typeof ELECTRIC_ICONS;

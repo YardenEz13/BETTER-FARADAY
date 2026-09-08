@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/react";
 import App from "./App";
 import PrototypeGate from "./components/PrototypeGate";
 import { ThemeProvider } from "./components/ThemeContext";
+import { FocusModeProvider } from "./components/FocusModeContext";
 import { reportToUser } from "./lib/errors";
 import "./index.css";
 
@@ -49,11 +50,13 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider>
-      <PrototypeGate>
-        <ConvexProvider client={convex}>
-          <App />
-        </ConvexProvider>
-      </PrototypeGate>
+      <FocusModeProvider>
+        <PrototypeGate>
+          <ConvexProvider client={convex}>
+            <App />
+          </ConvexProvider>
+        </PrototypeGate>
+      </FocusModeProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

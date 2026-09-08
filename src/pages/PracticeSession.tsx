@@ -15,6 +15,7 @@ import FaradayRig, { type RigMood } from "../components/FaradayRig";
 import SessionRecap from "../components/SessionRecap";
 import FaradayCanvas from "../components/FaradayCanvas";
 import { ThemeToggle } from "../components/ThemeContext";
+import { useFocusMode, FocusToggle } from "../components/FocusModeContext";
 import MathText from "../components/MathText";
 import ReportQuestionButton from "../components/ReportQuestionButton";
 import { Lightbulb as ElectricBulb, Battery, SparkBurst } from "../components/electric";
@@ -79,7 +80,12 @@ export default function PracticeSession() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   // Faraday personality pop-in reacting to the last answer
   const [reaction, setReaction] = useState<{ kind: FaradayReactionKind; count?: number } | null>(null);
-  const reducedMotion = !!useReducedMotion();
+  // Focus mode folds into reducedMotion: the card flash, the shake, the flying
+  // XP, the choice stagger and the spark burst are all already gated on it.
+  // What it does not cover — sound, fireStreak, the mascot, the chrome — is
+  // gated on `focus` explicitly below.
+  const { focus } = useFocusMode();
+  const reducedMotion = !!useReducedMotion() || focus;
 
   const openChat = () => faraday.open({
     studentId: studentId!,
@@ -236,35 +242,41 @@ export default function PracticeSession() {
     if (isCorrect) {
       setSessionXP(x => x + xpGained);
       setEarnedXP(xpGained);
-      setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 1800);
+      if (!focus) {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 1800);
+      }
       flashCard("correct");
-      playSpark();
+      if (!focus) playSpark();
       if (choiceEl && !reducedMotion) {
         const r = choiceEl.getBoundingClientRect();
         fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
         flyXP(r, xpGained);
       }
-      if (newCombo >= 3) fireStreak(newCombo);
+      if (newCombo >= 3 && !focus) fireStreak(newCombo);
       setWrongStreak(0);
       // Faraday reacts to every correct answer — streak milestones get the
       // louder line. (This was throttled to ~1-in-3; students read the silence
       // as him missing the answer, especially right after a wrong one.)
-      if (newCombo === 3 || newCombo === 5 || newCombo === 10) {
-        setReaction({ kind: "streak", count: newCombo });
-      } else {
-        setReaction({ kind: "correct" });
+      if (!focus) {
+        if (newCombo === 3 || newCombo === 5 || newCombo === 10) {
+          setReaction({ kind: "streak", count: newCombo });
+        } else {
+          setReaction({ kind: "correct" });
+        }
       }
     } else {
       flashCard("wrong");
-      playBuzz();
+      if (!focus) playBuzz();
       shakeCard();
       // Faraday reacts on every wrong answer with a gentle, growth-minded line
-      setReaction({ kind: "wrong" });
+      if (!focus) setReaction({ kind: "wrong" });
       // Proactive Faraday: after two misses in a row he offers help himself.
+      // In focus mode he stays put — a card sliding in over the work is the
+      // interruption, and the header button already says he is there.
       setWrongStreak(w => {
         const next = w + 1;
-        if (next >= 2 && !chatOpen && !nudgeDismissed) setShowNudge(true);
+        if (next >= 2 && !chatOpen && !nudgeDismissed && !focus) setShowNudge(true);
         return next;
       });
     }
@@ -342,7 +354,7 @@ export default function PracticeSession() {
     <div className="min-h-screen bg-background relative overflow-x-hidden">
 
       {/* ── Faraday-effect polarization field (full-bleed backdrop) ── */}
-      <FaradayCanvas variant="effect" style={{ position: 'fixed', zIndex: 0 }} />
+      {!focus && <FaradayCanvas variant="effect" style={{ position: 'fixed', zIndex: 0 }} />}
 
       {/* ── Top nav ── */}
       <motion.header
@@ -364,19 +376,24 @@ export default function PracticeSession() {
         {/* Session stats */}
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Charge meter — builds with each correct answer in a row */}
-          <ChargeMeter combo={combo} max={CHARGE_MAX} />
-          {/* Questions chip */}
+          {!focus && <ChargeMeter combo={combo} max={CHARGE_MAX} />}
+          {/* Questions chip — the one counter focus mode keeps: it says how far
+              into the round you are, and it is the same number the question
+              card is headed with. */}
           <div className="stat-chip">
             <Activity size={13} className="text-primary" />
             <span key={questionsAnswered} className="num font-bold text-sm text-on-surface pop">{questionsAnswered}</span>
             <span className="text-xs text-on-surface-variant">שאלות</span>
           </div>
           {/* XP chip — the number pops on every increment (keyed re-mount) */}
-          <div className="stat-chip" ref={xpChipRef}>
-            <Zap size={13} className="text-tertiary" />
-            <span key={sessionXP} className="num font-bold text-sm text-tertiary pop">+{sessionXP}</span>
-            <span className="text-xs text-on-surface-variant">XP</span>
-          </div>
+          {!focus && (
+            <div className="stat-chip" ref={xpChipRef}>
+              <Zap size={13} className="text-tertiary" />
+              <span key={sessionXP} className="num font-bold text-sm text-tertiary pop">+{sessionXP}</span>
+              <span className="text-xs text-on-surface-variant">XP</span>
+            </div>
+          )}
+          <FocusToggle />
           <ThemeToggle />
           {questionsAnswered > 0 && (
             <button
@@ -421,7 +438,7 @@ export default function PracticeSession() {
               `lg` the sidebar does, so there is exactly one streak display at
               every width — they were split at `sm`, which left tablets showing
               the header meter and no Faraday at all. */}
-          <div className="lg:hidden rounded-2xl border-2 border-outline bg-surface px-4 py-3 flex items-center gap-4" style={{ boxShadow: 'var(--shadow-clay)' }}>
+          <div className={`${focus ? "hidden" : "lg:hidden"} rounded-2xl border-2 border-outline bg-surface px-4 py-3 flex items-center gap-4`} style={{ boxShadow: 'var(--shadow-clay)' }}>
             {!rigVisible && <FaradayRig mood={rigMood} px={84} className="flex-shrink-0" />}
             <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
@@ -483,15 +500,20 @@ export default function PracticeSession() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       <span className="badge">שאלה #{questionsAnswered + 1}</span>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-surface-container border-2 border-outline text-on-surface-variant">
-                        {'★'.repeat(Math.max(0, activeQuestion.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (activeQuestion.difficulty || 1)))} רמה {activeQuestion.difficulty}
-                      </span>
+                      {/* The difficulty rating changes nothing about how the
+                          question is solved — in focus mode it is one more
+                          thing on the card to read before starting. */}
+                      {!focus && (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-surface-container border-2 border-outline text-on-surface-variant">
+                          {'★'.repeat(Math.max(0, activeQuestion.difficulty || 1))}{'☆'.repeat(Math.max(0, 3 - (activeQuestion.difficulty || 1)))} רמה {activeQuestion.difficulty}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   {/* Stem — letters jump in one by one via animateLetters */}
                   <div className="text-lg md:text-xl leading-relaxed font-semibold text-on-surface mb-8">
-                    <MathText animateLetters>{activeQuestion.stem}</MathText>
+                    <MathText animateLetters={!focus}>{activeQuestion.stem}</MathText>
                   </div>
 
                   {/* Celebration — electric spark discharge on a correct answer */}
@@ -732,7 +754,7 @@ export default function PracticeSession() {
               Gated on the media query rather than just `hidden lg:flex`: a
               hidden <img> is still fetched, and that would spend 164KB of
               layers on phones to render nothing. */}
-          {rigVisible && <FaradayRig mood={rigMood} px={200} className="self-center" />}
+          {rigVisible && !focus && <FaradayRig mood={rigMood} px={200} className="self-center" />}
           <CalculatorCard />
         </div>
         </div>

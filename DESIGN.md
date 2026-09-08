@@ -112,6 +112,32 @@ All primitives live in `src/components/ui/` — import from `"../components/ui"`
    `border-e-*`) — never `ml-`/`mr-`/`pl-`/`pr-` in new code. Pages are `dir="rtl"`.
 4. **Run `npm run lint:design`** (i.e. `node scripts/design-lint.mjs`) before committing UI changes.
 
+## Focus mode
+
+A second, calmer skin over the same screens, for students who lose the thread on the default one.
+It is a device preference (`localStorage: faraday_focus_mode`), toggled from the header button on the
+student home and the practice session, and it moves in two places at once:
+
+- `data-focus="on"` on `<html>` — the block at the bottom of `src/index.css` zeroes every decorative
+  CSS animation, hover travel, glow and backdrop-blur, and flattens the clay shadow to a hairline.
+  It is a blanket rule, so decoration added later is covered without being listed.
+- `useFocusMode()` in the pages (`src/components/FocusModeContext.tsx`) — the loud pieces do not
+  **mount**. CSS cannot stop a canvas RAF loop, a GSAP tween or a confetti burst, and on a school
+  phone those are the expensive half.
+
+What goes, and why: the field-line backdrops, the mascot rig and his reaction bubbles, confetti,
+flying XP, the streak/charge meters, XP counters, badges, titles, the shop, the league, achievements,
+the daily experiment, notification badges, the self-opening tour, the proactive help card, and the
+question's difficulty rating. What stays: the question, the explanation, the hint, the tutor button,
+the teacher's live broadcast, the calculator, and one count of how far into the day you are.
+
+The student home swaps its serpentine map and stats sidebar for `src/components/FocusBoard.tsx` —
+one column: the next topic with one button, today as one line, then the topics as a plain list.
+
+**When adding to a student screen:** if it moves on its own, celebrates, counts up, or offers a
+detour, gate it on `!focus`. Motion-only effects can gate on the page's `reducedMotion`, which both
+pages already OR focus mode into.
+
 ## Design-lint ratchet
 
 `scripts/design-lint.mjs` tracks two debt metrics against a committed baseline

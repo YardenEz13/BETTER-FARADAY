@@ -18,6 +18,8 @@ import { useFaraday } from "../components/chat/FaradayProvider";
 import CyberAvatar from "../components/CyberAvatar";
 import NotificationCenter from "../components/NotificationCenter";
 import { ThemeToggle } from "../components/ThemeContext";
+import { useFocusMode, FocusToggle } from "../components/FocusModeContext";
+import FocusBoard from "../components/FocusBoard";
 import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
 import { ElectricBolt, ElectricAtom, Battery, StreakBolt } from "../components/electric";
@@ -581,7 +583,10 @@ export default function StudentHome() {
     setSfxMuted(next);
   };
   const [liveSheetOpen, setLiveSheetOpen] = useState(false);
-  const reducedMotion = !!useReducedMotion();
+  // Focus mode folds into reducedMotion rather than being threaded separately:
+  // every GSAP/anime/celebration effect on this page is already gated on it.
+  const { focus } = useFocusMode();
+  const reducedMotion = !!useReducedMotion() || focus;
 
   // Level-up celebration. A teacher approves the promotion (levels.resolveSuggestion)
   // while the student is away, so the "what did they last see" marker has to
@@ -594,8 +599,10 @@ export default function StudentHome() {
     const key = `faraday:level:${studentId}`;
     const seen = Number(localStorage.getItem(key) ?? 0);
     localStorage.setItem(key, String(level));
-    if (seen > 0 && level > seen) setLevelUp(level);
-  }, [student?.level, studentId]);
+    // The promotion is still recorded; the full-screen celebration is what
+    // focus mode drops.
+    if (seen > 0 && level > seen && !focus) setLevelUp(level);
+  }, [student?.level, studentId, focus]);
 
   // The header's height varies (badges, wrapped chips, mobile vs desktop rows)
   // so content padding is measured live instead of a guessed pt-[Npx] — a fixed
@@ -670,13 +677,15 @@ export default function StudentHome() {
   // DOM a beat to mount so the tour's data-tour targets exist before it measures.
   const [tourOpen, setTourOpen] = useState(false);
   useEffect(() => {
-    if (!student || !topics || onboarding === undefined || onboarding?.needed) return;
+    // A tour that opens itself is the exact interruption focus mode exists to
+    // remove — the "?" button still replays it on demand.
+    if (!student || !topics || onboarding === undefined || onboarding?.needed || focus) return;
     let stored: string | null = null;
     try { stored = localStorage.getItem("faraday_tour_done"); } catch { /* storage disabled */ }
     if (stored) return;
     const t = window.setTimeout(() => setTourOpen(true), 650);
     return () => window.clearTimeout(t);
-  }, [student, topics, onboarding]);
+  }, [student, topics, onboarding, focus]);
   const closeTour = () => {
     try { localStorage.setItem("faraday_tour_done", "1"); } catch { /* storage disabled */ }
     setTourOpen(false);
@@ -768,11 +777,13 @@ export default function StudentHome() {
           NightSkyCanvas stacks a second layer on top of it — and it is added as
           a key or not at all, since spreading `opacity: undefined` would
           clobber that default and paint the backdrop at full strength. */}
-      <FaradayCanvas
-        variant={THEME_VARIANT[student.equippedTheme as keyof typeof THEME_VARIANT] ?? "linesOfForce"}
-        style={{ zIndex: 0, ...(student.equippedTheme === "night" ? { opacity: 0.5 } : {}) }}
-      />
-      {student.equippedTheme === "night" && <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />}
+      {!focus && (
+        <FaradayCanvas
+          variant={THEME_VARIANT[student.equippedTheme as keyof typeof THEME_VARIANT] ?? "linesOfForce"}
+          style={{ zIndex: 0, ...(student.equippedTheme === "night" ? { opacity: 0.5 } : {}) }}
+        />
+      )}
+      {!focus && student.equippedTheme === "night" && <NightSkyCanvas style={{ zIndex: 0, opacity: 0.7 }} />}
 
       {/* ── Top Navigation ── */}
       <motion.header
@@ -821,25 +832,33 @@ export default function StudentHome() {
                 landing on top of the streak chip beside it on a phone. */}
             <div className="min-w-0">
               <div className="font-semibold text-sm text-on-surface leading-tight truncate">{student.name}</div>
-              {/* Equipped shop title — a rarity pill; the whole point of buying one is being seen */}
-              {equippedTitle && <div className="mt-0.5 min-w-0"><TitlePill title={equippedTitle} /></div>}
-              {/* Badges stay a desktop detail — below lg they stacked the pill into a tower */}
-              {ownedBadges && ownedBadges.length > 0 && <div className="hidden lg:block"><BadgeChips badges={ownedBadges} /></div>}
-              {/* Compact layout shows XP under the name; full desktop keeps the theme label */}
-              <div className="num font-bold text-primary text-[10px] lg:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
-              <div className="hidden lg:block">
-                {student.homeworkTheme ? (
-                  <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
-                ) : (
-                  <div className="font-medium text-on-surface-variant text-[10px]">בחירת נושא ✨</div>
-                )}
-              </div>
+              {/* Trophies, titles and the running XP count are what the name
+                  carries in the default header. In focus mode the name is just
+                  the name — nothing here changes as the student works, so
+                  nothing here earns a glance mid-session. */}
+              {!focus && (
+                <>
+                  {/* Equipped shop title — a rarity pill; the whole point of buying one is being seen */}
+                  {equippedTitle && <div className="mt-0.5 min-w-0"><TitlePill title={equippedTitle} /></div>}
+                  {/* Badges stay a desktop detail — below lg they stacked the pill into a tower */}
+                  {ownedBadges && ownedBadges.length > 0 && <div className="hidden lg:block"><BadgeChips badges={ownedBadges} /></div>}
+                  {/* Compact layout shows XP under the name; full desktop keeps the theme label */}
+                  <div className="num font-bold text-primary text-[10px] lg:hidden leading-tight"><CountUpNum value={totalXP} suffix=" XP" /></div>
+                  <div className="hidden lg:block">
+                    {student.homeworkTheme ? (
+                      <div className="font-semibold text-primary text-[10px] tracking-wide">{currentThemeLabel}</div>
+                    ) : (
+                      <div className="font-medium text-on-surface-variant text-[10px]">בחירת נושא ✨</div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </button>
         </div>
 
         {/* Center: stats */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className={`${focus ? "hidden" : "hidden lg:flex"} items-center gap-3`}>
           <div className="stat-chip">
             <ElectricBolt tone="spark" size={18} glow={0.55} animated={false} />
             <span><CountUpNum value={totalXP} suffix=" XP" /></span>
@@ -863,20 +882,23 @@ export default function StudentHome() {
         <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
           {/* Compact streak chip — stands in for the center stats block below lg,
               same threshold as that block so there's no gap where neither shows. */}
-          <div className="flex lg:hidden flex-shrink-0 items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
-            <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
-            <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
-          </div>
+          {!focus && (
+            <div className="flex lg:hidden flex-shrink-0 items-center gap-1 px-2.5 py-1.5 rounded-full bg-tertiary/12 border-2 border-tertiary/30 shadow-(--shadow-clay)">
+              <StreakBolt days={student.streak} size={14} atRisk={streakInDanger} />
+              <span className="num font-bold text-sm text-on-surface">{student.streak}</span>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setTourOpen(true)}
             aria-label="הצג סיור היכרות"
             title="סיור היכרות"
-            className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer shadow-(--shadow-clay)"
+            className={`${focus ? "hidden" : "hidden sm:flex"} w-9 h-9 rounded-full items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all border-2 border-outline hover:border-primary cursor-pointer shadow-(--shadow-clay)`}
           >
             <span className="font-bold text-sm leading-none">?</span>
           </button>
-          <NotificationCenter studentId={studentId!} />
+          {/* Badge counts that appear mid-session are an interruption by design */}
+          {!focus && <NotificationCenter studentId={studentId!} />}
           <button
             type="button"
             onClick={toggleSfxMuted}
@@ -887,6 +909,7 @@ export default function StudentHome() {
           >
             {sfxMuted ? <SpeakerOff size={16} /> : <Speaker size={16} />}
           </button>
+          <FocusToggle />
           <ThemeToggle />
           <button
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-surface text-on-surface-variant border-2 border-outline hover:border-primary hover:text-primary rounded-full font-semibold transition-all text-sm cursor-pointer shadow-(--shadow-clay)"
@@ -908,9 +931,31 @@ export default function StudentHome() {
 
       {/* ── Main Content ── */}
       <div
-        className="page-shell relative z-10 pb-24 md:pb-10 flex flex-col xl:flex-row gap-8 min-h-screen py-6"
+        className={`page-shell relative z-10 pb-24 md:pb-10 py-6 ${focus ? "" : "flex flex-col xl:flex-row gap-8 min-h-screen"}`}
         style={{ paddingTop: headerHeight + 16 }}
       >
+        {focus ? (
+          <>
+            {/* A question the teacher is broadcasting right now still gets
+                through — that is the lesson, not a nudge. */}
+            <LiveBanner studentId={studentId!} onJoin={() => setLiveSheetOpen(true)} />
+            <FocusBoard
+              studentId={studentId as Id<"students">}
+              topics={topics.map((t, i) => ({
+                id: t._id,
+                nameHe: t.nameHe,
+                progress: nodeStates[i].progress,
+                isCompleted: nodeStates[i].isCompleted,
+                isActive: nodeStates[i].isActive,
+              }))}
+              reviewCount={reviewCount}
+              onOpenTopic={(topicId) => navigate(`/student/${studentId}/practice/${topicId}`)}
+              onHomework={() => navigate(`/student/${studentId}/homework`)}
+              onReview={() => navigate(`/student/${studentId}/review`)}
+            />
+          </>
+        ) : (
+          <>
 
         {/* ── Learning Map ── */}
         <section className="flex-1 relative flex flex-col items-center">
@@ -1335,6 +1380,8 @@ export default function StudentHome() {
             </div>
           </div>
         </aside>
+          </>
+        )}
       </div>
 
       {/* Mobile Bottom Navigation */}
@@ -1345,7 +1392,9 @@ export default function StudentHome() {
           { icon: Activity, label: 'התקדמות', action: () => navigate(`/student/${studentId}/progress`), active: false },
           { icon: Package, label: 'שיעורי בית', action: () => navigate(`/student/${studentId}/homework`), active: false },
           { icon: Palette, label: 'נושא', action: () => setThemePickerOpen(true), active: false },
-        ].map(({ icon: Icon, label, action, active }) => (
+        // Five thumb-sized destinations under the work is a menu, not a nav bar.
+        // Focus mode keeps the two that lead back to work and the tutor.
+        ].filter(({ label }) => !focus || label === 'מפה' || label === 'מורה AI' || label === 'שיעורי בית').map(({ icon: Icon, label, action, active }) => (
           <button
             key={label}
             className={`flex flex-col items-center gap-1 min-w-[56px] py-1.5 px-2 rounded-2xl transition-all cursor-pointer
