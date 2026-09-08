@@ -65,6 +65,9 @@ const PROOF_SECTIONS = [
         stepIndex: 3,
         expectedClaim: "משולש AOB ≅ משולש COD",
         expectedReason: "צ.ז.צ (SAS)",
+        // A second legitimate route to the same congruence, not a rephrasing:
+        // the grader already accepts the student's own wording of either.
+        acceptableReasons: ["ז.צ.ז"],
         clueIfWrong: "יש שתי צלעות שוות וזווית ביניהן — איזה משפט חפיפה זה?",
       },
     ],

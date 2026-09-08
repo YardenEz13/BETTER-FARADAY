@@ -280,6 +280,10 @@ export default defineSchema({
         stepIndex: v.number(),
         expectedClaim: v.string(),
         expectedReason: v.string(),
+        // A step often has more than one legitimate justification. Additive and
+        // optional: `expectedReason` remains the first acceptable one, so
+        // existing rows need no backfill.
+        acceptableReasons: v.optional(v.array(v.string())),
         clueIfWrong: v.optional(v.string()),
       }))),
     })),
@@ -365,6 +369,10 @@ export default defineSchema({
       // Total tries the student made on this section (unlimited retries after a
       // wrong answer). Optional so pre-existing rows stay valid; absent ≈ 1.
       attempts: v.optional(v.number()),
+      // How the answer was decided — see convex/answerMatch.ts:
+      // "exact" | "equivalent" | "rounded" | "wrong" | "unparsed" | "ai".
+      // Absent on rows written before server-side grading existed.
+      matchVerdict: v.optional(v.string()),
       proofStepResults: v.optional(v.array(v.object({
         stepIndex: v.number(),
         studentClaim: v.string(),
@@ -373,6 +381,11 @@ export default defineSchema({
         reasonCorrect: v.optional(v.boolean()),
         stepScore: v.number(),            // 0 | 0.5 | 1
         feedback: v.optional(v.string()),
+        // The reason was right but informally phrased: full credit, plus the
+        // formal name so the student learns it instead of losing a mark.
+        reasonPhrasingNote: v.optional(v.string()),
+        // Theorem id from convex/geometryTheorems.ts, when one was recognised.
+        matchedTheoremId: v.optional(v.string()),
       }))),
     }))),
     score: v.optional(v.number()),        // 0-100

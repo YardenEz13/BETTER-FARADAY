@@ -138,6 +138,55 @@ one column: the next topic with one button, today as one line, then the topics a
 detour, gate it on `!focus`. Motion-only effects can gate on the page's `reducedMotion`, which both
 pages already OR focus mode into.
 
+## Answer checking
+
+One module decides whether a maths answer is right: `convex/answerMatch.ts`. The server grades with it
+(authoritative) and the client imports the same file for instant optimistic feedback, so the two cannot
+drift. It replaced two checkers that disagreed — one graded any answer over five characters as correct,
+and both compared *strings*, so the LaTeX the MathField emits (`\sqrt{2}`) never matched the plain
+Unicode the bank stores (`√2`).
+
+It does not compare text. Both sides are canonicalised to one plain syntax, parsed, and compared by
+**evaluating them at sample points**. √8 = 2√2, (x+1)² = x²+2x+1, 0.5 = 1/2 — all free once you evaluate.
+
+The ladder, cheapest first:
+
+| verdict | meaning | outcome |
+| --- | --- | --- |
+| `exact` | identical once canonicalised | correct |
+| `equivalent` | different form, same value | correct |
+| `rounded` | a rounded decimal of the exact answer | correct, with a note |
+| `wrong` | parsed on both sides, genuinely differs | wrong |
+| `unparsed` | one side is not maths we can read | one Gemini call — `answerCheck.adjudicateAnswer` |
+
+Only `unparsed` escalates to the model. A confidently wrong answer is wrong; paying for a second opinion
+on every miss would be most of the Gemini budget. An adjudication that overturns the verdict also files a
+`questionReports` row — an answer our parser cannot read is usually a badly formatted question, and the
+bank is machine-authored.
+
+**Adding an answer type:** put it in `AUTO_GRADED_TYPES` only if `matchAnswer` can decide it. Anything
+else stays self-check. Every new form goes in the golden set in `convex/answerMatch.test.ts` — a row for
+what must be accepted and, more importantly, a row for the near-miss that must still be rejected.
+
+## Geometry justifications
+
+`convex/geometryTheorems.ts` holds the curriculum's theorems with the aliases students actually write
+(`צ.ז.צ` / `צזצ` / `צלע זווית צלע` / `SAS`). A justification is a *reference to a theorem*, not a sentence
+to match, so both sides resolve to a theorem id and the ids are compared. Same theorem in the student's
+own words is correct, deterministically, with no model call.
+
+It is an identity match, not a similarity score — a different theorem is still wrong. Two details carry
+that: token matching tolerates one glued Hebrew prefix (`במקבילית` reaches `מקבילית`), and `covers` is an
+**ordered** subsequence, because צלע-זווית-צלע and זווית-צלע-זווית are different theorems built from the
+same three words.
+
+Where the student is right but informal, the step scores full marks and carries a `reasonPhrasingNote`
+with the formal name. That was the whole complaint: the grader used to see one `expectedReason` string
+and mark a correct justification wrong for being worded differently.
+
+`acceptableReasons` on a proof step lists *other routes* to the same claim — not rephrasings, which the
+matcher already handles.
+
 ## Design-lint ratchet
 
 `scripts/design-lint.mjs` tracks two debt metrics against a committed baseline

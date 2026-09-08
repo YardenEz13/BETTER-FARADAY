@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useState, useRef, lazy, Suspense } from "react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,24 +9,22 @@ import { log } from "../lib/logger";
 import { countOf, minuteCount } from "../lib/hebrew";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
+import MathSymbolStrip from "./playground/MathSymbolStrip";
+import type { MathFieldHandle } from "./playground/MathField";
+import { matchAnswer, AUTO_GRADED_TYPES } from "../../convex/answerMatch";
 
 // MathLive is heavy — load it only when a math section actually renders.
 const MathField = lazy(() => import("./playground/MathField"));
 // Answer types that get the visual LaTeX editor. Everything else (free text)
-// keeps the plain textarea; proofs use ProofSectionRenderer.
-const MATH_ANSWER_TYPES = new Set(["numeric", "expression", "coordinates", "range"]);
+// keeps the plain textarea; proofs use ProofSectionRenderer. Same set the
+// grader auto-decides, so the editor appears exactly where it is checkable.
+const MATH_ANSWER_TYPES = AUTO_GRADED_TYPES;
 
-// Normalize a possibly-LaTeX answer for lenient comparison (strip spaces,
-// braces, and common LaTeX operator commands so "\frac{1}{2}" ≈ "1/2"-ish).
-function normalizeMath(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\\left|\\right|\\,|\\;|\\!|\\ /g, "")
-    .replace(/\\cdot|\\times/g, "*")
-    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "$1/$2")
-    .replace(/[\s{}$]/g, "")
-    .replace(/\\/g, "");
-}
+// The local `normalizeMath` + `... || answerLower.length > 5` checker is gone.
+// It graded any answer over five characters as correct and rejected the LaTeX
+// the MathField emits against the plain-Unicode stored answer. The verdict now
+// comes from the server, which decides with convex/answerMatch — imported here
+// only so the student gets an instant optimistic result from identical code.
 
 interface ProofStep {
   stepIndex: number;
@@ -107,11 +105,21 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     () => question.sections.find((s) => !prior.some((a) => a.sectionLabel === s.label))?.label
       ?? question.sections[0]?.label ?? "א",
   );
+  // What the checker made of each answer: any note it attached (a rounded
+  // answer is accepted with one), and how it read the input back — so a
+  // mis-parse is visible instead of an unexplained wrong mark.
+  const [verdictNotes, setVerdictNotes] = useState<Record<string, string>>({});
+  const [readAs, setReadAs] = useState<Record<string, string>>({});
+  const [adjudicating, setAdjudicating] = useState<Record<string, boolean>>({});
   const [showSolution, setShowSolution] = useState<Record<string, boolean>>({});
   const [sectionTimes, setSectionTimes] = useState<Record<string, number>>({});
   const [sectionStartTime, setSectionStartTime] = useState(Date.now());
 
   const submitAnswer = useMutation(api.homework.submitAnswer);
+  const adjudicateAnswer = useAction(api.answerCheck.adjudicateAnswer);
+  // One field handle per section, so the symbol strip inserts into the field
+  // the student is actually working in.
+  const fieldRefs = useRef<Record<string, MathFieldHandle | null>>({});
   const finalizeSubmission = useMutation(api.homework.finalizeSubmission);
   const figureUrl = useQuery(api.compoundQuestions.getFigureUrl, { id: question._id });
 
@@ -134,28 +142,54 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
     const timeMs = Date.now() - sectionStartTime;
     setSectionTimes((prev) => ({ ...prev, [section.label]: timeMs }));
 
-    // Normalize both sides so LaTeX answers (from the MathField editor) compare
-    // sensibly against the stored plain-text correctAnswer.
-    const correctLower = normalizeMath(section.correctAnswer);
-    const answerLower = normalizeMath(answer);
-    const isCorrect = correctLower.includes(answerLower) || answerLower.includes(correctLower) || answerLower.length > 5;
+    // Optimistic: the very checker the server is about to run, so the result
+    // appears instantly and is then confirmed rather than replaced.
+    const local = matchAnswer(section.correctAnswer, answer, section.answerType);
 
     const attempts = (attemptCounts[section.label] ?? 0) + 1;
     setAttemptCounts((prev) => ({ ...prev, [section.label]: attempts }));
     setSubmitted((prev) => ({ ...prev, [section.label]: true }));
-    setResults((prev) => ({ ...prev, [section.label]: isCorrect }));
+    setResults((prev) => ({ ...prev, [section.label]: local.correct }));
+    setReadAs((prev) => ({ ...prev, [section.label]: local.readAs }));
+    setVerdictNotes((prev) => ({ ...prev, [section.label]: local.note ?? "" }));
 
-    log.homework("section submitted", { section: section.label, isCorrect, attempts, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
+    log.homework("section submitted", { section: section.label, isCorrect: local.correct, verdict: local.verdict, attempts, timeMs, hintsUsed: hintsRevealed[section.label] ?? 0 });
 
-    await submitAnswer({
+    const graded = await submitAnswer({
       assignedQuestionId,
       sectionLabel: section.label,
       studentAnswer: answer,
-      isCorrect,
       timeMs,
       hintsUsed: hintsRevealed[section.label] ?? 0,
     });
-    log.homework("section persisted to Convex", { section: section.label });
+    // The server reads the stored correctAnswer; the client only has a copy of
+    // it, so the server's verdict wins.
+    setResults((prev) => ({ ...prev, [section.label]: graded.isCorrect }));
+    setReadAs((prev) => ({ ...prev, [section.label]: graded.readAs }));
+    setVerdictNotes((prev) => ({ ...prev, [section.label]: graded.note ?? "" }));
+    log.homework("section persisted to Convex", { section: section.label, verdict: graded.verdict });
+
+    // The maths could not be parsed on one side or the other — worth one AI
+    // opinion before telling a student they are wrong. Never fires on a
+    // confidently wrong answer; that would spend the budget re-doing arithmetic.
+    if (graded.canAdjudicate) {
+      setAdjudicating((prev) => ({ ...prev, [section.label]: true }));
+      try {
+        const verdict = await adjudicateAnswer({
+          assignedQuestionId,
+          sectionLabel: section.label,
+          studentAnswer: answer,
+        });
+        if (verdict.decided) {
+          setResults((prev) => ({ ...prev, [section.label]: verdict.isCorrect }));
+          setVerdictNotes((prev) => ({ ...prev, [section.label]: verdict.note ?? "" }));
+        }
+      } catch {
+        // Gemini unreachable — the deterministic verdict already stands.
+      } finally {
+        setAdjudicating((prev) => ({ ...prev, [section.label]: false }));
+      }
+    }
 
     // We do NOT auto-expand the next section here anymore,
     // so the student has time to review the solution steps and feedback.
@@ -308,7 +342,7 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                         {MATH_ANSWER_TYPES.has(section.answerType) ? (
                           <div className="flex flex-col gap-2">
                             <div className="label-mono text-[10px] text-on-surface-variant flex items-center gap-1">
-                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — אפשר להקליד ישירות או להשתמש במקלדת המתמטית
+                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — הקלידו ישירות או הקישו על סימן
                             </div>
                             <Suspense
                               fallback={
@@ -318,12 +352,16 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                               }
                             >
                               <MathField
+                                ref={(h) => { fieldRefs.current[section.label] = h; }}
                                 value={answers[section.label] ?? ""}
                                 onChange={(latex) => setAnswers((prev) => ({ ...prev, [section.label]: latex }))}
                                 onEnter={() => handleSubmitSection(section)}
                                 placeholder="התשובה כאן…"
                               />
                             </Suspense>
+                            {/* On a Hebrew keyboard layout these buttons are the
+                                only way to reach √ — see MathSymbolStrip. */}
+                            <MathSymbolStrip fieldRef={{ current: fieldRefs.current[section.label] ?? null }} />
                           </div>
                         ) : (
                           <textarea
@@ -404,6 +442,23 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                             <><X size={24} /> אנומליה זוהתה בנתונים — התשובה שגויה.</>
                           )}
                         </div>
+
+                        {adjudicating[section.label] && (
+                          <div className="label-mono text-xs opacity-70">בודקים שוב, רגע…</div>
+                        )}
+
+                        {/* What the checker understood. A wrong mark caused by a
+                            mis-typed formula is otherwise indistinguishable from
+                            a wrong answer. */}
+                        {readAs[section.label] && (
+                          <div dir="ltr" className="label-mono normal-case text-xs opacity-70 text-start">
+                            נקרא כ: {readAs[section.label]}
+                          </div>
+                        )}
+
+                        {verdictNotes[section.label] && (
+                          <div className="text-body-sm opacity-90">{verdictNotes[section.label]}</div>
+                        )}
 
                         {(attemptCounts[section.label] ?? 0) > 1 && (
                           <div className="label-mono text-xs opacity-70">

@@ -32,6 +32,9 @@ export const packetSection = v.object({
     stepIndex: v.number(),
     expectedClaim: v.string(),
     expectedReason: v.string(),
+    // Other routes that establish the same claim. Not rephrasings — the grader
+    // already resolves a student's own wording to the theorem it names.
+    acceptableReasons: v.optional(v.array(v.string())),
     clueIfWrong: v.optional(v.string()),
   }))),
 });

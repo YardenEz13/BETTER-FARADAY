@@ -21,11 +21,16 @@ function configureMathlive() {
 }
 
 export interface MathFieldHandle {
-  /** Insert LaTeX at the caret (used by the formula bank). */
+  /** Insert LaTeX at the caret (used by the formula bank and the symbol strip). */
   insertLatex: (latex: string) => void;
   focus: () => void;
   getValue: () => string;
+  /** Show/hide MathLive's on-screen keypad. */
+  toggleKeyboard: () => void;
 }
+
+/** The slice of MathLive's global keyboard controller we use. */
+interface VirtualKeyboard { visible: boolean; show: () => void; hide: () => void }
 
 interface Props {
   value: string;
@@ -55,6 +60,12 @@ const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
     insertLatex: (latex) => elRef.current?.insert(latex, { focus: true }),
     focus: () => elRef.current?.focus(),
     getValue: () => elRef.current?.value ?? "",
+    toggleKeyboard: () => {
+      const kb = (globalThis as { mathVirtualKeyboard?: VirtualKeyboard }).mathVirtualKeyboard;
+      if (!kb) return;
+      elRef.current?.focus();
+      if (kb.visible) kb.hide(); else kb.show();
+    },
   }));
 
   useEffect(() => {

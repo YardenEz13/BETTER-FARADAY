@@ -5,6 +5,7 @@ import { Id, Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
 import { compoundQuestionsForTopics } from "./compoundQuestions";
+import { matchAnswer, type MatchResult } from "./answerMatch";
 
 // Shared helper: schedule the per-student fan-out for a homework doc. Used by
 // immediate publish (createHomework), scheduled auto-publish (publishScheduled),
@@ -464,18 +465,33 @@ export const getStudentHomework = query({
 });
 
 // ── Student: submit answer for one section ──
+// The verdict is computed HERE, from the stored correctAnswer. It used to
+// arrive as an `isCorrect` boolean the client had worked out for itself, with
+// a checker that graded any answer over five characters as right. The client
+// still runs the same `matchAnswer` for instant feedback, but this is the copy
+// that gets written down.
 export const submitAnswer = mutation({
   args: {
     assignedQuestionId: v.id("assignedQuestions"),
     sectionLabel: v.string(),
     studentAnswer: v.string(),
-    isCorrect: v.boolean(),
     timeMs: v.number(),
     hintsUsed: v.number(),
   },
+  returns: v.object({
+    isCorrect: v.boolean(),
+    verdict: v.string(),
+    note: v.optional(v.string()),
+    readAs: v.string(),
+    /** True when the deterministic checker could not decide — the client may
+     *  then ask answerCheck.adjudicateAnswer for one AI opinion. */
+    canAdjudicate: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const aq = await ctx.db.get(args.assignedQuestionId);
     if (!aq) throw new Error("Assigned question not found");
+
+    const graded = await gradeSectionAnswer(ctx, aq, args.sectionLabel, args.studentAnswer);
 
     const existingAnswers = aq.answers ?? [];
     const prior = existingAnswers.find((a) => a.sectionLabel === args.sectionLabel);
@@ -485,10 +501,11 @@ export const submitAnswer = mutation({
     const newAnswer = {
       sectionLabel: args.sectionLabel,
       studentAnswer: args.studentAnswer,
-      isCorrect: args.isCorrect,
+      isCorrect: graded.correct,
       timeMs: args.timeMs,
       hintsUsed: args.hintsUsed,
       attempts,
+      matchVerdict: graded.verdict,
     };
 
     // Replace if already answered, otherwise append
@@ -501,8 +518,57 @@ export const submitAnswer = mutation({
       answers: filtered,
       status: "in_progress",
     });
+
+    return {
+      isCorrect: graded.correct,
+      verdict: graded.verdict,
+      note: graded.note,
+      readAs: graded.readAs,
+      // Only worth one Gemini call when the maths itself was undecidable — a
+      // confidently wrong answer is wrong, and paying for a second opinion on
+      // every miss would be most of the AI budget.
+      canAdjudicate: !graded.correct && graded.verdict === "unparsed" && args.studentAnswer.trim().length > 0,
+    };
   },
 });
+
+/**
+ * Grade one submitted answer against what the question actually says.
+ *
+ * Two shapes reach this: a compound question's section (free-text maths, graded
+ * by value via answerMatch) and a legacy single question (multiple choice,
+ * where the client sends the chosen option's text). Anything else — a question
+ * row that has gone missing, a section label that does not exist — is
+ * "unparsed" rather than "wrong", so a data problem never silently costs a
+ * student a mark.
+ */
+async function gradeSectionAnswer(
+  ctx: MutationCtx,
+  aq: Doc<"assignedQuestions">,
+  sectionLabel: string,
+  studentAnswer: string,
+): Promise<MatchResult> {
+  const readAs = studentAnswer.trim();
+
+  if (aq.compoundQuestionId) {
+    const cq = await ctx.db.get(aq.compoundQuestionId);
+    const section = cq?.sections.find((s) => s.label === sectionLabel);
+    if (!section) return { correct: false, verdict: "unparsed", readAs };
+    return matchAnswer(section.correctAnswer, studentAnswer, section.answerType);
+  }
+
+  if (aq.questionId) {
+    const q = await ctx.db.get(aq.questionId);
+    const right = q?.choices?.[q.correctIndex];
+    if (right === undefined) return { correct: false, verdict: "unparsed", readAs };
+    // The client sends the chosen option verbatim, so this is an identity
+    // check on the option — not a maths comparison.
+    const correct = right.trim() === readAs;
+    return { correct, verdict: correct ? "exact" : "wrong", readAs };
+  }
+
+  return { correct: false, verdict: "unparsed", readAs };
+}
 
 // ── Student: finalize submission ──
 export const finalizeSubmission = mutation({
