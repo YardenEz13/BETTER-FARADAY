@@ -621,6 +621,7 @@ export const Plus = makeIcon({ paths: ["M32 12 V52", "M12 32 H52"], sw: 3 });
 export const Settings = makeIcon({ rings: [[32, 32, 9]], paths: [{ d: "M32 6 V14", accent: true }, { d: "M32 50 V58", accent: true }, { d: "M6 32 H14", accent: true }, { d: "M50 32 H58", accent: true }, { d: "M13 13 L19 19", accent: true }, { d: "M45 45 L51 51", accent: true }, { d: "M45 19 L51 13", accent: true }, { d: "M13 51 L19 45", accent: true }], dots: [[32, 32, 2.6]] });
 export const Sigma = makeIcon({ paths: ["M46 14 H20 L36 32 L20 50 H46"] });
 export const Calculator = makeIcon({ paths: ["M16 8 H48 A4 4 0 0 1 52 12 V52 A4 4 0 0 1 48 56 H16 A4 4 0 0 1 12 52 V12 A4 4 0 0 1 16 8 Z", "M18 18 H46 V26 H18 Z"], dots: [[22, 36], [32, 36], [42, 36], [22, 46], [32, 46], [42, 46]] });
+export const Keyboard = makeIcon({ paths: [{ d: "M8 16 H56 A3 3 0 0 1 59 19 V45 A3 3 0 0 1 56 48 H8 A3 3 0 0 1 5 45 V19 A3 3 0 0 1 8 16 Z", soft: true }, { d: "M22 41 H42", accent: true }], dots: [[15, 25, 2.2], [26, 25, 2.2], [37, 25, 2.2], [48, 25, 2.2], [15, 33, 2.2], [26, 33, 2.2], [37, 33, 2.2], [48, 33, 2.2]] });
 export const Search = makeIcon({ rings: [[28, 28, 16]], paths: ["M40 40 L54 54"] });
 
 /* — view — */
@@ -658,6 +659,9 @@ export const Trophy = makeIcon({ paths: ["M20 12 H44 V26 A12 12 0 0 1 20 26 Z", 
 export const Activity = makeIcon({ paths: ["M6 32 H20 L26 16 L34 48 L40 32 H58"] });
 export const TrendingUp = makeIcon({ paths: ["M8 44 L26 26 L36 36 L56 16", "M44 16 H56 V28"] });
 export const Target = makeIcon({ rings: [[32, 32, 22], [32, 32, 13]], dots: [[32, 32, 4]] });
+// Viewfinder — the focus-mode toggle. A frame that crops the world down to one
+// thing, which is exactly what the mode does.
+export const Focus = makeIcon({ paths: ["M10 22 V14 A4 4 0 0 1 14 10 H22", "M42 10 H50 A4 4 0 0 1 54 14 V22", "M54 42 V50 A4 4 0 0 1 50 54 H42", "M22 54 H14 A4 4 0 0 1 10 50 V42"], dots: [[32, 32, 5]] });
 
 export const ELECTRIC_ICONS = {
   // physics family
@@ -726,6 +730,7 @@ export const ELECTRIC_ICONS = {
   settings: Settings,
   sigma: Sigma,
   calculator: Calculator,
+  keyboard: Keyboard,
   search: Search,
   eye: Eye,
   eyeOff: EyeOff,
@@ -754,6 +759,7 @@ export const ELECTRIC_ICONS = {
   activity: Activity,
   trendingUp: TrendingUp,
   target: Target,
+  focus: Focus,
 } as const;
 
 export type ElectricIconName = keyof typeof ELECTRIC_ICONS;

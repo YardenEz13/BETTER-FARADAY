@@ -112,6 +112,90 @@ All primitives live in `src/components/ui/` — import from `"../components/ui"`
    `border-e-*`) — never `ml-`/`mr-`/`pl-`/`pr-` in new code. Pages are `dir="rtl"`.
 4. **Run `npm run lint:design`** (i.e. `node scripts/design-lint.mjs`) before committing UI changes.
 
+## Focus mode
+
+A second, calmer skin over the same screens, for students who lose the thread on the default one.
+It is a device preference (`localStorage: faraday_focus_mode`), toggled from the header button on the
+student home and the practice session, and it moves in two places at once:
+
+- `data-focus="on"` on `<html>` — the block at the bottom of `src/index.css` zeroes every decorative
+  CSS animation, hover travel, glow and backdrop-blur, and flattens the clay shadow to a hairline.
+  It is a blanket rule, so decoration added later is covered without being listed.
+- `useFocusMode()` in the pages (`src/components/FocusModeContext.tsx`) — the loud pieces do not
+  **mount**. CSS cannot stop a canvas RAF loop, a GSAP tween or a confetti burst, and on a school
+  phone those are the expensive half.
+
+What goes, and why: the field-line backdrops, the mascot rig and his reaction bubbles, confetti,
+flying XP, the streak/charge meters, XP counters, badges, titles, the shop, the league, achievements,
+the daily experiment, notification badges, the self-opening tour, the proactive help card, and the
+question's difficulty rating. What stays: the question, the explanation, the hint, the tutor button,
+the teacher's live broadcast, the calculator, and one count of how far into the day you are.
+
+The student home swaps its serpentine map and stats sidebar for `src/components/FocusBoard.tsx` —
+one column: the next topic with one button, today as one line, then the topics as a plain list.
+
+**When adding to a student screen:** if it moves on its own, celebrates, counts up, or offers a
+detour, gate it on `!focus`. Motion-only effects can gate on the page's `reducedMotion`, which both
+pages already OR focus mode into.
+
+## Answer checking
+
+One module decides whether a maths answer is right: `convex/answerMatch.ts`. The server grades with it
+(authoritative) and the client imports the same file for instant optimistic feedback, so the two cannot
+drift. It replaced two checkers that disagreed — one graded any answer over five characters as correct,
+and both compared *strings*, so the LaTeX the MathField emits (`\sqrt{2}`) never matched the plain
+Unicode the bank stores (`√2`).
+
+It does not compare text. Both sides are canonicalised to one plain syntax, parsed, and compared by
+**evaluating them at sample points**. √8 = 2√2, (x+1)² = x²+2x+1, 0.5 = 1/2 — all free once you evaluate.
+
+The ladder, cheapest first:
+
+| verdict | meaning | outcome |
+| --- | --- | --- |
+| `exact` | identical once canonicalised | correct |
+| `equivalent` | different form, same value | correct |
+| `rounded` | a rounded decimal of the exact answer | correct, with a note |
+| `wrong` | parsed on both sides, genuinely differs | wrong |
+| `unparsed` | one side is not maths we can read | one Gemini call — `answerCheck.adjudicateAnswer` |
+
+Only `unparsed` escalates to the model. A confidently wrong answer is wrong; paying for a second opinion
+on every miss would be most of the Gemini budget. An adjudication that overturns the verdict also files a
+`questionReports` row — an answer our parser cannot read is usually a badly formatted question, and the
+bank is machine-authored.
+
+Two policies inside it are load-bearing and were both set by an adversarial pass that broke the first
+version. Rounding is allowed **to the precision the student actually wrote** — "1.414" claims three
+decimals and is a fair rounding of √2, while "1004" claims integer precision and is simply not 1000; the
+flat 0.5% tolerance it replaced accepted both. And the sample points **straddle zero**, because an
+all-positive sample set cannot tell `abs(x)` from `x`.
+
+One known gap, left deliberately: `1,5` is read as two answers, not as 1.5. Israeli notation uses a
+decimal point, and treating the comma as a decimal separator would break every solution set.
+
+**Adding an answer type:** put it in `AUTO_GRADED_TYPES` only if `matchAnswer` can decide it. Anything
+else stays self-check. Every new form goes in the golden set in `convex/answerMatch.test.ts` — a row for
+what must be accepted and, more importantly, a row for the near-miss that must still be rejected.
+
+## Geometry justifications
+
+`convex/geometryTheorems.ts` holds the curriculum's theorems with the aliases students actually write
+(`צ.ז.צ` / `צזצ` / `צלע זווית צלע` / `SAS`). A justification is a *reference to a theorem*, not a sentence
+to match, so both sides resolve to a theorem id and the ids are compared. Same theorem in the student's
+own words is correct, deterministically, with no model call.
+
+It is an identity match, not a similarity score — a different theorem is still wrong. Two details carry
+that: token matching tolerates one glued Hebrew prefix (`במקבילית` reaches `מקבילית`), and `covers` is an
+**ordered** subsequence, because צלע-זווית-צלע and זווית-צלע-זווית are different theorems built from the
+same three words.
+
+Where the student is right but informal, the step scores full marks and carries a `reasonPhrasingNote`
+with the formal name. That was the whole complaint: the grader used to see one `expectedReason` string
+and mark a correct justification wrong for being worded differently.
+
+`acceptableReasons` on a proof step lists *other routes* to the same claim — not rephrasings, which the
+matcher already handles.
+
 ## Design-lint ratchet
 
 `scripts/design-lint.mjs` tracks two debt metrics against a committed baseline

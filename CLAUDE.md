@@ -52,6 +52,13 @@ and `4db9062` rather than merging the branch.
 4. **Strict TypeScript.** No new `any`.
 5. **Icons** come from the in-house `src/components/electric` family. No icon libraries.
 6. **Mobile matters.** Students are on phones. Never load fonts/assets from a CDN — school networks filter them.
+7. **One answer checker.** `convex/answerMatch.ts` decides every maths answer — server-authoritative,
+   imported by the client only for optimistic feedback. Never write a second comparison; add cases to
+   its golden set instead. Geometry justifications resolve through `convex/geometryTheorems.ts`.
+8. **Focus mode.** A calm skin over the student screens for distractible students —
+   `FocusModeContext.tsx` + the `[data-focus="on"]` block in `index.css` + `FocusBoard.tsx`. Anything
+   new on a student screen that moves, celebrates, counts up or offers a detour gates on `!focus`
+   (motion-only effects can ride the page's `reducedMotion`, which ORs focus in). See `DESIGN.md`.
 
 ## Commands
 

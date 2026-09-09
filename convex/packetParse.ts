@@ -14,6 +14,7 @@ export interface PacketProofStep {
   stepIndex: number;
   expectedClaim: string;
   expectedReason: string;
+  acceptableReasons?: string[];
   clueIfWrong?: string;
 }
 
@@ -311,6 +312,10 @@ function normalizeSection(raw: unknown, index: number, sectionCount: number): Pa
           expectedClaim: toStr(s.expectedClaim),
           expectedReason: toStr(s.expectedReason),
         };
+        const alts = Array.isArray(s.acceptableReasons)
+          ? s.acceptableReasons.map(toStr).map((r) => r.trim()).filter(Boolean)
+          : [];
+        if (alts.length) step.acceptableReasons = alts;
         const clue = toStr(s.clueIfWrong).trim();
         if (clue) step.clueIfWrong = clue;
         return step;
