@@ -5,7 +5,14 @@ hand verification of every finding quoted below. Scope: Convex backend, the Gemi
 proxy, the student-facing React flow, the packet/PDF ingest pipeline, the adaptive
 and grading engines, and the design/RTL guardrails.
 
-**The suite does not catch any of this.** Baseline at the time of the audit:
+> **Status update — PR #6 landed after this audit was written.** It fixes two of the
+> four criticals: `homework.submitAnswer` now derives `isCorrect` server-side, and
+> `exams.ts`'s string comparison is replaced by `convex/answerMatch.ts`, which compares
+> by evaluating at sample points. Both are struck through below. Everything else was
+> re-verified against `green-torch` at `48d34ec` and still stands. Line numbers below
+> are as of that commit.
+
+**The suite does not catch any of this.** Baseline at the time of the audit (pre-#6):
 `npm test` 297/297 green, `tsc -b` 0 errors, `npm run lint` 0 errors (107 warnings),
 `design-lint` gate green. The only build failure is environmental — `VITE_CONVEX_URL`
 unset, no `.env.local`.
@@ -14,16 +21,16 @@ unset, no `.env.local`.
 
 | # | Sev | Finding | Where |
 |---|-----|---------|-------|
-| 1 | CRITICAL | Gemini proxy forwards the client's prompt verbatim — open relay, `CORS: *` | `convex/http.ts:125,192` |
+| 1 | CRITICAL | Gemini proxy forwards the client's prompt verbatim — open relay, `CORS: *` | `convex/http.ts:129,195` |
 | 2 | CRITICAL | `submitAttempt` trusts client-supplied `isCorrect` | `convex/attempts.ts:13` |
-| 3 | CRITICAL | `homework.submitAnswer` / `finalizeSubmission` trust client-supplied `isCorrect` | `convex/homework.ts` |
-| 4 | CRITICAL | Exam auto-grader marks correct answers wrong (4 paths) | `convex/exams.ts:23-47` |
+| 3 | ~~CRITICAL~~ | ~~`homework.submitAnswer` trusts client-supplied `isCorrect`~~ — **fixed in #6** | `convex/homework.ts:504` |
+| 4 | ~~CRITICAL~~ | ~~Exam auto-grader marks correct answers wrong (4 paths)~~ — **fixed in #6** | `convex/exams.ts:19` |
 | 5 | HIGH | Public unauthenticated file-upload URL, no size cap, blobs never deleted | `convex/packetImport.ts:20`, `pdfAssignments.ts:109` |
 | 6 | HIGH | Only access gate is a hardcoded credential in the JS bundle | `src/components/PrototypeGate.tsx:23` |
 | 7 | HIGH | Unauthenticated full-classroom student PII export | `convex/classroom.ts` |
 | 8 | HIGH | Per-student AI rate limit keyed on client-supplied `studentId` | `convex/http.ts:117,177` |
 | 9 | HIGH | Chat history round-trips into live prompts unvalidated (persistent jailbreak) | `convex/aiChat.ts:28-68` |
-| 10 | HIGH | `startExam` with `NaN` count serves the entire bank as one exam | `convex/exams.ts:82` |
+| 10 | HIGH | `startExam` with `NaN` count serves the entire bank as one exam | `convex/exams.ts:60` |
 | 11 | HIGH | Duplicate section labels collide answers and cross-grade sections | `CompoundQuestionRenderer.tsx:92-109` |
 | 12 | HIGH | `dependsOn` on a nonexistent label locks a section permanently | `CompoundQuestionRenderer.tsx:118` |
 | 13 | HIGH | `packetValidators` is shape-only — garbage publishes to students | `convex/packetValidators.ts`, `packetPublish.ts:11` |
@@ -81,9 +88,11 @@ No rate limit on the mutation either.
 **Fix:** `const q = await ctx.db.get(args.questionId); const isCorrect = args.choiceIndex === q?.correctIndex;`
 and use that everywhere below. Drop `isCorrect` from the args entirely.
 
-## 4. CRITICAL — the exam grader marks correct answers wrong
+## 4. ~~CRITICAL~~ — the exam grader marks correct answers wrong — **fixed in #6**
 
-`convex/exams.ts:23-33`, `normalizeAnswer`:
+Kept for the record; `exams.ts:19` now delegates to `convex/answerMatch.ts`, which
+canonicalises LaTeX/Unicode/ASCII and compares by evaluating at sample points. The
+original defect was in `normalizeAnswer`:
 
 ```js
 .replace(/[,;]/g, ",")
@@ -171,7 +180,7 @@ transactions with OCC retry. The same false race was checked and ruled out in
 `aiUsage.record` and `live.ts`.)*
 
 ### 10. `NaN` exam size
-`convex/exams.ts:82`: `Math.max(2, Math.min(3, Math.round(questionCount)))` is `NaN` when
+`convex/exams.ts:60`: `Math.max(2, Math.min(3, Math.round(questionCount)))` is `NaN` when
 `questionCount` is `NaN` (a valid float64 over Convex's wire format). Every
 `picked.length >= count` break is then false, so the loop pushes the whole pool — up to 200
 compound questions in one exam.
