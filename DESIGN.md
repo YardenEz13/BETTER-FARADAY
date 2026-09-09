@@ -49,6 +49,13 @@ line-height + weight).
 Font families: `Assistant` (Hebrew-first UI/body), `Yarden` (display headlines, `font-headline-xl/lg`
 only), `JetBrains Mono` (`font-mono` — the `.num`/`.label-mono` "voltmeter" faces for stats).
 
+`.num` and `.label-mono` both stack `JetBrains Mono` over `Assistant` deliberately: the mono face
+carries no Hebrew, so Hebrew falls through to Assistant and only the digits and Latin get the voltmeter
+face. Eyebrow labels take **no** `uppercase` and no wide tracking — Hebrew has no case, so the pair only
+pushed the letters apart and cost legibility. The Faraday eyebrow gesture is `.label-tick` instead: a
+terminal stub on the inline-start, the wire landing on the label (`.label-tick--live` for the volt
+version). It is opt-in, because `.label-mono` is used inline as often as it is used as a block eyebrow.
+
 ## Radius
 
 | Token | Value |
@@ -76,6 +83,20 @@ The signature "3D press" offset shadow — solid color, no blur, mimics a button
 On `:active`, clay elements translate down and their shadow collapses to a 1px sliver — that's the
 "press" feel. Don't recreate this by hand; use `.clay-card` / `.btn-clay-*` / `ClayButton` / `ClayCard`.
 
+### The light source
+
+The clay is lit from above, and three tokens carry that:
+
+| Token | Role |
+|---|---|
+| `--color-clay-lip` | the lit top edge — `.clay-card` sets it as `border-block-start-color` |
+| `--color-clay-riser` | the shaded side wall: the offset in `--shadow-clay` **and** the card's `border-block-end-color` |
+| `--clay-highlight` | the sheen just inside the lip (`inset 0 1px 0`) |
+
+The bottom border and the riser must stay the same colour. A border even a shade off the riser puts a
+seam between them, and the card goes back to reading as a drawn box standing on a slab. `--color-clay-lip`
+inverts in dark: on lab ink a lit edge is *brighter* than the outline, where on paper it is lighter.
+
 ## Spacing
 
 `--spacing-*` tokens exist (`xs` 4px, `sm` 12px, `md` 24px, `lg` 40px, `xl` 64px, plus `-gutter`,
@@ -100,6 +121,32 @@ All primitives live in `src/components/ui/` — import from `"../components/ui"`
 | `EmptyState` | Zero-data / empty list states | icon disc + title + description + CTA slot |
 | `Skeleton` / `SkeletonText` / `SkeletonCircle` / `SkeletonClayCard` / `SkeletonCard` | Loading placeholders | `Skeleton` = generic block; `SkeletonCard` = pre-built kpi/student-card/mastery-cell shapes |
 | `BottomSheet` | Mobile-first modal/sheet | Swipe-to-dismiss, falls back gracefully on desktop |
+
+## States
+
+Three states are defined once in `src/index.css` and must not be re-implemented per component. All
+three used to be browser or framework defaults; each now says something in the app's own vocabulary.
+
+**Keyboard focus — the current loop.** Two layers with two different jobs, and only one of them is
+load-bearing. The `outline` (3px `primary-dark`, 2px offset) carries the contrast on its own: it is an
+outline rather than a `box-shadow` so it leaves the clay riser alone and survives forced-colors mode.
+On top of it a `::after` rides the component's own 2px border and runs the same current down it that
+`.progress-current-glow` runs along an XP bar — the same 115° repeating gradient, the same 1.1s
+`progress-current-flow`, the same `--color-inverse-primary` spark. That half is identity only, and it
+needs no gate: `[data-focus="on"] *::after` and the reduced-motion block both stop it, leaving the
+outline that was doing the work anyway.
+
+The clay primitives get it automatically. A bespoke control opts in with **`.focus-loop`**, which buys
+the ring without inheriting a primitive's padding and borders.
+
+**Disabled — de-energised.** Never `opacity`. Fading a clay control dims its riser too, so it loses its
+volume and reads as a rendering fault, and the label drops under contrast on the way. Instead the
+colour drains to the neutral rail at full opacity, and `.btn-clay-primary` / `-secondary` add an
+open-contact glyph (`--icon-open-contact`, painted as a mask so it takes `currentColor`). If you are
+adding a disabled style to a bespoke button, use these classes rather than a new `disabled:opacity-*`.
+
+**Text selection.** `::selection` is volt-tinted and the text keeps `--color-on-surface`. Don't override
+it locally.
 
 ## Rules
 

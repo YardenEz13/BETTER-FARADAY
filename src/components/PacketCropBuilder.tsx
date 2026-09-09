@@ -342,7 +342,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                   <div className="flex-1" />
                   {stage === "question" ? (
                     <button type="button" onClick={takeQuestionCrop} disabled={!sel}
-                      className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
+                      className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm">
                       <Scissors size={14} /> גזור שאלה
                     </button>
                   ) : (
@@ -352,7 +352,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                         דילוג (בלי תשובה)
                       </button>
                       <button type="button" onClick={takeAnswerCrop} disabled={!sel}
-                        className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm disabled:opacity-40">
+                        className="btn-clay-primary flex items-center gap-1.5 px-4 py-2 text-sm">
                         <Scissors size={14} /> גזור תשובה
                       </button>
                     </>
@@ -405,7 +405,7 @@ export default function PacketCropBuilder({ classroomId, onClose }: Props) {
                 type="button"
                 disabled={pairs.length === 0 || submitting}
                 onClick={handleSubmit}
-                className="btn-clay-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold disabled:opacity-50"
+                className="btn-clay-primary w-full flex items-center justify-center gap-2 py-2.5 font-bold"
               >
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {submitting ? "שולחים…" : <>שליחת הכל ל-AI <Send size={14} /></>}

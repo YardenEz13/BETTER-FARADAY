@@ -50,7 +50,7 @@ export const ClayButton = forwardRef<HTMLButtonElement, ClayButtonProps>(
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         onPointerDown={handlePointerDown}
-        className={`${VARIANT_CLASS[variant]} ${sizeClass} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`${VARIANT_CLASS[variant]} ${sizeClass} ${className}`}
         {...rest}
       >
         {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}

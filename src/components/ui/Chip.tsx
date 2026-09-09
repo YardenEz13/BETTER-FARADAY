@@ -21,7 +21,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
       ref={ref}
       type={rest.type ?? "button"}
       aria-pressed={rest["aria-pressed"] ?? (selected || undefined)}
-      className={`stat-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selected ? "border-primary text-primary" : ""} ${className}`}
+      className={`stat-chip ${selected ? "border-primary text-primary" : ""} ${className}`}
       {...rest}
     >
       {icon && <span className="inline-flex shrink-0" aria-hidden>{icon}</span>}
