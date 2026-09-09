@@ -37,6 +37,8 @@ interface Props {
   onChange: (latex: string) => void;
   /** Fired on Enter — the worksheet uses it as "compute / evaluate". */
   onEnter?: () => void;
+  /** Fired when focus leaves — the exam saves the section on it. */
+  onBlur?: (latex: string) => void;
   placeholder?: string;
 }
 
@@ -46,15 +48,17 @@ interface Props {
  * though it sits inside the RTL panel.
  */
 const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
-  { value, onChange, onEnter, placeholder },
+  { value, onChange, onEnter, onBlur, placeholder },
   ref,
 ) {
   const elRef = useRef<MathfieldElement | null>(null);
   // Keep the latest callbacks without re-binding listeners each render.
   const onChangeRef = useRef(onChange);
   const onEnterRef = useRef(onEnter);
+  const onBlurRef = useRef(onBlur);
   onChangeRef.current = onChange;
   onEnterRef.current = onEnter;
+  onBlurRef.current = onBlur;
 
   useImperativeHandle(ref, () => ({
     insertLatex: (latex) => elRef.current?.insert(latex, { focus: true }),
@@ -84,11 +88,16 @@ const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
         onEnterRef.current?.();
       }
     };
+    // focusout, not blur: the virtual keyboard and the symbol strip move focus
+    // inside the component, and blur does not bubble from those.
+    const onFocusOut = () => onBlurRef.current?.(el.value);
     el.addEventListener("input", onInput);
     el.addEventListener("keydown", onKeyDown);
+    el.addEventListener("focusout", onFocusOut);
     return () => {
       el.removeEventListener("input", onInput);
       el.removeEventListener("keydown", onKeyDown);
+      el.removeEventListener("focusout", onFocusOut);
     };
   }, []);
 

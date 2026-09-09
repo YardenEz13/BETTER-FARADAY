@@ -7,6 +7,12 @@ import { internalMutation } from "./_generated/server";
 export const E2E_CLASSROOM = "כיתת בדיקות E2E";
 export const E2E_STUDENT = "תלמיד בדיקה";
 export const E2E_TOPIC_HE = "חשבון בסיסי (בדיקות)";
+export const E2E_HOMEWORK = "שיעורי בית לבדיקה E2E";
+/** The seeded homework section's stored answer — a ROOT, deliberately.
+ *  Entering and grading √2 is the exact path that was broken in both
+ *  directions (unenterable on a Hebrew keyboard, then graded wrong), so the
+ *  homework spec drives it end to end. */
+export const E2E_HOMEWORK_ANSWER = "√2";
 
 export const seed = internalMutation({
   args: {},
@@ -67,7 +73,65 @@ export const seed = internalMutation({
       }
     }
 
-    return { classroomId, studentId, topicId };
+    // ── One homework assignment, so the submission path is testable ──
+    // A compound question with a single numeric section. Without this the e2e
+    // suite could only cover practice; homework is where the answer editor and
+    // the grader actually meet.
+    const compound = (await ctx.db.query("compoundQuestions").collect()).find(
+      (c) => c.preamble.includes("E2E"),
+    );
+    const compoundId =
+      compound?._id ??
+      (await ctx.db.insert("compoundQuestions", {
+        topicIds: [topicId],
+        difficulty: 1,
+        tags: ["בדיקות"],
+        preamble: "שאלת E2E: נתון ריבוע ששטחו 2.",
+        preambleParams: [],
+        sections: [{
+          label: "א",
+          prompt: "מהו אורך צלע הריבוע?",
+          answerType: "numeric",
+          correctAnswer: E2E_HOMEWORK_ANSWER,
+          solutionSteps: ["צלע הריבוע היא השורש הריבועי של השטח"],
+          hints: ["חשבו שורש ריבועי של 2"],
+          points: 100,
+          skillsTested: ["שורשים"],
+        }],
+        fullSolution: "הצלע היא $\\sqrt{2}$",
+      }));
+
+    const homework = (await ctx.db.query("homework").withIndex("by_classroom", (q) => q.eq("classroomId", classroomId)).collect()).find(
+      (h) => h.title === E2E_HOMEWORK,
+    );
+    const homeworkId =
+      homework?._id ??
+      (await ctx.db.insert("homework", {
+        classroomId,
+        title: E2E_HOMEWORK,
+        topicIds: [topicId],
+        questionCount: 1,
+        createdAt: Date.now(),
+        // Far enough out that the fixture never expires mid-suite.
+        deadline: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        status: "active",
+        pinnedCompoundIds: [compoundId],
+      }));
+
+    const assigned = (await ctx.db.query("assignedQuestions").withIndex("by_homework_student", (q) =>
+      q.eq("homeworkId", homeworkId).eq("studentId", studentId)).collect())[0];
+    if (!assigned) {
+      await ctx.db.insert("assignedQuestions", {
+        homeworkId,
+        studentId,
+        compoundQuestionId: compoundId,
+        assignedDifficulty: 1,
+        personalizedReason: "fixture",
+        status: "pending",
+      });
+    }
+
+    return { classroomId, studentId, topicId, homeworkId, compoundId };
   },
 });
 
