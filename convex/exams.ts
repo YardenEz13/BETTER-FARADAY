@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { awardXpHelper } from "./xp";
 import { touchStreakHelper } from "./streaks";
+import { matchAnswer, AUTO_GRADED_TYPES } from "./answerMatch";
 
 // ── מצב מתכונת (Bagrut exam simulation) ──
 // A serious, timed, no-help sitting of 2-3 compound (581-style) questions.
@@ -14,37 +15,14 @@ import { touchStreakHelper } from "./streaks";
 const MINUTES_PER_QUESTION = 30;
 const GRACE_MS = 5 * 60 * 1000;
 
-// Section answerTypes we can auto-grade with a normalized compare. Everything
-// else (proof, graph_description, …) is surfaced as self-check.
-const AUTO_GRADED_TYPES = new Set(["numeric", "range", "coordinates"]);
-
-// ── Answer comparison (server-side) ──
-// Normalizes whitespace/case and a few LaTeX/Hebrew-math quirks, then compares.
-function normalizeAnswer(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\\cdot|\\times/g, "*")
-    .replace(/[\s]+/g, "")
-    .replace(/[{}]/g, "")
-    .replace(/\\left|\\right/g, "")
-    .replace(/[,;]/g, ",")
-    .trim();
-}
-
-function answersMatch(correct: string, student: string): boolean {
-  const c = normalizeAnswer(correct);
-  const a = normalizeAnswer(student);
-  if (!a) return false;
-  if (c === a) return true;
-  // Numeric tolerance compare when both sides parse as numbers.
-  const cn = Number(c.replace(/[^0-9.-]/g, ""));
-  const an = Number(a.replace(/[^0-9.-]/g, ""));
-  if (Number.isFinite(cn) && Number.isFinite(an) && c.replace(/[0-9.-]/g, "") === "" && a.replace(/[0-9.-]/g, "") === "") {
-    return Math.abs(cn - an) < 1e-4;
-  }
-  // Loose containment for short expression answers.
-  return c.length > 0 && (c === a);
-}
+// Grading now shares one checker with homework and the client — see
+// convex/answerMatch.ts. The old local `normalizeAnswer`/`answersMatch` pair
+// compared strings, so "\\sqrt{2}" (what the MathField emits) never matched the
+// stored "√2" and a correctly-typed root was graded wrong.
+//
+// "expression" joins the auto-graded set now that comparison is by value
+// rather than by text; an expression it cannot parse falls through to
+// self-check exactly as before, so nothing is graded on a guess.
 
 // Strip solution fields from a compound question for the in-progress client.
 function stripSolution(q: Doc<"compoundQuestions">) {
@@ -241,9 +219,10 @@ export const finishExam = mutation({
         const section = q?.sections.find((s) => s.label === sr.sectionLabel);
         if (!section) return sr;
 
-        const autoGrade = AUTO_GRADED_TYPES.has(section.answerType);
+        const autoGrade = AUTO_GRADED_TYPES.has(section.answerType) &&
+          matchAnswer(section.correctAnswer, sr.studentAnswer, section.answerType).verdict !== "unparsed";
         if (autoGrade) {
-          const isCorrect = answersMatch(section.correctAnswer, sr.studentAnswer);
+          const isCorrect = matchAnswer(section.correctAnswer, sr.studentAnswer, section.answerType).correct;
           const pointsEarned = isCorrect ? section.points ?? sr.pointsPossible : 0;
           totalEarned += pointsEarned;
           return {

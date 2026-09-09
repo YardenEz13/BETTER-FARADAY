@@ -47,7 +47,7 @@ describe("ProofSectionRenderer", () => {
     );
 
     const claimInputs = screen.getAllByPlaceholderText("לדוגמה: AO = OC");
-    const reasonInputs = screen.getAllByPlaceholderText("לדוגמה: זוויות קודקוד שוות");
+    const reasonInputs = screen.getAllByPlaceholderText(/לדוגמה: זוויות קודקוד שוות/);
     expect(claimInputs).toHaveLength(3);
     expect(reasonInputs).toHaveLength(3);
     claimInputs.forEach((el) => expect(el).toBeEnabled());
@@ -76,7 +76,7 @@ describe("ProofSectionRenderer", () => {
     );
 
     const claimInputs = screen.getAllByPlaceholderText("לדוגמה: AO = OC");
-    const reasonInputs = screen.getAllByPlaceholderText("לדוגמה: זוויות קודקוד שוות");
+    const reasonInputs = screen.getAllByPlaceholderText(/לדוגמה: זוויות קודקוד שוות/);
     claimInputs.forEach((el, i) => fireEvent.change(el, { target: { value: `claim ${i}` } }));
     reasonInputs.forEach((el, i) => fireEvent.change(el, { target: { value: `reason ${i}` } }));
 

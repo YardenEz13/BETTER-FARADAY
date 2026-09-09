@@ -108,6 +108,10 @@ If a section's task is to prove something (its prompt contains הוכח / הוכ
       "expectedReason": string,    // the justifying theorem/reason using STANDARD Hebrew theorem names,
                                    // e.g. "צ.ז.צ", "ז.צ.ז", "צ.צ.צ", "אלכסוני מקבילית מחצים זה את זה",
                                    // "זוויות קודקוד שוות", "זוויות מתחלפות בין ישרים מקבילים"
+      "acceptableReasons": string[], // OPTIONAL. Other justifications that would equally establish
+                                   // this same claim — a different valid theorem or route, NOT a
+                                   // rephrasing of expectedReason (the grader already accepts the
+                                   // student's own wording). Omit or [] when there is only one route.
       "clueIfWrong": string        // a short Hebrew nudge if the student's claim/reason is wrong
     }
   ]
@@ -192,7 +196,7 @@ GEOMETRY PROOF RULE — for any section whose task is to prove (הוכח / הו�
 "answerType":"proof", "correctAnswer" = one Hebrew sentence stating what is proven, and add
 "proofMeta": { "given": string, "toProve": string, "diagramDescription": string } plus
 "proofSteps": [{ "stepIndex": number, "expectedClaim": string, "expectedReason": string,
-"clueIfWrong": string }] — an ordered claim/reason chain using standard Hebrew theorem names
+"acceptableReasons": string[], "clueIfWrong": string }] — an ordered claim/reason chain using standard Hebrew theorem names
 (e.g. "צ.ז.צ", "אלכסוני מקבילית מחצים זה את זה"). Base the chain on the answer image when present.
 
 Rules:

@@ -5,8 +5,13 @@ import CompoundQuestionRenderer from "./CompoundQuestionRenderer";
 import type { Id } from "../../convex/_generated/dataModel";
 
 // Mock Convex hooks
-const mockSubmitAnswer = vi.fn().mockResolvedValue(true);
+// submitAnswer is the grader now: it returns the verdict the component renders,
+// instead of taking an `isCorrect` the client worked out for itself.
+const mockSubmitAnswer = vi.fn().mockResolvedValue({
+  isCorrect: true, verdict: "exact", readAs: "5", canAdjudicate: false,
+});
 const mockFinalizeSubmission = vi.fn().mockResolvedValue(true);
+const mockAdjudicate = vi.fn().mockResolvedValue({ isCorrect: false, decided: false });
 
 vi.mock("convex/react", () => ({
   useMutation: (apiPath: string) => {
@@ -14,6 +19,7 @@ vi.mock("convex/react", () => ({
     if (apiPath.includes("finalizeSubmission")) return mockFinalizeSubmission;
     return vi.fn();
   },
+  useAction: () => mockAdjudicate,
   useQuery: () => null,
 }));
 
@@ -37,6 +43,7 @@ vi.mock("../../convex/_generated/api", () => ({
       submitAnswer: "submitAnswer",
       finalizeSubmission: "finalizeSubmission",
     },
+    answerCheck: { adjudicateAnswer: "adjudicateAnswer" },
     compoundQuestions: {
       getFigureUrl: "getFigureUrl",
     },

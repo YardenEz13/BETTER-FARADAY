@@ -37,19 +37,19 @@ export default function LegacyHomeworkRenderer({ question, assignedQuestionId, o
     if (selectedIndex === null) return;
 
     const timeMs = Date.now() - startTime;
-    const correct = selectedIndex === question.correctIndex;
-    
-    setIsCorrect(correct);
+    // Optimistic — the server re-checks the chosen option against the stored
+    // correctIndex and its answer is the one that gets written down.
+    setIsCorrect(selectedIndex === question.correctIndex);
     setIsSubmitted(true);
 
-    await submitAnswer({
+    const graded = await submitAnswer({
       assignedQuestionId,
       sectionLabel: "שאלה יחידה",
       studentAnswer: question.choices[selectedIndex],
-      isCorrect: correct,
       timeMs,
       hintsUsed: 0,
     });
+    setIsCorrect(graded.isCorrect);
   };
 
   const handleFinalize = async () => {

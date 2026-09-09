@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Send, Bot, Loader as Loader2, AlertTriangle } from "../components/electric";
 import { Lightbulb as ElectricBulb } from "../components/electric";
 import MathText from "./MathText";
+import TheoremPicker from "./TheoremPicker";
 
 interface ProofStep {
   stepIndex: number;
@@ -26,6 +27,8 @@ interface StepResult {
   reasonCorrect: boolean;
   stepScore: number;
   feedback: string;
+  /** Right theorem, informal wording — full credit plus the formal name. */
+  reasonPhrasingNote?: string;
 }
 
 interface Props {
@@ -54,6 +57,8 @@ export default function ProofSectionRenderer({
   const [completed, setCompleted] = useState(false);
   const [gradeError, setGradeError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  // Which step's justification field the theorem bank will write into.
+  const [theoremPickerFor, setTheoremPickerFor] = useState<number | null>(null);
 
   // The whole proof is graded in ONE Gemini call, only when the student submits
   // it — not one call per step. A 3-step proof used to cost 3+ calls (one per
@@ -84,6 +89,7 @@ export default function ProofSectionRenderer({
           reasonCorrect: !!s.reasonCorrect,
           stepScore: s.stepScore,
           feedback: s.feedback ?? "",
+          reasonPhrasingNote: s.reasonPhrasingNote,
         };
         inputs[pos] = { claim: s.studentClaim, reason: s.studentReason };
       }
@@ -135,6 +141,7 @@ export default function ProofSectionRenderer({
           reasonCorrect: r.reasonCorrect,
           stepScore: r.stepScore,
           feedback: r.feedback,
+          reasonPhrasingNote: r.reasonPhrasingNote,
         };
       });
       setStepResults(nextResults);
@@ -234,13 +241,21 @@ export default function ProofSectionRenderer({
                   <label className="label-mono text-[10px] text-on-surface/50">הצדקה (שם המשפט)</label>
                   <textarea
                     className="bg-surface border border-outline rounded-lg px-3 py-2 text-on-surface text-sm focus:border-primary focus:outline-none transition-colors resize-none"
-                    placeholder="לדוגמה: זוויות קודקוד שוות"
+                    placeholder="לדוגמה: זוויות קודקוד שוות — או במילים שלך"
                     rows={2}
                     dir="rtl"
                     value={input.reason}
                     onChange={(e) => setInput(pos, "reason", e.target.value)}
                     disabled={isGrading}
                   />
+                  <button
+                    type="button"
+                    className="self-start label-mono text-[10px] text-primary hover:underline cursor-pointer"
+                    onClick={() => setTheoremPickerFor(pos)}
+                    disabled={isGrading}
+                  >
+                    מאגר המשפטים ↗
+                  </button>
                 </div>
               </div>
 
@@ -265,6 +280,12 @@ export default function ProofSectionRenderer({
                       <div className="mb-1">✓ ההצדקה נכונה — כדאי לבדוק את הטענה</div>
                     )}
                     <div>{result.feedback}</div>
+                    {/* Right theorem, student's own words. Full credit — the
+                        formal name is offered as something to learn, which is
+                        what the step was worth teaching in the first place. */}
+                    {result.reasonPhrasingNote && (
+                      <div className="mt-2 opacity-80">📘 {result.reasonPhrasingNote}</div>
+                    )}
                     {step.clueIfWrong && result.stepScore === 0 && (
                       <div className="mt-2 opacity-70">💡 {step.clueIfWrong}</div>
                     )}
@@ -299,6 +320,12 @@ export default function ProofSectionRenderer({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <TheoremPicker
+        isOpen={theoremPickerFor !== null}
+        onClose={() => setTheoremPickerFor(null)}
+        onPick={(name) => { if (theoremPickerFor !== null) setInput(theoremPickerFor, "reason", name); }}
+      />
 
       {/* ── Actions ── */}
       {!completed && (

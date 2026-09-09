@@ -1561,3 +1561,67 @@ math-field.faraday-mathfield::part(menu-toggle) {
 @media (prefers-reduced-motion: reduce) {
   .frig-body { transition: none; }
 }
+
+/* ═══════════════════ FOCUS MODE ════════════════════ */
+/* A student who gets distracted is fighting this UI, not using it. Focus mode
+   (src/components/FocusModeContext.tsx) sets data-focus="on" on <html>; the
+   pages stop mounting the loud pieces, and this block flattens what is left.
+
+   Everything here is a global safety net — any decorative animation added
+   later is caught by the blanket rule below without being listed. The pages
+   still gate the JS-driven effects (canvas backdrops, GSAP, confetti)
+   themselves, because CSS cannot stop a RAF loop. */
+
+[data-focus="on"] {
+  /* Glows are the loudest thing on the screen after motion. Off, not dimmed —
+     a faint halo still pulls the eye to the wrong place. */
+  --glow-primary:  none;
+  --glow-spark:    none;
+  --glow-hot:      none;
+  --glow-tertiary: none;
+  /* The clay stack stays (it is the affordance — a raised thing is pressable)
+     but drops to a hairline, derived from the live outline token so it follows
+     the theme instead of the light-mode hex the default is built from. */
+  --shadow-clay:           0 2px 0 0 var(--color-outline);
+  --shadow-clay-primary:   0 2px 0 0 var(--color-primary-dark);
+  --shadow-clay-secondary: 0 2px 0 0 var(--color-secondary-dark);
+  --shadow-clay-tertiary:  0 2px 0 0 var(--color-tertiary-dark);
+  --shadow-clay-error:     0 2px 0 0 var(--color-error);
+}
+
+/* No looping decoration, no entrance choreography, no hover travel. The
+   0.001ms (rather than 0) keeps transitionend/animationend listeners firing,
+   so anything waiting on one still completes. */
+[data-focus="on"] *,
+[data-focus="on"] *::before,
+[data-focus="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* The clay press is a transform on hover/active — in focus mode the cards sit
+   still and only the border colour answers the pointer. */
+[data-focus="on"] .clay-card:hover,
+[data-focus="on"] .clay-card:active {
+  transform: none;
+  box-shadow: var(--shadow-clay);
+}
+[data-focus="on"] .btn-clay-primary:hover:not(:disabled),
+[data-focus="on"] .btn-clay-secondary:hover:not(:disabled),
+[data-focus="on"] .btn-clay-ghost:hover:not(:disabled) {
+  transform: none;
+}
+
+/* Backdrop blur is both visual noise and the most expensive thing on a school
+   phone, and every one of these surfaces is translucent over a backdrop the
+   pages no longer render in this mode. */
+[data-focus="on"] .backdrop-blur-md,
+[data-focus="on"] .backdrop-blur-xl,
+[data-focus="on"] .backdrop-blur-sm {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
