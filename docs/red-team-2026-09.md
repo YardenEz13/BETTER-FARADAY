@@ -256,3 +256,62 @@ teacher's "asked for help" alerts.
   lost-update findings were ruled out rather than reported.
 - **Crop rectangles.** Already clamped and normalized client-side, never sent raw.
 - **Suppression debt.** Zero `@ts-ignore`, `TODO`, `FIXME`, `.only(` or `.skip(` in the tree.
+
+---
+
+## Fuzzing the pure logic
+
+Every item here was reproduced by executing the real module, not by reading it —
+vitest run from the repo root against a scratch config, so imports resolved normally.
+No repo file was modified.
+
+### HIGH — `moveAcross` silently produces a false equation
+
+`src/services/exprBricks.ts:247-260`. Drag the leading constant of `10 − x = 4` across the
+equals sign and the board renders `x = 4 − 10`, asserting **x = −6**. The correct step is
+`−x = 4 − 10`, so x = 6. Opposite sign, no error, no warning.
+
+Root cause at `:251`:
+
+```ts
+const staying = parent.a.id === id ? parent.b : parent.a;
+// `a − b` moving b: it arrives as `+ b`. Everything else flips to minus.
+```
+
+The comment only reasons about moving `b`. When `a` is the one moved out of a subtraction,
+the operand left behind was a *subtrahend* and must be negated — it never is. Reproduced with
+plain numbers too: `10 − 3 = 7`, move the `10`, get `3 = 7 − 10` (asserting 3 = −3).
+
+`canMoveAcross` places no restriction on which operand is dragged, and `ExprBoard.tsx:147`
+wires it directly to the drag gesture. `exprBricks` backs the step-by-step solving surface
+reached from `CompoundQuestionRenderer` and the Faraday chat components. All four existing
+tests for this function move `side.b` only; moving `side.a` of a subtraction is untested.
+
+Any equation of the form `constant − x = constant` — an ordinary linear equation — lets the
+student, or the tutor's own board, land on a wrong-signed state. This is worse than a crash: a
+maths tutor teaching a false step, confidently.
+
+**Fix:** when `parent.op === "−"` and the moved node is `parent.a`, negate `staying`.
+
+### MEDIUM — the rest
+
+- **`formatDateHe` / `formatDateLongHe` throw** `RangeError: Invalid time value` on NaN,
+  ±Infinity, out-of-range or non-numeric input (`src/lib/dates.ts`). No guard, unlike
+  `errors.ts` in the same directory, which deliberately falls back. Called on
+  `hw.deadline ?? hw.createdAt` in `HomeworkManagementView`.
+- **`countOf` / `dayCount` / `hourCount` render garbage** — literal `"NaN ימים"`,
+  `"Infinity ימים"`, `"-1 ימים"`, `"2.0000001 שעות"` (`src/lib/hebrew.ts`). Zero validation in
+  the one documented chokepoint for every counted-noun string in the UI.
+- **`hebrewGuard.arabicSample` returns the entire input** instead of the offending word when
+  the surrounding whitespace is `\t` or `\n` rather than a space — which defeats its documented
+  purpose exactly on the multi-line generated content (steps, explanations) it exists to guard.
+- **`errors.errorMessage` has no length cap** — a 100,000-character single-line `Error` message
+  reaches the toast (`ErrorToaster`) unmodified, on a phone.
+- **`exprBricks.holes()` stack-overflows** at a tree depth where `value()` and `text()` on the
+  identical tree do not.
+
+### LOW
+
+- `algebraBricks.rat()` accepts NaN/Infinity silently, though it already rejects zero
+  denominators.
+- `termBody()` uses the wrong minus glyph for negative exponents.
