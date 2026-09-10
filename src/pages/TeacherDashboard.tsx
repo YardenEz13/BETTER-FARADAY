@@ -11,6 +11,7 @@ import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
   Zap, GraduationCap, Trophy, Sparkles, UserPlus,
+  ElectricField,
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
@@ -186,7 +187,6 @@ export default function TeacherDashboard() {
   return (
     <div dir="rtl" className="relative min-h-screen flex flex-col bg-background">
       <FaradayCanvas variant="induction" style={{ position: "fixed", zIndex: 0 }} />
-      <div className="circuit-grid" style={{ position: "fixed", inset: 0, opacity: 0.5, pointerEvents: "none", zIndex: 0 }} />
 
       {/* ══════════ COMMAND BAR ══════════ */}
       <motion.header
@@ -1088,7 +1088,8 @@ function PulseView({ data, onSelect }: { data: CommandCenterData; onSelect: (s: 
   return (
     <div>
       {/* energy hero */}
-      <div data-tour="pulse-hero" className="clay-card circuit-grid flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
+      <div data-tour="pulse-hero" className="clay-card flex items-center justify-center gap-12 flex-wrap relative overflow-hidden mb-4.5 p-[30px]">
+        <ElectricField className="electric-field" intensity={0.42} />
         <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 220, height: 220 }}>
           <div className="field-ring" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />
           <div className="field-ring field-ring--2" style={{ position: "absolute", left: "50%", top: "50%", width: 200, height: 200, borderRadius: "50%", border: "2px solid var(--color-primary)" }} />

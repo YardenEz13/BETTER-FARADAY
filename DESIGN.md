@@ -103,6 +103,38 @@ The bottom border and the riser must stay the same colour. A border even a shade
 seam between them, and the card goes back to reading as a drawn box standing on a slab. `--color-clay-lip`
 inverts in dark: on lab ink a lit edge is *brighter* than the outline, where on paper it is lighter.
 
+## Backdrops
+
+Four layers can sit behind a screen. The first two are free and global; the last two are opt-in.
+
+| Layer | Where it lives | Scope |
+|---|---|---|
+| **Ground** | `body::before`, one fixed pseudo-element | every page |
+| **Dot field** | a second `background-image` on that same pseudo-element | every page |
+| **Field lines** | `ElectricField`, absolutely positioned in a container | hero surfaces, `EmptyState` |
+| **Canvas** | `FaradayCanvas` / `NightSkyCanvas` | the 8 flagship pages, tied to the equipped shop theme |
+
+The ground and the dot field are one fixed layer at `z-index: -1`, so they cost a single composited
+paint, never repaint on scroll, and reach all 21 pages rather than the 8 that mount a canvas. It is
+`fixed` rather than a `<body>` background so the gradient is sized to the viewport instead of stretching
+down a long page. Tokens: `--bg-lift` (the light the clay is lit by, arriving from above the fold),
+`--bg-sink` (where the page settles at the bottom), `--grid-dot` and `--grid-size`. All four invert in
+dark, where the lift becomes a faint volt bloom rather than white.
+
+**Never hand-roll a fixed backdrop div in a page.** That is what `TeacherDashboard` used to do, and it
+is why exactly one page had a dot field. If a page needs more than the ground, it mounts `ElectricField`
+in a container, or a canvas.
+
+`ElectricField` animates with SMIL (`<animate>`, `<animateMotion>`), not CSS — so `animation: none` does
+**not** stop it, and neither does the reduced-motion block at the bottom of `index.css`. It takes
+`useReducedMotion()` and simply does not render the animate elements, leaving a still frame. Pass
+`className="electric-field"` when you mount it: focus mode hides that class outright, and since none of
+this is canvas, hiding it genuinely stops the work.
+
+In focus mode the **ground stays** and everything else goes — it is static, and it is what keeps the page
+from reading as a flat sheet, while a repeating pattern behind text is exactly what that mode exists to
+remove. `prefers-contrast: more` drops the dot field for the same reason.
+
 ## Spacing
 
 `--spacing-*` tokens exist (`xs` 4px, `sm` 12px, `md` 24px, `lg` 40px, `xl` 64px, plus `-gutter`,

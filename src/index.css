@@ -223,6 +223,21 @@
   --shadow-md:             0 4px 12px rgba(0,0,0,0.08);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.10);
 
+  /* ── BACKDROP — the page ground ──
+     Three layers stack behind every screen, cheapest first: this ground, the
+     dot field printed on top of it, and — on hero surfaces only — ElectricField's
+     traces. The first two are one fixed pseudo-element on <body>, so they cost
+     a single composited paint and reach all 21 pages rather than the 8 that
+     happen to mount a canvas.
+     `lift` is the light the clay is lit by, arriving from above the fold;
+     `sink` is where the page settles at the bottom. Keep both far below the
+     accents — this is atmosphere, and anything you can name as a colour is
+     already too strong. */
+  --bg-lift:   rgba(255, 255, 255, 0.85);
+  --bg-sink:   rgba(120, 178, 120, 0.16);
+  --grid-dot:  color-mix(in srgb, var(--color-primary) 13%, transparent);
+  --grid-size: 26px;
+
   /* ── GLOW SHADOWS — electric identity ── */
   --glow-primary:  0 0 20px rgba(23, 201, 100, 0.32);
   --glow-spark:    0 0 22px rgba(91, 255, 159, 0.45);
@@ -317,6 +332,12 @@
   --shadow-md:             0 4px 12px rgba(0,0,0,0.3);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.4);
 
+  /* On lab ink the ground inverts: the lift is a faint volt bloom rather than
+     white, and the sink is real darkness at the edges. */
+  --bg-lift:  rgba(34, 216, 107, 0.07);
+  --bg-sink:  rgba(0, 0, 0, 0.45);
+  --grid-dot: color-mix(in srgb, var(--color-primary) 9%, transparent);
+
   /* Glows track their own dark-theme colour, as the old color-mix did. All
      four, not just primary: the other three sat at their light-theme values
      on lab ink, where --glow-hot in particular was tuned for #059669 and the
@@ -378,6 +399,25 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   transition: background-color 0.3s, color 0.3s;
+}
+
+/* The ground and the dot field, as one fixed layer behind everything.
+   Fixed rather than attached to <body>, so the gradient is sized to the
+   viewport instead of stretching down a long page, and so scrolling never
+   repaints it. z-index -1 puts it under #root (z-index 1) but above the root
+   background; body creates no stacking context of its own, so that holds.
+   A page that mounts FaradayCanvas stacks its canvas on top of this. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, var(--grid-dot) 1px, transparent 1px),
+    radial-gradient(120% 75% at 50% -12%, var(--bg-lift), transparent 62%),
+    radial-gradient(120% 60% at 50% 112%, var(--bg-sink), transparent 58%);
+  background-size: var(--grid-size) var(--grid-size), auto, auto;
 }
 
 #root {
@@ -1539,6 +1579,7 @@ body {
     --color-on-surface-variant: #3d5244;
     --color-clay-lip:           #a8d4a4;
     --color-clay-riser:         #7fb87a;
+    --grid-dot:                 transparent;
   }
   [data-theme="dark"] {
     --color-outline:            #5c7f66;
@@ -1546,6 +1587,7 @@ body {
     --color-on-surface-variant: #b6cfbe;
     --color-clay-lip:           #6d9478;
     --color-clay-riser:         #000000;
+    --grid-dot:                 transparent;
   }
 }
 
@@ -1832,7 +1874,15 @@ math-field.faraday-mathfield::part(menu-toggle) {
   --shadow-clay-secondary: 0 2px 0 0 var(--color-secondary-dark);
   --shadow-clay-tertiary:  0 2px 0 0 var(--color-tertiary-dark);
   --shadow-clay-error:     0 2px 0 0 var(--color-error);
+  /* The ground stays — it is static and it is what stops the page reading as a
+     flat sheet. The dot field goes: a repeating pattern behind text is exactly
+     the kind of thing this mode exists to remove. */
+  --grid-dot: transparent;
 }
+
+/* ElectricField is SMIL, not canvas, so display:none genuinely stops it —
+   there is no RAF loop left running behind the hidden element. */
+[data-focus="on"] .electric-field { display: none; }
 
 /* No looping decoration, no entrance choreography, no hover travel. The
    0.001ms (rather than 0) keeps transitionend/animationend listeners firing,
