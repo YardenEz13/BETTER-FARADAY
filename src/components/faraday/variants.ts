@@ -31,6 +31,16 @@ import {
  * Perf contract: glowDot() sprite-caches small halos, stampGlow() sprite-caches
  * big blooms, strokeBuckets()/addSeg() batches lines. No per-frame shadowBlur,
  * no per-pair stroke().
+ *
+ * Blend contract: every variant composites through `p.glow ? "lighter" :
+ * "multiply"`. Dark is additive — light accumulates toward white, which is what
+ * makes a glow read as emission. Light mode is the DUAL, not the absence: these
+ * shapes are drawn as halos, and a halo composited source-over onto a pale
+ * ground is a milky smudge, so on light the marks darken toward the ground
+ * instead. That one ternary is the difference between the light theme reading
+ * as structure and reading as fog, and light is the DEFAULT theme — every
+ * backdrop was the weaker half of itself for most students before it. Do not
+ * "simplify" it back to a bare source-over.
  */
 export function makeVariant(
   variant: FaradayVariant,
@@ -72,7 +82,7 @@ export function makeVariant(
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         atoms.forEach((a) => {
           a.x += a.vx;
           a.y += a.vy;
@@ -160,7 +170,7 @@ export function makeVariant(
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         nebula.forEach((nb) =>
           stampGlow(ctx, nb.x, nb.y, nb.r, p[nb.c], (p.glow ? 0.07 : 0.03) * (0.7 + 0.3 * Math.sin(t * 0.3 + nb.ph))),
         );
@@ -322,7 +332,7 @@ export function makeVariant(
           ctx.stroke(tr.path);
         });
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         traces.forEach((tr) => {
           let energy = 0.5 + 0.5 * Math.sin(t * 0.8 + tr.phase);
           if (mouse.active) {
@@ -401,7 +411,7 @@ export function makeVariant(
         const iMag = Math.abs(current), dir = current >= 0 ? 1 : -1;
 
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // magnet dipole field rings
         for (let k = 1; k <= 6; k++) {
           const spread = k / 6;
@@ -514,7 +524,7 @@ export function makeVariant(
         });
         strokeBuckets(ctx, gb, p.green, 0.4, 1.2);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // integrated field lines, streamed from the + pole toward the − pole
         const plus = poles[0];
         for (let n = 0; n < 12; n++) {
@@ -693,7 +703,7 @@ export function makeVariant(
           }
         });
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // proximity graph — the cage severs links that cross it (shielding made visible)
         const linkBuckets = makeBuckets();
         const sparks: { x: number; y: number }[] = [];
@@ -736,7 +746,7 @@ export function makeVariant(
           }
         }
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         ctx.lineCap = "round";
         // vertical bars — nearer bars brighter/thicker, a spark shimmers along each
         barAnchors.forEach((b) => {
@@ -835,7 +845,7 @@ export function makeVariant(
         }
         const cols = [p.green, p.spark, p.violet, p.amber];
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         for (let L = 0; L < LAYERS; L++) {
           const depth = L / (LAYERS - 1);
           const baseY = ((L + 0.5) / LAYERS) * h;

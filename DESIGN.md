@@ -125,6 +125,12 @@ dark, where the lift becomes a faint volt bloom rather than white.
 is why exactly one page had a dot field. If a page needs more than the ground, it mounts `ElectricField`
 in a container, or a canvas.
 
+The seven shop themes (`src/components/faraday/variants.ts`) composite through
+`p.glow ? "lighter" : "multiply"`. Dark is additive; **light is the dual, not the absence**. These are
+halo shapes, and a halo drawn source-over on a pale ground is a milky smudge — so on light they darken
+toward the ground instead. Light is the default theme, so before this every backdrop was the weaker half
+of itself for most students. Keep the ternary when adding a variant.
+
 `ElectricField` animates with SMIL (`<animate>`, `<animateMotion>`), not CSS — so `animation: none` does
 **not** stop it, and neither does the reduced-motion block at the bottom of `index.css`. It takes
 `useReducedMotion()` and simply does not render the animate elements, leaving a still frame. Pass
