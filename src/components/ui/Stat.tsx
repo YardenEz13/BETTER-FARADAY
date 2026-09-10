@@ -27,7 +27,7 @@ export function Stat({ value, label, icon, tone = "default", size = "md", classN
         {icon && <span className="inline-flex shrink-0" aria-hidden>{icon}</span>}
         {value}
       </div>
-      <div className="label-mono">{label}</div>
+      <div className="label-mono label-tick">{label}</div>
     </div>
   );
 }

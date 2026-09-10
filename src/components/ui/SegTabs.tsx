@@ -40,7 +40,7 @@ export function SegTabs<T extends string>({ tabs, value, onChange, label, classN
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-body-sm font-semibold whitespace-nowrap flex-shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="focus-loop relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-body-sm font-semibold whitespace-nowrap flex-shrink-0"
           >
             {active && (
               <motion.div
