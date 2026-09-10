@@ -211,7 +211,7 @@ export default function NotificationCenter({ studentId }: { studentId: string })
         <Bell size={16} />
         {unreadCount > 0 && (
           <span
-            className="num absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[10px] font-extrabold flex items-center justify-center border-2 border-surface"
+            className="num absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[10px] font-extrabold flex items-center justify-center border-2 border-surface"
             style={{ boxShadow: hasUrgentUnread ? "0 0 8px var(--color-tertiary)" : "0 0 6px var(--color-primary)" }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}

@@ -259,7 +259,7 @@ export default function TeacherDashboard() {
           </button>
           <button className="btn-icon relative" aria-label="התראות">
             <Bell size={17} className={data.atRisk > 0 ? "text-error" : "text-on-surface-variant"} />
-            {data.atRisk > 0 && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-surface" />}
+            {data.atRisk > 0 && <span className="absolute -top-0.5 -end-0.5 w-2.5 h-2.5 rounded-full bg-error border-2 border-surface" />}
           </button>
           <button className="btn-icon" onClick={() => navigate("/")} title="יציאה"><LogOut size={16} /></button>
         </div>
