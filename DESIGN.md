@@ -49,6 +49,12 @@ line-height + weight).
 Font families: `Assistant` (Hebrew-first UI/body), `Yarden` (display headlines, `font-headline-xl/lg`
 only), `JetBrains Mono` (`font-mono` — the `.num`/`.label-mono` "voltmeter" faces for stats).
 
+`.num` is also bidi-isolated (`direction: ltr; unicode-bidi: isolate`), the same protection `.katex`
+gets. A lone `1,240` survives a Hebrew line but a multi-part readout does not — in `3 / 10` the spaces
+around the separator take the paragraph's direction and the two operands swap, so the student is told
+they finished 10 out of 3. **Because `direction` also orders flex children, `.num` goes on the numeral
+itself, never on a row that also holds an icon** — that is why `Stat` wraps its value in its own span.
+
 `.num` and `.label-mono` both stack `JetBrains Mono` over `Assistant` deliberately: the mono face
 carries no Hebrew, so Hebrew falls through to Assistant and only the digits and Latin get the voltmeter
 face. Eyebrow labels take **no** `uppercase` and no wide tracking — Hebrew has no case, so the pair only
@@ -124,8 +130,8 @@ All primitives live in `src/components/ui/` — import from `"../components/ui"`
 
 ## States
 
-Three states are defined once in `src/index.css` and must not be re-implemented per component. All
-three used to be browser or framework defaults; each now says something in the app's own vocabulary.
+These are defined once in `src/index.css` and must not be re-implemented per component. Every one of
+them used to be a browser or framework default; each now says something in the app's own vocabulary.
 
 **Keyboard focus — the current loop.** Two layers with two different jobs, and only one of them is
 load-bearing. The `outline` (3px `primary-dark`, 2px offset) carries the contrast on its own: it is an
@@ -147,6 +153,25 @@ adding a disabled style to a bespoke button, use these classes rather than a new
 
 **Text selection.** `::selection` is volt-tinted and the text keeps `--color-on-surface`. Don't override
 it locally.
+
+Three more browser defaults are claimed centrally, and none of them should ever be set per-component:
+`caret-color` on `.field`, `accent-color` on `:root` (native checkbox / radio / range paint themselves
+from it), and the Firefox scrollbar. That last one is fenced behind
+`@supports not selector(::-webkit-scrollbar)` on purpose: Chrome and Safari drop their own
+`::-webkit-scrollbar` styling the moment a standard scrollbar property is set, so the fence is what lets
+Firefox be themed without costing Chrome the 6px bar and its hover tint.
+
+**Touch.** The reset does **not** kill `-webkit-tap-highlight-color` — it is a volt tint on `:root`, and
+the clay controls opt out of it because they answer a finger with their own press. Anything else you
+make tappable inherits it and needs nothing.
+
+**Increased contrast.** `@media (prefers-contrast: more)` darkens the structural tokens (`--color-outline`,
+`--color-on-surface-variant`, and the two clay faces) in both themes. The accents already carry their
+weight and stay put. Add new structural tokens to that block when you add them.
+
+**Scroll targets.** `scroll-behavior` is smooth app-wide and four screens carry a `fixed top-0` header,
+so `[id]` reserves `--header-h` worth of `scroll-margin-block-start`. Keep `--header-h` honest if a
+header's height changes.
 
 ## Rules
 
@@ -250,6 +275,12 @@ matcher already handles.
 
 1. Raw hex colors in `src/**/*.tsx` (outside the allowlist) — **fails the build if the count grows**.
 2. `style={{` inline styles in `src/pages/**/*.tsx` — **warns if the count grows** (not yet a hard fail).
+3. Physical `ml/mr`, `pl/pr`, `left/right`, `border-l/r`, `rounded-l/r` and `text-left/right` in
+   `src/**/*.tsx` — **fails the build if the count grows**. Rule 3 below was the one rule nothing
+   measured, which is how four notification badges came to be pinned with `-right-*` and sat on the
+   wrong corner. Some physical values are legitimate (a full-bleed `left-0 right-0`, a `left-1/2`
+   centre), so this is a growth ratchet rather than a ban: everything present today is baselined and
+   only new ones fail.
 
 Counts *below* baseline are allowed silently — the script only complains about regressions. When you
 migrate legacy code and reduce a file's count, run:
@@ -258,6 +289,11 @@ migrate legacy code and reduce a file's count, run:
 node scripts/design-lint.mjs --update
 ```
 
-This rewrites the baseline to the new (lower) counts, "ratcheting" the debt ceiling down so it can never
-silently creep back up. Never hand-edit `scripts/design-lint-baseline.json`; always regenerate it with
-`--update` after a real reduction.
+`--update` is monotonic: it writes the **lower** of (baseline, current) for every file, so re-baselining
+one metric can never quietly raise the ceiling on another. A file the scan no longer sees is dropped; a
+file new to the scan enters at its current count, which is how a newly added metric gets its first
+baseline.
+
+To deliberately accept a **higher** count — a genuinely physical `left-1/2` centre, say — pass
+`--update --relax`. It is a separate flag so the decision shows up in the diff instead of riding along
+with an unrelated re-baseline. Never hand-edit `scripts/design-lint-baseline.json`.
