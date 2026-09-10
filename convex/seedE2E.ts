@@ -14,6 +14,33 @@ export const E2E_HOMEWORK = "שיעורי בית לבדיקה E2E";
  *  homework spec drives it end to end. */
 export const E2E_HOMEWORK_ANSWER = "√2";
 
+/**
+ * Reopen the seeded homework section.
+ *
+ * A section that has been answered correctly renders its verdict instead of the
+ * answer field, and offers no retry — so one passing run would close the
+ * fixture for every run after it, and for the second Playwright project in the
+ * same run. The homework spec calls this before each test.
+ */
+export const resetHomework = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const homework = (await ctx.db.query("homework").collect()).find(
+      (h) => h.title === E2E_HOMEWORK,
+    );
+    if (!homework) return { reset: 0 };
+
+    const assigned = await ctx.db
+      .query("assignedQuestions")
+      .withIndex("by_homework_student", (q) => q.eq("homeworkId", homework._id))
+      .collect();
+    for (const aq of assigned) {
+      await ctx.db.patch(aq._id, { status: "pending", answers: [], submittedAt: undefined, score: undefined });
+    }
+    return { reset: assigned.length };
+  },
+});
+
 export const seed = internalMutation({
   args: {},
   handler: async (ctx) => {

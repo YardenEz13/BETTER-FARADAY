@@ -13,6 +13,8 @@ test("student answers a practice question end-to-end", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     localStorage.setItem("faraday_prototype_auth", "true");
+    // The tour otherwise sits over the skill node this test clicks.
+    localStorage.setItem("faraday_tour_done", "true");
   });
   await page.goto("/");
 
