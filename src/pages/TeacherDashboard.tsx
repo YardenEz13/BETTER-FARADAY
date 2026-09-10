@@ -10,11 +10,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, LogOut, Users, LayoutGrid, Activity, Bot, BookOpen,
   Moon, Sun, Lightbulb, Send, X, AlertTriangle, Flame, CheckCircle as CheckCircle2,
-  Zap, GraduationCap, Trophy, Sparkles,
+  Zap, GraduationCap, Trophy, Sparkles, UserPlus,
 } from "../components/electric";
 
 import { AIChatAnalyticsView } from "./AIChatAnalyticsView";
 import { HomeworkManagementView } from "./HomeworkManagementView";
+import RosterView from "./RosterView";
 import LiveClassPanel from "../components/LiveClassPanel";
 import AiReactorPanel from "../components/AiReactorPanel";
 import MathText from "../components/MathText";
@@ -30,7 +31,7 @@ import {
   Avatar, Sparkline, Radar, Gauge, MiniRing,
 } from "../components/commandCenter";
 
-type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework";
+type View = "triage" | "mastery" | "pulse" | "aiChats" | "homework" | "roster";
 type Sort = "risk" | "acc" | "name";
 type MasteryMode = "grid" | "radar";
 
@@ -40,6 +41,7 @@ const NAV: { id: View; label: string; short: string; Icon: typeof Users }[] = [
   { id: "pulse", label: "דופק הכיתה", short: "דופק", Icon: Activity },
   { id: "aiChats", label: "שיחות AI", short: "שיחות", Icon: Bot },
   { id: "homework", label: "שיעורי בית", short: "ש״ב", Icon: BookOpen },
+  { id: "roster", label: "רשימת כיתה", short: "כיתה", Icon: UserPlus },
 ];
 
 const RISK_ORDER: Record<CCStatus, number> = { risk: 0, watch: 1, thriving: 2 };
@@ -283,6 +285,7 @@ export default function TeacherDashboard() {
               {view === "pulse" && <PulseView data={data} onSelect={setSel} />}
               {view === "aiChats" && <div className="-mx-4 md:-mx-6"><AIChatAnalyticsView analytics={aiAnalytics} /></div>}
               {view === "homework" && <div className="-mx-4 md:-mx-6"><HomeworkManagementView classroomId={classroom?._id ?? null} /></div>}
+              {view === "roster" && <div className="-mx-4 md:-mx-6"><RosterView classroomId={classroom?._id ?? null} /></div>}
             </motion.div>
           </AnimatePresence>
         </div>

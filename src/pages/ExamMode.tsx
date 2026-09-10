@@ -11,6 +11,7 @@ import {
 import { ThemeToggle } from "../components/ThemeContext";
 import { questionCount } from "../lib/hebrew";
 import MathText from "../components/MathText";
+import MathAnswerInput from "../components/MathAnswerInput";
 
 // ── מצב מתכונת — Bagrut exam simulation ──
 // Two routes share this file: the lobby (no examId) and the runner (examId).
@@ -354,15 +355,26 @@ function ExamActive({
                     </div>
                   )}
 
-                  <textarea
-                    dir="rtl"
-                    rows={isProof ? 5 : 2}
-                    value={val}
-                    onChange={(e) => handleChange(q._id, s.label, e.target.value)}
-                    onBlur={(e) => handleBlur(q._id, s.label, e.target.value)}
-                    placeholder={isProof ? "מהלך ההוכחה כאן…" : "התשובה כאן…"}
-                    className="w-full bg-surface border-2 border-outline rounded-2xl px-4 py-3 text-on-surface focus:border-primary focus:outline-none transition-colors"
-                  />
+                  {/* A proof is prose, so it keeps the textarea. Everything
+                      else is maths, and until now the exam had no way to enter
+                      a root at all — see MathAnswerInput. */}
+                  {isProof ? (
+                    <textarea
+                      dir="rtl"
+                      rows={5}
+                      value={val}
+                      onChange={(e) => handleChange(q._id, s.label, e.target.value)}
+                      onBlur={(e) => handleBlur(q._id, s.label, e.target.value)}
+                      placeholder="מהלך ההוכחה כאן…"
+                      className="w-full bg-surface border-2 border-outline rounded-2xl px-4 py-3 text-on-surface focus:border-primary focus:outline-none transition-colors"
+                    />
+                  ) : (
+                    <MathAnswerInput
+                      value={val}
+                      onChange={(latex) => handleChange(q._id, s.label, latex)}
+                      onBlur={(latex) => handleBlur(q._id, s.label, latex)}
+                    />
+                  )}
                 </div>
               );
             })}

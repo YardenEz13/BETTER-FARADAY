@@ -76,11 +76,24 @@ the site for the class, and the August incident showed the failure mode is a
 cron nobody was watching rather than a decision anybody made. Still a dashboard
 toggle if that changes.
 
-### 4. 🟠 Parental consent + school sign-off — app side done 2026-09-07
+### 4. 🟠 Parental consent + school sign-off — roster screen added 2026-09-09 — app side done 2026-09-07
 
 The **paperwork** is the long pole and none of it is engineering:
 `docs/parental-consent-he.md` still has every `[...]` field unfilled and has had
 no legal or school review.
+
+**Consent is now visible, not just enforced.** The teacher dashboard has a
+"רשימת כיתה" tab (`src/pages/RosterView.tsx`): every student with the recorded
+consent date beside their name, rows without one flagged rather than hidden,
+and an add form running the same `consentDateError` validator the mutation
+does. Before it, the answer to "does every student have a signed form on file"
+lived only in the database. `docs/parental-consent-he.md` now also carries a
+fill-in table naming every `[...]` field and who owns it — none are fillable
+from the code, and the point is that no form goes out with a placeholder in it.
+
+No delete button, deliberately: there is no auth, and a public mutation that
+erases a student is a bigger hole than the one this closes. `purgeStudent`
+stays internal.
 
 The **app side** is now enforced rather than assumed. `classroom.addStudent`
 requires a `consentOn` date (`convex/classroom.ts`, `consentDateError`), and it
@@ -129,8 +142,16 @@ live Gemini call per run: money, the rate limiter, and a non-deterministic
 string to match. The breakage worth catching is a panel that fails to mount or
 mounts behind the question card, and that is free to test.
 
-**Still open: homework submission.** It needs `seedE2E` extended to create an
-assignment, which is the only reason it is not done here.
+**Homework submission — done 2026-09-09.** `seedE2E:seed` now creates a
+compound question, a homework and an assignment, and `e2e/homework.spec.ts`
+drives the whole path: a wrong answer is marked wrong, then a retry enters √2
+by tapping the symbol chip (the only route to a radical on a Hebrew keyboard)
+and it is graded correct against the stored "√2". Three specs now, each at
+desktop and Pixel 5.
+
+The wrong-answer half is not padding: the checker this replaced accepted any
+answer over five characters, and a suite that only asserts correct answers pass
+would have stayed green through it.
 
 ### 9. 🟡 Accessibility statement follow-through
 

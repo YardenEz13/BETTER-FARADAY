@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -9,12 +9,9 @@ import { log } from "../lib/logger";
 import { countOf, minuteCount } from "../lib/hebrew";
 import MathText from "./MathText";
 import ProofSectionRenderer from "./ProofSectionRenderer";
-import MathSymbolStrip from "./playground/MathSymbolStrip";
-import type { MathFieldHandle } from "./playground/MathField";
+import MathAnswerInput from "./MathAnswerInput";
 import { matchAnswer, AUTO_GRADED_TYPES } from "../../convex/answerMatch";
 
-// MathLive is heavy — load it only when a math section actually renders.
-const MathField = lazy(() => import("./playground/MathField"));
 // Answer types that get the visual LaTeX editor. Everything else (free text)
 // keeps the plain textarea; proofs use ProofSectionRenderer. Same set the
 // grader auto-decides, so the editor appears exactly where it is checkable.
@@ -117,9 +114,6 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
 
   const submitAnswer = useMutation(api.homework.submitAnswer);
   const adjudicateAnswer = useAction(api.answerCheck.adjudicateAnswer);
-  // One field handle per section, so the symbol strip inserts into the field
-  // the student is actually working in.
-  const fieldRefs = useRef<Record<string, MathFieldHandle | null>>({});
   const finalizeSubmission = useMutation(api.homework.finalizeSubmission);
   const figureUrl = useQuery(api.compoundQuestions.getFigureUrl, { id: question._id });
 
@@ -340,29 +334,11 @@ export default function CompoundQuestionRenderer({ question, assignedQuestionId,
                     ) : !isSubmitted ? (
                       <div className="flex flex-col gap-4">
                         {MATH_ANSWER_TYPES.has(section.answerType) ? (
-                          <div className="flex flex-col gap-2">
-                            <div className="label-mono text-[10px] text-on-surface-variant flex items-center gap-1">
-                              <MathText>{"$\\sqrt{x}$"}</MathText> עורך נוסחאות — הקלידו ישירות או הקישו על סימן
-                            </div>
-                            <Suspense
-                              fallback={
-                                <div className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface-variant font-mono text-sm">
-                                  טוען עורך נוסחאות…
-                                </div>
-                              }
-                            >
-                              <MathField
-                                ref={(h) => { fieldRefs.current[section.label] = h; }}
-                                value={answers[section.label] ?? ""}
-                                onChange={(latex) => setAnswers((prev) => ({ ...prev, [section.label]: latex }))}
-                                onEnter={() => handleSubmitSection(section)}
-                                placeholder="התשובה כאן…"
-                              />
-                            </Suspense>
-                            {/* On a Hebrew keyboard layout these buttons are the
-                                only way to reach √ — see MathSymbolStrip. */}
-                            <MathSymbolStrip fieldRef={{ current: fieldRefs.current[section.label] ?? null }} />
-                          </div>
+                          <MathAnswerInput
+                            value={answers[section.label] ?? ""}
+                            onChange={(latex) => setAnswers((prev) => ({ ...prev, [section.label]: latex }))}
+                            onEnter={() => handleSubmitSection(section)}
+                          />
                         ) : (
                           <textarea
                             className="w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface font-mono focus:border-primary focus:outline-none transition-colors"
