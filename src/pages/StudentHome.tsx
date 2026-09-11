@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { Id } from "../../convex/_generated/dataModel";
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useMemo, useRef, memo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { gsap, useScrollReveal, useCountUp } from "../lib/gsapUtils";
 import { animateSafe, remove } from "../lib/anime";
@@ -24,7 +24,7 @@ import ThemeSelector, { HOMEWORK_THEMES } from "../components/ThemeSelector";
 import { LiveBanner, LiveQuestionSheet } from "../components/LiveQuestionSheet";
 import { ElectricBolt, ElectricAtom, Battery, StreakBolt } from "../components/electric";
 import { Skeleton, SkeletonCard, ProgressBar } from "../components/ui";
-import FaradayCanvas from "../components/FaradayCanvas";
+import FaradayCanvas, { type Concept } from "../components/FaradayCanvas";
 import NightSkyCanvas from "../components/NightSkyCanvas";
 import DailyExperiment from "../components/DailyExperiment";
 import FaradayTour from "../components/FaradayTour";
@@ -572,6 +572,43 @@ export default function StudentHome() {
     api.leaderboard.getWeeklyLeaderboard,
     student?.classroomId ? { classroomId: student.classroomId, studentId: studentId as Id<"students"> } : "skip",
   );
+  // Only the constellation backdrop reads mastery, so nobody else pays for the
+  // subscription. topicCharges is already loaded for the recharge nudge below.
+  const topicMastery = useQuery(
+    api.powerMap.getTopicMastery,
+    student?.equippedTheme === "constellation" ? { studentId: studentId as Id<"students"> } : "skip",
+  );
+  /**
+   * The constellation's topic nodes, drawn from what the student actually
+   * knows. Two sources, because they cover different students: the power map's
+   * masteryScore is the platform's canonical mastery but is computed from tutor
+   * session briefs, so a student who only practises questions has none; the
+   * retention charge (decayed accuracy over recent attempts) covers everyone
+   * who has answered anything. Power map wins where it exists.
+   *
+   * Ordered by recency and capped by the variant, so the sky shows what they
+   * are working on now. Undefined when there is nothing to say — the variant
+   * falls back to its generic labels rather than drawing an empty universe.
+   */
+  const constellationConcepts = useMemo<Concept[] | undefined>(() => {
+    if (student?.equippedTheme !== "constellation") return undefined;
+    const byTopic: Record<string, { mastery: number; daysSince: number }> = {};
+    for (const c of topicCharges ?? []) {
+      if (c.charge == null || c.daysSince == null) continue;
+      byTopic[c.nameHe] = { mastery: c.charge / 100, daysSince: c.daysSince };
+    }
+    for (const t of topicMastery ?? []) {
+      byTopic[t.topicName] = {
+        mastery: t.masteryScore / 100,
+        daysSince:
+          byTopic[t.topicName]?.daysSince ?? (Date.now() - t.lastSessionAt) / 86_400_000,
+      };
+    }
+    const list = Object.entries(byTopic)
+      .sort((a, b) => a[1].daysSince - b[1].daysSince)
+      .map(([label, v]) => ({ label, mastery: v.mastery }));
+    return list.length ? list : undefined;
+  }, [student?.equippedTheme, topicCharges, topicMastery]);
   // Faraday opens with a general practice context — the map has no active question.
   const faraday = useFaraday();
   const openChat = () => faraday.open({ studentId: studentId!, agentType: "practice" });
@@ -780,6 +817,7 @@ export default function StudentHome() {
       {!focus && (
         <FaradayCanvas
           variant={THEME_VARIANT[student.equippedTheme as keyof typeof THEME_VARIANT] ?? "linesOfForce"}
+          concepts={constellationConcepts}
           style={{ zIndex: 0, ...(student.equippedTheme === "night" ? { opacity: 0.5 } : {}) }}
         />
       )}

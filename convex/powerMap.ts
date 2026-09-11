@@ -1,4 +1,4 @@
-import { internalMutation } from "./_generated/server";
+import { query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -181,11 +181,31 @@ export const recomputePowerMap = internalMutation({
   },
 });
 
-// The read-side queries (getStudentPowerMap / getClassroomPowerMaps) were
-// removed with the power-map views. What remains is the write side: the map
-// is an ENGINE, not a screen — levels.evaluateStudentLevel reads
-// studentPowerMap to decide level-ups and homework.ts reads it to pick
-// mastery-appropriate questions. Add a query back if a screen needs one.
+// The broad read-side queries (getStudentPowerMap / getClassroomPowerMaps) were
+// removed with the power-map views. The map is an ENGINE, not a screen —
+// levels.evaluateStudentLevel reads studentPowerMap to decide level-ups and
+// homework.ts reads it to pick mastery-appropriate questions.
+//
+// ── The one read a screen needs ──
+// The constellation backdrop (shop theme, StudentHome) draws a node per topic
+// and lights it by how well the student knows it. It needs the names and the
+// scores and nothing else, so this returns that slice rather than the document:
+// progress velocity, engagement and the recompute latch stay private. Empty
+// when the student has no session briefs yet — the caller falls back.
+export const getTopicMastery = query({
+  args: { studentId: v.id("students") },
+  handler: async (ctx, { studentId }) => {
+    const map = await ctx.db
+      .query("studentPowerMap")
+      .withIndex("by_student", (q) => q.eq("studentId", studentId))
+      .first();
+    return (map?.topicMastery ?? []).map((t) => ({
+      topicName: t.topicName,
+      masteryScore: t.masteryScore,
+      lastSessionAt: t.lastSessionAt,
+    }));
+  },
+});
 
 // ── Event-driven recompute (replaces the old 5-minute cron) ──
 // Called after every sessionBrief insert. Debounced per student via the

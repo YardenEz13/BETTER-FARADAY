@@ -185,5 +185,15 @@ export function strokeBuckets(
 
 export type Mouse = { x: number; y: number; active: boolean };
 export type GetP = () => Palette;
+
+/**
+ * One topic node on the constellation backdrop: what it is called and how well
+ * the learner knows it, 0..1. The variant derives size, brightness, how far the
+ * node reaches into the star field and how opaque its label is from `mastery`
+ * alone, so a single number carries the whole reading.
+ */
+export type Concept = { label: string; mastery: number };
+/** Read fresh each frame, like GetP, so mastery updates without a loop restart. */
+export type GetConcepts = () => Concept[] | undefined;
 /** Per-frame draw; `dispose` releases any GSAP tweens the variant owns. */
 export type DrawFn = (() => void) & { dispose?: () => void };
