@@ -4,6 +4,7 @@ import {
   type Mouse,
   type GetP,
   type GetConcepts,
+  type Palette,
   type DrawFn,
   ha,
   rnd,
@@ -31,7 +32,8 @@ import {
  *
  * Perf contract: glowDot() sprite-caches small halos, stampGlow() sprite-caches
  * big blooms, strokeBuckets()/addSeg() batches lines. No per-frame shadowBlur,
- * no per-pair stroke().
+ * no per-pair stroke(). A gradient whose stops repeat on a short cycle is built
+ * once and cached against the palette, not rebuilt every frame.
  *
  * Blend contract: every variant composites through `p.glow ? "lighter" :
  * "multiply"`. Dark is additive — light accumulates toward white, which is what
@@ -899,8 +901,19 @@ export function makeVariant(
       const motes = Array.from({ length: 42 }, () => ({ x: rnd(0, w), y: rnd(0, h), s: rnd(0.3, 1), ph: rnd(0, 6.28) }));
       let polar = 0;
       let lastMx: number | null = null;
+      // A band's gradient depends only on its layer, the colour-shift phase
+      // (4 values) and the palette — 24 distinct gradients, and `w` is fixed
+      // for the life of this closure. Building six of them per frame was the
+      // most expensive thing in the most expensive variant. Keyed off the
+      // palette object, so a theme swap clears the cache and nothing else does.
+      const gradCache = new Map<number, CanvasGradient>();
+      let gradPalette: Palette | null = null;
       return () => {
         const p = getP();
+        if (p !== gradPalette) {
+          gradPalette = p;
+          gradCache.clear();
+        }
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         let field = 0;
@@ -935,9 +948,14 @@ export function makeVariant(
           for (let i = 1; i < xs.length; i++) band.lineTo(xs[i], offs[i] - width / 2);
           for (let i = xs.length - 1; i >= 0; i--) band.lineTo(xs[i], offs[i] + width / 2);
           band.closePath();
-          const g = ctx.createLinearGradient(0, 0, w, 0);
           const sh = Math.floor(((t * 0.05 + depth * 0.3) % 1) * 4);
-          for (let s = 0; s <= 4; s++) g.addColorStop(s / 4, ha(cols[(s + sh) % 4], (p.glow ? 0.3 : 0.2) * (0.4 + depth * 0.6)));
+          const gk = L * 4 + sh;
+          let g = gradCache.get(gk);
+          if (!g) {
+            g = ctx.createLinearGradient(0, 0, w, 0);
+            for (let s = 0; s <= 4; s++) g.addColorStop(s / 4, ha(cols[(s + sh) % 4], (p.glow ? 0.3 : 0.2) * (0.4 + depth * 0.6)));
+            gradCache.set(gk, g);
+          }
           ctx.fillStyle = g;
           ctx.fill(band);
           if (depth > 0.35) {
@@ -947,14 +965,20 @@ export function makeVariant(
             ctx.strokeStyle = ha(p.hot, (p.glow ? 0.5 : 0.3) * depth);
             ctx.lineWidth = 1.4;
             ctx.stroke(spine);
+            // One path for the whole ladder instead of a stroke() per rung.
+            // Four layers clear the depth gate and a 1400px-wide canvas gives
+            // ~30 rungs each, so this is ~120 draw calls a frame collapsed into
+            // four. Not strokeBuckets(): that quantizes alpha into 12 buckets
+            // and allocates a Path2D for each, where the alpha here is already
+            // quantized — one value per layer.
+            const rungs = new Path2D();
+            for (let i = 0; i < xs.length; i += 4) {
+              rungs.moveTo(xs[i], offs[i] - width / 2);
+              rungs.lineTo(xs[i], offs[i] + width / 2);
+            }
             ctx.strokeStyle = ha(p.spark, 0.4 * depth);
             ctx.lineWidth = 1;
-            for (let i = 0; i < xs.length; i += 4) {
-              ctx.beginPath();
-              ctx.moveTo(xs[i], offs[i] - width / 2);
-              ctx.lineTo(xs[i], offs[i] + width / 2);
-              ctx.stroke();
-            }
+            ctx.stroke(rungs);
           }
         }
         if (field) {
