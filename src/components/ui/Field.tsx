@@ -15,7 +15,10 @@ function Chrome({ id, label, hint, error, children }: FieldChrome & { id: string
           {label}
         </label>
       )}
-      {children}
+      {/* An <input> cannot host a pseudo-element, so the focus current loop
+          rides this wrapper via :has(:focus-visible). Flex, not block, so a
+          textarea leaves no baseline gap under it for the ring to trace. */}
+      <div className="focus-loop rounded-xl flex">{children}</div>
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-label-md text-error font-semibold">
           {error}

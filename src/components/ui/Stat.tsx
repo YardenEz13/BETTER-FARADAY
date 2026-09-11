@@ -23,9 +23,9 @@ const TONE_CLASS: Record<StatTone, string> = {
 export function Stat({ value, label, icon, tone = "default", size = "md", className = "", ...rest }: StatProps) {
   return (
     <div className={`flex flex-col gap-0.5 ${className}`} {...rest}>
-      <div className={`num flex items-center gap-1.5 font-bold ${size === "lg" ? "text-headline-xl" : "text-headline-md"} ${TONE_CLASS[tone]}`}>
+      <div className={`flex items-center gap-1.5 font-bold ${size === "lg" ? "text-headline-xl" : "text-headline-md"} ${TONE_CLASS[tone]}`}>
         {icon && <span className="inline-flex shrink-0" aria-hidden>{icon}</span>}
-        {value}
+        <span className="num">{value}</span>
       </div>
       <div className="label-mono label-tick">{label}</div>
     </div>

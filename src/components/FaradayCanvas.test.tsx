@@ -18,8 +18,13 @@ vi.mock("./ThemeContext", () => ({ useTheme: () => ({ theme: "light" }) }));
 
 /** Frames rendered since the last reset — the variant's draw() is what we count. */
 let frames = 0;
+/** Times the loop was (re)built, and the concept getter the last build was handed. */
+let builds = 0;
+let getConcepts: (() => unknown) | undefined;
 vi.mock("./faraday/variants", () => ({
-  makeVariant: () => {
+  makeVariant: (...args: unknown[]) => {
+    builds++;
+    getConcepts = args[6] as (() => unknown) | undefined;
     const draw = () => { frames++; };
     return draw;
   },
@@ -27,6 +32,8 @@ vi.mock("./faraday/variants", () => ({
 
 beforeEach(() => {
   frames = 0;
+  builds = 0;
+  getConcepts = undefined;
   reduceMotion = false;
   hidden = false;
   ioCallback = null;
@@ -108,6 +115,24 @@ describe("FaradayCanvas", () => {
     rerender(<div><FaradayCanvas variant="atom" theme="dark" /></div>);
     await flush();
     expect(frames).toBeGreaterThan(afterMount); // the swap repainted it
+  });
+
+  it("hands new concepts to the running loop without rebuilding it", async () => {
+    // The constellation lights its topic nodes by mastery, which arrives from a
+    // Convex subscription after mount and changes as the student practises. The
+    // loop reads through a ref precisely so that update does not tear down and
+    // reseed the star field, which would be a visible flicker.
+    const early = [{ label: "אלגברה", mastery: 0.2 }];
+    const later = [{ label: "אלגברה", mastery: 0.9 }];
+    const { rerender } = render(<div><FaradayCanvas variant="constellation" concepts={early} /></div>);
+    await flush();
+    expect(getConcepts?.()).toBe(early);
+    const afterMount = builds;
+
+    rerender(<div><FaradayCanvas variant="constellation" concepts={later} /></div>);
+    await flush();
+    expect(getConcepts?.()).toBe(later);
+    expect(builds).toBe(afterMount);
   });
 
   it("defaults to the design system's behind-UI opacity, and yields to a caller", () => {

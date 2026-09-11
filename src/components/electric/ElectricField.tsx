@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useReducedMotion } from "framer-motion";
 
 /**
  * Animated "circuit field" backdrop.
@@ -8,8 +9,15 @@ import { useId } from "react";
  * along them, a few pulsing nodes, and drifting spark particles.
  *
  * Renders decoratively (aria-hidden) and never intercepts pointer events.
- * Honors prefers-reduced-motion via the .electric-field-static class below —
- * see the inline <style>, scoped by the generated id so it can't leak.
+ *
+ * Motion is SMIL (<animate>, <animateMotion>), not CSS, so `animation: none`
+ * does NOT stop it — the media query this file used to rely on was inert. The
+ * animate elements are therefore not rendered at all under reduced motion,
+ * which leaves the static traces and nodes as a still frame.
+ *
+ * Callers should pass `className="electric-field"`: focus mode hides that class
+ * outright, and because none of this is canvas, hiding it really does stop the
+ * work rather than leaving a loop running behind an invisible element.
  */
 
 export interface ElectricFieldProps {
@@ -34,6 +42,7 @@ const NODES = [
 ];
 
 export function ElectricField({ intensity = 0.5, density = "normal", className = "", style }: ElectricFieldProps) {
+  const still = !!useReducedMotion();
   const uid = useId().replace(/:/g, "");
   const grad = `g-${uid}`;
   const glow = `glow-${uid}`;
@@ -57,12 +66,6 @@ export function ElectricField({ intensity = 0.5, density = "normal", className =
         ...style,
       }}
     >
-      <style>{`
-        @media (prefers-reduced-motion: reduce) {
-          .electric-field-${uid} * { animation: none !important; }
-          .electric-field-${uid} [data-current] { stroke-dasharray: none !important; }
-        }
-      `}</style>
       <defs>
         <linearGradient id={grad} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="var(--color-inverse-primary)" />
@@ -83,9 +86,11 @@ export function ElectricField({ intensity = 0.5, density = "normal", className =
       {/* current flowing along the traces */}
       <g stroke={`url(#${grad})`} strokeWidth={1.6} fill="none" strokeLinecap="round">
         {traces.map((d, i) => (
-          <path key={d} d={d} data-current strokeDasharray="2 220">
-            <animate attributeName="stroke-dashoffset" from="222" to="0"
-              dur={`${5 + i * 0.7}s`} repeatCount="indefinite" />
+          <path key={d} d={d} data-current strokeDasharray={still ? undefined : "2 220"} opacity={still ? 0.35 : 1}>
+            {!still && (
+              <animate attributeName="stroke-dashoffset" from="222" to="0"
+                dur={`${5 + i * 0.7}s`} repeatCount="indefinite" />
+            )}
           </path>
         ))}
       </g>
@@ -94,17 +99,21 @@ export function ElectricField({ intensity = 0.5, density = "normal", className =
       <g filter={`url(#${glow})`}>
         {nodes.map(([x, y], i) => (
           <circle key={`${x}-${y}`} cx={x} cy={y} r={2.4} fill="var(--color-inverse-primary)">
-            <animate attributeName="opacity" values="0.25;1;0.25"
-              dur={`${2.6 + (i % 3) * 0.6}s`} repeatCount="indefinite" begin={`${i * 0.3}s`} />
-            <animate attributeName="r" values="2;3.4;2"
-              dur={`${2.6 + (i % 3) * 0.6}s`} repeatCount="indefinite" begin={`${i * 0.3}s`} />
+            {!still && (
+              <>
+                <animate attributeName="opacity" values="0.25;1;0.25"
+                  dur={`${2.6 + (i % 3) * 0.6}s`} repeatCount="indefinite" begin={`${i * 0.3}s`} />
+                <animate attributeName="r" values="2;3.4;2"
+                  dur={`${2.6 + (i % 3) * 0.6}s`} repeatCount="indefinite" begin={`${i * 0.3}s`} />
+              </>
+            )}
           </circle>
         ))}
       </g>
 
       {/* drifting spark particles */}
       <g fill="var(--color-inverse-primary)" opacity={0.8}>
-        {nodes.slice(0, density === "sparse" ? 2 : 4).map(([x, y], i) => (
+        {(still ? [] : nodes.slice(0, density === "sparse" ? 2 : 4)).map(([x, y], i) => (
           <circle key={`p-${x}-${y}`} r={1.3}>
             <animateMotion dur={`${6 + i}s`} repeatCount="indefinite" begin={`${i * 0.8}s`}
               path={`M${x} ${y} q40 -30 90 -10 t100 20`} />

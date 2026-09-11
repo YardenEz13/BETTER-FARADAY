@@ -49,6 +49,12 @@ line-height + weight).
 Font families: `Assistant` (Hebrew-first UI/body), `Yarden` (display headlines, `font-headline-xl/lg`
 only), `JetBrains Mono` (`font-mono` — the `.num`/`.label-mono` "voltmeter" faces for stats).
 
+`.num` is also bidi-isolated (`direction: ltr; unicode-bidi: isolate`), the same protection `.katex`
+gets. A lone `1,240` survives a Hebrew line but a multi-part readout does not — in `3 / 10` the spaces
+around the separator take the paragraph's direction and the two operands swap, so the student is told
+they finished 10 out of 3. **Because `direction` also orders flex children, `.num` goes on the numeral
+itself, never on a row that also holds an icon** — that is why `Stat` wraps its value in its own span.
+
 `.num` and `.label-mono` both stack `JetBrains Mono` over `Assistant` deliberately: the mono face
 carries no Hebrew, so Hebrew falls through to Assistant and only the digits and Latin get the voltmeter
 face. Eyebrow labels take **no** `uppercase` and no wide tracking — Hebrew has no case, so the pair only
@@ -97,6 +103,44 @@ The bottom border and the riser must stay the same colour. A border even a shade
 seam between them, and the card goes back to reading as a drawn box standing on a slab. `--color-clay-lip`
 inverts in dark: on lab ink a lit edge is *brighter* than the outline, where on paper it is lighter.
 
+## Backdrops
+
+Four layers can sit behind a screen. The first two are free and global; the last two are opt-in.
+
+| Layer | Where it lives | Scope |
+|---|---|---|
+| **Ground** | `body::before`, one fixed pseudo-element | every page |
+| **Dot field** | a second `background-image` on that same pseudo-element | every page |
+| **Field lines** | `ElectricField`, absolutely positioned in a container | hero surfaces, `EmptyState` |
+| **Canvas** | `FaradayCanvas` / `NightSkyCanvas` | the 8 flagship pages, tied to the equipped shop theme |
+
+The ground and the dot field are one fixed layer at `z-index: -1`, so they cost a single composited
+paint, never repaint on scroll, and reach all 21 pages rather than the 8 that mount a canvas. It is
+`fixed` rather than a `<body>` background so the gradient is sized to the viewport instead of stretching
+down a long page. Tokens: `--bg-lift` (the light the clay is lit by, arriving from above the fold),
+`--bg-sink` (where the page settles at the bottom), `--grid-dot` and `--grid-size`. All four invert in
+dark, where the lift becomes a faint volt bloom rather than white.
+
+**Never hand-roll a fixed backdrop div in a page.** That is what `TeacherDashboard` used to do, and it
+is why exactly one page had a dot field. If a page needs more than the ground, it mounts `ElectricField`
+in a container, or a canvas.
+
+The seven shop themes (`src/components/faraday/variants.ts`) composite through
+`p.glow ? "lighter" : "multiply"`. Dark is additive; **light is the dual, not the absence**. These are
+halo shapes, and a halo drawn source-over on a pale ground is a milky smudge — so on light they darken
+toward the ground instead. Light is the default theme, so before this every backdrop was the weaker half
+of itself for most students. Keep the ternary when adding a variant.
+
+`ElectricField` animates with SMIL (`<animate>`, `<animateMotion>`), not CSS — so `animation: none` does
+**not** stop it, and neither does the reduced-motion block at the bottom of `index.css`. It takes
+`useReducedMotion()` and simply does not render the animate elements, leaving a still frame. Pass
+`className="electric-field"` when you mount it: focus mode hides that class outright, and since none of
+this is canvas, hiding it genuinely stops the work.
+
+In focus mode the **ground stays** and everything else goes — it is static, and it is what keeps the page
+from reading as a flat sheet, while a repeating pattern behind text is exactly what that mode exists to
+remove. `prefers-contrast: more` drops the dot field for the same reason.
+
 ## Spacing
 
 `--spacing-*` tokens exist (`xs` 4px, `sm` 12px, `md` 24px, `lg` 40px, `xl` 64px, plus `-gutter`,
@@ -124,8 +168,8 @@ All primitives live in `src/components/ui/` — import from `"../components/ui"`
 
 ## States
 
-Three states are defined once in `src/index.css` and must not be re-implemented per component. All
-three used to be browser or framework defaults; each now says something in the app's own vocabulary.
+These are defined once in `src/index.css` and must not be re-implemented per component. Every one of
+them used to be a browser or framework default; each now says something in the app's own vocabulary.
 
 **Keyboard focus — the current loop.** Two layers with two different jobs, and only one of them is
 load-bearing. The `outline` (3px `primary-dark`, 2px offset) carries the contrast on its own: it is an
@@ -147,6 +191,25 @@ adding a disabled style to a bespoke button, use these classes rather than a new
 
 **Text selection.** `::selection` is volt-tinted and the text keeps `--color-on-surface`. Don't override
 it locally.
+
+Three more browser defaults are claimed centrally, and none of them should ever be set per-component:
+`caret-color` on `.field`, `accent-color` on `:root` (native checkbox / radio / range paint themselves
+from it), and the Firefox scrollbar. That last one is fenced behind
+`@supports not selector(::-webkit-scrollbar)` on purpose: Chrome and Safari drop their own
+`::-webkit-scrollbar` styling the moment a standard scrollbar property is set, so the fence is what lets
+Firefox be themed without costing Chrome the 6px bar and its hover tint.
+
+**Touch.** The reset does **not** kill `-webkit-tap-highlight-color` — it is a volt tint on `:root`, and
+the clay controls opt out of it because they answer a finger with their own press. Anything else you
+make tappable inherits it and needs nothing.
+
+**Increased contrast.** `@media (prefers-contrast: more)` darkens the structural tokens (`--color-outline`,
+`--color-on-surface-variant`, and the two clay faces) in both themes. The accents already carry their
+weight and stay put. Add new structural tokens to that block when you add them.
+
+**Scroll targets.** `scroll-behavior` is smooth app-wide and four screens carry a `fixed top-0` header,
+so `[id]` reserves `--header-h` worth of `scroll-margin-block-start`. Keep `--header-h` honest if a
+header's height changes.
 
 ## Rules
 
@@ -250,6 +313,12 @@ matcher already handles.
 
 1. Raw hex colors in `src/**/*.tsx` (outside the allowlist) — **fails the build if the count grows**.
 2. `style={{` inline styles in `src/pages/**/*.tsx` — **warns if the count grows** (not yet a hard fail).
+3. Physical `ml/mr`, `pl/pr`, `left/right`, `border-l/r`, `rounded-l/r` and `text-left/right` in
+   `src/**/*.tsx` — **fails the build if the count grows**. Rule 3 below was the one rule nothing
+   measured, which is how four notification badges came to be pinned with `-right-*` and sat on the
+   wrong corner. Some physical values are legitimate (a full-bleed `left-0 right-0`, a `left-1/2`
+   centre), so this is a growth ratchet rather than a ban: everything present today is baselined and
+   only new ones fail.
 
 Counts *below* baseline are allowed silently — the script only complains about regressions. When you
 migrate legacy code and reduce a file's count, run:
@@ -258,6 +327,11 @@ migrate legacy code and reduce a file's count, run:
 node scripts/design-lint.mjs --update
 ```
 
-This rewrites the baseline to the new (lower) counts, "ratcheting" the debt ceiling down so it can never
-silently creep back up. Never hand-edit `scripts/design-lint-baseline.json`; always regenerate it with
-`--update` after a real reduction.
+`--update` is monotonic: it writes the **lower** of (baseline, current) for every file, so re-baselining
+one metric can never quietly raise the ceiling on another. A file the scan no longer sees is dropped; a
+file new to the scan enters at its current count, which is how a newly added metric gets its first
+baseline.
+
+To deliberately accept a **higher** count — a genuinely physical `left-1/2` centre, say — pass
+`--update --relax`. It is a separate flag so the decision shows up in the diff instead of riding along
+with an unrelated re-baseline. Never hand-edit `scripts/design-lint-baseline.json`.

@@ -3,6 +3,8 @@ import {
   type FaradayVariant,
   type Mouse,
   type GetP,
+  type GetConcepts,
+  type Palette,
   type DrawFn,
   ha,
   rnd,
@@ -30,8 +32,30 @@ import {
  *
  * Perf contract: glowDot() sprite-caches small halos, stampGlow() sprite-caches
  * big blooms, strokeBuckets()/addSeg() batches lines. No per-frame shadowBlur,
- * no per-pair stroke().
+ * no per-pair stroke(). A gradient whose stops repeat on a short cycle is built
+ * once and cached against the palette, not rebuilt every frame.
+ *
+ * Blend contract: every variant composites through `p.glow ? "lighter" :
+ * "multiply"`. Dark is additive — light accumulates toward white, which is what
+ * makes a glow read as emission. Light mode is the DUAL, not the absence: these
+ * shapes are drawn as halos, and a halo composited source-over onto a pale
+ * ground is a milky smudge, so on light the marks darken toward the ground
+ * instead. That one ternary is the difference between the light theme reading
+ * as structure and reading as fog, and light is the DEFAULT theme — every
+ * backdrop was the weaker half of itself for most students before it. Do not
+ * "simplify" it back to a bare source-over.
  */
+/**
+ * Deterministic 0..1 from a string (FNV-1a). Gives each topic a fixed place in
+ * the constellation sky rather than a fresh random one on every mount, so a
+ * student comes back to the same map and can find גיאומטריה where they left it.
+ */
+function hash01(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 100003) / 100003;
+}
+
 export function makeVariant(
   variant: FaradayVariant,
   ctx: CanvasRenderingContext2D,
@@ -39,6 +63,8 @@ export function makeVariant(
   h: number,
   mouse: Mouse,
   getP: GetP,
+  /** constellation only — the learner's real topics; see the case below. */
+  getConcepts?: GetConcepts,
 ): DrawFn {
   switch (variant) {
     // ── Bohr atoms — 3 parallax depth bands, orbital clouds, multi-electron
@@ -72,7 +98,7 @@ export function makeVariant(
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         atoms.forEach((a) => {
           a.x += a.vx;
           a.y += a.vy;
@@ -142,13 +168,56 @@ export function makeVariant(
       const farStars = Array.from({ length: nFar }, () => ({
         x: rnd(0, w), y: rnd(0, h), r: rnd(0.4, 1.2), tw: rnd(0, 6.28), tws: rnd(0.6, 1.8),
       }));
-      const concepts = [
-        { label: "טריג'", x: rnd(0.12, 0.28) * w, y: rnd(0.18, 0.36) * h },
-        { label: "אלגברה", x: rnd(0.52, 0.72) * w, y: rnd(0.14, 0.32) * h },
-        { label: "פונקציות", x: rnd(0.18, 0.36) * w, y: rnd(0.56, 0.74) * h },
-        { label: "חשבון", x: rnd(0.62, 0.8) * w, y: rnd(0.52, 0.7) * h },
-        { label: "גיאומטריה", x: rnd(0.35, 0.55) * w, y: rnd(0.32, 0.5) * h },
+      // The topic nodes. When the host supplies the learner's real topics and
+      // how well each is known, this stops being decoration: mastery drives the
+      // node's size, its halo, how far it reaches into the star field, how
+      // bright the paths to its neighbours burn and how legible its name is. A
+      // topic the student owns is a bright hub wired into everything around it;
+      // one they have barely touched is a faint point with threads that do not
+      // reach. Position is hashed from the label, so a topic keeps its place in
+      // the sky across sessions and does not jump when the set reorders.
+      //
+      // Unsupplied — the login gate, the design lab, tests — it falls back to
+      // the five generic labels at a neutral mastery, which is exactly how this
+      // variant looked before it could read anything.
+      const FALLBACK_LABELS = ["טריג'", "אלגברה", "פונקציות", "חשבון", "גיאומטריה"];
+      // Fixed, well-separated slots rather than free placement: a hashed x/y
+      // clusters badly on small sets and stacks the labels on top of each
+      // other. Each topic claims a slot by hash and probes forward if it is
+      // taken, over a label-sorted list — so the assignment is a pure function
+      // of WHICH topics are on screen, not of the order they arrived in, and a
+      // topic keeps its place in the sky between sessions.
+      const SLOTS = [
+        [0.19, 0.25], [0.50, 0.15], [0.81, 0.27],
+        [0.23, 0.71], [0.53, 0.50], [0.79, 0.73],
       ];
+      const MAX_CONCEPTS = SLOTS.length;
+      const seedConcepts = (src?: { label: string; mastery: number }[]) => {
+        const list = (src?.length
+          ? src.slice(0, MAX_CONCEPTS)
+          : FALLBACK_LABELS.map((label) => ({ label, mastery: 0.55 }))
+        )
+          .slice()
+          .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+        const taken = new Array<boolean>(MAX_CONCEPTS).fill(false);
+        return list.map((c) => {
+          let i = Math.floor(hash01(c.label) * MAX_CONCEPTS) % MAX_CONCEPTS;
+          while (taken[i]) i = (i + 1) % MAX_CONCEPTS;
+          taken[i] = true;
+          // A little stable jitter so the slots do not read as a grid.
+          const [sx, sy] = SLOTS[i];
+          return {
+            label: c.label,
+            m: clamp(c.mastery, 0, 1),
+            x: (sx + (hash01(`${c.label}#x`) - 0.5) * 0.07) * w,
+            y: (sy + (hash01(`${c.label}#y`) - 0.5) * 0.07) * h,
+          };
+        });
+      };
+      // Re-seeded only when the host hands over a different array, so a live
+      // mastery update costs one reference check per frame, not a rebuild.
+      let conceptSrc = getConcepts?.();
+      let concepts = seedConcepts(conceptSrc);
       const nebula = Array.from({ length: 4 }, () => ({
         x: rnd(0.15, 0.85) * w, y: rnd(0.15, 0.85) * h, r: rnd(120, 240),
         c: (Math.random() < 0.5 ? "violet" : "green") as "violet" | "green",
@@ -157,10 +226,15 @@ export function makeVariant(
       const D = 132;
       return () => {
         const p = getP();
+        const nextSrc = getConcepts?.();
+        if (nextSrc !== conceptSrc) {
+          conceptSrc = nextSrc;
+          concepts = seedConcepts(conceptSrc);
+        }
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         nebula.forEach((nb) =>
           stampGlow(ctx, nb.x, nb.y, nb.r, p[nb.c], (p.glow ? 0.07 : 0.03) * (0.7 + 0.3 * Math.sin(t * 0.3 + nb.ph))),
         );
@@ -189,11 +263,14 @@ export function makeVariant(
           }
         }
         strokeBuckets(ctx, lb, p.green, p.glow ? 0.34 : 0.2, 0.9);
+        // A mastered topic pulls in a wider field of stars and holds them more
+        // brightly; an untouched one barely reaches past itself.
         const cb = makeBuckets();
         stars.forEach((s) =>
           concepts.forEach((cn) => {
+            const reach = D * (0.8 + 0.8 * cn.m);
             const d = Math.hypot(s.x - cn.x, s.y - cn.y);
-            if (d < D * 1.3) addSeg(cb, s.x, s.y, cn.x, cn.y, 1 - d / (D * 1.3));
+            if (d < reach) addSeg(cb, s.x, s.y, cn.x, cn.y, (1 - d / reach) * (0.3 + 0.7 * cn.m));
           }),
         );
         strokeBuckets(ctx, cb, p.violet, p.glow ? 0.4 : 0.22, 0.9);
@@ -202,7 +279,8 @@ export function makeVariant(
             const a = concepts[i], b = concepts[j];
             const d = Math.hypot(a.x - b.x, a.y - b.y);
             if (d < D * 2.2) {
-              const al = (1 - d / (D * 2.2)) * 0.5;
+              // A path between two topics is only as strong as the weaker end.
+              const al = (1 - d / (D * 2.2)) * 0.5 * (0.25 + 0.75 * Math.min(a.m, b.m));
               ctx.strokeStyle = ha(p.violet, al);
               ctx.lineWidth = 1.4;
               ctx.beginPath();
@@ -230,22 +308,26 @@ export function makeVariant(
         });
         ctx.restore();
         concepts.forEach((cn, i) => {
-          const ph = ((t * 0.4) + i * 0.42) % 1;
+          // Everything below scales off cn.m: a topic the student owns is a
+          // large, bright hub that rings out fast and wide; one they have
+          // barely met is a dim point with a slow, short pulse and a name you
+          // have to look for.
+          const ph = ((t * (0.24 + 0.32 * cn.m)) + i * 0.42) % 1;
           ctx.beginPath();
-          ctx.arc(cn.x, cn.y, 10 + ph * 36, 0, 6.2832);
-          ctx.strokeStyle = ha(p.violet, (1 - ph) * 0.5);
+          ctx.arc(cn.x, cn.y, 10 + ph * (20 + 26 * cn.m), 0, 6.2832);
+          ctx.strokeStyle = ha(p.violet, (1 - ph) * (0.18 + 0.42 * cn.m));
           ctx.lineWidth = 1.5;
           ctx.stroke();
           const oa = t * 0.9 + i;
-          glowDot(ctx, cn.x + Math.cos(oa) * 15, cn.y + Math.sin(oa) * 15, 1.6, p.spark, p.glow ? 8 : 4);
-          stampGlow(ctx, cn.x, cn.y, 30, p.violet, p.glow ? 0.14 : 0.06);
-          glowDot(ctx, cn.x, cn.y, 5.5, p.violet, p.glow ? 16 : 10);
+          glowDot(ctx, cn.x + Math.cos(oa) * 15, cn.y + Math.sin(oa) * 15, 1.6, p.spark, p.glow ? 8 : 4, 0.35 + 0.65 * cn.m);
+          stampGlow(ctx, cn.x, cn.y, 22 + 14 * cn.m, p.violet, (p.glow ? 0.14 : 0.06) * (0.4 + 0.6 * cn.m));
+          glowDot(ctx, cn.x, cn.y, 3.5 + 2.5 * cn.m, p.violet, p.glow ? 16 : 10);
           ctx.save();
           ctx.font = "700 13px Assistant, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
           ctx.direction = "rtl";
-          ctx.fillStyle = ha(p.violet, 0.9);
+          ctx.fillStyle = ha(p.violet, 0.42 + 0.48 * cn.m);
           ctx.fillText(cn.label, cn.x, cn.y + 10);
           ctx.restore();
         });
@@ -322,7 +404,7 @@ export function makeVariant(
           ctx.stroke(tr.path);
         });
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         traces.forEach((tr) => {
           let energy = 0.5 + 0.5 * Math.sin(t * 0.8 + tr.phase);
           if (mouse.active) {
@@ -401,7 +483,7 @@ export function makeVariant(
         const iMag = Math.abs(current), dir = current >= 0 ? 1 : -1;
 
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // magnet dipole field rings
         for (let k = 1; k <= 6; k++) {
           const spread = k / 6;
@@ -514,7 +596,7 @@ export function makeVariant(
         });
         strokeBuckets(ctx, gb, p.green, 0.4, 1.2);
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // integrated field lines, streamed from the + pole toward the − pole
         const plus = poles[0];
         for (let n = 0; n < 12; n++) {
@@ -693,7 +775,7 @@ export function makeVariant(
           }
         });
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         // proximity graph — the cage severs links that cross it (shielding made visible)
         const linkBuckets = makeBuckets();
         const sparks: { x: number; y: number }[] = [];
@@ -736,7 +818,7 @@ export function makeVariant(
           }
         }
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         ctx.lineCap = "round";
         // vertical bars — nearer bars brighter/thicker, a spark shimmers along each
         barAnchors.forEach((b) => {
@@ -819,8 +901,19 @@ export function makeVariant(
       const motes = Array.from({ length: 42 }, () => ({ x: rnd(0, w), y: rnd(0, h), s: rnd(0.3, 1), ph: rnd(0, 6.28) }));
       let polar = 0;
       let lastMx: number | null = null;
+      // A band's gradient depends only on its layer, the colour-shift phase
+      // (4 values) and the palette — 24 distinct gradients, and `w` is fixed
+      // for the life of this closure. Building six of them per frame was the
+      // most expensive thing in the most expensive variant. Keyed off the
+      // palette object, so a theme swap clears the cache and nothing else does.
+      const gradCache = new Map<number, CanvasGradient>();
+      let gradPalette: Palette | null = null;
       return () => {
         const p = getP();
+        if (p !== gradPalette) {
+          gradPalette = p;
+          gradCache.clear();
+        }
         const t = performance.now() * 0.001;
         ctx.clearRect(0, 0, w, h);
         let field = 0;
@@ -835,7 +928,7 @@ export function makeVariant(
         }
         const cols = [p.green, p.spark, p.violet, p.amber];
         ctx.save();
-        if (p.glow) ctx.globalCompositeOperation = "lighter";
+        ctx.globalCompositeOperation = p.glow ? "lighter" : "multiply";
         for (let L = 0; L < LAYERS; L++) {
           const depth = L / (LAYERS - 1);
           const baseY = ((L + 0.5) / LAYERS) * h;
@@ -855,9 +948,14 @@ export function makeVariant(
           for (let i = 1; i < xs.length; i++) band.lineTo(xs[i], offs[i] - width / 2);
           for (let i = xs.length - 1; i >= 0; i--) band.lineTo(xs[i], offs[i] + width / 2);
           band.closePath();
-          const g = ctx.createLinearGradient(0, 0, w, 0);
           const sh = Math.floor(((t * 0.05 + depth * 0.3) % 1) * 4);
-          for (let s = 0; s <= 4; s++) g.addColorStop(s / 4, ha(cols[(s + sh) % 4], (p.glow ? 0.3 : 0.2) * (0.4 + depth * 0.6)));
+          const gk = L * 4 + sh;
+          let g = gradCache.get(gk);
+          if (!g) {
+            g = ctx.createLinearGradient(0, 0, w, 0);
+            for (let s = 0; s <= 4; s++) g.addColorStop(s / 4, ha(cols[(s + sh) % 4], (p.glow ? 0.3 : 0.2) * (0.4 + depth * 0.6)));
+            gradCache.set(gk, g);
+          }
           ctx.fillStyle = g;
           ctx.fill(band);
           if (depth > 0.35) {
@@ -867,14 +965,20 @@ export function makeVariant(
             ctx.strokeStyle = ha(p.hot, (p.glow ? 0.5 : 0.3) * depth);
             ctx.lineWidth = 1.4;
             ctx.stroke(spine);
+            // One path for the whole ladder instead of a stroke() per rung.
+            // Four layers clear the depth gate and a 1400px-wide canvas gives
+            // ~30 rungs each, so this is ~120 draw calls a frame collapsed into
+            // four. Not strokeBuckets(): that quantizes alpha into 12 buckets
+            // and allocates a Path2D for each, where the alpha here is already
+            // quantized — one value per layer.
+            const rungs = new Path2D();
+            for (let i = 0; i < xs.length; i += 4) {
+              rungs.moveTo(xs[i], offs[i] - width / 2);
+              rungs.lineTo(xs[i], offs[i] + width / 2);
+            }
             ctx.strokeStyle = ha(p.spark, 0.4 * depth);
             ctx.lineWidth = 1;
-            for (let i = 0; i < xs.length; i += 4) {
-              ctx.beginPath();
-              ctx.moveTo(xs[i], offs[i] - width / 2);
-              ctx.lineTo(xs[i], offs[i] + width / 2);
-              ctx.stroke();
-            }
+            ctx.stroke(rungs);
           }
         }
         if (field) {

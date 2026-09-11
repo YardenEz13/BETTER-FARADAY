@@ -1079,7 +1079,7 @@ export default function AIChatPanel({
                     <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center shadow-[0_0_15px_color-mix(in_srgb,var(--color-inverse-primary)_25%,transparent)]">
                       <FaradayMoodAvatar mood={faradayMood} px={48} fill />
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_color-mix(in_srgb,var(--color-inverse-primary)_60%,transparent)]" />
+                    <div className="absolute -bottom-0.5 -end-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface animate-pulse shadow-[0_0_8px_color-mix(in_srgb,var(--color-inverse-primary)_60%,transparent)]" />
                   </div>
                   <div className="min-w-0">
                     <div className="font-headline-md text-on-surface truncate" style={{ textShadow: '0 0 10px color-mix(in srgb, var(--color-inverse-primary) 8%, transparent)' }}>
@@ -1169,7 +1169,7 @@ export default function AIChatPanel({
                       <div className="w-16 h-16 rounded-full bg-primary-container/20 border-2 border-primary flex items-center justify-center overflow-hidden shadow-[0_0_24px_color-mix(in_srgb,var(--color-inverse-primary)_30%,transparent)]">
                         <FaradayAvatar px={64} fill />
                       </div>
-                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
+                      <span className="absolute -bottom-1 -end-1 w-4 h-4 rounded-full bg-primary border-2 border-surface animate-pulse" />
                     </div>
                     <div>
                       <div className="font-headline-md text-on-surface mb-1">שלום, אני פרופסור פאראדיי ⚡</div>

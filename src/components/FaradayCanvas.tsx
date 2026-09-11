@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "./ThemeContext";
-import { type FaradayVariant, type Palette, type DrawFn, PALETTES } from "./faraday/types";
+import { type FaradayVariant, type Concept, type Palette, type DrawFn, PALETTES } from "./faraday/types";
 import { makeVariant } from "./faraday/variants";
 import { prefersReducedMotion } from "../lib/gsapUtils";
 
@@ -23,7 +23,7 @@ import { prefersReducedMotion } from "../lib/gsapUtils";
 
 // Re-exported so existing `import { FaradayVariant } from "./FaradayCanvas"`
 // paths keep resolving after the type moved into ./faraday/types.
-export type { FaradayVariant };
+export type { FaradayVariant, Concept };
 
 export interface FaradayCanvasProps {
   variant: FaradayVariant;
@@ -31,6 +31,13 @@ export interface FaradayCanvasProps {
   theme?: "light" | "dark";
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * constellation only: the learner's topics and how well each is known (0..1).
+   * Read fresh every frame, so a mastery change repaints without restarting the
+   * loop; pass a memoized array, since a new reference re-seeds the node
+   * layout. Omitted, the variant draws its generic fallback labels.
+   */
+  concepts?: Concept[];
 }
 
 /**
@@ -42,11 +49,15 @@ export interface FaradayCanvasProps {
  */
 const BEHIND_UI_OPACITY = 0.64;
 
-export default function FaradayCanvas({ variant, theme: themeProp, className, style }: FaradayCanvasProps) {
+export default function FaradayCanvas({ variant, theme: themeProp, className, style, concepts }: FaradayCanvasProps) {
   const { theme: ctxTheme } = useTheme();
   const theme = themeProp ?? ctxTheme;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paletteRef = useRef<Palette>(PALETTES[theme]);
+  // Same trick as the palette: the loop reads through a ref, so topic data
+  // arriving from a Convex subscription never tears the RAF loop down.
+  const conceptsRef = useRef<Concept[] | undefined>(concepts);
+  conceptsRef.current = concepts;
   // The live draw fn, so a palette swap can repaint a *static* backdrop without
   // tearing the loop down.
   const drawRef = useRef<DrawFn | null>(null);
@@ -106,7 +117,7 @@ export default function FaradayCanvas({ variant, theme: themeProp, className, st
       parent.addEventListener("pointercancel", onLeave);
       parent.addEventListener("pointerleave", onLeave);
 
-      const draw = makeVariant(variant, ctx, w, h, mouse, () => paletteRef.current);
+      const draw = makeVariant(variant, ctx, w, h, mouse, () => paletteRef.current, () => conceptsRef.current);
       drawRef.current = draw;
 
       let raf = 0;

@@ -223,6 +223,21 @@
   --shadow-md:             0 4px 12px rgba(0,0,0,0.08);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.10);
 
+  /* ── BACKDROP — the page ground ──
+     Three layers stack behind every screen, cheapest first: this ground, the
+     dot field printed on top of it, and — on hero surfaces only — ElectricField's
+     traces. The first two are one fixed pseudo-element on <body>, so they cost
+     a single composited paint and reach all 21 pages rather than the 8 that
+     happen to mount a canvas.
+     `lift` is the light the clay is lit by, arriving from above the fold;
+     `sink` is where the page settles at the bottom. Keep both far below the
+     accents — this is atmosphere, and anything you can name as a colour is
+     already too strong. */
+  --bg-lift:   rgba(255, 255, 255, 0.85);
+  --bg-sink:   rgba(120, 178, 120, 0.16);
+  --grid-dot:  color-mix(in srgb, var(--color-primary) 13%, transparent);
+  --grid-size: 26px;
+
   /* ── GLOW SHADOWS — electric identity ── */
   --glow-primary:  0 0 20px rgba(23, 201, 100, 0.32);
   --glow-spark:    0 0 22px rgba(91, 255, 159, 0.45);
@@ -317,8 +332,21 @@
   --shadow-md:             0 4px 12px rgba(0,0,0,0.3);
   --shadow-lg:             0 8px 24px rgba(0,0,0,0.4);
 
-  /* Glow tracks the dark primary (#22D86B), as the old color-mix did */
-  --glow-primary: 0 0 20px rgba(34, 216, 107, 0.32);
+  /* On lab ink the ground inverts: the lift is a faint volt bloom rather than
+     white, and the sink is real darkness at the edges. */
+  --bg-lift:  rgba(34, 216, 107, 0.07);
+  --bg-sink:  rgba(0, 0, 0, 0.45);
+  --grid-dot: color-mix(in srgb, var(--color-primary) 9%, transparent);
+
+  /* Glows track their own dark-theme colour, as the old color-mix did. All
+     four, not just primary: the other three sat at their light-theme values
+     on lab ink, where --glow-hot in particular was tuned for #059669 and the
+     dark --color-hot is #EAFFF4. Alphas come down because a glow carries
+     further on a dark surface. */
+  --glow-primary:  0 0 20px rgba(34, 216, 107, 0.32);
+  --glow-spark:    0 0 22px rgba(91, 255, 159, 0.30);
+  --glow-hot:      0 0 24px rgba(234, 255, 244, 0.22);
+  --glow-tertiary: 0 0 20px rgba(255, 190, 82, 0.26);
 }
 
 /* ═══════════════════ GLOBAL RESET ════════════════════ */
@@ -330,8 +358,29 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* ── Touch feedback ──
+   Killing the tap highlight on `*` was right for the clay controls, which
+   answer a finger with their own press — but it also stripped it from every
+   list row, link and plain button, leaving them with no feedback at all on a
+   phone. Since the property inherits, the tint goes on the root and the clay
+   controls opt back out. */
+:root {
+  -webkit-tap-highlight-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+.btn-clay-primary, .btn-clay-secondary, .btn-clay-ghost, .btn-icon,
+.chip-btn, .stat-chip, .seg-tab, .clay-card, .lego {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* scroll-behavior is smooth app-wide and four screens carry a `fixed top-0`
+   header, so anything scrolled to lands under it unless it reserves the room.
+   scroll-margin only applies when something actually scrolls to the element,
+   so this is inert everywhere else. */
+[id] {
+  scroll-margin-block-start: calc(var(--header-h) + 0.75rem);
 }
 
 html {
@@ -352,6 +401,25 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+/* The ground and the dot field, as one fixed layer behind everything.
+   Fixed rather than attached to <body>, so the gradient is sized to the
+   viewport instead of stretching down a long page, and so scrolling never
+   repaints it. z-index -1 puts it under #root (z-index 1) but above the root
+   background; body creates no stacking context of its own, so that holds.
+   A page that mounts FaradayCanvas stacks its canvas on top of this. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, var(--grid-dot) 1px, transparent 1px),
+    radial-gradient(120% 75% at 50% -12%, var(--bg-lift), transparent 62%),
+    radial-gradient(120% 60% at 50% 112%, var(--bg-sink), transparent 58%);
+  background-size: var(--grid-size) var(--grid-size), auto, auto;
+}
+
 #root {
   position: relative;
   z-index: 1;
@@ -367,6 +435,14 @@ body {
 :root {
   --content-max: 75rem;       /* ~1200px — default reading/app column   */
   --content-max-wide: 90rem;  /* ~1440px — dashboards / dense multi-col */
+
+  /* Native checkbox / radio / range paint themselves from this one property;
+     without it they are the platform's blue, the last OS colour on the page. */
+  accent-color: var(--color-primary);
+
+  /* Height of the fixed page headers, so smooth-scrolled targets clear them
+     instead of landing underneath. */
+  --header-h: 74px;
 
   /* Open contact — a wire with a break in it. Painted as a mask so it takes
      currentColor and needs no icon component; it is chrome for the disabled
@@ -484,6 +560,9 @@ body {
     @apply w-full bg-surface border-2 border-outline rounded-xl px-4 py-3 text-on-surface outline-none transition-all duration-150;
     font-family: 'Assistant', sans-serif;
     font-size: 1rem;
+    /* The caret was the browser's black, in an app whose darkest text is
+       #26382c. It is the two pixels a student watches most. */
+    caret-color: var(--color-primary);
   }
   .field:focus { @apply border-primary; }
   .field::placeholder { @apply text-on-surface-variant; }
@@ -613,12 +692,10 @@ body {
   .stat-chip:focus-visible::after,
   .chip-btn:focus-visible::after,
   .seg-tab:focus-visible::after,
-  .focus-loop:focus-visible::after {
+  .focus-loop:focus-visible::after,
+  .focus-loop:has(:focus-visible)::after {
     content: "";
     position: absolute;
-    /* The containing block is the padding box, so -2px is what reaches back
-       out over the 2px border the current is meant to run along. */
-    inset: -2px;
     padding: 2px;
     border-radius: inherit;
     pointer-events: none;
@@ -639,8 +716,29 @@ body {
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
   }
+  /* On a control that is itself focused the pseudo-element's containing block
+     is the padding box, so -2px is what reaches back out over the component's
+     own 2px border. A wrapper around a focused input already sits on that
+     border, so it stays at 0. */
+  .btn-clay-primary:focus-visible::after,
+  .btn-clay-secondary:focus-visible::after,
+  .btn-clay-ghost:focus-visible::after,
+  .btn-icon:focus-visible::after,
+  .stat-chip:focus-visible::after,
+  .chip-btn:focus-visible::after,
+  .seg-tab:focus-visible::after,
+  .focus-loop:focus-visible::after { inset: -2px; }
+  .focus-loop:has(:focus-visible)::after { inset: 0; }
 
-  .field:focus-visible { @apply border-primary; outline: none; }
+  /* The field used to signal focus with a border colour change and nothing
+     else — colour alone, and identical for pointer and keyboard. It now takes
+     the same outline as every other control. The current loop rides on a
+     wrapper, because an <input> cannot carry a pseudo-element of its own. */
+  .field:focus-visible {
+    @apply border-primary;
+    outline: 3px solid var(--color-primary-dark);
+    outline-offset: 2px;
+  }
 
   /* ── Disabled — de-energised, not faded ──
      `opacity: .5` dimmed the clay riser along with the button, so a locked
@@ -1007,11 +1105,19 @@ body {
 .font-display { font-family: 'Yarden', 'Assistant', sans-serif !important; }
 
 /* Instrument-panel numerals — for XP, streaks, %, scores (voltmeter readout) */
+/* Same bidi isolation .katex gets, and for the same reason. A lone "1,240"
+   survives an RTL line, but a multi-part readout does not: in "3 / 10" the
+   spaces around the separator take the paragraph's direction and the two
+   operands swap, so the student is told they finished 10 out of 3. Because
+   `direction` also orders flex children, .num belongs on the numeral itself,
+   never on a row that also holds an icon. */
 .num {
   font-family: 'JetBrains Mono', 'Assistant', monospace;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.01em;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 
@@ -1460,6 +1566,31 @@ body {
 }
 
 /* ═══════════════════ SCROLLBAR ════════════════════ */
+/* ═══════════════════ INCREASED CONTRAST ════════════════════ */
+/* The tinted neutrals sit deliberately close in luminance — that is what makes
+   the clay read as moulded rather than drawn. It is also what makes it hard
+   work for a student who has turned contrast up, so that setting darkens the
+   structural tokens and nothing else. The accents already carry their weight
+   and stay put. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-outline:            #7fb87a;
+    --color-outline-variant:    #a8d4a4;
+    --color-on-surface-variant: #3d5244;
+    --color-clay-lip:           #a8d4a4;
+    --color-clay-riser:         #7fb87a;
+    --grid-dot:                 transparent;
+  }
+  [data-theme="dark"] {
+    --color-outline:            #5c7f66;
+    --color-outline-variant:    #33493a;
+    --color-on-surface-variant: #b6cfbe;
+    --color-clay-lip:           #6d9478;
+    --color-clay-riser:         #000000;
+    --grid-dot:                 transparent;
+  }
+}
+
 /* ═══════════════════ TEXT SELECTION ════════════════════ */
 /* The last colour in the app nobody chose. A student re-reading a question
    drags over it and gets the browser's blue, on a page that is green all the
@@ -1472,6 +1603,16 @@ body {
 /* Lab ink swallows a 22% veil, so the mix comes up on dark. */
 [data-theme="dark"] ::selection {
   background: color-mix(in srgb, var(--color-primary) 34%, transparent);
+}
+
+/* Firefox reads the standard properties and has no ::-webkit-scrollbar; Chrome
+   and Safari read the pseudo-elements and IGNORE their own scrollbar once a
+   standard property is set. Fencing the standard property behind "this engine
+   has no webkit scrollbar" is what lets Firefox be themed without costing
+   Chrome the 6px bar and its hover tint below. */
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--color-outline) transparent; }
+  .no-scrollbar { scrollbar-width: none; }
 }
 
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
@@ -1733,7 +1874,15 @@ math-field.faraday-mathfield::part(menu-toggle) {
   --shadow-clay-secondary: 0 2px 0 0 var(--color-secondary-dark);
   --shadow-clay-tertiary:  0 2px 0 0 var(--color-tertiary-dark);
   --shadow-clay-error:     0 2px 0 0 var(--color-error);
+  /* The ground stays — it is static and it is what stops the page reading as a
+     flat sheet. The dot field goes: a repeating pattern behind text is exactly
+     the kind of thing this mode exists to remove. */
+  --grid-dot: transparent;
 }
+
+/* ElectricField is SMIL, not canvas, so display:none genuinely stops it —
+   there is no RAF loop left running behind the hidden element. */
+[data-focus="on"] .electric-field { display: none; }
 
 /* No looping decoration, no entrance choreography, no hover travel. The
    0.001ms (rather than 0) keeps transitionend/animationend listeners firing,
